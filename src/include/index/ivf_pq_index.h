@@ -114,9 +114,9 @@
 
 /**
  * Class representing an inverted file (IVF) index for flat (non-compressed)
- * feature vectors.  The class simply holds the index data itself, it is
+ * feature vectors. The class simply holds the index data itself, it is
  * unaware of where the data comes from -- reading and writing data is done
- * via an ivf_pq_group.  Thus, this class does not hold information
+ * via an ivf_pq_group. Thus, this class does not hold information
  * about the group (neither the group members, nor the group metadata).
  *
  * @tparam partitioned_pq_vectors_feature_type
@@ -148,7 +148,6 @@ class ivf_pq_index {
 
  private:
   using flat_storage_type = ColMajorMatrix<pq_code_type>;
-  using tdb_flat_storage_type = ColMajorMatrix<pq_code_type>;
 
   using pq_storage_type = ColMajorPartitionedMatrix<  // was: storage_type
       pq_code_type,                                   // was: feature_type
@@ -165,12 +164,12 @@ class ivf_pq_index {
    * We need to store three different sets of centroids.
    *   - The flat ivf centroids_ which are uncompressed and used to partition
    *     the entire training set with train / add+compress patterns.
-   *   - The pq ivf centroids - compressed version of the ivf centroids.  These
-   *     are used in queries with symmetric distance.  They are also used in
+   *   - The pq ivf centroids - compressed version of the ivf centroids. These
+   *     are used in queries with symmetric distance. They are also used in
    *     the compress / train / add pattern.
    *   - The cluster_centroids_ that partition each subspace of the training set
    *     into another set of partitions. There are num_clusters of these, with
-   *     each centroid being of size dimensions_.  These are used to build the
+   *     each centroid being of size dimensions_. These are used to build the
    *     distance_tables_ and compress the training set and ivf centroids
    */
   using flat_ivf_centroid_storage_type =
@@ -186,9 +185,6 @@ class ivf_pq_index {
       ColMajorMatrix<flat_vector_feature_type>;
   using tdb_cluster_centroid_storage_type =
       tdbColMajorMatrix<flat_vector_feature_type>;
-
-  constexpr static const IndexKind index_kind_ =
-      IndexKind::IVFPQ;  // was: IVFFlat
 
   /****************************************************************************
    * Index group information
@@ -260,24 +256,21 @@ class ivf_pq_index {
 
   /**
    * @brief Construct a new `ivf_pq_index` object, setting a number of
-   * parameters to be used subsequently in training.  To fully create an index
+   * parameters to be used subsequently in training. To fully create an index
    * we will need to call `train()` and `add()`.
    *
-   * @param dimension Dimension of the vectors comprising the training set and
-   * the data set.
    * @param nlist Number of centroids / partitions to compute.
-   * @param max_iter Maximum number of iterations for kmans algorithm.
+   * @param num_subspaces Number of subspaces to use for pq compression. This is
+   * the number of sections to divide the vector into.
+   * @param max_iter Maximum number of iterations for kmeans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
-   * @param timestamp Timestamp for the index.
+   * @param temporal_policy Temporal policy for the index.
    * @param seed Random seed for kmeans algorithm.
    *
-   * @param num_subspaces number of subspaces to use for pq compression
-   * @param sub_dimension dimension of each subspace (dimension / num_subspaces)
-   *
    * @note PQ encoding generally is described as having parameter nbits, how
-   * many bits to use for indexing into the codebook.  In real implementations,
+   * many bits to use for indexing into the codebook. In real implementations,
    * this seems to always be 8 -- it doesn't make sense to be anything other
-   * than that, else indexing would be too slow.  Accordingly, we set it as
+   * than that, else indexing would be too slow. Accordingly, we set it as
    * a constexpr value to 8 -- and correspondingly, we set num_clusters to 256.
    *
    * @todo Use chained parameter technique for arguments
@@ -287,7 +280,6 @@ class ivf_pq_index {
    * @todo -- May also want start/stop?  Use a variant?  TemporalPolicy?
    */
   ivf_pq_index(
-      // size_t dim,
       size_t nlist = 0,
       size_t num_subspaces = 16,  // new for pq
       size_t max_iter = 2,
@@ -306,16 +298,16 @@ class ivf_pq_index {
   }
 
   /**
-   * @brief Open a previously created index, stored as a TileDB group.  This
+   * @brief Open a previously created index, stored as a TileDB group. This
    * class does not deal with the group itself, but rather calls the group
-   * constructor.  The group constructor will initialize itself with information
+   * constructor. The group constructor will initialize itself with information
    * about the different constituent arrays needed for operation of this class,
    * but will not initialize any member data of the class.
    *
    * The group is opened with a timestamp, so the correct values of base_size
    * and num_partitions will be set.
    *
-   * We go ahead and load the centroids here.  We defer reading anything else
+   * We go ahead and load the centroids here. We defer reading anything else
    * because that will depend on the type of query we are doing as well as the
    * contents of the query itself.
    *
@@ -341,8 +333,8 @@ class ivf_pq_index {
     }
 
     /**
-     * Read the centroids.  How the partitioned_pq_vectors_ are read in will be
-     * determined by the type of query we are doing.  But they will be read
+     * Read the centroids. How the partitioned_pq_vectors_ are read in will be
+     * determined by the type of query we are doing. But they will be read
      * in at this same timestamp.
      */
     dimensions_ = group_->get_dimensions();
@@ -392,7 +384,7 @@ class ivf_pq_index {
   }
 
   /****************************************************************************
-   * Methods for building, writing, and reading the complete index.  Includes:
+   * Methods for building, writing, and reading the complete index. Includes:
    *   - Method for encoding the training set using pq compression to create
    *     the cluster_centroids_ and distance_tables_.
    *   - Method to initialize the centroids that we will use for building the
@@ -400,7 +392,7 @@ class ivf_pq_index {
    *   - Method to partition the pq_vectors_ into a partitioned_matrix of pq
    *encoded vectors.
    * @note With this approach, we are partitioning based on cluster_centroids_
-   *the stored centroids are also encoded using pq.  Thus we can do our search
+   *the stored centroids are also encoded using pq. Thus we can do our search
    *using the symmetric distance function.
    *
    * @todo Create single function that trains and adds (ingests)
@@ -414,7 +406,8 @@ class ivf_pq_index {
    * create `distance_tables_`. We measure the maximum number of iterations and
    * minimum convergence over all of the subspaces and return a tuple of those
    * values. We compute all of the distance_tables_ regarless of the values of
-   * max_local_iters_taken or min_local_conv relative to max_iter_ and tol_.
+   * max_local_iters_taken or min_local_conv relative to max_iter_ and
+   * tol_.
    *
    * @tparam V type of the training vectors
    * @tparam SubDistance type of the distance function to use for encoding.
@@ -425,7 +418,7 @@ class ivf_pq_index {
    * convergence
    *
    * @note This is essentially the same as flat_pq_index::train
-   * @note Recall that centroids_ are used for IVF indexing.  cluster_centroids_
+   * @note Recall that centroids_ are used for IVF indexing. cluster_centroids_
    * are still centroids, but they are divided into subspaces, and each portion
    * of cluster_centroids_ is the centroid of the corresponding subspace of the
    * training set.
@@ -465,7 +458,7 @@ class ivf_pq_index {
     // This basically the same thing we do in ivf_flat, but we perform it
     // num_subspaces_ times, once for each subspace.
     // @todo IMPORTANT This is highly suboptimal and will make multiple passes
-    // through the training set.  We need to move iteration over subspaces to
+    // through the training set. We need to move iteration over subspaces to
     // the inner loop -- and SIMDize it
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
@@ -502,7 +495,7 @@ class ivf_pq_index {
     }
 
     // Create tables of distances storing distance between encoding keys,
-    // one table for each subspace.  That is, distance_tables_[i](j, k) is
+    // one table for each subspace. That is, distance_tables_[i](j, k) is
     // the distance between the jth and kth centroids in the ith subspace.
     // The distance between two encoded vectors is looked up using the
     // keys of the vectors in each subspace (summing up the results obtained
@@ -567,7 +560,7 @@ class ivf_pq_index {
    * @tparam V The type of b, a compressed feature vector, i.e., a vector of
    * code types
    * @return The distance between a and b
-   * @todo There is likely a copy constructor of the Distance functor.  That
+   * @todo There is likely a copy constructor of the Distance functor. That
    * should be checked and possibly fixed so that there is just a reference to
    * an existing object.
    * @todo This also needs to be SIMDized.
@@ -750,7 +743,7 @@ class ivf_pq_index {
 
   /**
    * @brief PQ encode the training set using the cluster_centroids_ to get
-   * unpartitioned_pq_vectors_.  PQ encode the flat_ivf_centroids_ to get
+   * unpartitioned_pq_vectors_. PQ encode the flat_ivf_centroids_ to get
    * pq_ivf_centroids_.
    *
    * @return
@@ -874,7 +867,7 @@ class ivf_pq_index {
    * @brief Open the index from the arrays contained in the group_uri.
    * The "finite" queries only load as much data (ids and vectors) as are
    * necessary for a given query -- so we can't load any data until we
-   * know what the query is.  So, here we would have read the centroids and
+   * know what the query is. So, here we would have read the centroids and
    * indices into memory, when creating the index but would not have read
    * the partitioned_ids or partitioned_pq_vectors.
    *
@@ -904,23 +897,29 @@ class ivf_pq_index {
         upper_bound,
         temporal_policy_);
 
-    // NB: We don't load the partitioned_pq_vectors here.  We will load them
+    // NB: We don't load the partitioned_pq_vectors here. We will load them
     // when we do the query.
     return std::make_tuple(
         std::move(active_partitions), std::move(active_queries));
   }
 
   /**
-   * @brief Write the index to storage.  This would typically be done after a
-   * set of input vectors has been read and a new group is created.  Or after
+   * @brief Write the index to storage. This would typically be done after a
+   * set of input vectors has been read and a new group is created. Or after
    * consolidation.
    *
    * We assume we have all of the data in memory, and that we are writing
-   * all of it to a TileDB group.  Since we have all of it in memory,
+   * all of it to a TileDB group. Since we have all of it in memory,
    * we write from the PartitionedMatrix base class.
    *
-   * @param group_uri
-   * @return bool indicating success or failure
+   * @param ctx TileDB context
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param group_uri The URI of the TileDB group where the index will be saved
+   * @param temporal_policy If set, we'll use the end timestamp of the policy as
+   * the write timestamp.
+   * @param storage_version The storage version to use. If empty, use the most
+   * defult version.
+   * @return Whether the write was successful
    */
   auto write_index(
       const tiledb::Context& ctx,
@@ -1037,31 +1036,31 @@ class ivf_pq_index {
    * Queries, infinite and finite.
    *
    * An "infinite" query assumes there is enough RAM to load the entire array
-   * of partitioned vectors into memory.  The query function then searches in
+   * of partitioned vectors into memory. The query function then searches in
    * the appropriate partitions of the array for the query vectors.
    *
    * A "finite" query, on the other hand, examines the query and only loads
-   * the partitions that are necessary for that particular search.  A finite
+   * the partitions that are necessary for that particular search. A finite
    * query also supports out of core operation, meaning that only a subset of
-   * the necessary partitions are loaded into memory at any one time.  The
+   * the necessary partitions are loaded into memory at any one time. The
    * query is applied to each subset until all of the necessary partitions to
    * satisfy the query have been read in. The number of partitions to be held
    * in memory is controlled by an upper bound parameter that the user can set.
-   * The upper bound limits the total number of vectors that will he held in
-   * memory as the partitions are loaded.  Only complete partitions are loaded,
+   * The upper bound limits the total number of vectors that will be held in
+   * memory as the partitions are loaded. Only complete partitions are loaded,
    * so the actual number of vectors in memory at any one time will generally
    * be less than the upper bound.
    *
    * @note Currently we have implemented two queries, `query_infinite_ram` and
-   * `query_finite_ram`.  These both use the asymmetric distance function.
+   * `query_finite_ram`. These both use the asymmetric distance function.
    * Meaning they pass the uncompressed query vectors to the query function,
-   * along with the asymmetric distance functor.  With the asymmetric distance
+   * along with the asymmetric distance functor. With the asymmetric distance
    * function, the query is kept uncompressed and the target is uncompressed
-   * on the fly as the distance is computed.  This is more expensive than
-   *computing a symmetric distance, which would only require looking up the
-   *distance in a lookup table.  However, with a query using symmetric distance,
-   *the query vectors would need to be compressed before the query is made,
-   *which can be potentially quite expensive.
+   * on the fly as the distance is computed. This is more expensive than
+   * computing a symmetric distance, which would only require looking up the
+   * distance in a lookup table. However, with a query using symmetric distance,
+   * the query vectors would need to be compressed before the query is made,
+   * which can be potentially quite expensive.
    *
    * @todo Implement variants of the query functions that use symmetric distance
    * (take care to evaluate performace / accuracy tradeoffs for `float` and
@@ -1074,7 +1073,7 @@ class ivf_pq_index {
 
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
-   * and distances.  The function returns a matrix containing k_nn nearest
+   * and distances. The function returns a matrix containing k_nn nearest
    * neighbors for each given query and a matrix containing the distances
    * corresponding to each returned neighbor.
    *
@@ -1112,20 +1111,20 @@ class ivf_pq_index {
 
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
-   * and distances.  The function returns a matrix containing k_nn nearest
+   * and distances. The function returns a matrix containing k_nn nearest
    * neighbors for each given query and a matrix containing the distances
    * corresponding to each returned neighbor.
    *
    * This function searches for the nearest neighbors using "finite RAM",
    * that is, it only loads that portion of the IVF index into memory that
-   * is necessary for the given query.  In addition, it supports out of core
+   * is necessary for the given query. In addition, it supports out of core
    * operation, meaning that only a subset of the necessary partitions are
    * loaded into memory at any one time.
    *
    * See the documentation for that function in detail/ivf/qv.h
    * for more details.
    *
-   * @tparam Q Type of query vectors.  Must meet requirements of
+   * @tparam Q Type of query vectors. Must meet requirements of
    * `feature_vector_array`
    * @param query_vectors Array of (uncompressed) vectors to query.
    * @param k_nn Number of nearest neighbors to return.
@@ -1338,8 +1337,8 @@ class ivf_pq_index {
 
   /**
    * @brief Compare groups associated with two ivf_pq_index objects for
-   * equality.  Note that both indexes will have had to perform a read or
-   * a write.  An index created from partitioning will not yet have a group
+   * equality. Note that both indexes will have had to perform a read or
+   * a write. An index created from partitioning will not yet have a group
    * associated with it.
    *
    * Comparing groups will also compare metadata associated with each group.
@@ -1353,8 +1352,8 @@ class ivf_pq_index {
 
   /**
    * @brief Compare metadata associated with two ivf_pq_index objects for
-   * equality.  Thi is not the same as the metadata associated with the index
-   * group.  Rather, it is the metadata associated with the index itself and is
+   * equality. This is not the same as the metadata associated with the index
+   * group. Rather, it is the metadata associated with the index itself and is
    * only a small number of cached quantities.
    *
    * Note that `max_iter` et al are only relevant for partitioning an index
@@ -1580,11 +1579,21 @@ class ivf_pq_index {
     return indices;
   }
 
-  void dump_group(const std::string& msg) {
+  void dump_group(const std::string& msg) const {
+    if (!group_) {
+      throw std::runtime_error(
+          "[ivf_flat_index@dump_group] Cannot dump group because there is no "
+          "group");
+    }
     group_->dump(msg);
   }
 
-  void dump_metadata(const std::string& msg) {
+  void dump_metadata(const std::string& msg) const {
+    if (!group_) {
+      throw std::runtime_error(
+          "[ivf_flat_index@dump_metadata] Cannot dump metadata because there "
+          "is no group");
+    }
     group_->metadata.dump(msg);
   }
 };

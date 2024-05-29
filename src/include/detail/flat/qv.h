@@ -430,9 +430,7 @@ auto qv_query_heap_tiled(
     futs[n].get();
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 template <

@@ -516,11 +516,11 @@ class base_index_metadata {
           if (name == "feature_datatype" || name == "id_datatype" ||
               name == "px_datatype" || name == "adjacency_scores_datatype" ||
               name == "adjacency_row_index_datatype") {
-            std::cout << name << ": "
+            std::cout << name << ": " << *static_cast<uint32_t*>(value) << " ("
                       << tiledb::impl::type_to_str(
                              (tiledb_datatype_t) *
                              static_cast<uint32_t*>(value))
-                      << std::endl;
+                      << ")" << std::endl;
           } else {
             std::cout << name << ": " << *static_cast<uint32_t*>(value)
                       << std::endl;

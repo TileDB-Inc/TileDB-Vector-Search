@@ -806,7 +806,7 @@ class vamana_index {
 
   const vamana_index_group<vamana_index>& group() const {
     if (!group_) {
-      throw std::runtime_error("No group available");
+      throw std::runtime_error("[vamana_index@group] No group available");
     }
     return *group_;
   }

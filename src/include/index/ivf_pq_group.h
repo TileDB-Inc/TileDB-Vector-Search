@@ -84,10 +84,10 @@ class ivf_pq_group : public base_index_group<index_type> {
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
-      uint64_t dimension = 0,
+      uint64_t dimensions = 0,
       size_t num_clusters = 0,
       size_t num_subspaces = 0)
-      : Base(ctx, uri, rw, temporal_policy, version, dimension) {
+      : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
       if (num_clusters == 0) {
         throw std::invalid_argument(
@@ -141,7 +141,7 @@ class ivf_pq_group : public base_index_group<index_type> {
   auto append_num_partitions(size_t size) {
     metadata_.partition_history_.push_back(size);
   }
-  auto get_all_num_partitions() {
+  auto get_all_num_partitions() const {
     return metadata_.partition_history_;
   }
   auto set_num_partitions(size_t size) {

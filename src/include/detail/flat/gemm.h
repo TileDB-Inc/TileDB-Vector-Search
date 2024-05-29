@@ -47,8 +47,7 @@ auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
 
   scoped_timer _{"Total time " + tdb_func__};
   auto scores = gemm_scores(db, q, nthreads);
-  auto top_k = get_top_k(scores, k, nth, nthreads);
-  return top_k;
+  return get_top_k(scores, k, nth, nthreads);
 }
 
 using namespace std::chrono_literals;
