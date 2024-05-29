@@ -1151,7 +1151,7 @@ TEST_CASE("vamana_index vector diskann_test_256bin", "[vamana]") {
 
   size_t l_build = 50;
   size_t r_max_degree = 4;
-  size_t b_backtrack = L;
+  size_t b_backtrack = l_build;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(x), l_build, r_max_degree, b_backtrack);
 
