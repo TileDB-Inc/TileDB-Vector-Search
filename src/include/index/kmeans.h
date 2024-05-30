@@ -213,7 +213,6 @@ void train_no_init(
     float tol_,
     size_t num_threads_,
     float reassign_ratio_ = 0.05,
-    bool reassign_tbd_ = false,  // placeholder for future use
     Distance distancex = Distance{}) {
   scoped_timer _{__FUNCTION__};
   using feature_type = typename V::value_type;

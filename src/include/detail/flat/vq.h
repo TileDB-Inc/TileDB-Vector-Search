@@ -114,9 +114,7 @@ auto vq_query_heap(
   } while (load(db));
 
   consolidate_scores(scores);
-  auto top_k = get_top_k_with_scores(scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(scores, k_nn);
 }
 
 template <class DB, class Q, class Distance = sum_of_squares_distance>
@@ -235,9 +233,7 @@ auto vq_query_heap_tiled(
   } while (load(db));
 
   consolidate_scores(scores);
-  auto top_k = get_top_k_with_scores(scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(scores, k_nn);
 }
 
 // ====================================================================================================
@@ -336,9 +332,7 @@ auto vq_query_heap_2(
   } while (load(db));
 
   consolidate_scores(scores);
-  auto top_k = get_top_k_with_scores(scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(scores, k_nn);
 }
 
 /**

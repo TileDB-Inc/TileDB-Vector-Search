@@ -82,7 +82,7 @@ TEST_CASE("default construct two", "[ivf_pq_index]") {
   CHECK(y.compare_cached_metadata(x));
 }
 
-TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
+TEST_CASE("test kmeans initializations", "[ivf_index][init]") {
   const bool debug = false;
 
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -139,7 +139,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   CHECK(outer_counts == index.get_flat_ivf_centroids().num_cols());
 }
 
-TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
+TEST_CASE("test kmeans", "[ivf_index][kmeans]") {
   const bool debug = false;
 
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -166,7 +166,7 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
   }
 }
 
-TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
+TEST_CASE("debug w/ sk", "[ivf_index]") {
   const bool debug = true;
 
   ColMajorMatrix<float> training_data{
@@ -278,7 +278,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 }
 
-TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
+TEST_CASE("ivf_index write and read", "[ivf_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
   size_t num_subspaces = 16;
@@ -356,7 +356,7 @@ TEST_CASE(
 //
 #if 0
 TEMPLATE_TEST_CASE(
-    "flativf_index: query stacked hypercube",
+    "query stacked hypercube",
     "[flativf_index]",
     float,
     uint8_t) {

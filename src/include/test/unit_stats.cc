@@ -34,5 +34,6 @@
 #include "stats.h"
 
 TEST_CASE("test build_config", "[stats]") {
-  build_config();
+  auto config = build_config();
+  CHECK(config.size() > 0);
 }
