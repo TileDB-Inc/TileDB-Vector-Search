@@ -2,7 +2,7 @@ import os
 from typing import Dict, List, OrderedDict, Tuple
 
 import numpy as np
-from common import *
+from common import INDEXES
 
 import tiledb
 from tiledb.cloud.dag import Mode
