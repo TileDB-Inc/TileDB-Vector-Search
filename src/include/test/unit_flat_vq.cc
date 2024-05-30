@@ -33,10 +33,6 @@
 #include "detail/flat/vq.h"
 #include "test/utils/query_common.h"
 
-TEST_CASE("flat vq: test test", "[flat vq]") {
-  REQUIRE(true);
-}
-
 // @todo: test with tdbMatrix
 TEST_CASE("flat vq all or nothing", "[flat vq]") {
   auto ids = std::vector<size_t>(sift_base.num_cols());

@@ -41,10 +41,6 @@
 #include "test/utils/gen_graphs.h"
 #include "test/utils/query_common.h"
 
-TEST_CASE("ivf_index: test test", "[ivf_index]") {
-  REQUIRE(true);
-}
-
 // kmeans and kmeans indexing still WIP
 
 void debug_centroids(auto& index) {
@@ -58,7 +54,7 @@ void debug_centroids(auto& index) {
   std::cout << std::endl;
 }
 
-TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
+TEST_CASE("test kmeans initializations", "[ivf_index][init]") {
   const bool debug = false;
 
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -115,7 +111,7 @@ TEST_CASE("ivf_index: test kmeans initializations", "[ivf_index][init]") {
   CHECK(outer_counts == index.get_centroids().num_cols());
 }
 
-TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
+TEST_CASE("test kmeans", "[ivf_index][kmeans]") {
   const bool debug = false;
 
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -147,7 +143,7 @@ TEST_CASE("ivf_index: test kmeans", "[ivf_index][kmeans]") {
  * More significant testing of kmeans (more significant comparisons against
  * sklearn) are done in python
  */
-TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
+TEST_CASE("debug w/ sk", "[ivf_index]") {
   const bool debug = false;
 
   ColMajorMatrix<float> training_data{
@@ -240,7 +236,7 @@ TEST_CASE("ivf_index: debug w/ sk", "[ivf_index]") {
   }
 }
 
-TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
+TEST_CASE("ivf_index write and read", "[ivf_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
   size_t nprobe = 10;
@@ -275,10 +271,7 @@ TEST_CASE("ivf_index: ivf_index write and read", "[ivf_index]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "flativf_index: query stacked hypercube",
-    "[flativf_index]",
-    float,
-    uint8_t) {
+    "query stacked hypercube", "[flativf_index]", float, uint8_t) {
   size_t k_dist = GENERATE(0, 32);
   size_t k_near = k_dist;
   size_t k_far = k_dist;
@@ -373,8 +366,7 @@ TEMPLATE_TEST_CASE(
 
 // Note:  In-place only makes sense for infinite ram case
 // @todo Use a fixed seed for initializing kmeans
-TEST_CASE(
-    "ivf_index: Build index and query in place, infinite", "[ivf_index]") {
+TEST_CASE("Build index and query in place, infinite", "[ivf_index]") {
   tiledb::Context ctx;
   size_t nlist = GENERATE(1, 100);
   using s = siftsmall_test_init_defaults;
@@ -618,7 +610,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
 
 // Decided to not support this for now -- see instead unit_compat.cc
 #if 0
-TEST_CASE("ivf_index: matrix+vector constructor, infinite", "[ivf_index]") {
+TEST_CASE("matrix+vector constructor, infinite", "[ivf_index]") {
   size_t nprobe = 16;
   size_t k_nn = 10;
   size_t nthreads = 8;
@@ -683,7 +675,7 @@ TEST_CASE("ivf_index: matrix+vector constructor, infinite", "[ivf_index]") {
   }
 }
 
-TEST_CASE("ivf_index: matrix+vector constructor, finite", "[ivf_index]") {
+TEST_CASE("matrix+vector constructor, finite", "[ivf_index]") {
   size_t nprobe = 16;
   size_t k_nn = 10;
   size_t nthreads = 8;

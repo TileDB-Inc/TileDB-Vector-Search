@@ -33,10 +33,6 @@
 #include "catch2/catch_all.hpp"
 #include "test/utils/query_common.h"
 
-TEST_CASE("api_flat_l2_index: test test", "[api_flat_l2_index]") {
-  REQUIRE(true);
-}
-
 // ----------------------------------------------------------------------------
 // Index tests
 // ----------------------------------------------------------------------------

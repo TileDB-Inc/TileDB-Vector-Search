@@ -33,12 +33,8 @@
 #include "detail/graph/adj_list.h"
 #include "test/utils/tiny_graphs.h"
 
-TEST_CASE("adj_list: test test", "[adj_list]") {
-  REQUIRE(true);
-}
-
 TEMPLATE_TEST_CASE(
-    "adj_list: index_adj_list initializer_list",
+    "index_adj_list initializer_list",
     "[adj_list]",
     int,
     unsigned,
@@ -57,7 +53,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "adj_list: pseudo copy constructor",
+    "pseudo copy constructor",
     "[adj_list]",
     (std::tuple<float, int>),
     (std::tuple<float, size_t>),

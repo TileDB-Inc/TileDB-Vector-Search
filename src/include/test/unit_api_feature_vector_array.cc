@@ -44,15 +44,11 @@
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
-TEST_CASE("api_feature_vector_array: test test", "[api_feature_vector_array]") {
-  REQUIRE(true);
-}
-
 // ----------------------------------------------------------------------------
 // FeatureVectorArray tests
 // ----------------------------------------------------------------------------
 
-TEST_CASE("api: feature vector array open", "[api]") {
+TEST_CASE("feature vector array open", "[api]") {
   tiledb::Context ctx;
 
   auto a = FeatureVectorArray(ctx, sift_inputs_uri);
@@ -84,7 +80,7 @@ auto ack() {
   _ack(MatrixView<float>{});
 }
 
-TEST_CASE("api: Matrix constructors and destructors", "[api]") {
+TEST_CASE("Matrix constructors and destructors", "[api]") {
   auto a = ColMajorMatrix<int>(3, 7);
   auto b = FeatureVectorArray(a);
 
@@ -93,7 +89,7 @@ TEST_CASE("api: Matrix constructors and destructors", "[api]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "api: FeatureVectorArray feature_type",
+    "FeatureVectorArray feature_type",
     "[api]",
     int,
     int8_t,
@@ -127,7 +123,7 @@ TEMPLATE_TEST_CASE(
   CHECK(g.feature_size() == sizeof(TestType));
 }
 
-TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
+TEST_CASE("tdbMatrix constructors and destructors", "[api]") {
   tiledb::Context ctx;
   auto c = ColMajorMatrix<int>(3, 7);
 
@@ -146,7 +142,7 @@ TEST_CASE("api: tdbMatrix constructors and destructors", "[api]") {
 }
 
 #if 0  // This fails with 2.16.0
-TEST_CASE("api: Arrays going out of scope", "[api]") {
+TEST_CASE("Arrays going out of scope", "[api]") {
   auto ctx = tiledb::Context{};
   auto foo = tiledb::Array(ctx, "/tmp/a", TILEDB_READ);
   auto bar = std::move(foo);
@@ -154,7 +150,7 @@ TEST_CASE("api: Arrays going out of scope", "[api]") {
 #endif
 
 TEMPLATE_TEST_CASE(
-    "api: tdb FeatureVectorArray feature_type",
+    "tdb FeatureVectorArray feature_type",
     "[api]",
     int,
     int8_t,
@@ -199,7 +195,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEST_CASE("api: query checks", "[api][index]") {
+TEST_CASE("query checks", "[api][index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
   size_t nthreads = 8;
@@ -236,7 +232,7 @@ TEST_CASE("api: query checks", "[api][index]") {
 // FeatureVectorArray with IDs tests
 // ----------------------------------------------------------------------------
 
-TEST_CASE("api: feature vector array with IDs open", "[api]") {
+TEST_CASE("feature vector array with IDs open", "[api]") {
   tiledb::Context ctx;
 
   auto a = FeatureVectorArray(ctx, sift_inputs_uri, sift_ids_uri);
@@ -250,7 +246,7 @@ TEST_CASE("api: feature vector array with IDs open", "[api]") {
   CHECK(num_vectors(b) == num_bigann1M_vectors);
 }
 
-TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
+TEST_CASE("MatrixWithIds constructors and destructors", "[api]") {
   auto rows = 3;
   auto cols = 7;
 
@@ -340,7 +336,7 @@ TEST_CASE("api: MatrixWithIds constructors and destructors", "[api]") {
 }
 
 TEMPLATE_PRODUCT_TEST_CASE(
-    "api: FeatureVectorArray with IDs feature_type",
+    "FeatureVectorArray with IDs",
     "[api]",
     (ColMajorMatrixWithIds),
     ((int, uint32_t),
@@ -393,7 +389,7 @@ TEMPLATE_PRODUCT_TEST_CASE(
   CHECK(g.ids_size() == sizeof(IdsType));
 }
 
-TEST_CASE("api: tdbMatrixWithIds constructors and destructors", "[api]") {
+TEST_CASE("tdbMatrixWithIds constructors and destructors", "[api]") {
   tiledb::Context ctx;
 
   int offset = 13;
@@ -420,7 +416,7 @@ TEST_CASE("api: tdbMatrixWithIds constructors and destructors", "[api]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "api: tdb FeatureVectorArray with IDs feature_type",
+    "tdb FeatureVectorArray with IDs feature_type",
     "[api]",
     uint32_t,
     uint64_t) {
@@ -489,7 +485,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEST_CASE("api: query checks with IDs", "[api][index]") {
+TEST_CASE("query checks with IDs", "[api][index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
   size_t nthreads = 8;
@@ -532,7 +528,7 @@ TEST_CASE("api: query checks with IDs", "[api][index]") {
   }
 }
 
-TEST_CASE("api: load empty matrix", "[api][index]") {
+TEST_CASE("load empty matrix", "[api][index]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -551,7 +547,7 @@ TEST_CASE("api: load empty matrix", "[api][index]") {
   auto X = FeatureVectorArray(ctx, tmp_matrix_uri);
 }
 
-TEST_CASE("api: temporal_policy", "[api]") {
+TEST_CASE("temporal_policy", "[api]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 

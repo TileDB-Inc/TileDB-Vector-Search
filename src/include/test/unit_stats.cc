@@ -33,11 +33,7 @@
 
 #include "stats.h"
 
-TEST_CASE("stats: test test", "[stats]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("stats: test build_config", "[stats]") {
+TEST_CASE("test build_config", "[stats]") {
   auto config = build_config();
   CHECK(config.size() > 0);
 }

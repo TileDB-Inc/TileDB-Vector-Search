@@ -237,10 +237,11 @@ class flat_pq_index {
 
   template <class SubDistance = cached_sub_sum_of_squares_distance>
   auto add(const ColMajorMatrix<feature_type>& feature_vectors) {
-    // These will be encoded. We will still have the same number of vectors, but now each will have
-    // num_subspaces_ dimensions instead of the original dimensions_. This is because we will chunk
-    // up the original vector into num_subspaces_ chunks and then for each chunk the vector will get 
-    // an ID which maps to a set of numbers which are stored in centroids_.
+    // These will be encoded. We will still have the same number of vectors, but
+    // now each will have num_subspaces_ dimensions instead of the original
+    // dimensions_. This is because we will chunk up the original vector into
+    // num_subspaces_ chunks and then for each chunk the vector will get an ID
+    // which maps to a set of numbers which are stored in centroids_.
     pq_vectors_ =
         ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
 

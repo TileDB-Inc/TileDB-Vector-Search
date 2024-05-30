@@ -76,7 +76,9 @@ class TemporalPolicy {
   }
 
   std::string dump() const {
-    return std::string("(timestamp_start: ") + std::to_string(timestamp_start_) + ", timestamp_end: " + std::to_string(timestamp_end_) + ")";
+    return std::string("(timestamp_start: ") +
+           std::to_string(timestamp_start_) +
+           ", timestamp_end: " + std::to_string(timestamp_end_) + ")";
   }
 
  private:

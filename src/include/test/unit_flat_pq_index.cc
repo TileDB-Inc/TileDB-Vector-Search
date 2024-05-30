@@ -39,12 +39,7 @@
 #include "test/utils/gen_graphs.h"
 #include "test/utils/query_common.h"
 
-TEST_CASE("flat_pq_index: test test", "[flat_pq_index]") {
-  REQUIRE(true);
-}
-
-TEST_CASE(
-    "flat_pq_index: flat qv_partition with sub distance", "[flat_pq_index]") {
+TEST_CASE("flat qv_partition with sub distance", "[flat_pq_index]") {
   {
     auto sub_sift_base =
         ColMajorMatrix<sift_feature_type>(2, num_vectors(sift_base));
@@ -96,7 +91,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE("flat_pq_index: flat qv_partition hypercube", "[flat_pq_index]") {
+TEST_CASE("flat qv_partition hypercube", "[flat_pq_index]") {
   const bool debug = false;
 
   size_t k_near = 8;
@@ -311,14 +306,12 @@ TEST_CASE("normalize matrix", "[flat_pq_index]") {
   }
 }
 
-TEMPLATE_TEST_CASE(
-    "flat_pq_index: create flat_pq_index", "[flat_pq_index]", float, uint8_t) {
+TEMPLATE_TEST_CASE("create flat_pq_index", "[flat_pq_index]", float, uint8_t) {
   auto pq_idx = flat_pq_index<TestType, uint32_t, uint32_t>(128, 16, 8);
   REQUIRE(true);
 }
 
-TEMPLATE_TEST_CASE(
-    "flat_pq_index: train flat_pq_index", "[flat_pq_index]", float, uint8_t) {
+TEMPLATE_TEST_CASE("train flat_pq_index", "[flat_pq_index]", float, uint8_t) {
   size_t k_near = 32;
   size_t k_far = 32;
 
@@ -330,8 +323,7 @@ TEMPLATE_TEST_CASE(
   REQUIRE(true);
 }
 
-TEMPLATE_TEST_CASE(
-    "flat_pq_index: add flat_pq_index", "[flat_pq_index]", float, uint8_t) {
+TEMPLATE_TEST_CASE("add flat_pq_index", "[flat_pq_index]", float, uint8_t) {
   size_t k_near = 32;
   size_t k_far = 32;
 
@@ -345,7 +337,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "flat_pq_index: verify flat_pq_index encoding with hypercube",
+    "verify flat_pq_index encoding with hypercube",
     "[flat_pq_index]",
     float,
     uint8_t) {
@@ -363,7 +355,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "flat_pq_index: verify flat_pq_index encoding with stacked hypercube",
+    "verify flat_pq_index encoding with stacked hypercube",
     "[flat_pq_index]",
     float,
     uint8_t) {
@@ -434,8 +426,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEST_CASE(
-    "flat_pq_index: verify pq_encoding and pq_distances with siftsmall",
-    "[flat_pq_index]") {
+    "verify pq_encoding and pq_distances with siftsmall", "[flat_pq_index]") {
   tiledb::Context ctx;
   auto training_set = tdbColMajorMatrix<siftsmall_feature_type>(
       ctx, siftsmall_inputs_uri, 2500);
@@ -469,10 +460,7 @@ TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "flat_pq_index: query stacked hypercube",
-    "[flat_pq_index]",
-    float,
-    uint8_t) {
+    "query stacked hypercube", "[flat_pq_index]", float, uint8_t) {
   size_t k_dist = GENERATE(/*0,*/ 32);
   size_t k_near = k_dist;
   size_t k_far = k_dist;
@@ -691,7 +679,7 @@ TEMPLATE_TEST_CASE(
 #endif
 }
 
-TEST_CASE("flat_pq_index: query siftsmall", "[flat_pq_index]") {
+TEST_CASE("query siftsmall", "[flat_pq_index]") {
   const bool debug = false;
 
   auto k_nn = 10;
@@ -754,7 +742,7 @@ TEST_CASE("flat_pq_index: query siftsmall", "[flat_pq_index]") {
   }
 }
 
-TEST_CASE("flat_pq_index: query 1M", "[flat_pq_index]") {
+TEST_CASE("query 1M", "[flat_pq_index]") {
   const bool debug = false;
 
   auto num_vectors = num_bigann1M_vectors;
@@ -821,7 +809,7 @@ TEST_CASE("flat_pq_index: query 1M", "[flat_pq_index]") {
   }
 }
 
-TEST_CASE("flat_pq_index: flat_pq_index write and read", "[flat_pq_index]") {
+TEST_CASE("flat_pq_index write and read", "[flat_pq_index]") {
   const bool debug = false;
 
   size_t dimensions_{128};

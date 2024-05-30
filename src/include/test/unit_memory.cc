@@ -6,18 +6,14 @@
 #include <memory>
 #include <vector>
 
-TEST_CASE("memory: test test", "[memory]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("memory: move unique_ptr scalar", "[memory]") {
+TEST_CASE("move unique_ptr scalar", "[memory]") {
   auto p = std::make_unique<int>(42);
   auto q = std::move(p);
   REQUIRE(*q == 42);
   REQUIRE(p == nullptr);
 }
 
-TEST_CASE("memory: move unique_ptr array", "[memory]") {
+TEST_CASE("move unique_ptr array", "[memory]") {
   // This will default initialize the array
   std::unique_ptr<double[]> storage_{new double[42]};
 

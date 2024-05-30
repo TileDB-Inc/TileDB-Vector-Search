@@ -41,8 +41,8 @@
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
-#include "index/ivf_pq_index.h"
 #include "index/index_defs.h"
+#include "index/ivf_pq_index.h"
 #include "tiledb/group_experimental.h"
 
 /*******************************************************************************
@@ -184,7 +184,8 @@ class IndexIVFPQ {
         index_ ? index_->num_subspaces() : num_subspaces_,
         index_ ? index_->max_iterations() : max_iterations_,
         index_ ? index_->convergence_tolerance() : convergence_tolerance_,
-        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) : std::nullopt,
+        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
+                 std::nullopt,
         index_ ? index_->num_clusters() : num_clusters_);
 
     index_->train(training_set);
@@ -214,7 +215,11 @@ class IndexIVFPQ {
     index_->add(data_set);
   }
 
-  [[nodiscard]] auto query(QueryType queryType, const QueryVectorArray& vectors, size_t top_k, size_t nprobe) {
+  [[nodiscard]] auto query(
+      QueryType queryType,
+      const QueryVectorArray& vectors,
+      size_t top_k,
+      size_t nprobe) {
     if (!index_) {
       throw std::runtime_error(
           "Cannot query_infinite_ram() because there is no index.");
@@ -305,9 +310,7 @@ class IndexIVFPQ {
     std::vector<metadata_element> metadata{
         {"feature_datatype", feature_datatype, TILEDB_UINT32},
         {"id_datatype", id_datatype, TILEDB_UINT32},
-        {"px_datatype",
-         partitioning_index_datatype,
-         TILEDB_UINT32}};
+        {"px_datatype", partitioning_index_datatype, TILEDB_UINT32}};
 
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
 
@@ -338,8 +341,11 @@ class IndexIVFPQ {
     virtual void add(const FeatureVectorArray& data_set) = 0;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
-    query(QueryType queryType, 
-        const QueryVectorArray& vectors, size_t top_k, size_t nprobe) = 0;
+    query(
+        QueryType queryType,
+        const QueryVectorArray& vectors,
+        size_t top_k,
+        size_t nprobe) = 0;
 
     virtual void write_index(
         const tiledb::Context& ctx,
@@ -436,12 +442,16 @@ class IndexIVFPQ {
      * @param vectors The query vectors.
      * @param top_k The number of results to return for each query vector.
      * @param nprobe The number of clusters to search in the index.
-     * @return A tuple of FeatureVectorArrays, one for the scores and one for the distances.
+     * @return A tuple of FeatureVectorArrays, one for the scores and one for
+     * the distances.
      *
      * @todo Make sure the extents of the returned arrays are used correctly.
      */
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
-        QueryType queryType, const QueryVectorArray& vectors, size_t top_k, size_t nprobe) override {
+        QueryType queryType,
+        const QueryVectorArray& vectors,
+        size_t top_k,
+        size_t nprobe) override {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
 
@@ -488,21 +498,21 @@ class IndexIVFPQ {
       return impl_index_.temporal_policy();
     }
 
-  uint64_t nlist() const override {
-    return impl_index_.nlist();
-  }
-  uint64_t num_subspaces() const override {
-    return impl_index_.num_subspaces();
-  }
-  uint64_t max_iterations() const override {
-    return impl_index_.max_iterations();
-  }
-  float convergence_tolerance() const override {
-    return impl_index_.convergence_tolerance();
-  }
-  uint64_t num_clusters() const override {
-    return impl_index_.num_clusters();
-  }
+    uint64_t nlist() const override {
+      return impl_index_.nlist();
+    }
+    uint64_t num_subspaces() const override {
+      return impl_index_.num_subspaces();
+    }
+    uint64_t max_iterations() const override {
+      return impl_index_.max_iterations();
+    }
+    float convergence_tolerance() const override {
+      return impl_index_.convergence_tolerance();
+    }
+    uint64_t num_clusters() const override {
+      return impl_index_.num_clusters();
+    }
 
    private:
     /**

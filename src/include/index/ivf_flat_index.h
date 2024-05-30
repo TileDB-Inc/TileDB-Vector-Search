@@ -70,9 +70,9 @@
 
 /**
  * Class representing an inverted file (IVF) index for flat (non-compressed)
- * feature vectors.  The class simply holds the index data itself, it is
+ * feature vectors. The class simply holds the index data itself, it is
  * unaware of where the data comes from -- reading and writing data is done
- * via an ivf_flat_group.  Thus, this class does not hold information
+ * via an ivf_flat_group. Thus, this class does not hold information
  * about the group (neither the group members, nor the group metadata).
  *
  * @tparam partitioned_vectors_feature_type
@@ -153,7 +153,7 @@ class ivf_flat_index {
 
   /**
    * @brief Construct a new `ivf_flat_index` object, setting a number of
-   * parameters to be used subsequently in training.  To fully create an index
+   * parameters to be used subsequently in training. To fully create an index
    * we will need to call `train()` and `add()`.
    *
    * @param dimensions Dimensions of the vectors comprising the training set and
@@ -195,9 +195,9 @@ class ivf_flat_index {
   }
 
   /**
-   * @brief Open a previously created index, stored as a TileDB group.  This
+   * @brief Open a previously created index, stored as a TileDB group. This
    * class does not deal with the group itself, but rather calls the group
-   * constructor.  The group constructor will initialize itself with information
+   * constructor. The group constructor will initialize itself with information
    * about the different constituent arrays needed for operation of this class,
    * but will not initialize any member data of the class.
    *
@@ -220,8 +220,8 @@ class ivf_flat_index {
       , group_{std::make_unique<ivf_flat_group<ivf_flat_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
     /**
-     * Read the centroids.  How the partitioned_vectors_ are read in will be
-     * determined by the type of query we are doing.  But they will be read
+     * Read the centroids. How the partitioned_vectors_ are read in will be
+     * determined by the type of query we are doing. But they will be read
      * in at this same timestamp.
      */
     dimensions_ = group_->get_dimensions();
@@ -259,7 +259,7 @@ class ivf_flat_index {
   /**
    * Compute centroids of the training set data, using the kmeans algorithm.
    * The initialization algorithm used to generate the starting centroids
-   * for kmeans is specified by the `init` parameter.  Either random
+   * for kmeans is specified by the `init` parameter. Either random
    * initialization or kmeans++ initialization can be used.
    *
    * @param training_set Array of vectors to cluster.
@@ -337,9 +337,9 @@ class ivf_flat_index {
   }
 
   /**
-   * @brief Build the index from a training set, given the centroids.  This
+   * @brief Build the index from a training set, given the centroids. This
    * will partition the training set into a contiguous array, with one
-   * partition per centroid.  It will also create an array to record the
+   * partition per centroid. It will also create an array to record the
    * original ids locations of each vector (their locations in the original
    * training set) as well as a partitioning index array demarcating the
    * boundaries of each partition (including the very end of the array).
@@ -354,7 +354,7 @@ class ivf_flat_index {
         detail::flat::qv_partition(centroids_, training_set, num_threads_);
 
     // @note parts is a vector containing the partition label for each
-    // vector in training_set.  num_parts is how many unique labels there
+    // vector in training_set. num_parts is how many unique labels there
     // are
     auto num_unique_labels = ::num_vectors(centroids_);
 
@@ -410,7 +410,7 @@ class ivf_flat_index {
    * @brief Open the index from the arrays contained in the group_uri.
    * The "finite" queries only load as much data (ids and vectors) as are
    * necessary for a given query -- so we can't load any data until we
-   * know what the query is.  So, here we would have read the centroids and
+   * know what the query is. So, here we would have read the centroids and
    * indices into memory, when creating the index but would not have read
    * the partitioned_ids or partitioned_vectors.
    *
@@ -440,19 +440,19 @@ class ivf_flat_index {
         upper_bound,
         temporal_policy_);
 
-    // NB: We don't load the partitioned_vectors here.  We will load them
+    // NB: We don't load the partitioned_vectors here. We will load them
     // when we do the query.
     return std::make_tuple(
         std::move(active_partitions), std::move(active_queries));
   }
 
   /**
-   * @brief Write the index to storage.  This would typically be done after a
-   * set of input vectors has been read and a new group is created.  Or after
+   * @brief Write the index to storage. This would typically be done after a
+   * set of input vectors has been read and a new group is created. Or after
    * consolidation.
    *
    * We assume we have all of the data in memory, and that we are writing
-   * all of it to a TileDB group.  Since we have all of it in memory,
+   * all of it to a TileDB group. Since we have all of it in memory,
    * we write from the PartitionedMatrix base class.
    *
    * @param group_uri The URI of the TileDB group where the index will be saved
@@ -533,18 +533,18 @@ class ivf_flat_index {
    * Queries, infinite and finite.
    *
    * An "infinite" query assumes there is enough RAM to load the entire array
-   * of partitioned vectors into memory.  The query function then searches in
+   * of partitioned vectors into memory. The query function then searches in
    * the appropriate partitions of the array for the query vectors.
    *
    * A "finite" query, on the other hand, examines the query and only loads
-   * the partitions that are necessary for that particular search.  A finite
+   * the partitions that are necessary for that particular search. A finite
    * query also supports out of core operation, meaning that only a subset of
-   * the necessary partitions are loaded into memory at any one time.  The
+   * the necessary partitions are loaded into memory at any one time. The
    * query is applied to each subset until all of the necessary partitions to
    * satisfy the query have been read in . The number of partitions to be held
    * in memory is controlled by an upper bound parameter that the user can set.
    * The upper bound limits the total number of vectors that will he held in
-   * memory as the partitions are loaded.  Only complete partitions are loaded,
+   * memory as the partitions are loaded. Only complete partitions are loaded,
    * so the actual number of vectors in memory at any one time will generally
    * be less than the upper bound.
    *
@@ -555,7 +555,7 @@ class ivf_flat_index {
 
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
-   * and distances.  The function returns a matrix containing k_nn nearest
+   * and distances. The function returns a matrix containing k_nn nearest
    * neighbors for each given query and a matrix containing the distances
    * corresponding to each returned neighbor.
    *
@@ -705,13 +705,13 @@ class ivf_flat_index {
 
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
-   * and distances.  The function returns a matrix containing k_nn nearest
+   * and distances. The function returns a matrix containing k_nn nearest
    * neighbors for each given query and a matrix containing the distances
    * corresponding to each returned neighbor.
    *
    * This function searches for the nearest neighbors using "finite RAM",
    * that is, it only loads that portion of the IVF index into memory that
-   * is necessary for the given query.  In addition, it supports out of core
+   * is necessary for the given query. In addition, it supports out of core
    * operation, meaning that only a subset of the necessary partitions are
    * loaded into memory at any one time.
    *
@@ -842,8 +842,8 @@ class ivf_flat_index {
 
   /**
    * @brief Compare groups associated with two ivf_flat_index objects for
-   * equality.  Note that both indexes will have had to perform a read or
-   * a write.  An index created from partitioning will not yet have a group
+   * equality. Note that both indexes will have had to perform a read or
+   * a write. An index created from partitioning will not yet have a group
    * associated with it.
    *
    * Comparing groups will also compare metadata associated with each group.
@@ -857,8 +857,8 @@ class ivf_flat_index {
 
   /**
    * @brief Compare metadata associated with two ivf_flat_index objects for
-   * equality.  Thi is not the same as the metadata associated with the index
-   * group.  Rather, it is the metadata associated with the index itself and is
+   * equality. This is not the same as the metadata associated with the index
+   * group. Rather, it is the metadata associated with the index itself and is
    * only a small number of cached quantities.
    *
    * Note that `max_iter` et al are only relevant for partitioning an index
@@ -1025,7 +1025,9 @@ class ivf_flat_index {
 
   void dump_group(const std::string& msg) {
     if (!group_) {
-      throw std::runtime_error("No group to dump");
+      throw std::runtime_error(
+          "[ivf_flat_index@dump_group] Cannot dump group because there is no "
+          "group");
     }
     group_->dump(msg);
   }
@@ -1036,6 +1038,5 @@ class ivf_flat_index {
     }
     group_->metadata.dump(msg);
   }
-};
 
 #endif  // TILEDB_ivf_flat_index_H

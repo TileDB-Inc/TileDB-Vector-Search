@@ -39,10 +39,6 @@
 #include "detail/flat/qv.h"
 #include "detail/linalg/tdb_matrix.h"
 
-TEST_CASE("array_defs: test test", "[array_defs]") {
-  REQUIRE(true);
-}
-
 std::vector<std::string> test_array_roots{
     sift_root,
     siftsmall_root,
@@ -56,7 +52,7 @@ std::vector<std::string> test_file_roots{
     siftsmall_files_root,
 };
 
-TEST_CASE("array_defs: test array root uris", "[array_defs]") {
+TEST_CASE("test array root uris", "[array_defs]") {
   for (auto& uri : {siftsmall_root, bigann10k_root}) {
     REQUIRE(std::filesystem::is_directory(uri));
   }
@@ -125,7 +121,7 @@ std::vector<std::string> siftsmall_files{
     siftsmall_groundtruth_file,
 };
 
-TEST_CASE("array_defs: test array uris", "[array_defs]") {
+TEST_CASE("test array uris", "[array_defs]") {
   bool debug = false;
 
   for (auto& test :
@@ -158,7 +154,7 @@ TEST_CASE("array_defs: test array uris", "[array_defs]") {
   }
 }
 
-TEST_CASE("array_defs: compare siftsmall arrays and files", "[array_defs]") {
+TEST_CASE("compare siftsmall arrays and files", "[array_defs]") {
   tiledb::Context ctx;
 
   auto array_inputs = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(

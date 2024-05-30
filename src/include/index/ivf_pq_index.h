@@ -211,8 +211,8 @@ class ivf_pq_index {
    * flat ivf_centroids, pq_ivf_centroids, pq_vectors, partitioned_pq_vectors
    */
 
-  // This holds the centroids we have determined in train_ivf(). We will have one column for each
-  // partition.
+  // This holds the centroids we have determined in train_ivf(). We will have
+  // one column for each partition.
   flat_ivf_centroid_storage_type flat_ivf_centroids_;
 
   cluster_centroid_storage_type cluster_centroids_;
@@ -221,10 +221,13 @@ class ivf_pq_index {
   pq_ivf_centroid_storage_type pq_ivf_centroids_;
   std::unique_ptr<pq_storage_type> partitioned_pq_vectors_;
 
-  // These are the original training vectors encoded using the cluster_centroids_. So each vector has
-  // been chunked up into num_subspaces_ sections, and for each section we find the closest centroid from
-  // cluster_centroids_ and appen that index as the next number in the pq_vector.
-  std::unique_ptr<ColMajorMatrixWithIds<pq_code_type, id_type>> unpartitioned_pq_vectors_;
+  // These are the original training vectors encoded using the
+  // cluster_centroids_. So each vector has been chunked up into num_subspaces_
+  // sections, and for each section we find the closest centroid from
+  // cluster_centroids_ and appen that index as the next number in the
+  // pq_vector.
+  std::unique_ptr<ColMajorMatrixWithIds<pq_code_type, id_type>>
+      unpartitioned_pq_vectors_;
   // Or should these just be
   // pq_storage_type partitioned_pq_vectors_;
   // flat_storage_type unpartitioned_pq_vectors_;
@@ -234,10 +237,11 @@ class ivf_pq_index {
   float tol_{1.e-4};
   float reassign_ratio_{0.075};
 
-  // Some parameters for performing kmeans clustering for pq compression. Only used in IVF PQ, not in IVF Flat.
-  uint64_t pq_max_iterations_{1};         
-  float pq_tol_{1.e-4};             
-  float pq_reassign_ratio_{0.075};  
+  // Some parameters for performing kmeans clustering for pq compression. Only
+  // used in IVF PQ, not in IVF Flat.
+  uint64_t pq_max_iterations_{1};
+  float pq_tol_{1.e-4};
+  float pq_reassign_ratio_{0.075};
 
   // Some parameters for execution
   uint64_t num_threads_{std::thread::hardware_concurrency()};
@@ -263,7 +267,8 @@ class ivf_pq_index {
    * we will need to call `train()` and `add()`.
    *
    * @param nlist Number of centroids / partitions to compute.
-   * @param num_subspaces Number of subspaces to use for pq compression. This is the number of sections to divide the vector into.
+   * @param num_subspaces Number of subspaces to use for pq compression. This is
+   * the number of sections to divide the vector into.
    * @param max_iter Maximum number of iterations for kmeans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
    * @param temporal_policy Temporal policy for the index.
@@ -408,7 +413,8 @@ class ivf_pq_index {
    * create `distance_tables_`. We measure the maximum number of iterations and
    * minimum convergence over all of the subspaces and return a tuple of those
    * values. We compute all of the distance_tables_ regarless of the values of
-   * max_local_iters_taken or min_local_conv relative to max_iterations_ and tol_.
+   * max_local_iters_taken or min_local_conv relative to max_iterations_ and
+   * tol_.
    *
    * @tparam V type of the training vectors
    * @tparam SubDistance type of the distance function to use for encoding.
@@ -595,7 +601,7 @@ class ivf_pq_index {
   auto make_pq_distance_asymmetric() const {
     // using A = std::span<feature_type>;  // @todo: Don't hardcode span
     // using B = decltype(pq_storage_type{}[0]);
-    
+
     using A = queries_feature_type;
     using B = index_feature_type;
 
@@ -626,7 +632,10 @@ class ivf_pq_index {
    */
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void kmeans_pp(const V& training_set) {
-    ::kmeans_pp<std::remove_cvref_t<V>, decltype(flat_ivf_centroids_), Distance>(
+    ::kmeans_pp<
+        std::remove_cvref_t<V>,
+        decltype(flat_ivf_centroids_),
+        Distance>(
         training_set, flat_ivf_centroids_, num_partitions_, num_threads_);
   }
 
@@ -655,7 +664,8 @@ class ivf_pq_index {
       case (kmeans_init::none):
         break;
       case (kmeans_init::kmeanspp):
-        kmeans_pp<std::remove_cvref_t<decltype(training_set)>, Distance>(training_set);
+        kmeans_pp<std::remove_cvref_t<decltype(training_set)>, Distance>(
+            training_set);
         break;
       case (kmeans_init::random):
         kmeans_random_init(training_set);
@@ -718,12 +728,17 @@ class ivf_pq_index {
     debug_matrix(flat_ivf_centroids_, "flat_ivf_centroids_");
     train_pq(training_set);   // cluster_centroids_, distance_tables_
     train_ivf(training_set);  // flat_ivf_centroids_
-    unpartitioned_pq_vectors_ = pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(training_set);
+    unpartitioned_pq_vectors_ =
+        pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(
+            training_set);
     std::copy(
         training_set_ids.begin(),
         training_set_ids.end(),
         unpartitioned_pq_vectors_->ids());
-    pq_ivf_centroids_ = std::move(*pq_encode<flat_ivf_centroid_storage_type, pq_ivf_centroid_storage_type>(flat_ivf_centroids_));
+    pq_ivf_centroids_ =
+        std::move(*pq_encode<
+                  flat_ivf_centroid_storage_type,
+                  pq_ivf_centroid_storage_type>(flat_ivf_centroids_));
     /*
     auto partition_labels = detail::flat::qv_partition(
         pq_ivf_centroids_,
@@ -751,8 +766,9 @@ class ivf_pq_index {
       class SubDistance = uncached_sub_sum_of_squares_distance>
   auto pq_encode_one(
       const V& v, W&& pq, SubDistance sub_distance = SubDistance{}) const {
-    // We have broken the vector into num_subspaces_ subspaces, and we will look in cluster_centroids_ and
-    // find the closest cluster_centroids_ to that chunk of the vector.
+    // We have broken the vector into num_subspaces_ subspaces, and we will look
+    // in cluster_centroids_ and find the closest cluster_centroids_ to that
+    // chunk of the vector.
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimensions_ * subspace;
       auto sub_end = sub_begin + sub_dimensions_;
@@ -770,11 +786,17 @@ class ivf_pq_index {
     }
   }
 
-  template <feature_vector_array U, class Matrix, class Distance = uncached_sub_sum_of_squares_distance>
+  template <
+      feature_vector_array U,
+      class Matrix,
+      class Distance = uncached_sub_sum_of_squares_distance>
   auto pq_encode(const U& training_set, Distance distance = Distance{}) const {
     // flat_storage_type = ColMajorMatrix<pq_code_type>
-//    auto pq_vectors = std::make_unique<ColMajorMatrix<pq_vector_feature_type>>(num_subspaces_, num_vectors(training_set));
-      auto pq_vectors = std::make_unique<Matrix>(num_subspaces_, num_vectors(training_set));
+    //    auto pq_vectors =
+    //    std::make_unique<ColMajorMatrix<pq_vector_feature_type>>(num_subspaces_,
+    //    num_vectors(training_set));
+    auto pq_vectors =
+        std::make_unique<Matrix>(num_subspaces_, num_vectors(training_set));
     auto& pqv = *pq_vectors;
     for (size_t i = 0; i < num_vectors(training_set); ++i) {
       pq_encode_one(training_set[i], pqv[i], distance);
@@ -874,7 +896,7 @@ class ivf_pq_index {
    */
   auto read_index_infinite() {
     // NOTE(paris): I think we can remove this b/c otherwise you can't open an
-    // index and then query it. 
+    // index and then query it.
     // if (partitioned_pq_vectors_ &&
     //     (::num_vectors(*partitioned_pq_vectors_) != 0 ||
     //      ::num_vectors(partitioned_pq_vectors_->ids()) != 0)) {
@@ -882,11 +904,14 @@ class ivf_pq_index {
     // }
     if (!group_) {
       if (!partitioned_pq_vectors_) {
-        throw std::runtime_error("[ivf_pq_index@read_index_infinite] Neither partitioned_pq_vectors nor the group have been initialized");
+        throw std::runtime_error(
+            "[ivf_pq_index@read_index_infinite] Neither partitioned_pq_vectors "
+            "nor the group have been initialized");
       }
-      // If we have created an empty index and then try to query it, partitioned_pq_vectors_ will be 
-      // empty so we will try to read here, but we won't have a group_. Just return and leave 
-      // partitioned_pq_vectors_ empty.
+      // If we have created an empty index and then try to query it,
+      // partitioned_pq_vectors_ will be empty so we will try to read here, but
+      // we won't have a group_. Just return and leave partitioned_pq_vectors_
+      // empty.
       return;
     }
 
@@ -999,8 +1024,8 @@ class ivf_pq_index {
     write_group.set_num_clusters(num_clusters_);
 
     assert(num_subspaces_ * sub_dimensions_ == dimensions_);
-    // The code below checks if the number of clusters is equal to 2^bits_per_subspace_.
-    // assert(num_clusters_ == 1 << bits_per_subspace_);
+    // The code below checks if the number of clusters is equal to
+    // 2^bits_per_subspace_. assert(num_clusters_ == 1 << bits_per_subspace_);
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
@@ -1154,7 +1179,8 @@ class ivf_pq_index {
    ****************************************************************************/
 
   template <feature_vector_array Q>
-  auto query(QueryType queryType, const Q& query_vectors, size_t k_nn, size_t nprobe) {
+  auto query(
+      QueryType queryType, const Q& query_vectors, size_t k_nn, size_t nprobe) {
     switch (queryType) {
       case QueryType::InfiniteRAM:
         return query_infinite_ram(query_vectors, k_nn, nprobe);
@@ -1162,7 +1188,7 @@ class ivf_pq_index {
         return query_finite_ram(query_vectors, k_nn, nprobe);
       default:
         throw std::runtime_error("Invalid query type");
-    }  
+    }
   }
 
   /**
@@ -1187,12 +1213,17 @@ class ivf_pq_index {
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
-      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" + std::to_string(nprobe) + 
-      ") was greater than than the number of centroids (" + std::to_string(::num_vectors(flat_ivf_centroids_)) +
-       ") - setting nprobe to " + std::to_string(::num_vectors(flat_ivf_centroids_)) << std::endl;
+      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" +
+                       std::to_string(nprobe) +
+                       ") was greater than than the number of centroids (" +
+                       std::to_string(::num_vectors(flat_ivf_centroids_)) +
+                       ") - setting nprobe to " +
+                       std::to_string(::num_vectors(flat_ivf_centroids_))
+                << std::endl;
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
-    if (!partitioned_pq_vectors_ || ::num_vectors(*partitioned_pq_vectors_) == 0) {
+    if (!partitioned_pq_vectors_ ||
+        ::num_vectors(*partitioned_pq_vectors_) == 0) {
       read_index_infinite();
     }
     auto&& [active_partitions, active_queries] =
@@ -1205,11 +1236,12 @@ class ivf_pq_index {
         active_queries,
         k_nn,
         num_threads_,
-        make_pq_distance_asymmetric<std::span<typename Q::value_type>, decltype(pq_storage_type{}[0])>());
+        make_pq_distance_asymmetric<
+            std::span<typename Q::value_type>,
+            decltype(pq_storage_type{}[0])>());
 
-// using A = std::span<feature_type>;  // @todo: Don't hardcode span
+    // using A = std::span<feature_type>;  // @todo: Don't hardcode span
     // using B = decltype(pq_storage_type{}[0]);
-
   }
 
   /**
@@ -1249,9 +1281,13 @@ class ivf_pq_index {
           "Cannot do finite query on in-memory index.");
     }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
-      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" + std::to_string(nprobe) + 
-      ") was greater than than the number of centroids (" + std::to_string(::num_vectors(flat_ivf_centroids_)) +
-       ") - setting nprobe to " + std::to_string(::num_vectors(flat_ivf_centroids_)) << std::endl;
+      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" +
+                       std::to_string(nprobe) +
+                       ") was greater than than the number of centroids (" +
+                       std::to_string(::num_vectors(flat_ivf_centroids_)) +
+                       ") - setting nprobe to " +
+                       std::to_string(::num_vectors(flat_ivf_centroids_))
+                << std::endl;
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
     auto&& [active_partitions, active_queries] =
@@ -1265,11 +1301,9 @@ class ivf_pq_index {
         upper_bound,
         num_threads_,
         make_pq_distance_asymmetric<
-          // std::span<float>, 
-          std::span<typename Q::value_type>,
-          decltype(pq_storage_type{}[0])
-        >()
-        );
+            // std::span<float>,
+            std::span<typename Q::value_type>,
+            decltype(pq_storage_type{}[0])>());
   }
 
   /***************************************************************************
@@ -1726,7 +1760,9 @@ class ivf_pq_index {
 
   void dump_group(const std::string& msg) const {
     if (!group_) {
-      throw std::runtime_error("No group to dump");
+      throw std::runtime_error(
+          "[ivf_flat_index@dump_group] Cannot dump group because there is no "
+          "group");
     }
     group_->dump(msg);
   }
@@ -1737,6 +1773,5 @@ class ivf_pq_index {
     }
     group_->metadata.dump(msg);
   }
-};
 
 #endif  // TILEDB_PQ_INDEX_H

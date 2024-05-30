@@ -184,7 +184,7 @@ template <std::ranges::forward_range V>
 void debug_vector(
     const V& v, const std::string& msg = "", size_t max_size = 10) {
   size_t end = std::min(max_size, dimensions(v));
-    if (!msg.empty()) {
+  if (!msg.empty()) {
     std::cout << msg << ": ";
   }
   std::cout << "[";
@@ -211,7 +211,10 @@ void debug_matrix(
 }
 
 template <class T>
-void debug_vector_of_vectors(const std::vector<std::vector<T>>& v, const std::string& msg = "", size_t max_size = 10) {
+void debug_vector_of_vectors(
+    const std::vector<std::vector<T>>& v,
+    const std::string& msg = "",
+    size_t max_size = 10) {
   std::cout << msg << ":\n";
   for (size_t i = 0; i < std::min(max_size, v.size()); ++i) {
     debug_vector(v[i], "", max_size);

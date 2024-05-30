@@ -174,18 +174,18 @@ class vamana_index {
    */
   vamana_index(
       size_t num_nodes,
-      size_t L,
-      size_t R,
-      size_t B = 0,
+      size_t l_build,
+      size_t r_max_degree,
+      size_t b_backtrack,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
-      , l_build_{L}
-      , r_max_degree_{R}
-      , b_backtrack_{B == 0 ? l_build_ : B} {
+      , l_build_{l_build}
+      , r_max_degree_{r_max_degree}
+      , b_backtrack_{b_backtrack} {
   }
 
   /**
@@ -821,7 +821,7 @@ class vamana_index {
 
   const vamana_index_group<vamana_index>& group() const {
     if (!group_) {
-      throw std::runtime_error("No group available");
+      throw std::runtime_error("[vamana_index@group] No group available");
     }
     return *group_;
   }

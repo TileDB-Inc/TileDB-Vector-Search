@@ -115,6 +115,10 @@ class IndexVamana {
         }
       }
     }
+
+    if (b_backtrack_ == 0) {
+      b_backtrack_ = l_build_;
+    }
   }
 
   /**
@@ -144,6 +148,9 @@ class IndexVamana {
       throw std::runtime_error("Unsupported datatype combination");
     }
     index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
+    l_build_ = index_->l_build();
+    r_max_degree_ = index_->r_max_degree();
+    b_backtrack_ = index_->b_backtrack();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -174,12 +181,18 @@ class IndexVamana {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
+
+    // Create a new index. Note that we may have already loaded an existing
+    // index by URI. In that case, we have updated our local state (i.e.
+    // l_build_, r_max_degree_, b_backtrack_), but we should also use the
+    // timestamp from that already loaded index..
     index_ = dispatch_table.at(type)(
         training_set.num_vectors(),
-        index_ ? index_->l_build() : l_build_,
-        index_ ? index_->r_max_degree() : r_max_degree_,
-        index_ ? index_->b_backtrack() : b_backtrack_,
-        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) : std::nullopt);
+        l_build_,
+        r_max_degree_,
+        b_backtrack_,
+        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
+                 std::nullopt);
 
     index_->train(training_set);
 
@@ -264,6 +277,18 @@ class IndexVamana {
 
   constexpr auto dimensions() const {
     return dimensions_;
+  }
+
+  constexpr auto l_build() const {
+    return l_build_;
+  }
+
+  constexpr auto r_max_degree() const {
+    return r_max_degree_;
+  }
+
+  constexpr auto b_backtrack() const {
+    return b_backtrack_;
   }
 
   constexpr auto feature_type() const {

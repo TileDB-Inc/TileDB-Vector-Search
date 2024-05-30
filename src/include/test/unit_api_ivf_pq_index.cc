@@ -169,9 +169,7 @@ TEST_CASE("init constructor", "[api_ivf_pq_index]") {
   }
 }
 
-TEST_CASE(
-    "create empty index and then train and query",
-    "[api_ivf_pq_index]") {
+TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
@@ -240,13 +238,16 @@ TEST_CASE(
     // ids: [0, 1, 1, 1]
     // debug_vector(ids, "ids");
     // CHECK(std::equal(
-    //     scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    //     scores.begin(), scores.end(), std::vector<float>{0, 0, 0,
+    //     0}.begin()));
     // CHECK(std::equal(
     //     ids.begin(), ids.end(), std::vector<int>{0, 1, 2, 3}.begin()));
   }
 }
 
-TEST_CASE("create empty index and then train and query with external IDs", "[api_ivf_pq_index]") {
+TEST_CASE(
+    "create empty index and then train and query with external IDs",
+    "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
@@ -310,14 +311,15 @@ TEST_CASE("create empty index and then train and query with external IDs", "[api
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
     auto ids = std::span<uint32_t>(
         (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-    
+
     // TODO(paris): Fix test. We are returned:
     // debug_vector(scores, "scores");
     // scores: [24.8125, 12.3125, 15.3125, 19.3125]
     // debug_vector(ids, "ids");
     // ids: [0, 1, 1, 0]
     // CHECK(std::equal(
-    //     scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    //     scores.begin(), scores.end(), std::vector<float>{0, 0, 0,
+    //     0}.begin()));
     // CHECK(std::equal(
     //     ids.begin(), ids.end(), std::vector<int>{10, 11, 12, 13}.begin()));
   }
@@ -376,7 +378,8 @@ TEST_CASE(
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    auto&& [scores, ids] = index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
+    auto&& [scores, ids] =
+        index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
     auto num_ids = num_vectors(ids);
     auto recall = ((double)intersections) / ((double)num_ids * k_nn);
@@ -408,8 +411,7 @@ TEST_CASE("infer dimension", "[api_ivf_pq_index]") {
   CHECK(dimensions(a) == 128);
 }
 
-TEST_CASE(
-    "write and read", "[api_ivf_pq_index]") {
+TEST_CASE("write and read", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   std::string api_ivf_pq_index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -460,7 +462,7 @@ TEST_CASE("build index and query", "[api_ivf_pq_index]") {
 TEST_CASE("read index and query", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   tiledb::VFS vfs(ctx);
- 
+
   size_t k_nn = 10;
 
   std::string api_ivf_pq_index_uri =
@@ -825,44 +827,46 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
     auto query_vector_array = FeatureVectorArray(queries);
     {
-        auto&& [scores_vector_array, ids_vector_array] =
-            index.query(QueryType::FiniteRAM, query_vector_array, 1, 1);
+      auto&& [scores_vector_array, ids_vector_array] =
+          index.query(QueryType::FiniteRAM, query_vector_array, 1, 1);
 
-        auto scores = std::span<float>(
-            (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-        auto ids = std::span<uint32_t>(
-            (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-        debug_vector(scores, "scores");
-        debug_vector(ids, "ids");
+      auto scores = std::span<float>(
+          (float*)scores_vector_array.data(),
+          scores_vector_array.num_vectors());
+      auto ids = std::span<uint32_t>(
+          (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+      debug_vector(scores, "scores");
+      debug_vector(ids, "ids");
 
-        CHECK(std::equal(
-            scores.begin(),
-            scores.end(),
-            std::vector<float>{std::numeric_limits<float>::max()}.begin()));
-        CHECK(std::equal(
-            ids.begin(),
-            ids.end(),
-            std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
+      CHECK(std::equal(
+          scores.begin(),
+          scores.end(),
+          std::vector<float>{std::numeric_limits<float>::max()}.begin()));
+      CHECK(std::equal(
+          ids.begin(),
+          ids.end(),
+          std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
     }
     {
-        auto&& [scores_vector_array, ids_vector_array] =
-            index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
+      auto&& [scores_vector_array, ids_vector_array] =
+          index.query(QueryType::InfiniteRAM, query_vector_array, 1, 1);
 
-        auto scores = std::span<float>(
-            (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-        auto ids = std::span<uint32_t>(
-            (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-        debug_vector(scores, "scores");
-        debug_vector(ids, "ids");
+      auto scores = std::span<float>(
+          (float*)scores_vector_array.data(),
+          scores_vector_array.num_vectors());
+      auto ids = std::span<uint32_t>(
+          (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+      debug_vector(scores, "scores");
+      debug_vector(ids, "ids");
 
-        CHECK(std::equal(
-            scores.begin(),
-            scores.end(),
-            std::vector<float>{std::numeric_limits<float>::max()}.begin()));
-        CHECK(std::equal(
-            ids.begin(),
-            ids.end(),
-            std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
+      CHECK(std::equal(
+          scores.begin(),
+          scores.end(),
+          std::vector<float>{std::numeric_limits<float>::max()}.begin()));
+      CHECK(std::equal(
+          ids.begin(),
+          ids.end(),
+          std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
     }
 
     auto typed_index = ivf_pq_index<

@@ -48,10 +48,6 @@
 #include <string>
 #include <vector>
 
-TEST_CASE("concepts: test test", "[concepts]") {
-  REQUIRE(true);
-}
-
 template <class V, class U>
 inline auto sum_of_squares(V const& a, U const& b) {
   float sum{0.0};
@@ -73,7 +69,7 @@ inline auto sum_of_squares(V const& a, U const& b) {
   return sum;
 }
 
-TEST_CASE("concepts: std::unsigned_integral", "[concepts]") {
+TEST_CASE("std::unsigned_integral", "[concepts]") {
   std::vector<unsigned> v(1);
   CHECK(std::unsigned_integral<unsigned>);
   CHECK(std::same_as<decltype(v[0]), unsigned&>);
@@ -82,7 +78,7 @@ TEST_CASE("concepts: std::unsigned_integral", "[concepts]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "concepts: std::unsigned_integral sum",
+    "std::unsigned_integral sum",
     "[concepts]",
     int,
     unsigned,
@@ -102,7 +98,7 @@ TEMPLATE_TEST_CASE(
   CHECK(sum2 == 27.0);
 }
 
-TEST_CASE("concepts: random_access_range", "[concepts]") {
+TEST_CASE("random_access_range", "[concepts]") {
   CHECK(!std::ranges::random_access_range<int>);
 
   CHECK(std::ranges::random_access_range<std::vector<int>>);
@@ -117,7 +113,7 @@ TEST_CASE("concepts: random_access_range", "[concepts]") {
   CHECK(std::ranges::random_access_range<Vector<int>>);
 }
 
-TEST_CASE("concepts: sized_range", "[concepts]") {
+TEST_CASE("sized_range", "[concepts]") {
   CHECK(!std::ranges::sized_range<int>);
 
   CHECK(std::ranges::sized_range<std::vector<int>>);
@@ -132,7 +128,7 @@ TEST_CASE("concepts: sized_range", "[concepts]") {
   CHECK(std::ranges::sized_range<Vector<int>>);
 }
 
-TEST_CASE("concepts: contiguous range", "[concepts]") {
+TEST_CASE("contiguous range", "[concepts]") {
   CHECK(!std::ranges::contiguous_range<int>);
   CHECK(std::ranges::contiguous_range<std::vector<int>>);
   CHECK(std::ranges::contiguous_range<std::vector<double>>);
@@ -144,7 +140,7 @@ TEST_CASE("concepts: contiguous range", "[concepts]") {
   CHECK(std::ranges::contiguous_range<Vector<int>>);
 }
 
-TEST_CASE("concepts: range_of_ranges", "[concepts]") {
+TEST_CASE("range_of_ranges", "[concepts]") {
   CHECK(!range_of_ranges<int>);
   CHECK(!range_of_ranges<std::vector<int>>);
   CHECK(!range_of_ranges<std::vector<double>>);
@@ -164,7 +160,7 @@ TEST_CASE("concepts: range_of_ranges", "[concepts]") {
   CHECK(!range_of_ranges<Vector<int>>);
 }
 
-TEST_CASE("concepts: inner_range", "[concepts]") {
+TEST_CASE("inner_range", "[concepts]") {
   CHECK(std::is_same_v<
         inner_range_t<std::vector<std::vector<int>>>,
         std::vector<int>>);
@@ -173,25 +169,25 @@ TEST_CASE("concepts: inner_range", "[concepts]") {
         typename std::vector<std::vector<int>>::value_type>);
 }
 
-TEST_CASE("concepts: inner_iterator_t", "[concepts]") {
+TEST_CASE("inner_iterator_t", "[concepts]") {
   CHECK(std::is_same_v<
         inner_iterator_t<std::vector<std::vector<int>>>,
         std::vector<int>::iterator>);
 }
 
-TEST_CASE("concepts: inner_const_iterator_t", "[concepts]") {
+TEST_CASE("inner_const_iterator_t", "[concepts]") {
   CHECK(std::is_same_v<
         inner_const_iterator_t<std::vector<std::vector<int>>>,
         std::vector<int>::const_iterator>);
 }
 
-TEST_CASE("concepts: inner_value_t", "[concepts]") {
+TEST_CASE("inner_value_t", "[concepts]") {
   CHECK(std::is_same_v<
         inner_value_t<std::vector<std::vector<int>>>,
         std::vector<int>::value_type>);
 }
 
-TEST_CASE("concepts: inner_reference_t", "[concepts]") {
+TEST_CASE("inner_reference_t", "[concepts]") {
   CHECK(std::is_same_v<
         inner_reference_t<std::vector<std::vector<int>>>,
         std::vector<int>::reference>);
@@ -208,7 +204,7 @@ struct bar {
   }
 };
 
-TEST_CASE("concepts: invocable", "[concepts]") {
+TEST_CASE("invocable", "[concepts]") {
   foo(bar{});
   std::invoke(bar{}, 1);
   std::invoke(Vector<int>{}, 1);
@@ -222,7 +218,7 @@ TEST_CASE("concepts: invocable", "[concepts]") {
   CHECK(std::is_invocable_r_v<int, Vector<int>, int>);
 }
 
-TEST_CASE("concepts: subscriptable_range", "[concepts]") {
+TEST_CASE("subscriptable_range", "[concepts]") {
   using sv = std::vector<int>;
   using svi = std::ranges::iterator_t<sv>;
   using svri = std::iter_reference_t<svi>;
@@ -245,7 +241,7 @@ TEST_CASE("concepts: subscriptable_range", "[concepts]") {
   CHECK(subscriptable_range<Vector<int>>);
 }
 
-TEST_CASE("concepts: callable_range", "[concepts]") {
+TEST_CASE("callable_range", "[concepts]") {
   CHECK(!callable_range<int>);
   CHECK(!callable_range<std::vector<int>>);
   CHECK(!callable_range<std::vector<double>>);
@@ -261,7 +257,7 @@ TEST_CASE("concepts: callable_range", "[concepts]") {
   CHECK(callable<int, bar, int>);
 }
 
-TEST_CASE("concepts: Vector", "[concepts]") {
+TEST_CASE("Vector", "[concepts]") {
   CHECK(!range_of_ranges<Vector<int>>);
   CHECK(std::ranges::random_access_range<Vector<int>>);
   CHECK(std::ranges::sized_range<Vector<int>>);
@@ -271,7 +267,7 @@ TEST_CASE("concepts: Vector", "[concepts]") {
   CHECK(std::ranges::sized_range<Vector<int>>);
 }
 
-TEST_CASE("concepts: dimensionable", "[concepts]") {
+TEST_CASE("dimensionable", "[concepts]") {
   CHECK(!dimensionable<int>);
   CHECK(dimensionable<std::vector<int>>);
   CHECK(dimensionable<std::vector<double>>);
@@ -291,7 +287,7 @@ struct dummy_vectorable {
   }
 };
 
-TEST_CASE("concepts: vectorable", "[concepts]") {
+TEST_CASE("vectorable", "[concepts]") {
   CHECK(!vectorable<int>);
   CHECK(vectorable<std::vector<int>>);
   CHECK(vectorable<std::vector<double>>);
@@ -307,7 +303,7 @@ TEST_CASE("concepts: vectorable", "[concepts]") {
   CHECK(vectorable<dummy_vectorable>);
 }
 
-TEST_CASE("concepts: partitionable", "[concepts]") {
+TEST_CASE("partitionable", "[concepts]") {
   CHECK(!partitionable<int>);
   CHECK(!partitionable<std::vector<int>>);
   CHECK(!partitionable<std::vector<double>>);
@@ -350,7 +346,7 @@ void bar() {
   foo(dummy_feature_vector<int>{});
 }
 
-TEST_CASE("concepts: feature_vector", "[concepts]") {
+TEST_CASE("feature_vector", "[concepts]") {
   CHECK(!feature_vector<int>);
   CHECK(feature_vector<std::vector<int>>);
   CHECK(feature_vector<std::vector<double>>);
@@ -364,7 +360,7 @@ TEST_CASE("concepts: feature_vector", "[concepts]") {
   CHECK(feature_vector<dummy_feature_vector<int>>);
 }
 
-TEST_CASE("concepts: query_vector", "[concepts]") {
+TEST_CASE("query_vector", "[concepts]") {
   CHECK(!query_vector<int>);
   CHECK(query_vector<std::vector<int>>);
   CHECK(query_vector<std::vector<double>>);
@@ -379,7 +375,7 @@ TEST_CASE("concepts: query_vector", "[concepts]") {
   CHECK(query_vector<dummy_feature_vector<int>>);
 }
 
-TEST_CASE("concepts: feature_vector_array", "[concepts]") {
+TEST_CASE("feature_vector_array", "[concepts]") {
   CHECK(!feature_vector_array<int>);
   CHECK(!feature_vector_array<std::vector<int>>);
   CHECK(!feature_vector_array<std::vector<double>>);
@@ -387,17 +383,16 @@ TEST_CASE("concepts: feature_vector_array", "[concepts]") {
 }
 
 // Placeholders
-TEST_CASE("concepts: contiguous_feature_vector_range", "[concepts]") {
+TEST_CASE("contiguous_feature_vector_range", "[concepts]") {
 }
 
-TEST_CASE("concepts: partitioned_feature_vector_range", "[concepts]") {
+TEST_CASE("partitioned_feature_vector_range", "[concepts]") {
 }
 
-TEST_CASE(
-    "concepts: contiguous_partitioned_feature_vector_range", "[concepts]") {
+TEST_CASE("contiguous_partitioned_feature_vector_range", "[concepts]") {
 }
 
-TEST_CASE("concepts: distance_function", "[concepts]") {
+TEST_CASE("distance_function", "[concepts]") {
   CHECK(!distance_function<
         int,
         dummy_feature_vector_with_size<float>,
@@ -444,7 +439,7 @@ TEST_CASE("concepts: distance_function", "[concepts]") {
         dummy_feature_vector_with_size<float>>);
 }
 
-TEST_CASE("concepts: sub_distance_function", "[concepts]") {
+TEST_CASE("sub_distance_function", "[concepts]") {
   CHECK(!sub_distance_function<
         int,
         dummy_feature_vector_with_size<float>,
@@ -487,7 +482,7 @@ TEST_CASE("concepts: sub_distance_function", "[concepts]") {
         dummy_feature_vector_with_size<float>>);
 }
 
-TEST_CASE("concepts: cached_sub_distance_function", "[concepts]") {
+TEST_CASE("cached_sub_distance_function", "[concepts]") {
   CHECK(!cached_sub_distance_function<
         int,
         dummy_feature_vector_with_size<float>,

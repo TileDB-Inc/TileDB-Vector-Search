@@ -37,14 +37,10 @@
 #include "mdspan/mdspan.hpp"
 #include "utils/print_types.h"
 
-TEST_CASE("cpos: test test", "[cpos]") {
-  REQUIRE(true);
-}
-
 template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;
 
-TEMPLATE_TEST_CASE("cpos: test num_rows", "[cpos]", float, uint8_t) {
+TEMPLATE_TEST_CASE("test num_rows", "[cpos]", float, uint8_t) {
   std::vector<TestType> v0(200);
   std::vector<TestType> v1(200);
 
