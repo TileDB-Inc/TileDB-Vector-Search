@@ -98,25 +98,12 @@ TEST_CASE("ivf_pq_index: default construct two", "[ivf_pq_index]") {
 }
 
 TEST_CASE("test kmeans initializations", "[ivf_pq_index][init]") {
-  std::vector<float> data = {
-    8,
-    6,
-    7,
-    5,
-    3,
-    3,
-    7,
-    2,
-    1,
-    4,
-    1,
-    3,
-    0,
-    5,
-    1,
-    2,
+  const bool debug = false;
 
-    ColMajorMatrix<float> training_data(4, 8);
+  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                             9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
+
+  ColMajorMatrix<float> training_data(4, 8);
   std::copy(begin(data), end(data), training_data.data());
 
   auto index = ivf_pq_index<float, uint32_t, uint32_t>(

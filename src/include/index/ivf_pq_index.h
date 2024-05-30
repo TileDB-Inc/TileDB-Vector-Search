@@ -126,12 +126,12 @@
 template <
     class partitioned_pq_vectors_feature_type,
     class partitioned_ids_type = uint64_t,
-    class partitioning_index_type = uint64_t>
+    class partitioning_indices_type = uint64_t>
 class ivf_pq_index {
  public:
   using feature_type = partitioned_pq_vectors_feature_type;
   using id_type = partitioned_ids_type;
-  using indices_type = partitioning_index_type;
+  using indices_type = partitioning_indices_type;
   using score_type = float;  // @todo -- this should be a parameter?
 
   using group_type = ivf_pq_group<ivf_pq_index>;
@@ -249,7 +249,7 @@ class ivf_pq_index {
 
  public:
   using value_type = feature_type;
-  using index_type = partitioning_index_type;  // @todo This isn't quite right
+  using index_type = partitioning_indices_type;  // @todo This isn't quite right
 
   /****************************************************************************
    * Constructors (et al)
@@ -1531,7 +1531,7 @@ class ivf_pq_index {
 
   /**
    * @brief Compare metadata associated with two ivf_pq_index objects for
-   * equality. Thi is not the same as the metadata associated with the index
+   * equality. This is not the same as the metadata associated with the index
    * group. Rather, it is the metadata associated with the index itself and is
    * only a small number of cached quantities.
    *
@@ -1769,9 +1769,12 @@ class ivf_pq_index {
 
   void dump_metadata(const std::string& msg) const {
     if (!group_) {
-      throw std::runtime_error("No group to dump metadata for");
+      throw std::runtime_error(
+          "[ivf_flat_index@dump_metadata] Cannot dump metadata because there "
+          "is no group");
     }
     group_->metadata.dump(msg);
   }
+};
 
 #endif  // TILEDB_PQ_INDEX_H

@@ -149,6 +149,11 @@ class IndexIVFPQ {
       throw std::runtime_error("Unsupported datatype combination");
     }
     index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
+    n_list_ = index_->nlist();
+    num_subspaces_ = index_->num_subspaces();
+    max_iterations_ = index_->max_iterations();
+    convergence_tolerance_ = index_->convergence_tolerance();
+    num_clusters_ = index_->num_clusters();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -179,14 +184,19 @@ class IndexIVFPQ {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
+
+    // Create a new index. Note that we may have already loaded an existing
+    // index by URI. In that case, we have updated our local state (i.e.
+    // num_subspaces_, etc.), but we should also use the timestamp from that
+    // already loaded index.
     index_ = dispatch_table.at(type)(
-        index_ ? index_->nlist() : n_list_,
-        index_ ? index_->num_subspaces() : num_subspaces_,
-        index_ ? index_->max_iterations() : max_iterations_,
-        index_ ? index_->convergence_tolerance() : convergence_tolerance_,
+        n_list_,
+        num_subspaces_,
+        max_iterations_,
+        convergence_tolerance_,
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
                  std::nullopt,
-        index_ ? index_->num_clusters() : num_clusters_);
+        num_clusters_);
 
     index_->train(training_set);
 
@@ -501,15 +511,19 @@ class IndexIVFPQ {
     uint64_t nlist() const override {
       return impl_index_.nlist();
     }
+
     uint64_t num_subspaces() const override {
       return impl_index_.num_subspaces();
     }
+
     uint64_t max_iterations() const override {
       return impl_index_.max_iterations();
     }
+
     float convergence_tolerance() const override {
       return impl_index_.convergence_tolerance();
     }
+
     uint64_t num_clusters() const override {
       return impl_index_.num_clusters();
     }

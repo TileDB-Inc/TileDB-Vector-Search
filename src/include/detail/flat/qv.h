@@ -498,7 +498,7 @@ auto qv_partition(
 
   auto par = stdx::execution::indexed_parallel_policy{(size_t)nthreads};
   // For each query vector, find the closest vector in the database (i.e. in
-  // centrdoids).
+  // centroids).
   stdx::range_for_each(
       std::move(par), q, [&, size_db](auto&& qvec, auto&& n = 0, auto&& j = 0) {
         score_type min_score = std::numeric_limits<score_type>::max();

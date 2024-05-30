@@ -1034,9 +1034,12 @@ class ivf_flat_index {
 
   void dump_metadata(const std::string& msg) {
     if (!group_) {
-      throw std::runtime_error("No group to dump metadata for");
+      throw std::runtime_error(
+          "[ivf_flat_index@dump_metadata] Cannot dump metadata because there "
+          "is no group");
     }
     group_->metadata.dump(msg);
   }
+};
 
 #endif  // TILEDB_ivf_flat_index_H
