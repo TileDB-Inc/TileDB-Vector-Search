@@ -144,58 +144,11 @@ class CloudTests(unittest.TestCase):
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
     def test_cloud_flat(self):
-        source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = siftsmall_query_file
-        gt_uri = siftsmall_groundtruth_file
-        index_uri = CloudTests.flat_index_uri
-        k = 100
-        nqueries = 100
-
-        queries = load_fvecs(queries_uri)
-        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
-
-        index = vs.ingest(
-            index_type="FLAT",
-            index_uri=index_uri,
-            source_uri=source_uri,
-            config=tiledb.cloud.Config().dict(),
-            mode=Mode.BATCH,
-        )
-        tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        index = vs.flat_index.FlatIndex(
-            uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
-        )
-
-        _, result_i = index.query(queries, k=k)
-        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
-
-        index.delete(external_id=42)
-        _, result_i = index.query(queries, k=k)
-        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+        self.run_cloud_test(CloudTests.flat_index_uri, "FLAT", vs.flat_index.FlatIndex)
 
     def test_cloud_vamana(self):
-        source_uri = "tiledb://TileDB-Inc/sift_10k"
-        queries_uri = siftsmall_query_file
-        gt_uri = siftsmall_groundtruth_file
-        index_uri = CloudTests.vamana_index_uri
-        k = 100
-        nqueries = 100
-
-        load_fvecs(queries_uri)
-        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
-
-        vs.ingest(
-            index_type="VAMANA",
-            index_uri=index_uri,
-            source_uri=source_uri,
-            input_vectors_per_work_item=5000,
-            config=tiledb.cloud.Config().dict(),
-            mode=Mode.BATCH,
-        )
-
-        tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        vs.vamana_index.VamanaIndex(
-            uri=tiledb_index_uri, config=tiledb.cloud.Config().dict()
+        self.run_cloud_test(
+            CloudTests.vamana_index_uri, "VAMANA", vs.flat_index.VamanaIndex
         )
 
     def test_cloud_ivf_flat(self):
