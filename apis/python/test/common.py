@@ -8,8 +8,19 @@ import numpy as np
 
 import tiledb
 from tiledb.cloud import groups
+from tiledb.vector_search.flat_index import FlatIndex
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.vamana_index import VamanaIndex
+
+INDEXES = ["FLAT", "IVF_FLAT", "VAMANA"]
+INDEX_CLASSES = [FlatIndex, IVFFlatIndex, VamanaIndex]
+INDEX_FILES = [
+    tiledb.vector_search.flat_index,
+    tiledb.vector_search.ivf_flat_index,
+    tiledb.vector_search.vamana_index,
+]
 
 
 def xbin_mmap(fname, dtype):

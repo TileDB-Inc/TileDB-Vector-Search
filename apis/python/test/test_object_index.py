@@ -2,6 +2,7 @@ import os
 from typing import Dict, List, OrderedDict, Tuple
 
 import numpy as np
+from common import *
 
 import tiledb
 from tiledb.cloud.dag import Mode
@@ -11,7 +12,6 @@ from tiledb.vector_search.object_readers import ObjectPartition
 from tiledb.vector_search.object_readers import ObjectReader
 
 EMBED_DIM = 4
-INDEXES = ["FLAT", "IVF_FLAT", "VAMANA"]
 
 
 # TestEmbedding with vectors of EMBED_DIM size with all values being the id of the object

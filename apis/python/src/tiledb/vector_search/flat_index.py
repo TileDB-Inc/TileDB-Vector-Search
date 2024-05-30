@@ -9,8 +9,6 @@ from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 
-MAX_INT32 = np.iinfo(np.dtype("int32")).max
-MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 TILE_SIZE_BYTES = 128000000  # 128MB
 INDEX_TYPE = "FLAT"
 

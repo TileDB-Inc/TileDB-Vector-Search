@@ -7,6 +7,10 @@ import numpy as np
 import tiledb
 from tiledb.vector_search import _tiledbvspy as vspy
 
+MAX_INT32 = np.iinfo(np.dtype("int32")).max
+MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
+MAX_FLOAT_32 = np.finfo(np.dtype("float32")).max
+
 
 def is_type_erased_index(index_type: str) -> bool:
     return index_type == "VAMANA"

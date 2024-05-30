@@ -11,7 +11,6 @@ from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import to_temporal_policy
 
-MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 INDEX_TYPE = "VAMANA"
 
 
