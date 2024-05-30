@@ -58,6 +58,7 @@ class VamanaIndex(index.Index):
         self.index_type = INDEX_TYPE
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
+        self.timestamp = timestamp
         self.uri = uri
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -264,7 +265,7 @@ class VamanaIndex(index.Index):
             opt_l=opt_l,
             k=k,
             config=config,
-            timestamp=self.base_array_timestamp,
+            timestamp=self.timestamp,
             resource_class="large"
             if (not resources and not resource_class)
             else resource_class,
