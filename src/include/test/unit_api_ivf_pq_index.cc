@@ -569,6 +569,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   size_t n_list = 1;
   size_t num_subspaces = 1;
   size_t num_clusters = 4;
+  float convergence_tolerance = 0.00003f;
+  size_t max_iterations = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -586,7 +588,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
          {"partitioning_index_type", partitioning_index_type},
          {"n_list", std::to_string(n_list)},
          {"num_subspaces", std::to_string(num_subspaces)},
-         {"num_clusters", std::to_string(num_clusters)}}));
+         {"num_clusters", std::to_string(num_clusters)},
+         {"convergence_tolerance", std::to_string(convergence_tolerance)},
+         {"max_iterations", std::to_string(max_iterations)}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -596,6 +600,11 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
 
     CHECK(index.temporal_policy().timestamp_end() == 0);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.n_list() == n_list);
+    CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.max_iterations() == max_iterations);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
@@ -630,6 +639,13 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(
         index.temporal_policy().timestamp_end() ==
         std::numeric_limits<uint64_t>::max());
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.n_list() == n_list);
+    CHECK(index.num_subspaces() == num_subspaces);
+    // TODO(paris): Have ivf_pq_index store these in metadata so we don't lose
+    // values on load by URI.
+    // CHECK(index.convergence_tolerance() == convergence_tolerance);
+    // CHECK(index.max_iterations() == max_iterations);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);

@@ -284,6 +284,22 @@ class IndexIVFPQ {
     return dimensions_;
   }
 
+  constexpr auto n_list() const {
+    return n_list_;
+  }
+
+  constexpr auto num_subspaces() const {
+    return num_subspaces_;
+  }
+
+  constexpr auto max_iterations() const {
+    return max_iterations_;
+  }
+
+  constexpr auto convergence_tolerance() const {
+    return convergence_tolerance_;
+  }
+
   constexpr auto feature_type() const {
     return feature_datatype_;
   }
