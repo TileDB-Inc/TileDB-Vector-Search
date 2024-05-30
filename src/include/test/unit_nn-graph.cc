@@ -31,15 +31,9 @@
 
 #include <catch2/catch_all.hpp>
 #include "detail/graph/nn-graph.h"
-#include "query_common.h"
+#include "test/utils/query_common.h"
 
-bool global_debug = false;
-
-TEST_CASE("nn-graph: test test", "[nn-graph]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("nn-graph: init_random_graph", "[nn-graph]") {
+TEST_CASE("init_random_graph", "[nn-graph]") {
   using feature_type = float;
   using id_type = uint32_t;
 
@@ -57,7 +51,7 @@ TEST_CASE("nn-graph: init_random_graph", "[nn-graph]") {
   CHECK(total_degree == g.num_vertices() * k_nn);
 }
 
-TEST_CASE("nn-graph: reverse random graph", "[nn-graph]") {
+TEST_CASE("reverse random graph", "[nn-graph]") {
   using feature_type = float;
   using id_type = uint32_t;
 

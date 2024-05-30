@@ -33,21 +33,17 @@
 
 #include <tiledb/group_experimental.h>
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "concepts.h"
 #include "cpos.h"
 #include "detail/linalg/tdb_io.h"
 #include "detail/linalg/tdb_matrix.h"
-#include "query_common.h"
-
-TEST_CASE("tdb_io: test test", "[tdb_io]") {
-  REQUIRE(true);
-}
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 
 // This may not work any longer as we are putting array sizes into the group
 // metadata rather than assuming it is the same as the array dimensions.
 #if 0
-TEST_CASE("tdb_io: read vector", "[tdb_io]") {
+TEST_CASE("read vector", "[tdb_io]") {
   tiledb::Context ctx;
 
   // Nice hallucination
@@ -57,7 +53,7 @@ TEST_CASE("tdb_io: read vector", "[tdb_io]") {
 }
 #endif
 
-TEMPLATE_TEST_CASE("tdb_io: read / write vector", "[tdb_io]", float, uint8_t) {
+TEMPLATE_TEST_CASE("read / write vector", "[tdb_io]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_std_vector_uri =
       (std::filesystem::temp_directory_path() / "tmp_std_vector").string();
@@ -89,7 +85,7 @@ TEMPLATE_TEST_CASE("tdb_io: read / write vector", "[tdb_io]", float, uint8_t) {
   CHECK(y == v);
 }
 
-TEST_CASE("tdb_io: read matrix", "[tdb_io]") {
+TEST_CASE("read matrix", "[tdb_io]") {
   tiledb::Context ctx;
 
   auto X = tdbColMajorMatrix<uint8_t>(ctx, bigann1M_inputs_uri);
@@ -97,7 +93,7 @@ TEST_CASE("tdb_io: read matrix", "[tdb_io]") {
   CHECK(dimensions(X) == bigann1M_dimension);
 }
 
-TEST_CASE("tdb_io: load_file", "[tdb_io]") {
+TEST_CASE("load_file", "[tdb_io]") {
   tiledb::Context ctx;
 
   SECTION("inputs") {
@@ -119,7 +115,7 @@ TEST_CASE("tdb_io: load_file", "[tdb_io]") {
   }
 }
 
-TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
+TEMPLATE_TEST_CASE("write matrix", "[tdb_io]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_matrix").string();
@@ -151,7 +147,7 @@ TEMPLATE_TEST_CASE("tdb_io: write matrix", "[tdb_io]", float, uint8_t) {
   }
 }
 
-TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
+TEST_CASE("write empty matrix", "[tdb_io]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -183,7 +179,7 @@ TEST_CASE("tdb_io: write empty matrix", "[tdb_io]") {
   CHECK(empty_preload_matrix.num_rows() == 0);
 }
 
-TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
+TEST_CASE("write empty vector", "[tdb_io]") {
   tiledb::Context ctx;
   std::string tmp_vector_uri =
       (std::filesystem::temp_directory_path() / "tmp_vector").string();
@@ -211,7 +207,7 @@ TEST_CASE("tdb_io: write empty vector", "[tdb_io]") {
   CHECK(filled_vector.size() == domain);
 }
 
-TEST_CASE("tdb_io: create group", "[tdb_io]") {
+TEST_CASE("create group", "[tdb_io]") {
   size_t N = 10'000;
 
   tiledb::Context ctx;

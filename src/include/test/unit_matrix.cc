@@ -38,21 +38,17 @@
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
-TEST_CASE("matrix: test test", "[matrix]") {
-  REQUIRE(true);
-}
-
 /*
  * Many tests remain in linalg.cc from before the refactor.
  */
-TEST_CASE("matrix: initializer list", "[matrix]") {
+TEST_CASE("initializer list", "[matrix]") {
   auto A = Matrix<float>{{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
   auto a = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
   CHECK(
       std::equal(A.data(), A.data() + A.num_rows() * A.num_cols(), a.begin()));
 }
 
-TEST_CASE("matrix: copy", "[matrix]") {
+TEST_CASE("copy", "[matrix]") {
   auto A = Matrix<float>{{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
   auto a = std::vector<float>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8};
   auto aptr = A.data();
@@ -67,7 +63,7 @@ TEST_CASE("matrix: copy", "[matrix]") {
   CHECK(A.data() == nullptr);
 }
 
-TEST_CASE("matrix: assign", "[matrix]") {
+TEST_CASE("assign", "[matrix]") {
   auto A = Matrix<float>{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}};
   auto a = std::vector<float>{8, 6, 7, 5, 3, 0, 9, 5, 0, 2, 7, 3};
 
@@ -86,7 +82,7 @@ TEST_CASE("matrix: assign", "[matrix]") {
   CHECK(A.data() == nullptr);
 }
 
-TEST_CASE("matrix: vector of matrix", "[matrix]") {
+TEST_CASE("vector of matrix", "[matrix]") {
   std::vector<Matrix<float>> v;
 
   auto A = Matrix<float>{{8, 6, 7}, {5, 3, 0}, {9, 5, 0}};
@@ -139,7 +135,7 @@ TEST_CASE("matrix: vector of matrix", "[matrix]") {
   }
 }
 
-TEMPLATE_TEST_CASE("matrix: view", "[matrix]", char, float, int32_t, int64_t) {
+TEMPLATE_TEST_CASE("view", "[matrix]", char, float, int32_t, int64_t) {
   size_t major = 7;
   size_t minor = 13;
   auto v = std::vector<TestType>(major * minor);

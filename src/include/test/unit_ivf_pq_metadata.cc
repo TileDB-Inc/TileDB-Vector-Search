@@ -1,11 +1,11 @@
 /**
- * @file   unit_cpos.cc
+ * @file   unit_ivf_pq_metadata.cc
  *
  * @section LICENSE
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,39 +27,13 @@
  *
  * @section DESCRIPTION
  *
- * Test application of concepts with TileDB-Vector-Search types
- *
  */
 
 #include <catch2/catch_all.hpp>
-#include <iostream>
-#include "cpos.h"
-#include "mdspan/mdspan.hpp"
-#include "utils/print_types.h"
+#include <tiledb/tiledb>
+#include "index/ivf_pq_metadata.h"
 
-template <class I = size_t>
-using matrix_extents = stdx::dextents<I, 2>;
-
-TEMPLATE_TEST_CASE("test num_rows", "[cpos]", float, uint8_t) {
-  std::vector<TestType> v0(200);
-  std::vector<TestType> v1(200);
-
-  // rows, cols
-  auto m0 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_right>{
-      v0.data(), 10, 20};
-  CHECK(num_vectors(m0) == 10);
-  CHECK(dimensions(m0) == 20);
-  CHECK(data(m0) == v0.data());
-
-  CHECK(extents(m0)[0] == 10);
-  CHECK(extents(m0)[1] == 20);
-
-  auto m1 = stdx::mdspan<TestType, matrix_extents<size_t>, stdx::layout_left>{
-      v1.data(), 10, 20};
-  CHECK(num_vectors(m1) == 20);
-  CHECK(dimensions(m1) == 10);
-  CHECK(data(m1) == v1.data());
-
-  CHECK(extents(m1)[0] == 10);
-  CHECK(extents(m1)[1] == 20);
+TEST_CASE("default constructor", "[ivf_pq_metadata]") {
+  auto x = ivf_pq_metadata();
+  ivf_pq_metadata y;
 }

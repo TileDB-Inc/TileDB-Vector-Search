@@ -37,21 +37,15 @@
 #include "api/flat_l2_index.h"
 #include "api/ivf_flat_index.h"
 #include "api/vamana_index.h"
-#include "array_defs.h"
 #include "detail/linalg/matrix.h"
 #include "index/flat_l2_index.h"
 #include "index/ivf_flat_index.h"
 #include "index/vamana_index.h"
 #include "mdspan/mdspan.hpp"
+#include "test/utils/array_defs.h"
 #include "utils/print_types.h"
 
-TEST_CASE("backwards_compatibility: test test", "[backwards_compatibility]") {
-  REQUIRE(true);
-}
-
-TEST_CASE(
-    "backwards_compatibility: test_query_old_indices",
-    "[backwards_compatibility]") {
+TEST_CASE("test_query_old_indices", "[backwards_compatibility]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 

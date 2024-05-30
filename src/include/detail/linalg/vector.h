@@ -161,26 +161,67 @@ class Vector : public std::span<T> {
 };
 
 template <feature_vector V>
-void debug_vector(const V& v, const std::string& msg = "") {
-  std::cout << msg << ": [";
-  for (size_t i = 0; i < dimensions(v); ++i) {
-    std::cout << v[i] << " ";
+void debug_vector(
+    const V& v, const std::string& msg = "", size_t max_size = 10) {
+  size_t end = std::min(max_size, dimensions(v));
+  if (!msg.empty()) {
+    std::cout << msg << ": ";
+  }
+  std::cout << "[";
+  for (size_t i = 0; i < end; ++i) {
+    std::cout << v[i];
+    if (i != end - 1) {
+      std::cout << ", ";
+    }
+  }
+  if (dimensions(v) > max_size) {
+    std::cout << "...";
   }
   std::cout << "]\n";
 }
 
 template <std::ranges::forward_range V>
-void debug_vector(const V& v, const std::string& msg = "") {
-  std::cout << msg << ": [";
+void debug_vector(
+    const V& v, const std::string& msg = "", size_t max_size = 10) {
+  size_t end = std::min(max_size, dimensions(v));
+  if (!msg.empty()) {
+    std::cout << msg << ": ";
+  }
+  std::cout << "[";
+  int idx = 0;
   for (auto&& i : v) {
-    std::cout << i << " ";
+    if (idx++ >= max_size) {
+      break;
+    }
+    std::cout << i;
+    if (i != end - 1) {
+      std::cout << ", ";
+    }
+  }
+  if (dimensions(v) > max_size) {
+    std::cout << "...";
   }
   std::cout << "]\n";
 }
 
 template <feature_vector V>
-void debug_matrix(const V& v, const std::string& msg = "") {
-  debug_vector(v, msg);
+void debug_matrix(
+    const V& v, const std::string& msg = "", size_t max_size = 10) {
+  debug_vector(v, msg, max_size);
+}
+
+template <class T>
+void debug_vector_of_vectors(
+    const std::vector<std::vector<T>>& v,
+    const std::string& msg = "",
+    size_t max_size = 10) {
+  std::cout << msg << ":\n";
+  for (size_t i = 0; i < std::min(max_size, v.size()); ++i) {
+    debug_vector(v[i], "", max_size);
+  }
+  if (v.size() > max_size) {
+    std::cout << "...\n";
+  }
 }
 
 #endif  // TILEDB_VECTOR_H

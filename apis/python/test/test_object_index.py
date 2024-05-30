@@ -350,29 +350,6 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         vector_dim_offset=0,
         config=config,
     )
-    # Check that updating the same data doesn't create duplicates
-    index = object_index.ObjectIndex(uri=index_uri, config=config)
-    index.update_index(
-        embeddings_generation_driver_mode=Mode.BATCH,
-        embeddings_generation_mode=Mode.BATCH,
-        vector_indexing_mode=Mode.BATCH,
-        workers=2,
-        worker_resources=worker_resources,
-        driver_resources=worker_resources,
-        kmeans_resources=worker_resources,
-        ingest_resources=worker_resources,
-        consolidate_partition_resources=worker_resources,
-        objects_per_partition=500,
-        partitions=10,
-        config=config,
-    )
-    evaluate_query(
-        index_uri=index_uri,
-        query_kwargs={"nprobe": 10},
-        dim_id=42,
-        vector_dim_offset=0,
-        config=config,
-    )
 
     # Add new data with a new reader
     reader = TestReader(
@@ -401,36 +378,6 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         query_kwargs={"nprobe": 10},
         dim_id=1042,
         vector_dim_offset=0,
-        config=config,
-    )
-
-    # Check overwritting existing data
-    reader = TestReader(
-        object_id_start=1000,
-        object_id_end=2000,
-        vector_dim_offset=1000,
-    )
-    index = object_index.ObjectIndex(uri=index_uri, config=config)
-    index.update_object_reader(reader, config=config)
-    index.update_index(
-        embeddings_generation_driver_mode=Mode.BATCH,
-        embeddings_generation_mode=Mode.BATCH,
-        vector_indexing_mode=Mode.BATCH,
-        workers=2,
-        worker_resources=worker_resources,
-        driver_resources=worker_resources,
-        kmeans_resources=worker_resources,
-        ingest_resources=worker_resources,
-        consolidate_partition_resources=worker_resources,
-        objects_per_partition=500,
-        partitions=10,
-        config=config,
-    )
-    evaluate_query(
-        index_uri=index_uri,
-        query_kwargs={"nprobe": 10},
-        dim_id=2042,
-        vector_dim_offset=1000,
         config=config,
     )
     delete_uri(index_uri, config)

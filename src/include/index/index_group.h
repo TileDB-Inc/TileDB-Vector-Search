@@ -85,6 +85,7 @@ class base_index_group {
 
   std::string version_;
   tiledb_query_type_t opened_for_{TILEDB_READ};
+  std::optional<TemporalPolicy> temporal_policy_;
 
   metadata_type metadata_;
 
@@ -314,14 +315,26 @@ class base_index_group {
       : cached_ctx_(ctx)
       , group_uri_(uri)
       , version_(version)
-      , opened_for_(rw) {
+      , opened_for_(rw)
+      , temporal_policy_(temporal_policy) {
+    if (opened_for_ == TILEDB_WRITE) {
+      set_dimensions(dimensions);
+    }
+  }
+
+  /**
+   * @brief Load the group - this should be called in the constructor of derived
+   * classes of index_group. Note that we don't have the index_group constructor
+   * call this because the derived class may need to do some setup before
+   * open_for_write() is called.
+   */
+  void load() {
     switch (opened_for_) {
       case TILEDB_READ:
-        open_for_read(temporal_policy);
+        open_for_read(temporal_policy_);
         break;
       case TILEDB_WRITE:
-        set_dimensions(dimensions);
-        open_for_write(temporal_policy);
+        open_for_write(temporal_policy_);
         break;
       case TILEDB_MODIFY_EXCLUSIVE:
         break;
@@ -357,7 +370,7 @@ class base_index_group {
    * @todo Don't use default Config
    */
   ~base_index_group() {
-    if (opened_for_ == TILEDB_WRITE) {
+    if (opened_for_ == TILEDB_WRITE && exists()) {
       auto write_group = tiledb::Group(
           cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
       metadata_.store_metadata(write_group);

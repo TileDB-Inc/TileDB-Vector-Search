@@ -31,18 +31,14 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
-#include "array_defs.h"
 #include "detail/ivf/dist_qv.h"  // dist_qv_finite_ram
 #include "detail/ivf/qv.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 
-TEST_CASE("qv: test test", "[qv]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("ivf qv: infinite all or none", "[ivf qv]") {
+TEST_CASE("infinite all or none", "[ivf qv]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 
@@ -137,7 +133,7 @@ TEST_CASE("ivf qv: infinite all or none", "[ivf qv]") {
   }
 }
 
-TEST_CASE("ivf qv: finite all or none", "[ivf qv]") {
+TEST_CASE("finite all or none", "[ivf qv]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 

@@ -38,7 +38,7 @@
 #include <span>
 #include "../execution_policy.h"
 
-TEST_CASE("execution_policy: construct", "[execution_policy]") {
+TEST_CASE("construct", "[execution_policy]") {
   std::execution::sequenced_policy p;
 
   std::vector<int> v(10);
@@ -48,9 +48,5 @@ TEST_CASE("execution_policy: construct", "[execution_policy]") {
   stdx::fill(q, v.begin(), v.end(), 0);
 }
 #else
-
-TEST_CASE("execution_policy: test test", "[execution_policy]") {
-  REQUIRE(true);
-}
 
 #endif

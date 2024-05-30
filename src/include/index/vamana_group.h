@@ -97,9 +97,9 @@ class vamana_index_group : public base_index_group<index_type> {
       const std::string& version = std::string{""},
       uint64_t dimensions = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
+    Base::load();
   }
 
- public:
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : vamana_storage_formats[version_]) {
       valid_array_keys_.insert(array_key);

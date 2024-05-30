@@ -40,11 +40,7 @@
 using TestTypes =
     std::tuple<float, uint8_t, double, int, char, size_t, uint32_t>;
 
-TEST_CASE("linalg: test test", "[linalg]") {
-  REQUIRE(true);
-}
-
-TEMPLATE_LIST_TEST_CASE("linalg: test mdspan", "[linalg][mdspan]", TestTypes) {
+TEMPLATE_LIST_TEST_CASE("test mdspan", "[linalg][mdspan]", TestTypes) {
   size_t M = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   size_t N = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   TestType* t = nullptr;
@@ -53,11 +49,11 @@ TEMPLATE_LIST_TEST_CASE("linalg: test mdspan", "[linalg][mdspan]", TestTypes) {
   CHECK(m.rank() == 2);
 }
 
-TEMPLATE_LIST_TEST_CASE("linalg: test span", "[linalg][span]", TestTypes) {
+TEMPLATE_LIST_TEST_CASE("test span", "[linalg][span]", TestTypes) {
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test Vector constructor", "[linalg][vector][create]", TestTypes) {
+    "test Vector constructor", "[linalg][vector][create]", TestTypes) {
   auto a = Vector<TestType>(7);
   auto v = a.data();
   std::iota(v, v + 7, 1);
@@ -91,7 +87,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test Matrix constructor, default oriented",
+    "test Matrix constructor, default oriented",
     "[linalg][matrix][create][default]",
     TestTypes) {
   auto a = Matrix<TestType>(3, 2);
@@ -127,7 +123,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test Matrix constructor, row oriented",
+    "test Matrix constructor, row oriented",
     "[linalg][matrix][create][row]",
     TestTypes) {
   auto a = Matrix<TestType, Kokkos::layout_right>(3, 2);
@@ -163,7 +159,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test Matrix constructor, column oriented",
+    "test Matrix constructor, column oriented",
     "[linalg][matrixx][create][column]",
     TestTypes) {
   auto a = Matrix<TestType, Kokkos::layout_left>(3, 2);
@@ -209,7 +205,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test Matrix initializer_list constructor, row oriented",
+    "test Matrix initializer_list constructor, row oriented",
     "[linalg][matrix][create][row]",
     TestTypes) {
   auto a = Matrix<TestType, Kokkos::layout_right>{{1, 2}, {3, 4}, {5, 6}};
@@ -245,7 +241,7 @@ TEMPLATE_LIST_TEST_CASE(
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test Matrix initializer list constructor, column oriented",
+    "test Matrix initializer list constructor, column oriented",
     "[linalg][matrixx][create][column]",
     TestTypes) {
   auto a = Matrix<TestType, Kokkos::layout_left>{{1, 2, 3}, {4, 5, 6}};
@@ -300,7 +296,7 @@ auto make_matrix(size_t num_rows, size_t num_cols) {
 };
 
 TEST_CASE(
-    "linalg: test Matrix copy constructor, row oriented",
+    "test Matrix copy constructor, row oriented",
     "[linalg][matrix][copy-create][row]") {
   auto&& [a, v] = make_matrix<float>(3, 2);
   CHECK(a.data() == v);
@@ -316,8 +312,7 @@ TEST_CASE(
 
 #ifdef TDB_ROW_MATRIX
 TEST_CASE(
-    "linalg: test tdbMatrix constructor, row",
-    "[linalg][tdbmatrix][create][row]") {
+    "test tdbMatrix constructor, row", "[linalg][tdbmatrix][create][row]") {
   // d1, d2, val_1
   //  data = np.array([
   //    [8, 6, 7, 5, 3, 1, 4, 1],
@@ -422,13 +417,13 @@ TEST_CASE(
 }
 #endif
 
-TEST_CASE("linalg: print cwd", "[linalg][cwd]") {
+TEST_CASE("print cwd", "[linalg][cwd]") {
   std::filesystem::path currentPath = std::filesystem::current_path();
   std::cout << "Current Working Directory: " << currentPath << std::endl;
 }
 
 TEST_CASE(
-    "linalg: test tdbMatrix constructor, column",
+    "test tdbMatrix constructor, column",
     "[linalg][tdbmatrix][create][column]") {
   std::vector<float> data = {
       8, 6, 7, 5, 3, 1, 4, 1, 3, 0, 9, 9, 5, 9, 2, 7,
@@ -526,7 +521,7 @@ TEST_CASE(
 
 #ifdef TILEDB_ROW_MATRIX
 TEST_CASE(
-    "linalg: test partitioned tdbMatrix constructor, row",
+    "test partitioned tdbMatrix constructor, row",
     "[linalg][partitioned][tdbmatrix][create][row]") {
   size_t part = GENERATE(0, 1, 2, 3, 4);
 
@@ -591,7 +586,7 @@ TEST_CASE(
 #endif
 
 TEST_CASE(
-    "linalg: test partitioned tdbMatrix constructor, column",
+    "test partitioned tdbMatrix constructor, column",
     "[linalg][partitioned][tdbmatrix][create][column]") {
   REQUIRE(local_array_exists("array_dense_1"));
   size_t part = GENERATE(0, 1, 2, 3, 4);
@@ -652,8 +647,7 @@ TEST_CASE(
 }
 
 #ifdef TILEDB_ROW_MATRIX
-TEST_CASE(
-    "linalg: test advance, row major", "[linalg][tdbmatrix][advance][row]") {
+TEST_CASE("test advance, row major", "[linalg][tdbmatrix][advance][row]") {
   tiledb::Context ctx;
   auto a = tdbMatrix<float, Kokkos::layout_right>(ctx, "array_dense_1", 2);
   a.load();
@@ -701,8 +695,7 @@ TEST_CASE(
 }
 #endif
 
-TEST_CASE(
-    "linalg: test advance, column", "[linalg][tdbmatrix][advance][column]") {
+TEST_CASE("test advance, column", "[linalg][tdbmatrix][advance][column]") {
   REQUIRE(local_array_exists("array_dense_1"));
   tiledb::Context ctx;
   auto a = tdbMatrix<float, Kokkos::layout_left>(ctx, "array_dense_2", 2);
@@ -751,9 +744,7 @@ TEST_CASE(
 }
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test write/read std::vector",
-    "[linalg][read-write][vector]",
-    TestTypes) {
+    "test write/read std::vector", "[linalg][read-write][vector]", TestTypes) {
   auto length = GENERATE(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
   tiledb::Context ctx;
 
@@ -775,7 +766,7 @@ TEMPLATE_LIST_TEST_CASE(
 using LayoutTypes = std::tuple<Kokkos::layout_right, Kokkos::layout_left>;
 
 TEMPLATE_LIST_TEST_CASE(
-    "linalg: test write/read Matrix",
+    "test write/read Matrix",
     "[linalg][tdbmatrix][read-write][matrix]",
     TestTypes) {
   size_t M = GENERATE(1, 2, 13, 1440, 1441);

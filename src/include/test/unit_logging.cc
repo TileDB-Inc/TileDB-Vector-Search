@@ -36,15 +36,13 @@
 #include <thread>
 #include "utils/logging.h"
 
+bool debug = false;
+
 using namespace std::literals::chrono_literals;
 
 auto duration = 500ms;
 
-TEST_CASE("logging: test test", "[logging]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("logging: test", "[logging]") {
+TEST_CASE("test", "[logging]") {
   log_timer a("test");
 
   std::this_thread::sleep_for(500ms);
@@ -62,7 +60,7 @@ TEST_CASE("logging: test", "[logging]") {
   CHECK((f <= 1040 && f >= 1000));
 }
 
-TEST_CASE("logging: noisy test", "[logging]") {
+TEST_CASE("noisy test", "[logging]") {
   log_timer a("noisy_test", true);
 
   std::this_thread::sleep_for(500ms);
@@ -80,7 +78,7 @@ TEST_CASE("logging: noisy test", "[logging]") {
   CHECK((f <= 1040 && f >= 1000));
 }
 
-TEST_CASE("logging: interval test", "[logging]") {
+TEST_CASE("interval test", "[logging]") {
   log_timer a("interval_test", true);
 
   std::this_thread::sleep_for(500ms);
@@ -123,18 +121,18 @@ TEST_CASE("logging: interval test", "[logging]") {
   CHECK((f <= 1040 && f >= 1000));
 }
 
-TEST_CASE("logging: scoped_timer start test", "[logging]") {
+TEST_CASE("scoped_timer start test", "[logging]") {
   scoped_timer a("life_test");
   std::this_thread::sleep_for(300ms);
 }
 
-TEST_CASE("logging: scoped_timer stop test", "[logging]") {
+TEST_CASE("scoped_timer stop test", "[logging]") {
   std::this_thread::sleep_for(500ms);
   auto f = _timing_data.get_entries_summed("life_test");
   CHECK((f <= 320 && f >= 300));
 }
 
-TEST_CASE("logging: ordering", "[logging]") {
+TEST_CASE("ordering", "[logging]") {
   auto g = log_timer{"g"};
   auto f = log_timer{"f"};
   auto i = log_timer{"i"};
@@ -168,7 +166,9 @@ TEST_CASE("logging: ordering", "[logging]") {
   auto g_t = _timing_data.get_entries_summed("g");
   auto f_t = _timing_data.get_entries_summed("f");
 
-  std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
+  if (debug) {
+    std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
+  }
 
   CHECK((i_t > 799 && i_t < 890));
   CHECK((h_t > 499 && h_t < 560));
@@ -176,6 +176,6 @@ TEST_CASE("logging: ordering", "[logging]") {
   CHECK((f_t > 499 && f_t < 560));
 }
 
-TEST_CASE("logging: memory", "[logging]") {
+TEST_CASE("memory", "[logging]") {
   _memory_data.insert_entry(tdb_func__, 8675309);
 }

@@ -107,8 +107,8 @@ class FeatureVectorArray {
       vector_array = tdb_col_major_matrix_dispatch_table.at(feature_type_)(
           ctx, uri, num_vectors, temporal_policy);
     } else {
-      auto ids_array =
-          tiledb_helpers::open_array(tdb_func__, ctx, ids_uri, TILEDB_READ);
+      auto ids_array = tiledb_helpers::open_array(
+          tdb_func__, ctx, ids_uri, TILEDB_READ, temporal_policy);
       ids_type_ = get_array_datatype(*ids_array);
       array->close();
       ids_size_ = datatype_to_size(ids_type_);

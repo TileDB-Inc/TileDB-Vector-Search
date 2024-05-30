@@ -31,26 +31,22 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
-#include "array_defs.h"
 #include "detail/ivf/qv.h"
 #include "detail/ivf/vq.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
-#include "query_common.h"
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 #include "utils/utils.h"
 
-TEST_CASE("vq: test test", "[ivf vq]") {
-  REQUIRE(true);
-}
-
 // vq_apply_query
-TEST_CASE("ivf vq: vq apply query", "[ivf vq]") {
+TEST_CASE("vq apply query", "[ivf vq]") {
   //  vq_apply_query(query, shuffled_db, new_indices, active_queries, ids,
   //  active_partitions, k_nn, first_part, last_part);
   REQUIRE(true);
 }
 
-TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
+TEST_CASE("infinite all or none", "[ivf vq]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 
@@ -123,7 +119,7 @@ TEST_CASE("ivf vq: infinite all or none", "[ivf vq]") {
   }
 }
 
-TEST_CASE("ivf vq: finite all or none", "[ivf vq]") {
+TEST_CASE("finite all or none", "[ivf vq]") {
   // vq_query_infinite_ram
   // vq_query_infinite_ram_2
 

@@ -30,16 +30,10 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "array_defs.h"
 #include "detail/flat/qv.h"
 #include "detail/linalg/tdb_matrix.h"
-#include "query_common.h"
-
-bool global_debug = false;
-
-TEST_CASE("qv test test", "[flat qv]") {
-  REQUIRE(true);
-}
+#include "test/utils/array_defs.h"
+#include "test/utils/query_common.h"
 
 TEST_CASE("flat qv simple case", "[flat qv]") {
   auto db = ColMajorMatrix<float>{
