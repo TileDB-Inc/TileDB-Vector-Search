@@ -279,8 +279,6 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
 }
 
 TEST_CASE("ivf_index write and read", "[ivf_index]") {
-  tiledb::Context ctx;
-  tiledb::VFS vfs(ctx);
   size_t dimension = 128;
   size_t nlist = 100;
   size_t num_subspaces = 16;
@@ -290,6 +288,7 @@ TEST_CASE("ivf_index write and read", "[ivf_index]") {
   size_t nthreads = 1;
 
   tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
   std::string ivf_index_uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
   if (vfs.is_dir(ivf_index_uri)) {
