@@ -568,7 +568,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   size_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
-  size_t num_clusters = 4;
+  size_t num_clusters = 256;
   float convergence_tolerance = 0.00003f;
   size_t max_iterations = 3;
 
