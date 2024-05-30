@@ -16,7 +16,7 @@ from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
-from tiledb.vector_search.utils import MAX_FLOAT_32
+from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
@@ -255,9 +255,9 @@ def test_vamana_index(tmp_path):
     distances, ids = index.query(queries, k=1)
     assert distances.shape == (1, 1)
     assert ids.shape == (1, 1)
-    assert distances[0][0] == MAX_FLOAT_32
+    assert distances[0][0] == MAX_FLOAT32
     assert ids[0][0] == MAX_UINT64
-    query_and_check_distances(index, queries, 1, [[MAX_FLOAT_32]], [[MAX_UINT64]])
+    query_and_check_distances(index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]])
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "VAMANA")
 
     update_vectors = np.empty([5], dtype=object)

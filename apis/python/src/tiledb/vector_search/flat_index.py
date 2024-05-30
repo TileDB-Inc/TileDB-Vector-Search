@@ -103,7 +103,7 @@ class FlatIndex(index.Index):
         # - typecheck queries
         # - add all the options and query strategies
         if self.size == 0:
-            return np.full((queries.shape[0], k), MAX_FLOAT_32), np.full(
+            return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
             )
 
