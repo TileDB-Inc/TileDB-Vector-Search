@@ -815,6 +815,7 @@ TEST_CASE("flat_pq_index write and read", "[flat_pq_index]") {
   size_t dimensions_{128};
   size_t num_subspaces_{16};
   size_t bits_per_subspace_{8};
+  size_t num_clusters_{256};
 
   tiledb::Context ctx;
   std::string flatpq_index_uri =
@@ -830,7 +831,8 @@ TEST_CASE("flat_pq_index write and read", "[flat_pq_index]") {
   auto idx = flat_pq_index<
       siftsmall_feature_type,
       siftsmall_ids_type,
-      siftsmall_indices_type>(dimensions_, num_subspaces_, bits_per_subspace_);
+      siftsmall_indices_type>(
+      dimensions_, num_subspaces_, bits_per_subspace_, num_clusters_);
   idx.train(training_set);
   idx.add(training_set);
 

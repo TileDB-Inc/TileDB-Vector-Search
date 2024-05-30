@@ -204,7 +204,7 @@ class ivf_pq_index {
   uint64_t num_subspaces_{0};
   uint64_t sub_dimensions_{0};
   constexpr static const uint64_t bits_per_subspace_{8};
-  constexpr static uint64_t num_clusters_{256};
+  constexpr static const uint64_t num_clusters_{256};
 
   /*
    * We are going to use train / compress / add pattern, so we need to store
@@ -233,13 +233,13 @@ class ivf_pq_index {
   // flat_storage_type unpartitioned_pq_vectors_;
 
   // Some parameters for performing kmeans clustering for ivf index
-  uint64_t max_iterations_{1};
+  uint64_t max_iter_{1};
   float tol_{1.e-4};
   float reassign_ratio_{0.075};
 
   // Some parameters for performing kmeans clustering for pq compression. Only
   // used in IVF PQ, not in IVF Flat.
-  uint64_t pq_max_iterations_{1};
+  uint64_t pq_max_iter_{1};
   float pq_tol_{1.e-4};
   float pq_reassign_ratio_{0.075};
 
@@ -298,7 +298,7 @@ class ivf_pq_index {
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_partitions_(nlist)
       , num_subspaces_{num_subspaces}  // new for pq
-      , max_iterations_(max_iter)
+      , max_iter_(max_iter)
       , tol_(tol)
       , seed_{seed} {
     if (num_subspaces_ <= 0) {
@@ -411,7 +411,7 @@ class ivf_pq_index {
    * create `distance_tables_`. We measure the maximum number of iterations and
    * minimum convergence over all of the subspaces and return a tuple of those
    * values. We compute all of the distance_tables_ regarless of the values of
-   * max_local_iters_taken or min_local_conv relative to max_iterations_ and
+   * max_local_iters_taken or min_local_conv relative to max_iter_ and
    * tol_.
    *
    * @tparam V type of the training vectors
@@ -496,7 +496,7 @@ class ivf_pq_index {
           sub_end,
           num_clusters_,
           tol_,
-          max_iterations_,
+          max_iter_,
           num_threads_);
 
       max_local_iters_taken = std::max(max_local_iters_taken, iters);
@@ -603,7 +603,7 @@ class ivf_pq_index {
     // @todo Do we need to worry about function call overhead here?
     struct pq_distance {
       const ivf_pq_index* outer_;
-      inline float operator()(A& a, const B& b) {
+      inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_asymmetric(a, b);
       }
     };
@@ -671,7 +671,7 @@ class ivf_pq_index {
         flat_ivf_centroids_,
         dimensions_,
         num_partitions_,
-        max_iterations_,
+        max_iter_,
         tol_,
         num_threads_,
         reassign_ratio_);
@@ -1281,7 +1281,7 @@ class ivf_pq_index {
 
   /***************************************************************************
    * Getters. Note that we don't have a `num_vectors` because it isn't clear
-   *what that means for a partitioned (possibly out-of-core) index.
+   * what that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
   const ivf_pq_group<ivf_pq_index>& group() const {
     if (!group_) {
@@ -1322,7 +1322,7 @@ class ivf_pq_index {
   }
 
   auto max_iterations() const {
-    return max_iterations_;
+    return max_iter_;
   }
 
   auto convergence_tolerance() const {

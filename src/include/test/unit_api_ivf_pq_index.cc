@@ -5,7 +5,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -172,7 +172,6 @@ TEST_CASE("init constructor", "[api_ivf_pq_index]") {
 TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
-  using id_type_type = uint32_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
@@ -232,16 +231,10 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
     auto ids = std::span<uint32_t>(
         (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-    // TODO(paris): Fix test. We are returned:
-    // debug_vector(scores, "scores");
-    // scores: [17.375, 8.375, 5.375, 3.375]
-    // ids: [0, 1, 1, 1]
-    // debug_vector(ids, "ids");
-    // CHECK(std::equal(
-    //     scores.begin(), scores.end(), std::vector<float>{0, 0, 0,
-    //     0}.begin()));
-    // CHECK(std::equal(
-    //     ids.begin(), ids.end(), std::vector<int>{0, 1, 2, 3}.begin()));
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{0, 1, 2, 3}.begin()));
   }
 }
 
@@ -311,17 +304,10 @@ TEST_CASE(
         (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
     auto ids = std::span<uint32_t>(
         (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-
-    // TODO(paris): Fix test. We are returned:
-    // debug_vector(scores, "scores");
-    // scores: [24.8125, 12.3125, 15.3125, 19.3125]
-    // debug_vector(ids, "ids");
-    // ids: [0, 1, 1, 0]
-    // CHECK(std::equal(
-    //     scores.begin(), scores.end(), std::vector<float>{0, 0, 0,
-    //     0}.begin()));
-    // CHECK(std::equal(
-    //     ids.begin(), ids.end(), std::vector<int>{10, 11, 12, 13}.begin()));
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{10, 11, 12, 13}.begin()));
   }
 }
 
