@@ -126,7 +126,6 @@ class VamanaIndex(index.Index):
             Only relevant for taskgraph based execution.
             If provided, this is the number of workers to use for the query execution.
         """
-        print("[vamana_index@query_internal] mode", mode)
         warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
@@ -149,12 +148,10 @@ class VamanaIndex(index.Index):
         if not queries.flags.f_contiguous:
             queries = queries.copy(order="F")
         if mode is None:
-            print("[vamana_index@query_internal] mode is None")
             queries_feature_vector_array = vspy.FeatureVectorArray(queries)
             distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
             return np.array(distances, copy=False), np.array(ids, copy=False)
         else:
-            print("[vamana_index@query_internal] use self.taskgraph_query()")
             return self.taskgraph_query(
                 queries=queries,
                 k=k,
@@ -226,7 +223,6 @@ class VamanaIndex(index.Index):
             config: Optional[Mapping[str, Any]] = None,
             timestamp: int = 0,
         ):
-            print("[vamana_index@taskgraph_query@query_udf]")
             from tiledb.vector_search import _tiledbvspy as vspy
 
             ctx = vspy.Ctx(config)
@@ -279,7 +275,6 @@ class VamanaIndex(index.Index):
         d.compute()
         d.wait()
         results = node.result()
-        print("[vamana_index@taskgraph_query] results", results)
         return results
 
 

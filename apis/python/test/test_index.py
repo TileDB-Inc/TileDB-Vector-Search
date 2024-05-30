@@ -8,7 +8,6 @@ from common import *
 from common import load_metadata
 
 import tiledb.vector_search.index as ind
-from tiledb.cloud.dag import Mode
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
@@ -233,42 +232,6 @@ def test_vamana_index_simple(tmp_path):
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
     assert vfs.dir_size(uri) == 0
-
-
-def test_vamana_queries(tmp_path):
-    print()
-    uri = os.path.join(tmp_path, "array")
-    if os.path.exists(uri):
-        os.rmdir(uri)
-    vector_type = np.float32
-
-    index = vamana_index.create(
-        uri=uri,
-        dimensions=3,
-        vector_type=np.dtype(vector_type),
-    )
-
-    ingestion_timestamps, base_sizes = load_metadata(uri)
-    assert base_sizes == [0]
-    assert ingestion_timestamps == [0]
-    update_vectors = np.empty([5], dtype=object)
-    update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
-    update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.float32))
-    update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.float32))
-    update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
-    update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
-    index.update_batch(
-        vectors=update_vectors,
-        external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
-    )
-    index = index.consolidate_updates()
-    print("index.query() ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    queries = np.array([[2, 2, 2]], dtype=np.float32)
-    distances, ids = index.query(queries, k=1, mode=Mode.REALTIME, verbose=True)
-    print("distances:", distances)
-    print("ids:", ids)
-
-    np.array([[2, 2, 2]], dtype=np.float32)
 
 
 def test_vamana_index(tmp_path):
