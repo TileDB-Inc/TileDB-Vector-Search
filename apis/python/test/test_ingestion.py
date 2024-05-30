@@ -204,7 +204,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
-def test_ivf_flat_ingestion_f32(tmp_path):
+def test_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
     size = 10000

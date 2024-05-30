@@ -42,7 +42,7 @@ class CloudTests(unittest.TestCase):
             uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config()
         )
 
-    def run_cloud_test(index_uri, index_type, index_class):
+    def run_cloud_test(self, index_uri, index_type, index_class):
         source_uri = "tiledb://TileDB-Inc/sift_10k"
         queries_uri = siftsmall_query_file
         gt_uri = siftsmall_groundtruth_file
@@ -55,7 +55,7 @@ class CloudTests(unittest.TestCase):
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
         index = vs.ingest(
-            index_type="IVF_FLAT",
+            index_type=index_type,
             index_uri=index_uri,
             source_uri=source_uri,
             partitions=partitions,
@@ -65,7 +65,7 @@ class CloudTests(unittest.TestCase):
         )
 
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        index = vs.ivf_flat_index.IVFFlatIndex(
+        index = index_class(
             uri=tiledb_index_uri,
             config=tiledb.cloud.Config().dict(),
         )
@@ -131,7 +131,7 @@ class CloudTests(unittest.TestCase):
                 resources=resources,
             )
 
-        index = vs.ivf_flat_index.IVFFlatIndex(
+        index = index_class(
             uri=index_uri,
             config=tiledb.cloud.Config().dict(),
         )
@@ -148,12 +148,12 @@ class CloudTests(unittest.TestCase):
 
     def test_cloud_vamana(self):
         self.run_cloud_test(
-            CloudTests.vamana_index_uri, "VAMANA", vs.flat_index.VamanaIndex
+            CloudTests.vamana_index_uri, "VAMANA", vs.vamana_index.VamanaIndex
         )
 
     def test_cloud_ivf_flat(self):
         self.run_cloud_test(
-            CloudTests.ivf_flat_index_uri, "IVF_FLAT", vs.flat_index.IVFFlatIndex
+            CloudTests.ivf_flat_index_uri, "IVF_FLAT", vs.ivf_flat_index.IVFFlatIndex
         )
 
     def test_cloud_ivf_flat_random_sampling(self):
