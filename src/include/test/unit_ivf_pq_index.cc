@@ -279,6 +279,8 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
 }
 
 TEST_CASE("ivf_index write and read", "[ivf_index]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
   size_t dimension = 128;
   size_t nlist = 100;
   size_t num_subspaces = 16;
@@ -290,6 +292,9 @@ TEST_CASE("ivf_index write and read", "[ivf_index]") {
   tiledb::Context ctx;
   std::string ivf_index_uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
+  if (vfs.is_dir(ivf_index_uri)) {
+    vfs.remove_dir(ivf_index_uri);
+  }
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
@@ -302,6 +307,9 @@ TEST_CASE("ivf_index write and read", "[ivf_index]") {
   ivf_index_uri =
       (std::filesystem::temp_directory_path() / "second_tmp_ivf_index")
           .string();
+  if (vfs.is_dir(ivf_index_uri)) {
+    vfs.remove_dir(ivf_index_uri);
+  }
   idx.write_index(ctx, ivf_index_uri);
   auto idx2 = ivf_pq_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
