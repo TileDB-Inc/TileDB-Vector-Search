@@ -7,6 +7,8 @@ from typing import Any, Mapping, Optional
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.utils import MAX_FLOAT_32
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
 
 DATASET_TYPE = "vector_search"

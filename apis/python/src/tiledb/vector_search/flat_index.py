@@ -7,6 +7,7 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
+from tiledb.vector_search.utils import MAX_INT32
 from tiledb.vector_search.utils import add_to_group
 
 TILE_SIZE_BYTES = 128000000  # 128MB
@@ -102,8 +103,8 @@ class FlatIndex(index.Index):
         # - typecheck queries
         # - add all the options and query strategies
         if self.size == 0:
-            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
-                (queries.shape[0], k), index.MAX_UINT64
+            return np.full((queries.shape[0], k), MAX_FLOAT_32), np.full(
+                (queries.shape[0], k), MAX_UINT64
             )
 
         assert queries.dtype == np.float32

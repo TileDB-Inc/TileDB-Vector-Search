@@ -15,6 +15,7 @@ from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix
 from tiledb.vector_search.module import kmeans_fit
 from tiledb.vector_search.module import kmeans_predict
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.utils import metadata_to_list

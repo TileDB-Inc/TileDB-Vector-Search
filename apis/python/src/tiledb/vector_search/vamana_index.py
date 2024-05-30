@@ -9,6 +9,8 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
+from tiledb.vector_search.utils import MAX_FLOAT_32
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import to_temporal_policy
 
 INDEX_TYPE = "VAMANA"
@@ -81,8 +83,8 @@ class VamanaIndex(index.Index):
         """
         warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
-            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
-                (queries.shape[0], k), index.MAX_UINT64
+            return np.full((queries.shape[0], k), MAX_FLOAT_32), np.full(
+                (queries.shape[0], k), MAX_UINT64
             )
 
         assert queries.dtype == np.float32
