@@ -7,7 +7,6 @@ from array_paths import *
 from common import *
 from common import load_metadata
 
-import tiledb.vector_search.index as ind
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
@@ -17,6 +16,8 @@ from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.utils import MAX_FLOAT_32
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.vamana_index import VamanaIndex
@@ -78,7 +79,7 @@ def test_flat_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     vector_type = np.dtype(np.uint8)
     index = flat_index.create(uri=uri, dimensions=3, vector_type=vector_type)
-    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {MAX_UINT64})
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "FLAT")
 
     update_vectors = np.empty([5], dtype=object)
@@ -136,7 +137,7 @@ def test_ivf_flat_index(tmp_path):
         index,
         np.array([[2, 2, 2]], dtype=np.float32),
         3,
-        {ind.MAX_UINT64},
+        {MAX_UINT64},
         nprobe=partitions,
     )
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "IVF_FLAT")
@@ -221,12 +222,12 @@ def test_vamana_index_simple(tmp_path):
     # Create the index.
     index = vamana_index.create(uri=uri, dimensions=dimensions, vector_type=vector_type)
     assert index.get_dimensions() == dimensions
-    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {MAX_UINT64})
 
     # Open the index.
     index = VamanaIndex(uri=uri)
     assert index.get_dimensions() == dimensions
-    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {ind.MAX_UINT64})
+    query_and_check(index, np.array([[2, 2, 2]], dtype=np.float32), 3, {MAX_UINT64})
 
     vfs = tiledb.VFS()
     assert vfs.dir_size(uri) > 0
@@ -254,11 +255,9 @@ def test_vamana_index(tmp_path):
     distances, ids = index.query(queries, k=1)
     assert distances.shape == (1, 1)
     assert ids.shape == (1, 1)
-    assert distances[0][0] == ind.MAX_FLOAT_32
-    assert ids[0][0] == ind.MAX_UINT64
-    query_and_check_distances(
-        index, queries, 1, [[ind.MAX_FLOAT_32]], [[ind.MAX_UINT64]]
-    )
+    assert distances[0][0] == MAX_FLOAT_32
+    assert ids[0][0] == MAX_UINT64
+    query_and_check_distances(index, queries, 1, [[MAX_FLOAT_32]], [[MAX_UINT64]])
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "VAMANA")
 
     update_vectors = np.empty([5], dtype=object)
