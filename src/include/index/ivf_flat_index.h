@@ -331,6 +331,8 @@ class ivf_flat_index {
 #endif
   }
 
+  // @todo Use these IDs when we start using this index instead of the pure
+  // Python one.
   template <feature_vector_array Array, feature_vector Vector>
   void add(const Array& training_set, const Vector& training_set_ids) {
     add(training_set);

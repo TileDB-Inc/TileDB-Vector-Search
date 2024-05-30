@@ -54,8 +54,7 @@ struct dummy_index {
   constexpr static tiledb_datatype_t adjacency_ids_datatype = TILEDB_UINT64;
 };
 
-TEST_CASE(
-    "ivf_pq_group: read constructor for non-existent group", "[ivf_pq_group]") {
+TEST_CASE("read constructor for non-existent group", "[ivf_pq_group]") {
   tiledb::Context ctx;
 
   CHECK_THROWS_WITH(
@@ -63,8 +62,7 @@ TEST_CASE(
       "Group uri I dont exist does not exist.");
 }
 
-TEST_CASE(
-    "ivf_pq_group: write constructor - create and open", "[ivf_pq_group]") {
+TEST_CASE("write constructor - create and open", "[ivf_pq_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_pq_group_test_write_constructor")
                             .string();
@@ -102,8 +100,7 @@ TEST_CASE(
   CHECK(x.get_dimensions() == dimensions);
 }
 
-TEST_CASE(
-    "ivf_pq_group: write constructor - create and read", "[ivf_pq_group]") {
+TEST_CASE("write constructor - create and read", "[ivf_pq_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_pq_group_test_write_constructor")
                             .string();
@@ -144,9 +141,7 @@ TEST_CASE(
   ivf_pq_group y = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
 }
 
-TEST_CASE(
-    "ivf_pq_group: write constructor - invalid create and read",
-    "[ivf_pq_group]") {
+TEST_CASE("write constructor - invalid create and read", "[ivf_pq_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_pq_group_test_write_constructor")
                             .string();
@@ -187,9 +182,7 @@ TEST_CASE(
       "No ingestion timestamps found.");
 }
 
-TEST_CASE(
-    "ivf_pq_group: group metadata - bases, ingestions, partitions",
-    "[ivf_pq_group]") {
+TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
   std::string tmp_uri = (std::filesystem::temp_directory_path() /
                          "ivf_pq_group_test_write_constructor")
                             .string();
@@ -491,7 +484,7 @@ TEST_CASE(
   CHECK(x.get_dimensions() == dimensions + offset);
 }
 
-TEST_CASE("ivf_pq_group: storage version", "[ivf_pq_group]") {
+TEST_CASE("storage version", "[ivf_pq_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_pq_group").string();
 
@@ -557,7 +550,7 @@ TEST_CASE("ivf_pq_group: storage version", "[ivf_pq_group]") {
   CHECK(x.get_dimensions() == dimensions + offset);
 }
 
-TEST_CASE("ivf_pq_group: invalid storage version", "[ivf_pq_group]") {
+TEST_CASE("invalid storage version", "[ivf_pq_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_pq_group").string();
 
@@ -575,7 +568,7 @@ TEST_CASE("ivf_pq_group: invalid storage version", "[ivf_pq_group]") {
       10));
 }
 
-TEST_CASE("ivf_pq_group: mismatched storage version", "[ivf_pq_group]") {
+TEST_CASE("mismatched storage version", "[ivf_pq_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_pq_group").string();
 
@@ -610,7 +603,7 @@ TEST_CASE("ivf_pq_group: mismatched storage version", "[ivf_pq_group]") {
       "Version mismatch. Requested different_version but found 0.3");
 }
 
-TEST_CASE("ivf_pq_group: clear history", "[ivf_pq_group]") {
+TEST_CASE("clear history", "[ivf_pq_group]") {
   std::string tmp_uri =
       (std::filesystem::temp_directory_path() / "ivf_pq_group").string();
 

@@ -399,15 +399,6 @@ void sub_kmeans_random_init(
     size_t seed = 0) {
   scoped_timer _{__FUNCTION__};
 
-  if (num_vectors(training_set) < num_vectors(centroids)) {
-    // throw std::invalid_argument(
-    //     "Number of vectors in training set (" +
-    //     std::to_string(num_vectors(training_set)) +
-    //     ") must be greater than or equal to number of centroids (" +
-    //     std::to_string(num_vectors(centroids)) + ")");
-    // return;
-  }
-
   std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
   std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
 

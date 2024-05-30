@@ -62,7 +62,6 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  std::cout << "idx() ~~~~~~~~~~~~~~~~" << std::endl;
   auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(0, 16);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
@@ -82,11 +81,8 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     auto training_vectors =
         ColMajorMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(
             128, 0);
-    std::cout << "idx.train() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.train(training_vectors, training_vectors.raveled_ids());
-    std::cout << "idx.add() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.add(training_vectors, training_vectors.raveled_ids());
-    std::cout << "idx.write_index() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
@@ -112,8 +108,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     CHECK(x.partition_history_.size() == 1);
     CHECK(x.partition_history_[0] == 0);
   }
-  std::cout << "------------------------------------------------------------"
-            << std::endl;
+
   {
     // Check that we can overwrite the last ingestion_timestamps, base_sizes,
     // and num_edges_history. We rely on this when creating an index from Python
@@ -123,9 +118,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         siftsmall_feature_type,
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
 
-    std::cout << "idx.train() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.train(training_vectors, training_vectors.raveled_ids());
-    std::cout << "idx.add() ~~~~~~~~~~~~~~~~" << std::endl;
     idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 2), "");
 
@@ -153,6 +146,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     CHECK(x.base_sizes_[0] == 222);
     CHECK(x.partition_history_.size() == 1);
   }
+
   {
     // Check we appended to metadata after a second normal write_index().
     auto training_vectors = tdbColMajorPreLoadMatrixWithIds<
