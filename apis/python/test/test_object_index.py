@@ -236,6 +236,7 @@ def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset, config=No
 
 def test_object_index(tmp_path):
     from common import INDEXES
+
     for index_type in INDEXES:
         index_uri = os.path.join(tmp_path, f"object_index_{index_type}")
         reader = TestReader(
