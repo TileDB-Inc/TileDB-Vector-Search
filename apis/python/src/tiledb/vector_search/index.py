@@ -7,11 +7,10 @@ from typing import Any, Mapping, Optional
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
+from tiledb.vector_search.utils import MAX_FLOAT32
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
 
-MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
-MAX_INT32 = np.iinfo(np.dtype("int32")).max
-MAX_FLOAT_32 = np.finfo(np.dtype("float32")).max
 DATASET_TYPE = "vector_search"
 
 
@@ -190,7 +189,7 @@ class Index:
                 if self.query_base_array:
                     return self.query_internal(queries, k, **kwargs)
                 else:
-                    return np.full((queries.shape[0], k), MAX_FLOAT_32), np.full(
+                    return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                         (queries.shape[0], k), MAX_UINT64
                     )
 
@@ -213,7 +212,7 @@ class Index:
                 queries, retrieval_k, **kwargs
             )
         else:
-            internal_results_d = np.full((queries.shape[0], k), MAX_FLOAT_32)
+            internal_results_d = np.full((queries.shape[0], k), MAX_FLOAT32)
             internal_results_i = np.full((queries.shape[0], k), MAX_UINT64)
         addition_results_d, addition_results_i, updated_ids = future.result()
 
@@ -223,7 +222,7 @@ class Index:
             res_id = 0
             for res in query:
                 if res in updated_ids:
-                    internal_results_d[query_id, res_id] = MAX_FLOAT_32
+                    internal_results_d[query_id, res_id] = MAX_FLOAT32
                     internal_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1
@@ -243,7 +242,7 @@ class Index:
                     addition_results_d[query_id, res_id] == 0
                     and addition_results_i[query_id, res_id] == 0
                 ):
-                    addition_results_d[query_id, res_id] = MAX_FLOAT_32
+                    addition_results_d[query_id, res_id] = MAX_FLOAT32
                     addition_results_i[query_id, res_id] = MAX_UINT64
                 res_id += 1
             query_id += 1

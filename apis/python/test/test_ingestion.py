@@ -15,21 +15,13 @@ from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix
 from tiledb.vector_search.module import kmeans_fit
 from tiledb.vector_search.module import kmeans_predict
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.utils import metadata_to_list
 from tiledb.vector_search.vamana_index import VamanaIndex
 
 MINIMUM_ACCURACY = 0.85
-MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
-
-INDEXES = ["FLAT", "IVF_FLAT", "VAMANA"]
-INDEX_CLASSES = [FlatIndex, IVFFlatIndex, VamanaIndex]
-INDEX_FILES = [
-    tiledb.vector_search.flat_index,
-    tiledb.vector_search.ivf_flat_index,
-    tiledb.vector_search.vamana_index,
-]
 
 
 def query_and_check_equals(index, queries, expected_result_d, expected_result_i):
