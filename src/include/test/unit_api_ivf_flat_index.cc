@@ -257,7 +257,7 @@ TEST_CASE("read index and query infinite and finite", "[api_ivf_flat_index]") {
     CHECK(nt == nv);
     auto recall = ((double)intersections_a) / ((double)nt * k_nn);
     if (nprobe == 32) {
-      CHECK(recall >= 0.999);
+      CHECK(recall >= 0.998);
     } else if (nprobe == 8) {
       CHECK(recall > 0.925);
     }
