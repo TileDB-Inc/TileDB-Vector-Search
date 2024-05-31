@@ -182,7 +182,7 @@ TEST_CASE("test kmeans", "[ivf_pq_index][kmeans]") {
 }
 
 TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
-  const bool debug = true;
+  const bool debug = false;
 
   ColMajorMatrix<float> training_data{
       {1.0573647, 5.082087},

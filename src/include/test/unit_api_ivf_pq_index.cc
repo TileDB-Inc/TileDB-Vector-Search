@@ -835,8 +835,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
           scores_vector_array.num_vectors());
       auto ids = std::span<uint32_t>(
           (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-      debug_vector(scores, "scores");
-      debug_vector(ids, "ids");
 
       CHECK(std::equal(
           scores.begin(),

@@ -139,7 +139,6 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
 
     auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
-    x.dump();
     CHECK(x.ingestion_timestamps_.size() == 1);
     CHECK(x.ingestion_timestamps_[0] == 2);
     CHECK(x.base_sizes_.size() == 1);
@@ -174,7 +173,6 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
 
     auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
-    x.dump();
     CHECK(x.ingestion_timestamps_.size() == 2);
     CHECK(x.ingestion_timestamps_[0] == 2);
     CHECK(x.ingestion_timestamps_[1] == 3);
