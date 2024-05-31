@@ -35,10 +35,11 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
+from tiledb.vector_search.utils import MAX_FLOAT32
+from tiledb.vector_search.utils import MAX_INT32
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
 
-MAX_INT32 = np.iinfo(np.dtype("int32")).max
-MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 TILE_SIZE_BYTES = 64000000  # 64MB
 INDEX_TYPE = "IVF_FLAT"
 
@@ -215,8 +216,8 @@ class IVFFlatIndex(index.Index):
             If provided, this is the number of workers to use for the query execution.
         """
         if self.size == 0:
-            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
-                (queries.shape[0], k), index.MAX_UINT64
+            return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
+                (queries.shape[0], k), MAX_UINT64
             )
 
         if mode != Mode.BATCH and resources:
