@@ -163,9 +163,18 @@ class IVFFlatIndex(index.Index):
         Returns the dimension of the vectors in the index.
         """
         return self.dimensions
+    
+    def get_num_workers(self, num_partitions: int = -1):
+        """
+        Returns the dimension of the vectors in the index.
+        """
+        if num_partitions == -1:
+            num_partitions = 5
+        if num_workers == -1:
+            num_workers = num_partitions
 
-    def query_internal(
-        self,
+    def query_internal_taskgraph(self, 
+        submit: any,
         queries: np.ndarray,
         k: int = 10,
         nprobe: int = 1,
@@ -176,161 +185,7 @@ class IVFFlatIndex(index.Index):
         resources: Optional[Mapping[str, Any]] = None,
         num_partitions: int = -1,
         num_workers: int = -1,
-        **kwargs,
-    ):
-        """
-        Queries an `IVFFlatIndex`.
-
-        Parameters
-        ----------
-        queries: np.ndarray
-            2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
-        k: int
-            Number of results to return per query vector.
-        nprobe: int
-            Number of partitions to check per query.
-            Use this parameter to trade-off accuracy for latency and cost.
-        nthreads: int
-            Number of threads to use for local query execution.
-        use_nuv_implementation: bool
-            Whether to use the nuv query implementation. Default: False
-        mode: Mode
-            If provided the query will be executed using TileDB cloud taskgraphs.
-            For distributed execution you can use REALTIME or BATCH mode.
-            For local execution you can use LOCAL mode.
-        resource_class:
-            The name of the resource class to use ("standard" or "large"). Resource classes define maximum
-            limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
-            Cannot be used alongside resources.
-            In REALTIME or BATCH mode if neither resource_class nor resources are provided,
-            we default to the "large" resource class.
-        resources:
-            A specification for the amount of resources to use when executing using TileDB cloud
-            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used
-            in BATCH mode. Cannot be used alongside resource_class.
-        num_partitions: int
-            Only relevant for taskgraph based execution.
-            If provided, we split the query execution in that many partitions.
-        num_workers: int
-            Only relevant for taskgraph based execution.
-            If provided, this is the number of workers to use for the query execution.
-        """
-        if self.size == 0:
-            return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
-                (queries.shape[0], k), MAX_UINT64
-            )
-
-        if mode != Mode.BATCH and resources:
-            raise TypeError("Can only pass resources in BATCH mode")
-        if (mode != Mode.REALTIME and mode != Mode.BATCH) and resource_class:
-            raise TypeError("Can only pass resource_class in REALTIME or BATCH mode")
-
-        assert queries.dtype == np.float32
-
-        if queries.ndim == 1:
-            queries = np.array([queries])
-
-        if nthreads == -1:
-            nthreads = multiprocessing.cpu_count()
-
-        nprobe = min(nprobe, self.partitions)
-        if mode is None:
-            queries_m = array_to_matrix(np.transpose(queries))
-            if self.memory_budget == -1:
-                d, i = ivf_query_ram(
-                    self.dtype,
-                    self._db,
-                    self._centroids,
-                    queries_m,
-                    self._index,
-                    self._ids,
-                    nprobe=nprobe,
-                    k_nn=k,
-                    nthreads=nthreads,
-                    ctx=self.ctx,
-                    use_nuv_implementation=use_nuv_implementation,
-                )
-            else:
-                d, i = ivf_query(
-                    self.dtype,
-                    self.db_uri,
-                    self._centroids,
-                    queries_m,
-                    self._index,
-                    self.ids_uri,
-                    nprobe=nprobe,
-                    k_nn=k,
-                    memory_budget=self.memory_budget,
-                    nthreads=nthreads,
-                    ctx=self.ctx,
-                    use_nuv_implementation=use_nuv_implementation,
-                    timestamp=self.base_array_timestamp,
-                )
-
-            return np.transpose(np.array(d)), np.transpose(np.array(i))
-        else:
-            return self._taskgraph_query(
-                queries=queries,
-                k=k,
-                nthreads=nthreads,
-                nprobe=nprobe,
-                mode=mode,
-                resource_class=resource_class,
-                resources=resources,
-                num_partitions=num_partitions,
-                num_workers=num_workers,
-                config=self.config,
-            )
-
-    def _taskgraph_query(
-        self,
-        queries: np.ndarray,
-        k: int = 10,
-        nprobe: int = 10,
-        nthreads: int = -1,
-        mode: Mode = None,
-        resource_class: Optional[str] = None,
-        resources: Optional[Mapping[str, Any]] = None,
-        num_partitions: int = -1,
-        num_workers: int = -1,
-        config: Optional[Mapping[str, Any]] = None,
-    ):
-        """
-        Query an IVF_FLAT index using TileDB cloud taskgraphs
-
-        Parameters
-        ----------
-        queries: numpy.ndarray
-            ND Array of queries
-        k: int
-            Number of top results to return per query
-        nprobe: int
-            number of probes
-        nthreads: int
-            Number of threads to use for query
-        mode: Mode
-            If provided the query will be executed using TileDB cloud taskgraphs.
-            For distributed execution you can use REALTIME or BATCH mode.
-            For local execution you can use LOCAL mode.
-        resource_class:
-            The name of the resource class to use ("standard" or "large"). Resource classes define maximum
-            limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
-            Cannot be used alongside resources.
-            In REALTIME or BATCH mode if neither resource_class nor resources are provided,
-            we default to the "large" resource class.
-        resources:
-            A specification for the amount of resources to use when executing using TileDB cloud
-            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used
-            in BATCH mode. Cannot be used alongside resource_class.
-        num_partitions: int
-            Only relevant for taskgraph based execution.
-            If provided, we split the query execution in that many partitions.
-        num_workers: int
-            Only relevant for taskgraph based execution.
-            If provided, this is the number of workers to use for the query execution.
-        config: None
-            config dictionary, defaults to None
-        """
+        **kwargs):
         import math
         from functools import partial
 
@@ -341,9 +196,15 @@ class IVFFlatIndex(index.Index):
         from tiledb.vector_search.module import array_to_matrix
         from tiledb.vector_search.module import dist_qv
         from tiledb.vector_search.module import partition_ivf_index
+        if self.size == 0:
+            return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
+                (queries.shape[0], k), MAX_UINT64
+            )
 
-        if resource_class and resources:
-            raise TypeError("Cannot provide both resource_class and resources")
+        if nthreads == -1:
+            nthreads = multiprocessing.cpu_count()
+
+        nprobe = min(nprobe, self.partitions)
 
         def dist_qv_udf(
             dtype: np.dtype,
@@ -391,34 +252,6 @@ class IVFFlatIndex(index.Index):
                 results.append(tmp_results)
             return results
 
-        assert queries.dtype == np.float32
-        if num_partitions == -1:
-            num_partitions = 5
-        if num_workers == -1:
-            num_workers = num_partitions
-        if mode == Mode.BATCH:
-            d = dag.DAG(
-                name="vector-query",
-                mode=Mode.BATCH,
-                max_workers=num_workers,
-            )
-        elif mode == Mode.REALTIME:
-            d = dag.DAG(
-                name="vector-query",
-                mode=Mode.REALTIME,
-                max_workers=num_workers,
-            )
-        else:
-            d = dag.DAG(
-                name="vector-query",
-                mode=Mode.REALTIME,
-                max_workers=1,
-                namespace="default",
-            )
-        submit = partial(submit_local, d)
-        if mode == Mode.BATCH or mode == Mode.REALTIME:
-            submit = d.submit
-
         queries_m = array_to_matrix(np.transpose(queries))
         active_partitions, active_queries = partition_ivf_index(
             centroids=self._centroids, query=queries_m, nprobe=nprobe, nthreads=nthreads
@@ -448,38 +281,103 @@ class IVFFlatIndex(index.Index):
                     active_queries=np.array(aq, dtype=object),
                     indices=np.array(self._index),
                     k_nn=k,
-                    config=config,
+                    config=self.config,
                     timestamp=self.base_array_timestamp,
-                    resource_class="large"
-                    if (not resources and not resource_class)
-                    else resource_class,
+                    resource_class="large" if (not resources and not resource_class) else resource_class,
                     resources=resources,
                     image_name="3.9-vectorsearch",
                 )
             )
+        
+        def merge_results(results):
+            print("[ivf_flat_index@query_internal_taskgraph]")
+            print("[ivf_flat_index@query_internal_taskgraph] results", results)
+            results_per_query_d = []
+            results_per_query_i = []
+            for q in range(queries.shape[0]):
+                tmp_results = []
+                for j in range(k):
+                    for r in results:
+                        if len(r[q]) > j:
+                            if r[q][j][0] > 0:
+                                tmp_results.append(r[q][j])
+                tmp = sorted(tmp_results, key=lambda t: t[0])[0:k]
+                for j in range(len(tmp), k):
+                    tmp.append((float(0.0), int(0)))
+                results_per_query_d.append(np.array(tmp, dtype=np.float32)[:, 0])
+                results_per_query_i.append(np.array(tmp, dtype=np.uint64)[:, 1])
+            print("[ivf_flat_index@query_internal_taskgraph] np.array(results_per_query_d)", np.array(results_per_query_d))
+            print("[ivf_flat_index@query_internal_taskgraph] np.array(results_per_query_i)", np.array(results_per_query_i))
+            return np.array(results_per_query_d), np.array(results_per_query_i)
+        query_base_node = submit(merge_results, nodes)
+        return query_base_node
 
-        d.compute()
-        d.wait()
-        results = []
-        for node in nodes:
-            res = node.result()
-            results.append(res)
+    def query_internal_local(self, queries: np.ndarray, k: int = 10, nprobe: int = 1, nthreads: int = -1, use_nuv_implementation: bool = False, mode: Mode = None, resource_class: Optional[str] = None, resources: Optional[Mapping[str, Any]] = None, num_partitions: int = -1, num_workers: int = -1, **kwargs):
+        if self.size == 0:
+            return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
+                (queries.shape[0], k), MAX_UINT64
+            )
 
-        results_per_query_d = []
-        results_per_query_i = []
-        for q in range(queries.shape[0]):
-            tmp_results = []
-            for j in range(k):
-                for r in results:
-                    if len(r[q]) > j:
-                        if r[q][j][0] > 0:
-                            tmp_results.append(r[q][j])
-            tmp = sorted(tmp_results, key=lambda t: t[0])[0:k]
-            for j in range(len(tmp), k):
-                tmp.append((float(0.0), int(0)))
-            results_per_query_d.append(np.array(tmp, dtype=np.float32)[:, 0])
-            results_per_query_i.append(np.array(tmp, dtype=np.uint64)[:, 1])
-        return np.array(results_per_query_d), np.array(results_per_query_i)
+        if nthreads == -1:
+            nthreads = multiprocessing.cpu_count()
+
+        nprobe = min(nprobe, self.partitions)
+
+        queries_m = array_to_matrix(np.transpose(queries))
+        if self.memory_budget == -1:
+            d, i = ivf_query_ram(
+                self.dtype,
+                self._db,
+                self._centroids,
+                queries_m,
+                self._index,
+                self._ids,
+                nprobe=nprobe,
+                k_nn=k,
+                nthreads=nthreads,
+                ctx=self.ctx,
+                use_nuv_implementation=use_nuv_implementation,
+            )
+        else:
+            d, i = ivf_query(
+                self.dtype,
+                self.db_uri,
+                self._centroids,
+                queries_m,
+                self._index,
+                self.ids_uri,
+                nprobe=nprobe,
+                k_nn=k,
+                memory_budget=self.memory_budget,
+                nthreads=nthreads,
+                ctx=self.ctx,
+                use_nuv_implementation=use_nuv_implementation,
+                timestamp=self.base_array_timestamp,
+            )
+
+        return np.transpose(np.array(d)), np.transpose(np.array(i))
+
+    # input = submit, orchestrator_node
+    # output = query_nodes (should be able to do the iteration over them like we do in IVF Flat)
+    # this should work for both local and distributed - in the local case
+    # 
+    # query_local = returns distances, ids
+    # query_taskgraph = returns nodes
+
+    # if is_local:
+    #     start query_additions
+    #     local_results = query_local()
+    #     additional_results = finish query_additions
+    #     combine local_results and additional_results
+    # else:
+    #     additions_node = get node for query_additions
+    #     taskgraph_nodes = query_taskgraph()
+    #     wait for all to complete
+    #     combine additions_node and taskgraph_nodes
+
+    # note that in this case we will have N taskgraph nodes and 1 additions node, none will depend on each other. They return partial results which we then combine locally.
+    # 
+    # We could also think about an approach where we have a single start node, then fan out to N taskgraph nodes and 1 additions node, then fan in to a single end node. The single end node would then combine everything and return the results.
 
 
 def create(

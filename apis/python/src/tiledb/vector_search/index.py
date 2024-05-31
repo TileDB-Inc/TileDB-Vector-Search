@@ -4,6 +4,7 @@ import os
 import time
 from typing import Any, Mapping, Optional
 
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
@@ -154,7 +155,15 @@ class Index:
         self.thread_executor = futures.ThreadPoolExecutor()
         self.has_updates = self._check_has_updates()
 
-    def query(self, queries: np.ndarray, k: int, **kwargs):
+    def query(
+        self, 
+        queries: np.ndarray, 
+        k: int, 
+        mode: Mode = None,
+        resource_class: Optional[str] = None,
+        resources: Optional[Mapping[str, Any]] = None,
+        **kwargs
+    ):
         """
         Queries an index with a set of query vectors, retrieving the `k` most similar vectors for each query.
 
@@ -164,19 +173,47 @@ class Index:
         - Calls the algorithm specific implementation of `query_internal` to query the base data.
         - Merges the results applying the updated data.
 
+        You can control where the query is executed by setting the `mode` parameter:
+        - With mode = None, both querying the updates table and the algorithm specific query of the base data will be executed locally.
+        - If mode is provided, we will use one worker in a TileDB cloud taskgraph to query the non-consolidated updates table, and other workers to run the algorithm specific query of the base data. See the implementation specific `query_internal` methods to configure the base data UDF.
+
         Parameters
         ----------
         queries: np.ndarray
             2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
             Number of results to return per query vector.
+        mode: Mode
+            If provided the query will be executed using TileDB cloud taskgraphs.
+            For distributed execution you can use REALTIME or BATCH mode.
+            For local execution you can use LOCAL mode.
+        resource_class:
+            The name of the resource class to use ("standard" or "large"). Resource classes define maximum
+            limits for cpu and memory usage. Can only be used in REALTIME or BATCH mode.
+            Cannot be used alongside resources.
+            In REALTIME or BATCH mode if neither resource_class nor resources are provided,
+            we default to the "large" resource class.
+        resources:
+            A specification for the amount of resources to use when executing using TileDB cloud
+            taskgraphs, of the form: {"cpu": "6", "memory": "12Gi", "gpu": 1}. Can only be used
+            in BATCH mode. Cannot be used alongside resource_class.
         **kwargs
             Extra kwargs passed here are passed to the `query_internal` implementation of the concrete index class.
         """
+        from tiledb.cloud.dag import Mode
+
         if queries.ndim != 2:
             raise TypeError(
                 f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions"
             )
+        if mode != Mode.BATCH and resources:
+            raise TypeError("Can only pass resources in BATCH mode")
+        if (mode != Mode.REALTIME and mode != Mode.BATCH) and resource_class:
+            raise TypeError("Can only pass resource_class in REALTIME or BATCH mode")
+        if resource_class and resources:
+            raise TypeError("Cannot provide both resource_class and resources")
+        
+        assert queries.dtype == np.float32
 
         query_dimensions = queries.shape[0] if queries.ndim == 1 else queries.shape[1]
         if query_dimensions != self.get_dimensions():
@@ -184,75 +221,176 @@ class Index:
                 f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions"
             )
 
-        with tiledb.scope_ctx(ctx_or_config=self.config):
-            if not self.has_updates:
-                if self.query_base_array:
-                    return self.query_internal(queries, k, **kwargs)
-                else:
-                    return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
-                        (queries.shape[0], k), MAX_UINT64
-                    )
+        if not self.has_updates and not self.query_base_array:
+            return np.full((queries.shape[0], k), MAX_FLOAT32), np.full((queries.shape[0], k), MAX_UINT64)
+        
+        def _merge_results(internal_results_d, internal_results_i, addition_results_d, addition_results_i, updated_ids, k):
+            # Filter updated vectors
+            query_id = 0
+            for query in internal_results_i:
+                res_id = 0
+                for res in query:
+                    if res in updated_ids:
+                        internal_results_d[query_id, res_id] = MAX_FLOAT32
+                        internal_results_i[query_id, res_id] = MAX_UINT64
+                    res_id += 1
+                query_id += 1
+            sort_index = np.argsort(internal_results_d, axis=1)
+            internal_results_d = np.take_along_axis(internal_results_d, sort_index, axis=1)
+            internal_results_i = np.take_along_axis(internal_results_i, sort_index, axis=1)
 
-        # Query with updates
-        # Perform the queries in parallel
+            # Merge update results
+            if addition_results_d is None:
+                return internal_results_d[:, 0:k], internal_results_i[:, 0:k]
+
+            query_id = 0
+            for query in addition_results_d:
+                res_id = 0
+                for res in query:
+                    if (
+                        addition_results_d[query_id, res_id] == 0
+                        and addition_results_i[query_id, res_id] == 0
+                    ):
+                        addition_results_d[query_id, res_id] = MAX_FLOAT32
+                        addition_results_i[query_id, res_id] = MAX_UINT64
+                    res_id += 1
+                query_id += 1
+
+            results_d = np.hstack((internal_results_d, addition_results_d))
+            results_i = np.hstack((internal_results_i, addition_results_i))
+            sort_index = np.argsort(results_d, axis=1)
+            results_d = np.take_along_axis(results_d, sort_index, axis=1)
+            results_i = np.take_along_axis(results_i, sort_index, axis=1)
+            return results_d[:, 0:k], results_i[:, 0:k]
+        
         retrieval_k = 2 * k
-        kwargs["nthreads"] = int(os.cpu_count() / 2)
-        future = self.thread_executor.submit(
-            Index._query_additions,
-            queries,
-            k,
-            self.dtype,
-            self.updates_array_uri,
-            int(os.cpu_count() / 2),
-            self.update_array_timestamp,
-            self.config,
-        )
-        if self.query_base_array:
-            internal_results_d, internal_results_i = self.query_internal(
-                queries, retrieval_k, **kwargs
+        
+        # If we do not want to use a TileDB Cloud taskgraph, we will execute the query locally.
+        if mode is None:
+            with tiledb.scope_ctx(ctx_or_config=self.config):
+                if not self.has_updates and self.query_base_array:
+                    return self.query_internal_local(queries, k, **kwargs)
+
+            # Query with updates
+            # Perform the queries in parallel
+            kwargs["nthreads"] = int(os.cpu_count() / 2)
+            future = self.thread_executor.submit(
+                Index._query_additions,
+                queries,
+                k,
+                self.dtype,
+                self.updates_array_uri,
+                int(os.cpu_count() / 2),
+                self.update_array_timestamp,
+                self.config,
+            )
+            if self.query_base_array:
+                internal_results_d, internal_results_i = self.query_internal_local(
+                    queries, retrieval_k, **kwargs
+                )
+            else:
+                internal_results_d = np.full((queries.shape[0], k), MAX_FLOAT32)
+                internal_results_i = np.full((queries.shape[0], k), MAX_UINT64)
+            addition_results_d, addition_results_i, updated_ids = future.result()
+            return _merge_results(
+                internal_results_d, internal_results_i, addition_results_d, addition_results_i, updated_ids, k
+            )
+
+        def submit_local(d, func, *args, **kwargs):
+            # Drop kwarg
+            kwargs.pop("image_name", None)
+            kwargs.pop("resource_class", None)
+            kwargs.pop("resources", None)
+            return d.submit_local(func, *args, **kwargs)
+        
+        from tiledb.cloud import dag
+        from functools import partial
+
+        num_workers = self.get_num_workers(**kwargs)
+        if mode == Mode.BATCH:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.BATCH,
+                max_workers=num_workers,
+            )
+        elif mode == Mode.REALTIME:
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.REALTIME,
+                max_workers=num_workers,
             )
         else:
-            internal_results_d = np.full((queries.shape[0], k), MAX_FLOAT32)
-            internal_results_i = np.full((queries.shape[0], k), MAX_UINT64)
-        addition_results_d, addition_results_i, updated_ids = future.result()
+            d = dag.DAG(
+                name="vector-query",
+                mode=Mode.REALTIME,
+                max_workers=1,
+                namespace="default",
+            )
+        submit = partial(submit_local, d)
+        if mode == Mode.BATCH or mode == Mode.REALTIME:
+            submit = d.submit
 
-        # Filter updated vectors
-        query_id = 0
-        for query in internal_results_i:
-            res_id = 0
-            for res in query:
-                if res in updated_ids:
-                    internal_results_d[query_id, res_id] = MAX_FLOAT32
-                    internal_results_i[query_id, res_id] = MAX_UINT64
-                res_id += 1
-            query_id += 1
-        sort_index = np.argsort(internal_results_d, axis=1)
-        internal_results_d = np.take_along_axis(internal_results_d, sort_index, axis=1)
-        internal_results_i = np.take_along_axis(internal_results_i, sort_index, axis=1)
+        # First add a node which will query the updates table.
+        def query_updates(queries, k):
+            print("[index@query@query_updates]")
+            future = self.thread_executor.submit(
+                Index._query_additions,
+                queries,
+                k,
+                self.dtype,
+                self.updates_array_uri,
+                int(os.cpu_count() / 2),
+                self.update_array_timestamp,
+                self.config,
+            )
+            addition_results_d, addition_results_i, updated_ids = future.result()
+            print("[index@query@query_updates] addition_results_d", addition_results_d)
+            print("[index@query@query_updates] addition_results_i", addition_results_i)
+            print("[index@query@query_updates] updated_ids", updated_ids)
+            return addition_results_d, addition_results_i, updated_ids
+        query_updates_node = submit(
+            query_updates, 
+            queries=queries, 
+            k=k,
+            resource_class="large" if (not resources and not resource_class) else resource_class,
+            resources=resources,
+            image_name="3.9-vectorsearch"
+        )
 
-        # Merge update results
-        if addition_results_d is None:
-            return internal_results_d[:, 0:k], internal_results_i[:, 0:k]
+        # Then add the implementation specific node which will query the base data.
+        query_base_node = self.query_internal_taskgraph(queries, retrieval_k, **kwargs)
 
-        query_id = 0
-        for query in addition_results_d:
-            res_id = 0
-            for res in query:
-                if (
-                    addition_results_d[query_id, res_id] == 0
-                    and addition_results_i[query_id, res_id] == 0
-                ):
-                    addition_results_d[query_id, res_id] = MAX_FLOAT32
-                    addition_results_i[query_id, res_id] = MAX_UINT64
-                res_id += 1
-            query_id += 1
+        # Finally add a node to combine the results.
+        def merge_results(query_updates_node, query_base_node):
+            print("[index@query@merge_results]")
+            print("[index@query@merge_results] query_updates_node", query_updates_node)
+            print("[index@query@merge_results] query_base_node", query_base_node)
+            addition_results_d, addition_results_i, updated_ids = query_updates_node
+            print("[index@query@merge_results] addition_results_d", addition_results_d)
+            print("[index@query@merge_results] addition_results_i", addition_results_i)
+            print("[index@query@merge_results] updated_ids", updated_ids)
+            internal_results_d, internal_results_i = query_base_node
+            print("[index@query@merge_results] internal_results_d", internal_results_d)
+            print("[index@query@merge_results] internal_results_i", internal_results_i)
+            results = _merge_results(internal_results_d, internal_results_i, addition_results_d, addition_results_i, updated_ids, k)
+            print("[index@query@merge_results] results", results)
+            return results
+        merge_results_node = submit(
+            merge_results, 
+            query_updates_node=query_updates_node, 
+            query_base_node=query_base_node,
+            resource_class="large" if (not resources and not resource_class) else resource_class,
+            resources=resources,
+            image_name="3.9-vectorsearch"
+        )
 
-        results_d = np.hstack((internal_results_d, addition_results_d))
-        results_i = np.hstack((internal_results_i, addition_results_i))
-        sort_index = np.argsort(results_d, axis=1)
-        results_d = np.take_along_axis(results_d, sort_index, axis=1)
-        results_i = np.take_along_axis(results_i, sort_index, axis=1)
-        return results_d[:, 0:k], results_i[:, 0:k]
+        merge_results_node.depends_on(query_updates_node)
+        merge_results_node.depends_on(query_base_node)
+
+        d.compute()
+        d.wait()
+        print("[index@query] DAG execution completed. merge_results_node: ", merge_results_node, "merge_results_node.result()", merge_results_node.result())
+        return merge_results_node.result()
 
     def update(self, vector: np.array, external_id: np.uint64, timestamp: int = None):
         """
@@ -548,7 +686,49 @@ class Index:
         """
         raise NotImplementedError
 
+    def get_num_workers(self, **kwargs):
+        """
+        Abstract method implemented by all Vector Index implementations.
+
+        Returns the number of workers to be used during taskgraph queries.
+        """
+        raise NotImplementedError
+
     def query_internal(self, queries: np.ndarray, k: int, **kwargs):
+        """
+        Abstract method implemented by all Vector Index implementations.
+
+        Queries the base index with a set of query vectors, retrieving the `k` most similar vectors for each query.
+
+        Parameters
+        ----------
+        queries: np.ndarray
+            2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
+        k: int
+            Number of results to return per query vector.
+        **kwargs
+            Extra kwargs passed here for each algorithm implementation.
+        """
+        raise NotImplementedError
+    
+    def query_internal_local(self, queries: np.ndarray, k: int, **kwargs):
+        """
+        Abstract method implemented by all Vector Index implementations.
+
+        Queries the base index with a set of query vectors, retrieving the `k` most similar vectors for each query.
+
+        Parameters
+        ----------
+        queries: np.ndarray
+            2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
+        k: int
+            Number of results to return per query vector.
+        **kwargs
+            Extra kwargs passed here for each algorithm implementation.
+        """
+        raise NotImplementedError
+    
+    def query_internal_taskgraph(self, queries: np.ndarray, k: int, **kwargs):
         """
         Abstract method implemented by all Vector Index implementations.
 
@@ -575,7 +755,6 @@ class Index:
         timestamp=None,
         config=None,
     ):
-        assert queries.dtype == np.float32
         additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
             updates_array_uri, timestamp, config
         )

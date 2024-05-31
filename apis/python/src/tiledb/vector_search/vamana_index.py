@@ -76,8 +76,14 @@ class VamanaIndex(index.Index):
         Returns the dimension of the vectors in the index.
         """
         return self.dimensions
+    
+    def get_num_workers(self):
+        """
+        Returns the dimension of the vectors in the index.
+        """
+        return 1
 
-    def query_internal(
+    def query_internal_local(
         self,
         queries: np.ndarray,
         k: int = 10,
@@ -102,7 +108,6 @@ class VamanaIndex(index.Index):
                 (queries.shape[0], k), MAX_UINT64
             )
 
-        assert queries.dtype == np.float32
         if opt_l < k:
             warnings.warn(f"opt_l ({opt_l}) should be >= k ({k}), setting to k")
             opt_l = k
@@ -118,6 +123,25 @@ class VamanaIndex(index.Index):
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
+    def query_internal_taskgraph(self, 
+        submit: any,
+        queries: np.ndarray,
+        k: int = 10,
+        opt_l: Optional[int] = 100,
+        resource_class: Optional[str] = None,
+        resources: Optional[Mapping[str, Any]] = None,
+        **kwargs):
+        query_base_node = submit(
+            query_internal_local,
+            queries=queries,
+            k=k,
+            opt_l=opt_l,
+            resource_class="large" if (not resources and not resource_class) else resource_class,
+            resources=resources,
+            image_name="3.9-vectorsearch",
+        )
+
+        return query_base_node
 
 def create(
     uri: str,

@@ -94,7 +94,13 @@ class FlatIndex(index.Index):
         """
         return self.dimensions
 
-    def query_internal(
+    def get_num_workers(self):
+        """
+        Returns the dimension of the vectors in the index.
+        """
+        return 1
+
+    def query_internal_local(
         self,
         queries: np.ndarray,
         k: int = 10,
@@ -121,12 +127,70 @@ class FlatIndex(index.Index):
                 (queries.shape[0], k), MAX_UINT64
             )
 
-        assert queries.dtype == np.float32
-
         queries_m = array_to_matrix(np.transpose(queries))
         d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
+
+    def query_internal_taskgraph(
+        self, 
+        submit: any,
+        queries: np.ndarray,
+        k: int = 10,
+        nthreads: int = -1,
+        resource_class: Optional[str] = None,
+        resources: Optional[Mapping[str, Any]] = None,
+        **kwargs):
+        
+        def query(queries, k, nthreads, base_array_timestamp, size, db_uri, ids_uri, config, **kwargs):
+            from tiledb.vector_search.module import load_as_matrix
+            if size == 0:
+                return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
+                    (queries.shape[0], k), MAX_UINT64
+                )
+            ctx = tiledb.Ctx(config)
+            db = load_as_matrix(
+                db_uri,
+                ctx=ctx,
+                config=config,
+                size=size,
+                timestamp=base_array_timestamp,
+            )
+            print("[flat_index@query] db", db)
+            # Check for existence of ids array. Previous versions were not using external_ids in the ingestion assuming
+            # that the external_ids were the position of the vector in the array.
+            if ids_uri == "":
+                ids = StdVector_u64(np.arange(size).astype(np.uint64))
+            else:
+                ids = read_vector_u64(
+                    ctx, ids_uri, 0, size, base_array_timestamp
+                )
+            print("[flat_index@query] ids", ids)
+
+            queries_m = array_to_matrix(np.transpose(queries))
+            d, i = query_vq_heap(db, queries_m, ids, k, nthreads)
+            print("[flat_index@query] d", np.transpose(np.array(d)))
+            print("[flat_index@query] i", np.transpose(np.array(i)))
+
+            return np.transpose(np.array(d)), np.transpose(np.array(i))
+        
+        query_base_node = submit(
+            query,
+            queries=queries,
+            k=k,
+            nthreads=nthreads,
+            base_array_timestamp=self.base_array_timestamp,
+            size=self.size,
+            db_uri=self.db_uri,
+            ids_uri=self.ids_uri,
+            config=self.config,
+            resource_class="large" if (not resources and not resource_class) else resource_class,
+            resources=resources,
+            image_name="3.9-vectorsearch",
+        )
+        print("[flat_index@query] query_base_node", query_base_node)
+
+        return query_base_node
 
 
 def create(
