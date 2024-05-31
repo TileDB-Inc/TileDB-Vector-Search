@@ -331,19 +331,40 @@ class Index:
             submit = d.submit
 
         # First add a node which will query the updates table.
-        def query_updates(queries, k):
+        def query_updates(queries, k, dtype, updates_array_uri, update_array_timestamp, config):
             print("[index@query@query_updates]")
-            future = self.thread_executor.submit(
-                Index._query_additions,
+            print("[index@query@query_updates] queries", queries)
+            print("[index@query@query_updates] k", k)
+            print("[index@query@query_updates] dtype", dtype)
+            print("[index@query@query_updates] updates_array_uri", updates_array_uri)
+            print("[index@query@query_updates] update_array_timestamp", update_array_timestamp)
+            import concurrent.futures as futures
+            thread_executor = futures.ThreadPoolExecutor()
+            # future = thread_executor.submit(
+            addition_results_d, addition_results_i, updated_ids = Index._query_additions(
                 queries,
                 k,
-                self.dtype,
-                self.updates_array_uri,
+                dtype,
+                updates_array_uri,
                 int(os.cpu_count() / 2),
-                self.update_array_timestamp,
-                self.config,
-            )
-            addition_results_d, addition_results_i, updated_ids = future.result()
+                # TODO(paris): If we pass update_array_timestamp we get: 
+                # Traceback (most recent call last):
+                # File "/opt/conda/lib/python3.9/site-packages/tdbudf/main.py", line 182, in real_main
+                #     result = udf(*args, **kwargs)
+                # File "/opt/homebrew/anaconda3/envs/TileDB-Vector-Search-5/lib/python3.9/site-packages/tiledb/vector_search/index.py", line 344, in query_updates
+                # File "/opt/conda/lib/python3.9/site-packages/tiledb/vector_search/index.py", line 580, in _query_additions
+                #     additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
+                # File "/opt/conda/lib/python3.9/site-packages/tiledb/vector_search/index.py", line 603, in _read_additions
+                #     updates_array = tiledb.open(
+                # File "/opt/conda/lib/python3.9/site-packages/tiledb/highlevel.py", line 22, in open
+                #     return tiledb.Array.load_typed(
+                # File "tiledb/libtiledb.pyx", line 1010, in tiledb.libtiledb.Array.load_typed
+                # File "tiledb/libtiledb.pyx", line 766, in tiledb.libtiledb.preload_array
+                # TypeError: Unexpected argument type for 'timestamp' keyword argument
+                None, # update_array_timestamp,
+                config)
+            # )
+            # addition_results_d, addition_results_i, updated_ids = future.result()
             print("[index@query@query_updates] addition_results_d", addition_results_d)
             print("[index@query@query_updates] addition_results_i", addition_results_i)
             print("[index@query@query_updates] updated_ids", updated_ids)
@@ -352,13 +373,17 @@ class Index:
             query_updates, 
             queries=queries, 
             k=k,
+            dtype=self.dtype,
+            updates_array_uri=self.updates_array_uri,
+            update_array_timestamp=self.update_array_timestamp,
+            config=self.config,
             resource_class="large" if (not resources and not resource_class) else resource_class,
             resources=resources,
             image_name="3.9-vectorsearch"
         )
 
         # Then add the implementation specific node which will query the base data.
-        query_base_node = self.query_internal_taskgraph(queries, retrieval_k, **kwargs)
+        query_base_node = self.query_internal_taskgraph(submit, queries, retrieval_k, **kwargs)
 
         # Finally add a node to combine the results.
         def merge_results(query_updates_node, query_base_node):
@@ -755,6 +780,7 @@ class Index:
         timestamp=None,
         config=None,
     ):
+        print("[index@_query_additions] timestamp", timestamp)
         additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
             updates_array_uri, timestamp, config
         )
@@ -775,6 +801,7 @@ class Index:
     def _read_additions(
         updates_array_uri, timestamp=None, config=None
     ) -> (np.ndarray, np.array):
+        print("[index@_read_additions] timestamp", timestamp)
         with tiledb.scope_ctx(ctx_or_config=config):
             if updates_array_uri is None:
                 return None, None, np.array([], np.uint64)

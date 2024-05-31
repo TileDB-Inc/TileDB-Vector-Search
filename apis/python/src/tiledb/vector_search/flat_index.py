@@ -137,18 +137,24 @@ class FlatIndex(index.Index):
         submit: any,
         queries: np.ndarray,
         k: int = 10,
-        nthreads: int = -1,
+        nthreads: int = 8,
         resource_class: Optional[str] = None,
         resources: Optional[Mapping[str, Any]] = None,
         **kwargs):
         
-        def query(queries, k, nthreads, base_array_timestamp, size, db_uri, ids_uri, config, **kwargs):
+        def query(queries, k, nthreads, base_array_timestamp, size, db_uri, ids_uri, config):
             from tiledb.vector_search.module import load_as_matrix
+            from tiledb.vector_search.module import array_to_matrix
+            from tiledb.vector_search.module import query_vq_heap
+            
             if size == 0:
                 return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                     (queries.shape[0], k), MAX_UINT64
                 )
-            ctx = tiledb.Ctx(config)
+            ctx = vspy.Ctx(config)
+            print("[flat_index@query] db_uri", db_uri)
+            print("[flat_index@query] size", size)
+            print("[flat_index@query] timestamp", base_array_timestamp)
             db = load_as_matrix(
                 db_uri,
                 ctx=ctx,

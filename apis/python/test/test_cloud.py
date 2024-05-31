@@ -193,7 +193,7 @@ class CloudTests(unittest.TestCase):
         expected_result_d = [[0]]
         assert np.array_equal(result_i, expected_result_i), f"result_i: {result_i} != expected_result_i: {expected_result_i}"
         assert np.array_equal(result_d, expected_result_d), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
-        return
+
         print('[test_cloud@run_small_cloud_test] vs.query() mode = REALTIME ----------------------------')
         result_d, result_i = index.query(queries, k=1, mode=Mode.REALTIME)
         print('[test_cloud@run_small_cloud_test] result_d', result_d)
