@@ -93,7 +93,6 @@ class CloudTests(unittest.TestCase):
                     mode=mode,
                     driver_mode=driver_mode,
                     num_partitions=2,
-                    resource_class="standard",
                 )
                 assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
@@ -174,8 +173,6 @@ class CloudTests(unittest.TestCase):
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
     def run_small_cloud_test(self, index_uri, index_type):
-        print()
-        print("[test_cloud@run_small_cloud_test]", index_type, index_uri)
         data = np.array(
             [
                 [1.0, 1.1, 1.2, 1.3],
@@ -186,7 +183,6 @@ class CloudTests(unittest.TestCase):
             ],
             dtype=np.float32,
         )
-        print("[test_cloud@run_small_cloud_test] vs.ingest()")
         index = vs.ingest(
             index_type=index_type,
             index_uri=index_uri,
@@ -194,16 +190,10 @@ class CloudTests(unittest.TestCase):
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
-        print("[test_cloud@run_small_cloud_test] vs.ingest() done")
 
         queries = np.array([data[1]], dtype=np.float32)
 
-        print(
-            "[test_cloud@run_small_cloud_test] vs.query() mode = None ----------------------------"
-        )
         result_d, result_i = index.query(queries, k=1)
-        print("[test_cloud@run_small_cloud_test] result_d", result_d)
-        print("[test_cloud@run_small_cloud_test] result_i", result_i)
         expected_result_i = [[1]]
         expected_result_d = [[0]]
         assert np.array_equal(
@@ -213,12 +203,7 @@ class CloudTests(unittest.TestCase):
             result_d, expected_result_d
         ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
 
-        print(
-            "[test_cloud@run_small_cloud_test] vs.query() mode = LOCAL ----------------------------"
-        )
         result_d, result_i = index.query(queries, k=1, mode=Mode.LOCAL)
-        print("[test_cloud@run_small_cloud_test] result_d", result_d)
-        print("[test_cloud@run_small_cloud_test] result_i", result_i)
         expected_result_i = [[1]]
         expected_result_d = [[0]]
         assert np.array_equal(
@@ -228,12 +213,7 @@ class CloudTests(unittest.TestCase):
             result_d, expected_result_d
         ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
 
-        print(
-            "[test_cloud@run_small_cloud_test] vs.query() mode = REALTIME ----------------------------"
-        )
         result_d, result_i = index.query(queries, k=1, mode=Mode.REALTIME)
-        print("[test_cloud@run_small_cloud_test] result_d", result_d)
-        print("[test_cloud@run_small_cloud_test] result_i", result_i)
         expected_result_i = [[1]]
         expected_result_d = [[0]]
         assert np.array_equal(

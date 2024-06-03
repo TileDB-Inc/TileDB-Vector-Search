@@ -156,7 +156,13 @@ class Index:
         self.has_updates = self._check_has_updates()
 
     def _query_with_driver(
-        self, queries: np.ndarray, k: int, mode=None, resources=None, acn=None, **kwargs
+        self,
+        queries: np.ndarray,
+        k: int,
+        driver_mode=None,
+        driver_resources=None,
+        driver_access_credentials_name=None,
+        **kwargs,
     ):
         from tiledb.cloud import dag
 
@@ -178,7 +184,7 @@ class Index:
 
         d = dag.DAG(
             name="vector-query",
-            mode=mode,
+            mode=driver_mode,
             max_workers=1,
         )
         query_kwargs = {
@@ -192,9 +198,9 @@ class Index:
             self.index_open_kwargs,
             query_kwargs,
             name="vector-query-driver",
-            resources=resources,
+            resources=driver_resources,
             image_name="vectorsearch",
-            access_credentials_name=acn,
+            access_credentials_name=driver_access_credentials_name,
         )
         d.compute()
         d.wait()
