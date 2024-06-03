@@ -75,6 +75,21 @@ void debug_flat_ivf_centroids(auto& index) {
   std::cout << std::endl;
 }
 
+TEST_CASE("construct different types", "[ivf_pq_index]") {
+  ivf_pq_index<int8_t, uint32_t, uint32_t> index1{};
+  ivf_pq_index<uint8_t, uint32_t, uint32_t> index2{};
+  ivf_pq_index<float, uint32_t, uint32_t> index3{};
+  ivf_pq_index<int8_t, uint32_t, uint64_t> index4{};
+  ivf_pq_index<uint8_t, uint32_t, uint64_t> index5{};
+  ivf_pq_index<float, uint32_t, uint64_t> index6{};
+  ivf_pq_index<int8_t, uint64_t, uint32_t> index7{};
+  ivf_pq_index<uint8_t, uint64_t, uint32_t> index8{};
+  ivf_pq_index<float, uint64_t, uint32_t> index9{};
+  ivf_pq_index<int8_t, uint64_t, uint64_t> index10{};
+  ivf_pq_index<uint8_t, uint64_t, uint64_t> index11{};
+  ivf_pq_index<float, uint64_t, uint64_t> index12{};
+}
+
 TEST_CASE("default construct two", "[ivf_pq_index]") {
   ivf_pq_index<float, uint32_t, uint32_t> x;
   ivf_pq_index<float, uint32_t, uint32_t> y;
@@ -82,7 +97,7 @@ TEST_CASE("default construct two", "[ivf_pq_index]") {
   CHECK(y.compare_cached_metadata(x));
 }
 
-TEST_CASE("test kmeans initializations", "[ivf_index][init]") {
+TEST_CASE("test kmeans initializations", "[ivf_pq_index][init]") {
   const bool debug = false;
 
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -139,7 +154,7 @@ TEST_CASE("test kmeans initializations", "[ivf_index][init]") {
   CHECK(outer_counts == index.get_flat_ivf_centroids().num_cols());
 }
 
-TEST_CASE("test kmeans", "[ivf_index][kmeans]") {
+TEST_CASE("test kmeans", "[ivf_pq_index][kmeans]") {
   const bool debug = false;
 
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
@@ -166,8 +181,8 @@ TEST_CASE("test kmeans", "[ivf_index][kmeans]") {
   }
 }
 
-TEST_CASE("debug w/ sk", "[ivf_index]") {
-  const bool debug = true;
+TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
+  const bool debug = false;
 
   ColMajorMatrix<float> training_data{
       {1.0573647, 5.082087},
@@ -278,7 +293,7 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
   }
 }
 
-TEST_CASE("ivf_index write and read", "[ivf_index]") {
+TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
   size_t num_subspaces = 16;
@@ -294,25 +309,27 @@ TEST_CASE("ivf_index write and read", "[ivf_index]") {
   if (vfs.is_dir(ivf_index_uri)) {
     vfs.remove_dir(ivf_index_uri);
   }
+
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
-
+  std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
+  std::iota(begin(ids), end(ids), 0);
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
       /*dimension,*/ nlist, num_subspaces, max_iters, nthreads);
-
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
-  idx.add(training_set);
-
+  idx.add(training_set, ids);
   ivf_index_uri =
       (std::filesystem::temp_directory_path() / "second_tmp_ivf_index")
           .string();
   if (vfs.is_dir(ivf_index_uri)) {
     vfs.remove_dir(ivf_index_uri);
   }
+
   idx.write_index(ctx, ivf_index_uri);
   auto idx2 = ivf_pq_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
 
+  CHECK(idx.compare_cached_metadata(idx2));
   CHECK(idx.compare_cached_metadata(idx2));
   CHECK(idx.compare_cluster_centroids(idx2));
   CHECK(idx.compare_flat_ivf_centroids(idx2));
@@ -324,19 +341,20 @@ TEST_CASE("ivf_index write and read", "[ivf_index]") {
 }
 
 TEST_CASE(
-    "flat_pq_index: verify pq_encoding and pq_distances with siftsmall",
-    "[flat_pq_index]") {
+    "verify pq_encoding and pq_distances with siftsmall", "[ivf_pq_index]") {
   tiledb::Context ctx;
   auto training_set = tdbColMajorMatrix<siftsmall_feature_type>(
       ctx, siftsmall_inputs_uri, 2500);
   training_set.load();
+  std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
+  std::iota(begin(ids), end(ids), 0);
 
   auto pq_idx = ivf_pq_index<
       siftsmall_feature_type,
       siftsmall_ids_type,
       siftsmall_indices_type>(20, 16, 50);
   pq_idx.train_ivf(training_set);
-  pq_idx.add(training_set);
+  pq_idx.add(training_set, ids);
 
   SECTION("pq_encoding") {
     auto avg_error = pq_idx.verify_pq_encoding(training_set);
@@ -377,6 +395,9 @@ TEMPLATE_TEST_CASE(
   auto hypercube2 = ColMajorMatrix<TestType>(6, num_vectors(hypercube0));
   auto hypercube4 = ColMajorMatrix<TestType>(12, num_vectors(hypercube0));
 
+  std::vector<uint32_t> ids(num_vectors(hypercube0));
+  std::iota(begin(ids), end(ids), 0);
+
   for (size_t j = 0; j < 3; ++j) {
     for (size_t i = 0; i < num_vectors(hypercube4); ++i) {
       hypercube2(j, i) = hypercube0(j, i);
@@ -395,11 +416,11 @@ TEMPLATE_TEST_CASE(
     auto ivf_idx2 = ivf_pq_index<TestType, uint32_t, uint32_t>(
         /*128,*/ nlist, 2, 4, 1.e-4);  // dim nlist maxiter eps nthreads
     ivf_idx2.train_ivf(hypercube2);
-    ivf_idx2.add(hypercube2);
+    ivf_idx2.add(hypercube2, ids);
     auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(
         /*128,*/ nlist, 2, 4, 1.e-4);
     ivf_idx4.train_ivf(hypercube4);
-    ivf_idx4.add(hypercube4);
+    ivf_idx4.add(hypercube4, ids);
 
     auto top_k_ivf_scores = ColMajorMatrix<float>();
     auto top_k_ivf = ColMajorMatrix<unsigned>();

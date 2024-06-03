@@ -679,8 +679,14 @@ class ivf_pq_index {
    *
    * @todo Create and write index that is larger than RAM
    */
-  template <feature_vector_array V, class Distance = sum_of_squares_distance>
-  void add(const V& training_set, Distance distance = Distance{}) {
+  template <
+      feature_vector_array V,
+      feature_vector Vector,
+      class Distance = sum_of_squares_distance>
+  void add(
+      const V& training_set,
+      const Vector& training_set_ids,
+      Distance distance = Distance{}) {
     auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
 
     train_pq(training_set);   // cluster_centroids_, distance_tables_
@@ -731,7 +737,7 @@ class ivf_pq_index {
   template <
       feature_vector_array U,
       class Distance = uncached_sub_sum_of_squares_distance>
-  auto pq_encode(const U& training_set, Distance distance = Distance{}) {
+  auto pq_encode(const U& training_set, Distance distance = Distance{}) const {
     auto pq_vectors = std::make_unique<ColMajorMatrix<pq_vector_feature_type>>(
         num_subspaces_, num_vectors(training_set));
     auto& pqv = *pq_vectors;
