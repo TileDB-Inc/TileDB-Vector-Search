@@ -160,8 +160,9 @@ concept feature_vector_array = requires(D d, size_t n) {
 
 template <class D>
 concept feature_vector_array_with_ids =
-    feature_vector_array<D> && requires(D d) {
+    feature_vector_array<D> && requires(D d, size_t i) {
       { d.ids() };
+      { d.id(i) };
     };
 
 /**
