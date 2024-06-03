@@ -4,13 +4,13 @@ import os
 import time
 from typing import Any, Mapping, Optional
 
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
-from tiledb.cloud.dag import Mode
 
 DATASET_TYPE = "vector_search"
 
@@ -159,7 +159,6 @@ class Index:
         self, queries: np.ndarray, k: int, mode=None, resources=None, acn=None, **kwargs
     ):
         from tiledb.cloud import dag
-        from tiledb.cloud.dag import Mode
 
         def query_udf(index_type, index_open_kwargs, query_kwargs):
             from tiledb.vector_search.flat_index import FlatIndex
@@ -202,13 +201,14 @@ class Index:
         return node.result()
 
     def query(
-            self, 
-            queries: np.ndarray, 
-            k: int, 
-            driver_mode: Mode = None,
-            driver_resources: Optional[str] = None,
-            driver_access_credentials_name: Optional[str] = None,
-            **kwargs):
+        self,
+        queries: np.ndarray,
+        k: int,
+        driver_mode: Mode = None,
+        driver_resources: Optional[str] = None,
+        driver_access_credentials_name: Optional[str] = None,
+        **kwargs,
+    ):
         """
         Queries an index with a set of query vectors, retrieving the `k` most similar vectors for each query.
 
@@ -248,20 +248,21 @@ class Index:
             raise TypeError(
                 f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions"
             )
-        
+
         if queries.dtype != np.float32:
             raise TypeError(
                 f"Expected queries to have dtype np.float32, but it had dtype {queries.dtype}"
             )
-        
+
         if driver_mode is not None:
             return self._query_with_driver(
-                queries, 
-                k, 
+                queries,
+                k,
                 driver_mode,
                 driver_resources,
                 driver_access_credentials_name,
-                **kwargs)
+                **kwargs,
+            )
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
             if not self.has_updates:
