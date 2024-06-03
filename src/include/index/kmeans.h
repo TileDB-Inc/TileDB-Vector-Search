@@ -82,6 +82,9 @@ void kmeans_pp(
     size_t num_threads_,
     Distance distancex = Distance{}) {
   scoped_timer _{__FUNCTION__};
+  if (::num_vectors(training_set) == 0) {
+    return;
+  }
   using score_type = typename C::value_type;
 
   std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
@@ -165,6 +168,9 @@ template <feature_vector_array V, feature_vector_array C>
 void kmeans_random_init(
     const V& training_set, C& centroids_, size_t num_partitions_) {
   scoped_timer _{__FUNCTION__};
+  if (::num_vectors(training_set) == 0) {
+    return;
+  }
 
   std::vector<size_t> indices(num_partitions_);
 
@@ -215,6 +221,9 @@ void train_no_init(
     float reassign_ratio_ = 0.05,
     Distance distancex = Distance{}) {
   scoped_timer _{__FUNCTION__};
+  if (::num_vectors(training_set) == 0) {
+    return;
+  }
   using feature_type = typename V::value_type;
   using centroid_feature_type = typename C::value_type;
   using index_type = size_t;
@@ -381,25 +390,20 @@ void train_no_init(
 #endif
 }
 
-template <class T, class U>
+template <feature_vector_array V, feature_vector_array C>
 void sub_kmeans_random_init(
-    const ColMajorMatrix<T>& training_set,
-    ColMajorMatrix<U>& centroids,
+    const V& training_set,
+    C& centroids,
     size_t sub_begin,
     size_t sub_end,
     size_t seed = 0) {
   scoped_timer _{__FUNCTION__};
 
-  if (num_vectors(training_set) < num_vectors(centroids)) {
-    throw std::invalid_argument(
-        "Number of vectors in training set must be greater than or equal to "
-        "number of centroids");
-  }
-
   std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
   std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
 
-  size_t num_clusters = num_vectors(centroids);
+  size_t num_clusters =
+      std::min(num_vectors(training_set), num_vectors(centroids));
 
   std::vector<size_t> indices(num_clusters);
   std::unordered_set<size_t> visited;

@@ -155,16 +155,10 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       , part_index_(num_parts + 1)
       , num_vectors_{::num_vectors(training_set)}
       , num_parts_{num_parts} {
-    if (num_vectors_ == 0) {
-      throw std::invalid_argument("training_set cannot be empty.");
-    }
     if (size(part_labels) != ::num_vectors(training_set)) {
       throw std::invalid_argument(
           "The number of part_labels must equal the number of vectors in the "
           "training_set.");
-    }
-    if (num_parts <= 0) {
-      throw std::invalid_argument("num_parts should be greater than 0.");
     }
 
     auto degrees = std::vector<size_t>(num_parts);
@@ -180,7 +174,11 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
       size_t bin = part_labels[i];
       size_t ibin = part_index_[bin];
 
-      ids_[ibin] = i;
+      if constexpr (feature_vector_array_with_ids<F>) {
+        ids_[ibin] = training_set.id(i);
+      } else {
+        ids_[ibin] = i;
+      }
 
       assert(ibin < this->num_cols());
       for (size_t j = 0; j < dimensions(training_set); ++j) {
