@@ -11,12 +11,12 @@ import tiledb.vector_search.object_api as object_api
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import FlatIndex
 from tiledb.vector_search import IVFFlatIndex
-from tiledb.vector_search import VamanaIndex
 from tiledb.vector_search import IVFPQIndex
+from tiledb.vector_search import VamanaIndex
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
-from tiledb.vector_search import vamana_index
 from tiledb.vector_search import ivf_pq_index
+from tiledb.vector_search import vamana_index
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_readers import ObjectReader
 from tiledb.vector_search.storage_formats import STORAGE_VERSION

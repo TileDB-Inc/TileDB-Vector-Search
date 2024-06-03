@@ -20,7 +20,6 @@ from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.utils import metadata_to_list
 from tiledb.vector_search.vamana_index import VamanaIndex
-from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 
 MINIMUM_ACCURACY = 0.85
 

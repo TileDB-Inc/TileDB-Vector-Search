@@ -6,6 +6,7 @@ from .flat_index import FlatIndex
 from .index import Index
 from .ingestion import ingest
 from .ivf_flat_index import IVFFlatIndex
+from .ivf_pq_index import IVFPQIndex
 from .module import array_to_matrix
 from .module import ivf_index
 from .module import ivf_index_tdb
@@ -20,7 +21,6 @@ from .module import validate_top_k
 from .storage_formats import STORAGE_VERSION
 from .storage_formats import storage_formats
 from .vamana_index import VamanaIndex
-from .ivf_pq_index import IVFPQIndex
 
 try:
     from tiledb.vector_search.version import version as __version__

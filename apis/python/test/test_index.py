@@ -10,19 +10,19 @@ from common import load_metadata
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
-from tiledb.vector_search import vamana_index
 from tiledb.vector_search import ivf_pq_index
+from tiledb.vector_search import vamana_index
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.vamana_index import VamanaIndex
-from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 
 
 def query_and_check_distances(
@@ -317,6 +317,7 @@ def test_vamana_index(tmp_path):
     Index.delete_index(uri=uri, config={})
     assert vfs.dir_size(uri) == 0
 
+
 def test_ivf_pq_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     if os.path.exists(uri):
@@ -396,6 +397,7 @@ def test_ivf_pq_index(tmp_path):
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
     assert vfs.dir_size(uri) == 0
+
 
 def test_delete_invalid_index(tmp_path):
     # We don't throw with an invalid uri.

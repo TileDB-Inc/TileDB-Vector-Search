@@ -40,8 +40,8 @@
 #include "api/feature_vector_array.h"
 #include "api/flat_l2_index.h"
 #include "api/ivf_flat_index.h"
-#include "api/vamana_index.h"
 #include "api/ivf_pq_index.h"
+#include "api/vamana_index.h"
 #include "detail/time/temporal_policy.h"
 #include "stats.h"
 
@@ -413,7 +413,7 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "query",
           [](IndexIVFPQ& index,
-            QueryType queryType,
+             QueryType queryType,
              FeatureVectorArray& vectors,
              size_t top_k,
              size_t nprobe) {

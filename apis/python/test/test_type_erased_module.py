@@ -1,11 +1,7 @@
-import logging
-
 import numpy as np
 from array_paths import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
-from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.utils import to_temporal_policy
 
 ctx = vspy.Ctx({})
 
@@ -356,6 +352,7 @@ ctx = vspy.Ctx({})
 
 #     assert recall == 1.0
 
+
 def test_construct_IndexIVFPQ():
     return
     a = vspy.IndexIVFPQ()
@@ -451,6 +448,7 @@ def test_inplace_build_query_IndexIVFPQ():
     recall = intersections / nt
 
     assert recall == 1.0
+
 
 # def test_construct_IndexIVFFlat():
 #     a = vspy.IndexIVFFlat()

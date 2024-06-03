@@ -199,8 +199,8 @@ def ingest(
     from tiledb.cloud.utilities import set_aws_context
     from tiledb.vector_search import flat_index
     from tiledb.vector_search import ivf_flat_index
-    from tiledb.vector_search import vamana_index
     from tiledb.vector_search import ivf_pq_index
+    from tiledb.vector_search import vamana_index
     from tiledb.vector_search.storage_formats import storage_formats
 
     validate_storage_version(storage_version)
