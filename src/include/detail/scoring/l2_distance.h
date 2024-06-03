@@ -1,5 +1,5 @@
 /**
- * @file   l2_distance_avx.h
+ * @file   l2_distance.h
  *
  * @section LICENSE
  *
@@ -30,9 +30,10 @@
  * C++ functions for computing L2 distance between two feature vectors
  *
  * This file contains a number of different implementations of the L2 distance
- * computation, including naive, unrolled, and start/stop versions.  The
+ * computation, including naive, unrolled, and start/stop versions. The
  * implementations are templated on the type of the feature vector, and
- * concepts are used to select between feature vectors of float and uint8_t.
+ * concepts are used to select between feature vectors of float and uint8_t or
+ * int8_t.
  *
  * Implementations include:
  * - naive_sum_of_squares: single loop, one statement in inner loop
@@ -41,7 +42,7 @@
  * - unroll4_sum_of_squares with start and stop
  *
  * The unrolled versions use simple 4x unrolling, and are faster than the
- * naive versions.  The start/stop versions are useful for computing the
+ * naive versions. The start/stop versions are useful for computing the
  * "sub" distance, that is, the distance between just a portion of two vectors,
  * which is used in pq distance computation.
  *
@@ -341,7 +342,7 @@ inline float naive_sum_of_squares(
 
 /****************************************************************
  *
- * 4x unrolled algorithms with start and stop.  We have separate
+ * 4x unrolled algorithms with start and stop. We have separate
  * functions despite the code duplication to make sure about
  * performance in the common case (no start / stop).
  *
