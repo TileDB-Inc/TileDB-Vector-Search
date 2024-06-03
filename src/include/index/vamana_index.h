@@ -55,7 +55,6 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
 /**

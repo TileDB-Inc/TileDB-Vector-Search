@@ -41,7 +41,6 @@
 #include "test/utils/test_utils.h"
 #include "utils/utils.h"
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
 // ----------------------------------------------------------------------------

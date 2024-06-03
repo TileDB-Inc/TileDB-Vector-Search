@@ -35,7 +35,6 @@
 #include <catch2/catch_all.hpp>
 #include <ranges>
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 #include "detail/linalg/tdb_io.h"
 
