@@ -232,8 +232,6 @@ class IVFFlatIndex(index.Index):
         if (mode != Mode.REALTIME and mode != Mode.BATCH) and resource_class:
             raise TypeError("Can only pass resource_class in REALTIME or BATCH mode")
 
-        assert queries.dtype == np.float32
-
         if queries.ndim == 1:
             queries = np.array([queries])
 
@@ -398,7 +396,6 @@ class IVFFlatIndex(index.Index):
                 results.append(tmp_results)
             return results
 
-        assert queries.dtype == np.float32
         if num_partitions == -1:
             num_partitions = 5
         if num_workers == -1:

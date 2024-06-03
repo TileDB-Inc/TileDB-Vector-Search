@@ -108,7 +108,6 @@ class VamanaIndex(index.Index):
                 (queries.shape[0], k), MAX_UINT64
             )
 
-        assert queries.dtype == np.float32
         if opt_l < k:
             warnings.warn(f"opt_l ({opt_l}) should be >= k ({k}), setting to k")
             opt_l = k

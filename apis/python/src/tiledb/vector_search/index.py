@@ -10,6 +10,7 @@ from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
+from tiledb.cloud.dag import Mode
 
 DATASET_TYPE = "vector_search"
 
@@ -154,8 +155,8 @@ class Index:
         self.thread_executor = futures.ThreadPoolExecutor()
         self.has_updates = self._check_has_updates()
 
-    def query_with_driver(
-        self, queries: np.ndarray, k: int, driver_resources=None, acn=None, **kwargs
+    def _query_with_driver(
+        self, queries: np.ndarray, k: int, mode=None, resources=None, acn=None, **kwargs
     ):
         from tiledb.cloud import dag
         from tiledb.cloud.dag import Mode
@@ -178,7 +179,7 @@ class Index:
 
         d = dag.DAG(
             name="vector-query",
-            mode=Mode.BATCH,
+            mode=mode,
             max_workers=1,
         )
         query_kwargs = {
@@ -192,7 +193,7 @@ class Index:
             self.index_open_kwargs,
             query_kwargs,
             name="vector-query-driver",
-            resources=driver_resources,
+            resources=resources,
             image_name="vectorsearch",
             access_credentials_name=acn,
         )
@@ -200,7 +201,14 @@ class Index:
         d.wait()
         return node.result()
 
-    def query(self, queries: np.ndarray, k: int, **kwargs):
+    def query(
+            self, 
+            queries: np.ndarray, 
+            k: int, 
+            driver_mode: Mode = None,
+            driver_resources: Optional[str] = None,
+            driver_access_credentials_name: Optional[str] = None,
+            **kwargs):
         """
         Queries an index with a set of query vectors, retrieving the `k` most similar vectors for each query.
 
@@ -210,12 +218,23 @@ class Index:
         - Calls the algorithm specific implementation of `query_internal` to query the base data.
         - Merges the results applying the updated data.
 
+        You can control where the query is executed by setting the `driver_mode` parameter:
+        - With `driver_mode = None`, the driver logic for the query will be executed locally.
+        - If `driver_mode` is not `None`, we will use a TileDB cloud taskgraph to re-open the index and run the query.
+        With both options, certain implementations, i.e. IVF Flat, may let you create further TileDB taskgraphs as defined in the implementation specific `query_internal` methods.
+
         Parameters
         ----------
         queries: np.ndarray
             2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
             Number of results to return per query vector.
+        driver_mode: Mode
+            If not `None`, the query will be executed in the cloud using the driver mode specified.
+        driver_resources: Optional[str]
+            If `driver_mode` was not `None`, the resources to use for the driver execution.
+        driver_access_credentials_name: Optional[str]
+            If `driver_mode` was not `None`, the access credentials name to use for the driver execution.
         **kwargs
             Extra kwargs passed here are passed to the `query_internal` implementation of the concrete index class.
         """
@@ -229,6 +248,20 @@ class Index:
             raise TypeError(
                 f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions"
             )
+        
+        if queries.dtype != np.float32:
+            raise TypeError(
+                f"Expected queries to have dtype np.float32, but it had dtype {queries.dtype}"
+            )
+        
+        if driver_mode is not None:
+            return self._query_with_driver(
+                queries, 
+                k, 
+                driver_mode,
+                driver_resources,
+                driver_access_credentials_name,
+                **kwargs)
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
             if not self.has_updates:
@@ -621,7 +654,6 @@ class Index:
         timestamp=None,
         config=None,
     ):
-        assert queries.dtype == np.float32
         additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
             updates_array_uri, timestamp, config
         )
