@@ -44,6 +44,12 @@ class FlatIndex(index.Index):
         timestamp=None,
         **kwargs,
     ):
+        self.index_open_kwargs = {
+            "uri": uri,
+            "config": config,
+            "timestamp": timestamp,
+        }
+        self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self._index = None

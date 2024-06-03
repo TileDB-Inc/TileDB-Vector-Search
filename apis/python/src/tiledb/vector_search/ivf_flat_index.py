@@ -80,6 +80,13 @@ class IVFFlatIndex(index.Index):
         memory_budget: int = -1,
         **kwargs,
     ):
+        self.index_open_kwargs = {
+            "uri": uri,
+            "config": config,
+            "timestamp": timestamp,
+            "memory_budget": memory_budget,
+        }
+        self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.db_uri = self.group[

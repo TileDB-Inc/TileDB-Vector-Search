@@ -154,6 +154,52 @@ class Index:
         self.thread_executor = futures.ThreadPoolExecutor()
         self.has_updates = self._check_has_updates()
 
+    def query_with_driver(
+        self, queries: np.ndarray, k: int, driver_resources=None, acn=None, **kwargs
+    ):
+        from tiledb.cloud import dag
+        from tiledb.cloud.dag import Mode
+
+        def query_udf(index_type, index_open_kwargs, query_kwargs):
+            from tiledb.vector_search.flat_index import FlatIndex
+            from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+            from tiledb.vector_search.vamana_index import VamanaIndex
+
+            # Open index
+            if index_type == "FLAT":
+                index = FlatIndex(**index_open_kwargs)
+            elif index_type == "IVF_FLAT":
+                index = IVFFlatIndex(**index_open_kwargs)
+            elif index_type == "VAMANA":
+                index = VamanaIndex(**index_open_kwargs)
+
+            # Query index
+            return index.query(**query_kwargs)
+
+        d = dag.DAG(
+            name="vector-query",
+            mode=Mode.BATCH,
+            max_workers=1,
+        )
+        query_kwargs = {
+            "queries": queries,
+            "k": k,
+        }
+        query_kwargs.update(kwargs)
+        node = d.submit(
+            query_udf,
+            self.index_type,
+            self.index_open_kwargs,
+            query_kwargs,
+            name="vector-query-driver",
+            resources=driver_resources,
+            image_name="vectorsearch",
+            access_credentials_name=acn,
+        )
+        d.compute()
+        d.wait()
+        return node.result()
+
     def query(self, queries: np.ndarray, k: int, **kwargs):
         """
         Queries an index with a set of query vectors, retrieving the `k` most similar vectors for each query.

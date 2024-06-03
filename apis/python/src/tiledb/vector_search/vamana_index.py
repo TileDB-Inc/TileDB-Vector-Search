@@ -47,6 +47,12 @@ class VamanaIndex(index.Index):
         timestamp=None,
         **kwargs,
     ):
+        self.index_open_kwargs = {
+            "uri": uri,
+            "config": config,
+            "timestamp": timestamp,
+        }
+        self.index_open_kwargs.update(kwargs)
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
