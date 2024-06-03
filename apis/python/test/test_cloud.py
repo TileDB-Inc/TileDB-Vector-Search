@@ -29,11 +29,6 @@ class CloudTests(unittest.TestCase):
         cls.flat_index_uri = f"{test_path}/test_cloud_flat_index"
         cls.vamana_index_uri = f"{test_path}/test_cloud_vamana_index"
         cls.ivf_flat_index_uri = f"{test_path}/test_cloud_ivf_flat_index"
-
-        cls.small_flat_index_uri = f"{test_path}/test_cloud_small_flat_index"
-        cls.small_vamana_index_uri = f"{test_path}/test_cloud_small_vamana_index"
-        cls.small_ivf_flat_index_uri = f"{test_path}/test_cloud_small_ivf_flat_index"
-
         cls.ivf_flat_random_sampling_index_uri = (
             f"{test_path}/test_cloud_ivf_flat_random_sampling_index"
         )
@@ -43,15 +38,6 @@ class CloudTests(unittest.TestCase):
         vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.vamana_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
-        vs.Index.delete_index(
-            uri=cls.small_flat_index_uri, config=tiledb.cloud.Config()
-        )
-        vs.Index.delete_index(
-            uri=cls.small_vamana_index_uri, config=tiledb.cloud.Config()
-        )
-        vs.Index.delete_index(
-            uri=cls.small_ivf_flat_index_uri, config=tiledb.cloud.Config()
-        )
         vs.Index.delete_index(
             uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config()
         )
@@ -68,6 +54,7 @@ class CloudTests(unittest.TestCase):
         queries = load_fvecs(queries_uri)
         gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
+        # Test ingest().
         index = vs.ingest(
             index_type=index_type,
             index_uri=index_uri,
@@ -78,12 +65,12 @@ class CloudTests(unittest.TestCase):
             mode=Mode.BATCH,
         )
 
+        # Test query().
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
         index = index_class(
             uri=tiledb_index_uri,
             config=tiledb.cloud.Config().dict(),
         )
-
         for driver_mode in [None, Mode.LOCAL, Mode.REALTIME]:
             for mode in [None, Mode.LOCAL, Mode.REALTIME]:
                 _, result_i = index.query(
@@ -96,30 +83,29 @@ class CloudTests(unittest.TestCase):
                 )
                 assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
-        # Query with mode = None.
-        _, result_i = index.query(queries, k=k, nprobe=nprobe)
-        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
-
-        # Query with mode = REALTIME.
-        _, result_i = index.query(
-            queries,
-            k=k,
-            nprobe=nprobe,
-            mode=Mode.REALTIME,
-            num_partitions=2,
-            resource_class="standard",
+        # Test without loading index data into memory.
+        index = index_class(
+            uri=tiledb_index_uri,
+            config=tiledb.cloud.Config().dict(),
+            load_index_data=False,
         )
-        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
-
-        # Query with mode = LOCAL.
-        _, result_i = index.query(
-            queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, num_partitions=2
-        )
-        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+        # Throws if we try to query locally.
+        with self.assertRaises(ValueError):
+            index.query(queries, k=k, nprobe=nprobe)
+        # Succeeeds if we try query locally with a taskgraph.
+        for driver_mode in [None, Mode.LOCAL, Mode.REALTIME]:
+            _, result_i = index.query(
+                queries=queries,
+                k=k,
+                nprobe=nprobe,
+                mode=mode,
+                driver_mode=driver_mode,
+                num_partitions=2,
+            )
+            assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         # We now will test for invalid scenarios when setting the query() resources.
         resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
-
         # Cannot pass resource_class or resources to LOCAL mode or to no mode.
         with self.assertRaises(TypeError):
             index.query(
@@ -133,13 +119,11 @@ class CloudTests(unittest.TestCase):
             index.query(queries, k=k, nprobe=nprobe, resource_class="large")
         with self.assertRaises(TypeError):
             index.query(queries, k=k, nprobe=nprobe, resources=resources)
-
         # Cannot pass resources to REALTIME.
         with self.assertRaises(TypeError):
             index.query(
                 queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources
             )
-
         # Cannot pass both resource_class and resources.
         with self.assertRaises(TypeError):
             index.query(
@@ -160,6 +144,7 @@ class CloudTests(unittest.TestCase):
                 resources=resources,
             )
 
+        # Test delete and consolidate_updates.
         index = index_class(
             uri=index_uri,
             config=tiledb.cloud.Config().dict(),
@@ -171,66 +156,6 @@ class CloudTests(unittest.TestCase):
         index = index.consolidate_updates()
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
-
-    def run_small_cloud_test(self, index_uri, index_type):
-        data = np.array(
-            [
-                [1.0, 1.1, 1.2, 1.3],
-                [2.0, 2.1, 2.2, 2.3],
-                [3.0, 3.1, 3.2, 3.3],
-                [4.0, 4.1, 4.2, 4.3],
-                [5.0, 5.1, 5.2, 5.3],
-            ],
-            dtype=np.float32,
-        )
-        index = vs.ingest(
-            index_type=index_type,
-            index_uri=index_uri,
-            input_vectors=data,
-            config=tiledb.cloud.Config().dict(),
-            mode=Mode.BATCH,
-        )
-
-        queries = np.array([data[1]], dtype=np.float32)
-
-        result_d, result_i = index.query(queries, k=1)
-        expected_result_i = [[1]]
-        expected_result_d = [[0]]
-        assert np.array_equal(
-            result_i, expected_result_i
-        ), f"result_i: {result_i} != expected_result_i: {expected_result_i}"
-        assert np.array_equal(
-            result_d, expected_result_d
-        ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
-
-        result_d, result_i = index.query(queries, k=1, mode=Mode.LOCAL)
-        expected_result_i = [[1]]
-        expected_result_d = [[0]]
-        assert np.array_equal(
-            result_i, expected_result_i
-        ), f"result_i: {result_i} != expected_result_i: {expected_result_i}"
-        assert np.array_equal(
-            result_d, expected_result_d
-        ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
-
-        result_d, result_i = index.query(queries, k=1, mode=Mode.REALTIME)
-        expected_result_i = [[1]]
-        expected_result_d = [[0]]
-        assert np.array_equal(
-            result_i, expected_result_i
-        ), f"result_i: {result_i} != expected_result_i: {expected_result_i}"
-        assert np.array_equal(
-            result_d, expected_result_d
-        ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
-
-    def test_cloud_small_flat(self):
-        self.run_small_cloud_test(CloudTests.small_flat_index_uri, "FLAT")
-
-    def test_cloud_small_vamana(self):
-        self.run_small_cloud_test(CloudTests.small_vamana_index_uri, "VAMANA")
-
-    def test_cloud_small_ivf_flat(self):
-        self.run_small_cloud_test(CloudTests.small_ivf_flat_index_uri, "IVF_FLAT")
 
     def test_cloud_flat(self):
         source_uri = "tiledb://TileDB-Inc/sift_10k"

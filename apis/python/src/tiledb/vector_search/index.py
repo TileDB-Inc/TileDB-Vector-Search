@@ -36,11 +36,15 @@ class Index:
     timestamp: int or tuple(int)
         If int, open the index at a given timestamp.
         If tuple, open at the given start and end timestamps.
+    load_index_data: bool
+        If `False`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `True`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
     def __init__(
         self,
         uri: str,
+        load_index_data: bool,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
     ):
@@ -49,6 +53,7 @@ class Index:
             config = dict(config)
 
         self.uri = uri
+        self.load_index_data = load_index_data
         self.config = config
         self.ctx = vspy.Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
@@ -268,6 +273,11 @@ class Index:
                 driver_resources,
                 driver_access_credentials_name,
                 **kwargs,
+            )
+
+        if not self.load_index_data:
+            raise ValueError(
+                "Cannot query an index with mode=None without loading the index data in main memory. Set load_index_data=True when creating the index to load the index data before query."
             )
 
         with tiledb.scope_ctx(ctx_or_config=self.config):

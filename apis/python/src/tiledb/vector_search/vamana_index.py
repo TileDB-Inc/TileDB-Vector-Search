@@ -38,6 +38,9 @@ class VamanaIndex(index.Index):
         URI of the index.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
+    load_index_data: bool
+        If `False`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `True`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
     def __init__(
@@ -45,6 +48,7 @@ class VamanaIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        load_index_data: bool = True,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -53,8 +57,11 @@ class VamanaIndex(index.Index):
             "timestamp": timestamp,
         }
         self.index_open_kwargs.update(kwargs)
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
+        super().__init__(
+            uri=uri, config=config, timestamp=timestamp, load_index_data=load_index_data
+        )
         self.index_type = INDEX_TYPE
+        # TODO(SC-48710): Add support for `load_index_data`. We don't leave `self.index`` as `None`` because we need to be able to call index.dimensions().
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -165,4 +172,4 @@ def create(
     index.train(empty_vector)
     index.add(empty_vector)
     index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
-    return VamanaIndex(uri=uri, config=config, memory_budget=1000000)
+    return VamanaIndex(uri=uri, config=config)
