@@ -10,6 +10,7 @@ from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import is_type_erased_index
 
 DATASET_TYPE = "vector_search"
 
@@ -464,14 +465,19 @@ class Index:
                     f"Time traveling is not supported for index storage_version={storage_version}"
                 )
 
-            if index_type == "VAMANA":
+            if is_type_erased_index(index_type):
                 if storage_formats[storage_version]["UPDATES_ARRAY_NAME"] in group:
                     updates_array_uri = group[
                         storage_formats[storage_version]["UPDATES_ARRAY_NAME"]
                     ].uri
                     tiledb.Array.delete_fragments(updates_array_uri, 0, timestamp)
                 ctx = vspy.Ctx(config)
-                vspy.IndexVamana.clear_history(ctx, uri, timestamp)
+                if index_type == "VAMANA":
+                    vspy.IndexVamana.clear_history(ctx, uri, timestamp)
+                elif index_type == "IVF_PQ":
+                    vspy.IndexIVFPQ.clear_history(ctx, uri, timestamp)
+                else:
+                    raise ValueError(f"Unsupported index_type: {index_type}")
                 return
 
             ingestion_timestamps = [

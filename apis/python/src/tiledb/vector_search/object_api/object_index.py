@@ -12,9 +12,11 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search import FlatIndex
 from tiledb.vector_search import IVFFlatIndex
 from tiledb.vector_search import VamanaIndex
+from tiledb.vector_search import IVFPQIndex
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import vamana_index
+from tiledb.vector_search import ivf_pq_index
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_readers import ObjectReader
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
@@ -57,6 +59,10 @@ class ObjectIndex:
                 )
             elif self.index_type == "VAMANA":
                 self.index = VamanaIndex(
+                    uri=uri, config=config, timestamp=timestamp, **kwargs
+                )
+            elif self.index_type == "IVF_PQ":
+                self.index = IVFPQIndex(
                     uri=uri, config=config, timestamp=timestamp, **kwargs
                 )
             else:
@@ -438,6 +444,14 @@ def create(
             )
         elif index_type == "VAMANA":
             index = vamana_index.create(
+                uri=uri,
+                dimensions=dimensions,
+                vector_type=vector_type,
+                config=config,
+                storage_version=storage_version,
+            )
+        elif index_type == "IVF_PQ":
+            index = ivf_pq_index.create(
                 uri=uri,
                 dimensions=dimensions,
                 vector_type=vector_type,

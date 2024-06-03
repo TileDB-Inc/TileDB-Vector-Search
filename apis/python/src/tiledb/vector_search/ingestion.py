@@ -87,7 +87,7 @@ def ingest(
     Parameters
     ----------
     index_type: str
-        Type of vector index (FLAT, IVF_FLAT, VAMANA).
+        Type of vector index (FLAT, IVF_FLAT, IVF_PQ, VAMANA).
     index_uri: str
         Vector index URI (stored as TileDB group).
     input_vectors: np.ndarray
@@ -200,6 +200,7 @@ def ingest(
     from tiledb.vector_search import flat_index
     from tiledb.vector_search import ivf_flat_index
     from tiledb.vector_search import vamana_index
+    from tiledb.vector_search import ivf_pq_index
     from tiledb.vector_search.storage_formats import storage_formats
 
     validate_storage_version(storage_version)
@@ -1511,7 +1512,7 @@ def ingest(
             parts_array.close()
             ids_array.close()
 
-    def ingest_vamana(
+    def ingest_type_erased(
         index_group_uri: str,
         source_uri: str,
         source_type: str,
@@ -1636,7 +1637,12 @@ def ingest(
         from tiledb.vector_search import _tiledbvspy as vspy
 
         ctx = vspy.Ctx(config)
-        index = vspy.IndexVamana(ctx, index_group_uri)
+        if index_type == "VAMANA":
+            index = vspy.IndexVamana(ctx, index_group_uri)
+        elif index_type == "IVF_PQ":
+            index = vspy.IndexIVFPQ(ctx, index_group_uri)
+        else:
+            raise ValueError(f"Unsupported index type: {index_type}")
         data = vspy.FeatureVectorArray(
             ctx, parts_array_uri, ids_array_uri, 0, to_temporal_policy(index_timestamp)
         )
@@ -2191,9 +2197,10 @@ def ingest(
                 **kwargs,
             )
             return d
-        elif index_type == "VAMANA":
+        elif is_type_erased_index(index_type):
             ingest_node = submit(
-                ingest_vamana,
+                ingest_type_erased,
+                index_type=index_type,
                 index_group_uri=index_group_uri,
                 source_uri=source_uri,
                 source_type=source_type,
@@ -2572,8 +2579,8 @@ def ingest(
 
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
-        if index_type == "VAMANA":
-            # If we're using a type-erased index (i.e. Vamana), we create the group in C++.
+        if is_type_erased_index(index_type):
+            # If we're using a type-erased index, we create the group in C++.
             try:
                 # Try opening the group to see if it exists.
                 group = tiledb.Group(index_group_uri, "r")
@@ -2583,13 +2590,24 @@ def ingest(
                 # If it does not then we can create it in C++.
                 message = str(err)
                 if "not exist" in message:
-                    vamana_index.create(
-                        uri=index_group_uri,
-                        dimensions=dimensions,
-                        vector_type=vector_type,
-                        config=config,
-                        storage_version=storage_version,
-                    )
+                    if index_type == "VAMANA":
+                        vamana_index.create(
+                            uri=index_group_uri,
+                            dimensions=dimensions,
+                            vector_type=vector_type,
+                            config=config,
+                            storage_version=storage_version,
+                        )
+                    elif index_type == "IVF_PQ":
+                        ivf_pq_index.create(
+                            uri=index_group_uri,
+                            dimensions=dimensions,
+                            vector_type=vector_type,
+                            config=config,
+                            storage_version=storage_version,
+                        )
+                    else:
+                        raise ValueError(f"Unsupported index type {index_type}")
                 else:
                     raise err
         else:
@@ -2855,12 +2873,12 @@ def ingest(
         if index_type == "FLAT":
             return flat_index.FlatIndex(uri=index_group_uri, config=config)
         elif index_type == "VAMANA":
-            return vamana_index.VamanaIndex(
-                uri=index_group_uri, config=config, debug=True
-            )
+            return vamana_index.VamanaIndex(uri=index_group_uri, config=config)
         elif index_type == "IVF_FLAT":
             return ivf_flat_index.IVFFlatIndex(
                 uri=index_group_uri, memory_budget=1000000, config=config
             )
+        elif index_type == "IVF_PQ":
+            return ivf_pq_index.IVFPQIndex(uri=index_group_uri, config=config)
         else:
             raise ValueError(f"Not supported index_type {index_type}")

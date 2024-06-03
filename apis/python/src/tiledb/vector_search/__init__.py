@@ -20,6 +20,7 @@ from .module import validate_top_k
 from .storage_formats import STORAGE_VERSION
 from .storage_formats import storage_formats
 from .vamana_index import VamanaIndex
+from .ivf_pq_index import IVFPQIndex
 
 try:
     from tiledb.vector_search.version import version as __version__
@@ -31,6 +32,7 @@ __all__ = [
     "FlatIndex",
     "IVFFlatIndex",
     "VamanaIndex",
+    "IVFPQIndex",
     "Mode",
     "load_as_array",
     "load_as_matrix",

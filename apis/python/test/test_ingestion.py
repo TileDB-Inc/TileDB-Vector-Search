@@ -20,6 +20,7 @@ from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.utils import metadata_to_list
 from tiledb.vector_search.vamana_index import VamanaIndex
+from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 
 MINIMUM_ACCURACY = 0.85
 
@@ -662,7 +663,7 @@ def test_ingestion_timetravel(tmp_path):
             assert metadata_to_list(group, "ingestion_timestamps") == [10, 21]
             assert metadata_to_list(group, "base_sizes") == [2, 3]
             assert group.meta["has_updates"] == 1
-            if not is_type_erased_index(index_type):
+            if index_type != "VAMANA":
                 assert metadata_to_list(group, "partition_history") == [1, 1]
             if index_type == "VAMANA":
                 num_edges_history = metadata_to_list(group, "num_edges_history")
@@ -676,7 +677,7 @@ def test_ingestion_timetravel(tmp_path):
             assert metadata_to_list(group, "ingestion_timestamps") == [21]
             assert metadata_to_list(group, "base_sizes") == [3]
             assert group.meta["has_updates"] == 1
-            if not is_type_erased_index(index_type):
+            if index_type != "VAMANA":
                 assert metadata_to_list(group, "partition_history") == [1]
             if index_type == "VAMANA":
                 assert metadata_to_list(group, "num_edges_history") == [
@@ -1307,7 +1308,7 @@ def test_storage_versions(tmp_path):
 
     for index_type, index_class, index_file in zip(INDEXES, INDEX_CLASSES, INDEX_FILES):
         # TODO(paris): Fix Vamana old storage versions and re-enable.
-        if index_type == "VAMANA":
+        if is_type_erased_index(index_type):
             continue
 
         # First we test with an invalid storage version.
