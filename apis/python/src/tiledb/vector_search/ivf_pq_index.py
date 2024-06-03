@@ -141,7 +141,7 @@ def create(
     index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
-        adjacency_row_index_type=np.dtype(np.uint64).name,
+        partitioning_index_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
     )
     # TODO(paris): Run all of this with a single C++ call.

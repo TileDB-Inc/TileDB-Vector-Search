@@ -43,6 +43,7 @@
 #include "api/ivf_pq_index.h"
 #include "api/vamana_index.h"
 #include "detail/time/temporal_policy.h"
+#include "index/index_defs.h"
 #include "stats.h"
 
 namespace py = pybind11;
@@ -519,6 +520,11 @@ void init_type_erased_module(py::module_& m) {
       .def("id_type_string", &IndexIVFFlat::id_type_string)
       .def("px_type_string", &IndexIVFFlat::px_type_string)
       .def("dimensions", &IndexIVFFlat::dimensions);
+
+  py::enum_<QueryType>(m, "QueryType")
+      .value("FiniteRAM", QueryType::FiniteRAM)
+      .value("InfiniteRAM", QueryType::InfiniteRAM)
+      .export_values();
 
   m.def("build_config_string", []() { return build_config().dump(); });
 }

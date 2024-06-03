@@ -1513,6 +1513,7 @@ def ingest(
             ids_array.close()
 
     def ingest_type_erased(
+        index_type: str,
         index_group_uri: str,
         source_uri: str,
         source_type: str,
