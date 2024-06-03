@@ -42,7 +42,6 @@
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
 #include "index/vamana_index.h"
-#include "tiledb/group_experimental.h"
 
 /*******************************************************************************
  * IndexVamana
