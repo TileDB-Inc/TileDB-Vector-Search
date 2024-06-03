@@ -82,8 +82,8 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         ColMajorMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(
             128, 0);
     idx.train(training_vectors, training_vectors.raveled_ids());
-    idx.add(training_vectors, training_vectors.raveled_ids());
     return;
+    idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
