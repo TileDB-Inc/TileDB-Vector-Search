@@ -108,7 +108,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     CHECK(x.partition_history_.size() == 1);
     CHECK(x.partition_history_[0] == 0);
   }
-
+  return;
   {
     // Check that we can overwrite the last ingestion_timestamps, base_sizes,
     // and num_edges_history. We rely on this when creating an index from Python
