@@ -277,7 +277,7 @@ class Index:
 
         if not self.load_index_data:
             raise ValueError(
-                "Cannot query an index with mode=None without loading the index data in main memory. Set load_index_data=True when creating the index to load the index data before query."
+                "Cannot query an index with driver_mode=None without loading the index data in main memory. Set load_index_data=True when creating the index to load the index data before query."
             )
 
         with tiledb.scope_ctx(ctx_or_config=self.config):

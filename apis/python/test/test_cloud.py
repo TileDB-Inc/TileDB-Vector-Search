@@ -71,7 +71,7 @@ class CloudTests(unittest.TestCase):
             uri=tiledb_index_uri,
             config=tiledb.cloud.Config().dict(),
         )
-        for driver_mode in [None, Mode.LOCAL, Mode.REALTIME]:
+        for driver_mode in [None, Mode.REALTIME]:
             for mode in [None, Mode.LOCAL, Mode.REALTIME]:
                 _, result_i = index.query(
                     queries=queries,

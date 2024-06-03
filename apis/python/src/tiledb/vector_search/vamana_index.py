@@ -109,7 +109,6 @@ class VamanaIndex(index.Index):
         opt_l: int
             How deep to search. Should be >= k, and if it's not, we will set it to k.
         """
-        warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
@@ -156,7 +155,6 @@ def create(
         The TileDB vector search storage version to use.
         If not provided, use the latest stable storage version.
     """
-    warnings.warn("The Vamana index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
