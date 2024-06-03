@@ -55,6 +55,8 @@ enum class IndexKind { FlatL2, IVFFlat, Vamana, IVFPQ };
   return index_kind_strings[static_cast<int>(kind)];
 }
 
+enum class QueryType { FiniteRAM, InfiniteRAM };
+
 /******************************************************************************
  * Static info for arrays associated with an index group
  ******************************************************************************/
