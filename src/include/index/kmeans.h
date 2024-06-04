@@ -401,6 +401,9 @@ void sub_kmeans_random_init(
 
   size_t num_clusters =
       std::min(num_vectors(training_set), num_vectors(centroids));
+  if (num_clusters == 0) {
+    return;
+  }
 
   std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
   std::uniform_int_distribution<> dis(0, num_clusters - 1);
