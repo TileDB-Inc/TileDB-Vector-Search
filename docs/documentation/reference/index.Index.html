@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.554">
+<meta name="generator" content="quarto-1.4.555">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -201,19 +201,19 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="tiledb.vector_search.index.Index" class="level1">
 <h1>index.Index</h1>
-<p><code>vector_search.index.Index(self, uri, config=None, timestamp=None)</code></p>
+<p><code>vector_search.index.Index(self, uri, open_for_remote_query_execution, config=None, timestamp=None)</code></p>
 <p>Abstract Vector Index class.</p>
 <p>All Vector Index algorithm implementations are instantiations of this class. Apart from the abstract method interfaces, <code>Index</code> provides implementations for common tasks i.e.&nbsp;supporting updates, time-traveling and metadata management.</p>
 <p>Opens an <code>Index</code> reading metadata and applying time-traveling options.</p>
 <p>Do not use this directly but rather instantiate the concrete Index classes.</p>
 <section id="parameters" class="level2">
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
-<col style="width: 8%">
-<col style="width: 20%">
-<col style="width: 63%">
 <col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 82%">
+<col style="width: 2%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -242,12 +242,18 @@ ul.task-list li input[type="checkbox"] {
 <td>If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.</td>
 <td><code>None</code></td>
 </tr>
+<tr class="even">
+<td><code>open_for_remote_query_execution</code></td>
+<td>bool</td>
+<td>If <code>True</code>, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-<code>None</code> <code>driver_mode</code> is passed to <code>query()</code>. If <code>False</code>, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you’ll just end up loading the data both on your local machine and in the cloud taskgraph.</td>
+<td><em>required</em></td>
+</tr>
 </tbody>
 </table>
 </section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">Methods</h2>
-<table class="table">
+<table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -305,7 +311,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Use this in collaboration with <code>consolidate_updates</code> to periodically cleanup update history.</p>
 <section id="parameters-1" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 16%">
 <col style="width: 10%">
@@ -344,7 +350,7 @@ ul.task-list li input[type="checkbox"] {
 <p>The consolidation process is used to avoid query latency degradation as more updates are added to the index. It triggers a base index re-indexing, merging the non-consolidated updates and the rest of the base vectors.</p>
 <section id="parameters-2" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 4%">
 <col style="width: 2%">
@@ -382,7 +388,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Deletes a vector by its <code>external_id</code>.</p>
 <section id="parameters-3" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-3">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 16%">
 <col style="width: 12%">
@@ -420,7 +426,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Deletes vectors by their <code>external_ids</code>.</p>
 <section id="parameters-4" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-4">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 17%">
 <col style="width: 11%">
@@ -458,7 +464,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Deletes an index from storage based on its URI.</p>
 <section id="parameters-5" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-5">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 12%">
 <col style="width: 40%">
@@ -498,7 +504,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="tiledb.vector_search.index.Index.query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.query">query</h3>
-<p><code>vector_search.index.Index.query(queries, k, **kwargs)</code></p>
+<p><code>vector_search.index.Index.query(queries, k, driver_mode=None, driver_resources=None, driver_access_credentials_name=None, **kwargs)</code></p>
 <p>Queries an index with a set of query vectors, retrieving the <code>k</code> most similar vectors for each query.</p>
 <p>This provides an algorithm-agnostic implementation for updates:</p>
 <ul>
@@ -506,14 +512,15 @@ ul.task-list li input[type="checkbox"] {
 <li>Calls the algorithm specific implementation of <code>query_internal</code> to query the base data.</li>
 <li>Merges the results applying the updated data.</li>
 </ul>
+<p>You can control where the query is executed by setting the <code>driver_mode</code> parameter: - With <code>driver_mode = None</code>, the driver logic for the query will be executed locally. - If <code>driver_mode</code> is not <code>None</code>, we will use a TileDB cloud taskgraph to re-open the index and run the query. With both options, certain implementations, i.e.&nbsp;IVF Flat, may let you create further TileDB taskgraphs as defined in the implementation specific <code>query_internal</code> methods.</p>
 <section id="parameters-6" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
-<col style="width: 8%">
-<col style="width: 8%">
-<col style="width: 75%">
-<col style="width: 8%">
+<col style="width: 19%">
+<col style="width: 9%">
+<col style="width: 64%">
+<col style="width: 6%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -537,6 +544,24 @@ ul.task-list li input[type="checkbox"] {
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
+<td><code>driver_mode</code></td>
+<td>Mode</td>
+<td>If not <code>None</code>, the query will be executed in a TileDB cloud taskgraph using the driver mode specified.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>driver_resources</code></td>
+<td>Optional[str]</td>
+<td>If <code>driver_mode</code> was not <code>None</code>, the resources to use for the driver execution.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>driver_access_credentials_name</code></td>
+<td>Optional[str]</td>
+<td>If <code>driver_mode</code> was not <code>None</code>, the access credentials name to use for the driver execution.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td><code>**kwargs</code></td>
 <td></td>
 <td>Extra kwargs passed here are passed to the <code>query_internal</code> implementation of the concrete index class.</td>
@@ -553,7 +578,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Queries the base index with a set of query vectors, retrieving the <code>k</code> most similar vectors for each query.</p>
 <section id="parameters-7" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-7">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 8%">
 <col style="width: 8%">
@@ -598,7 +623,7 @@ ul.task-list li input[type="checkbox"] {
 <p>This can be used to add new vectors or update an existing vector with the same <code>external_id</code>.</p>
 <section id="parameters-8" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-8">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 16%">
 <col style="width: 12%">
@@ -643,7 +668,7 @@ ul.task-list li input[type="checkbox"] {
 <p>This can be used to add new vectors or update existing vectors with the same <code>external_id</code>.</p>
 <section id="parameters-9" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-9">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 17%">
 <col style="width: 13%">

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.554">
+<meta name="generator" content="quarto-1.4.555">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -200,7 +200,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Stores all vectors in a 2D TileDB array performing exhaustive similarity search between the query vectors and all the dataset vectors.</p>
 <section id="classes" class="level2">
 <h2 class="anchored" data-anchor-id="classes">Classes</h2>
-<table class="table">
+<table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -216,16 +216,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.flat_index.FlatIndex" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.flat_index.FlatIndex">FlatIndex</h3>
-<p><code>vector_search.flat_index.FlatIndex(self, uri, config=None, timestamp=None, **kwargs)</code></p>
+<p><code>vector_search.flat_index.FlatIndex(self, uri, config=None, timestamp=None, open_for_remote_query_execution=False, **kwargs)</code></p>
 <p>Opens a <code>FlatIndex</code> loading all dataset vectors in main memory.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
-<col style="width: 8%">
-<col style="width: 20%">
-<col style="width: 63%">
 <col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 82%">
+<col style="width: 2%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -254,12 +254,18 @@ ul.task-list li input[type="checkbox"] {
 <td>If int, open the index at a given timestamp. If tuple, open at the given start and end timestamps.</td>
 <td><code>None</code></td>
 </tr>
+<tr class="even">
+<td><code>open_for_remote_query_execution</code></td>
+<td>bool</td>
+<td>If <code>True</code>, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-<code>None</code> <code>driver_mode</code> is passed to <code>query()</code>. If <code>False</code>, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you’ll just end up loading the data both on your local machine and in the cloud taskgraph.</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
 </section>
 <section id="methods" class="level4">
 <h4 class="anchored" data-anchor-id="methods">Methods</h4>
-<table class="table">
+<table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -288,7 +294,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Queries a FlatIndex using the vectors already loaded in main memory.</p>
 <section id="parameters-1" class="level6">
 <h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 8%">
 <col style="width: 8%">
@@ -331,7 +337,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="functions" class="level2">
 <h2 class="anchored" data-anchor-id="functions">Functions</h2>
-<table class="table">
+<table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -351,7 +357,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Creates an empty FlatIndex.</p>
 <section id="parameters-2" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 9%">
 <col style="width: 17%">

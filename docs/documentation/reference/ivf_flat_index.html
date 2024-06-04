@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.4.554">
+<meta name="generator" content="quarto-1.4.555">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -218,7 +218,7 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 <section id="classes" class="level2">
 <h2 class="anchored" data-anchor-id="classes">Classes</h2>
-<table class="table">
+<table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -234,16 +234,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex">IVFFlatIndex</h3>
-<p><code>vector_search.ivf_flat_index.IVFFlatIndex(self, uri, config=None, timestamp=None, memory_budget=-1, **kwargs)</code></p>
+<p><code>vector_search.ivf_flat_index.IVFFlatIndex(self, uri, config=None, timestamp=None, memory_budget=-1, open_for_remote_query_execution=False, **kwargs)</code></p>
 <p>Opens an <code>IVFFlatIndex</code>.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
+<col style="width: 6%">
 <col style="width: 5%">
-<col style="width: 11%">
-<col style="width: 78%">
-<col style="width: 4%">
+<col style="width: 85%">
+<col style="width: 2%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -278,12 +278,18 @@ ul.task-list li input[type="checkbox"] {
 <td>Main memory budget, in number of vectors, for query execution. If not provided, all index data are loaded in main memory. Otherwise, no index data are loaded in main memory and this memory budget is applied during queries.</td>
 <td><code>-1</code></td>
 </tr>
+<tr class="odd">
+<td><code>open_for_remote_query_execution</code></td>
+<td>bool</td>
+<td>If <code>True</code>, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-<code>None</code> <code>driver_mode</code> is passed to <code>query()</code>. We then load index data in the taskgraph based on <code>memory_budget</code>. If <code>False</code>, load index data in main memory locally according to <code>memory_budget</code>. Note that you can still use a taskgraph for query execution, you’ll just end up loading the data both on your local machine and in the cloud taskgraph..</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
 </section>
 <section id="methods" class="level4">
 <h4 class="anchored" data-anchor-id="methods">Methods</h4>
-<table class="table">
+<table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -312,7 +318,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Queries an <code>IVFFlatIndex</code>.</p>
 <section id="parameters-1" class="level6">
 <h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 6%">
 <col style="width: 8%">
@@ -397,7 +403,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="functions" class="level2">
 <h2 class="anchored" data-anchor-id="functions">Functions</h2>
-<table class="table">
+<table class="caption-top table">
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -417,7 +423,7 @@ ul.task-list li input[type="checkbox"] {
 <p>Creates an empty IVFFlatIndex.</p>
 <section id="parameters-2" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
-<table class="table">
+<table class="caption-top table">
 <colgroup>
 <col style="width: 9%">
 <col style="width: 17%">
