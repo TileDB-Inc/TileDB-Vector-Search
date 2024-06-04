@@ -241,7 +241,7 @@ class Index:
         k: int
             Number of results to return per query vector.
         driver_mode: Mode
-            If not `None`, the query will be executed in the cloud using the driver mode specified.
+            If not `None`, the query will be executed in a TileDB cloud taskgraph using the driver mode specified.
         driver_resources: Optional[str]
             If `driver_mode` was not `None`, the resources to use for the driver execution.
         driver_access_credentials_name: Optional[str]

@@ -65,24 +65,6 @@ class CloudTests(unittest.TestCase):
             mode=Mode.BATCH,
         )
 
-        # Test query().
-        tiledb_index_uri = groups.info(index_uri).tiledb_uri
-        index = index_class(
-            uri=tiledb_index_uri,
-            config=tiledb.cloud.Config().dict(),
-        )
-        for driver_mode in [None, Mode.REALTIME]:
-            for mode in [None, Mode.LOCAL, Mode.REALTIME]:
-                _, result_i = index.query(
-                    queries=queries,
-                    k=k,
-                    nprobe=nprobe,
-                    mode=mode,
-                    driver_mode=driver_mode,
-                    num_partitions=2,
-                )
-                assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
-
         # Test without loading index data into memory.
         index = index_class(
             uri=tiledb_index_uri,
@@ -101,6 +83,24 @@ class CloudTests(unittest.TestCase):
             num_partitions=2,
         )
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+
+        # Test query().
+        tiledb_index_uri = groups.info(index_uri).tiledb_uri
+        index = index_class(
+            uri=tiledb_index_uri,
+            config=tiledb.cloud.Config().dict(),
+        )
+        for driver_mode in [None, Mode.REALTIME]:
+            for mode in [None, Mode.LOCAL, Mode.REALTIME]:
+                _, result_i = index.query(
+                    queries=queries,
+                    k=k,
+                    nprobe=nprobe,
+                    mode=mode,
+                    driver_mode=driver_mode,
+                    num_partitions=2,
+                )
+                assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         # We now will test for invalid scenarios when setting the query() resources.
         resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
