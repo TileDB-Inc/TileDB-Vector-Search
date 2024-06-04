@@ -72,7 +72,7 @@ class IVFPQIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        opt_l: Optional[int] = 100,
+        nprobe: Optional[int] = 100,
         **kwargs,
     ):
         """
@@ -84,19 +84,15 @@ class IVFPQIndex(index.Index):
             2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
             Number of results to return per query vector.
-        opt_l: int
-            How deep to search. Should be >= k, and if it's not, we will set it to k.
+        nprobe: int
+            Number of partitions to check per query.
+            Use this parameter to trade-off accuracy for latency and cost.
         """
         warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
             )
-
-        assert queries.dtype == np.float32
-        if opt_l < k:
-            warnings.warn(f"opt_l ({opt_l}) should be >= k ({k}), setting to k")
-            opt_l = k
 
         if queries.ndim == 1:
             queries = np.array([queries])
@@ -105,7 +101,9 @@ class IVFPQIndex(index.Index):
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
 
-        distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
+        distances, ids = self.index.query(
+            vspy.QueryType.InfiniteRAM, queries_feature_vector_array, k, nprobe
+        )
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
@@ -114,8 +112,10 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
+    num_subspaces: int,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    partitions: Optional[int] = None,
     **kwargs,
 ) -> IVFPQIndex:
     """
@@ -129,20 +129,37 @@ def create(
     vector_type: np.dtype
         Datatype of vectors.
         Supported values (uint8, int8, float32).
+    num_subspaces: int
+        Number of subspaces to use in the PQ encoding. We will divide the dimensions into
+        num_subspaces parts, and PQ encode each part separately. This means dimensions must
+        be divisible by num_subspaces.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
     storage_version: str
         The TileDB vector search storage version to use.
         If not provided, use the latest stable storage version.
+    partitions: int
+        Number of partitions to load the data with, if not provided, is auto-configured
+        based on the dataset size.
     """
     warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
     ctx = vspy.Ctx(config)
+    if num_subspaces <= 0:
+        raise ValueError(
+            f"Number of num_subspaces ({num_subspaces}) must be greater than 0."
+        )
+    if dimensions % num_subspaces != 0:
+        raise ValueError(
+            f"Number of dimensions ({dimensions}) must be divisible by num_subspaces ({num_subspaces})."
+        )
     index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         partitioning_index_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
+        n_list=partitions if partitions is not None else 0,
+        num_subspaces=num_subspaces,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

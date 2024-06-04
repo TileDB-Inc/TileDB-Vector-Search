@@ -51,6 +51,7 @@ def ingest(
     namespace: Optional[str] = None,
     size: int = -1,
     partitions: int = -1,
+    num_subspaces: int = -1,
     training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
     copy_centroids_uri: str = None,
     training_sample_size: int = -1,
@@ -114,7 +115,11 @@ def ingest(
         Number of input vectors, if not provided use the full size of the input dataset.
         If provided, we filter the first vectors from the input source.
     partitions: int
-        Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size.
+        For IVF indexes, the number of partitions to load the data with, if not provided, is auto-configured based on the dataset size.
+    num_subspaces: int
+        For PQ encoded indexes, the number of subspaces to use in the PQ encoding. We will divide the dimensions into
+        num_subspaces parts, and PQ encode each part separately. This means dimensions must
+        be divisible by num_subspaces.
     copy_centroids_uri: str
         TileDB array URI to copy centroids from, if not provided, centroids are build running `k-means`.
     training_sample_size: int
@@ -2604,6 +2609,7 @@ def ingest(
                             uri=index_group_uri,
                             dimensions=dimensions,
                             vector_type=vector_type,
+                            num_subspaces=num_subspaces,
                             config=config,
                             storage_version=storage_version,
                         )
