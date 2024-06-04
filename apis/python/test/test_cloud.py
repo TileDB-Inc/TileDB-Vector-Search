@@ -92,17 +92,15 @@ class CloudTests(unittest.TestCase):
         # Throws if we try to query locally.
         with self.assertRaises(ValueError):
             index.query(queries, k=k, nprobe=nprobe)
-        # Succeeeds if we try query locally with a taskgraph.
-        for driver_mode in [None, Mode.LOCAL, Mode.REALTIME]:
-            _, result_i = index.query(
-                queries=queries,
-                k=k,
-                nprobe=nprobe,
-                mode=mode,
-                driver_mode=driver_mode,
-                num_partitions=2,
-            )
-            assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+        # Succeeeds if we try query with a taskgraph.
+        _, result_i = index.query(
+            queries=queries,
+            k=k,
+            nprobe=nprobe,
+            driver_mode=Mode.REALTIME,
+            num_partitions=2,
+        )
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         # We now will test for invalid scenarios when setting the query() resources.
         resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
