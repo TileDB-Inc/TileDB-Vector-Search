@@ -55,8 +55,8 @@ option(BUILD_CLI "Build the index and query command-line interface programs" OFF
 set(CMAKE_CXX_STANDARD 20)
 
 if (TILEDB_PATH)
-    set(TileDB_DIR ${TILEDB_PATH})
-    message(STATUS "Setting TileDB_DIR to ${TILEDB_PATH}")
+    set(CMAKE_PREFIX_PATH  "${TILEDB_PATH};${CMAKE_PREFIX_PATH}")
+    message(STATUS "Adding TILEDB_PATH to CMAKE_PREFIX_PATH")
 endif()
 
 
