@@ -265,6 +265,12 @@ class Index:
                 f"Expected queries to have dtype np.float32, but it had dtype {queries.dtype}"
             )
 
+        if driver_mode == Mode.LOCAL:
+            # @todo: Fix bug with driver_mode=Mode.LOCAL and remove this check.
+            raise TypeError(
+                "Cannot pass driver_mode=Mode.LOCAL to query() - use driver_mode=None to query locally."
+            )
+
         if driver_mode is not None:
             return self._query_with_driver(
                 queries,

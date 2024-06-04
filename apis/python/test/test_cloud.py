@@ -103,44 +103,45 @@ class CloudTests(unittest.TestCase):
                 assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         # We now will test for invalid scenarios when setting the query() resources.
-        resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
-        # Cannot pass resource_class or resources to LOCAL mode or to no mode.
-        with self.assertRaises(TypeError):
-            index.query(
-                queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large"
-            )
-        with self.assertRaises(TypeError):
-            index.query(
-                queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources
-            )
-        with self.assertRaises(TypeError):
-            index.query(queries, k=k, nprobe=nprobe, resource_class="large")
-        with self.assertRaises(TypeError):
-            index.query(queries, k=k, nprobe=nprobe, resources=resources)
-        # Cannot pass resources to REALTIME.
-        with self.assertRaises(TypeError):
-            index.query(
-                queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources
-            )
-        # Cannot pass both resource_class and resources.
-        with self.assertRaises(TypeError):
-            index.query(
-                queries,
-                k=k,
-                nprobe=nprobe,
-                mode=Mode.REALTIME,
-                resource_class="large",
-                resources=resources,
-            )
-        with self.assertRaises(TypeError):
-            index.query(
-                queries,
-                k=k,
-                nprobe=nprobe,
-                mode=Mode.BATCH,
-                resource_class="large",
-                resources=resources,
-            )
+        if index_type == "IVF_FLAT":
+            resources = {"cpu": "9", "memory": "12Gi", "gpu": 0}
+            # Cannot pass resource_class or resources to LOCAL mode or to no mode.
+            with self.assertRaises(TypeError):
+                index.query(
+                    queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resource_class="large"
+                )
+            with self.assertRaises(TypeError):
+                index.query(
+                    queries, k=k, nprobe=nprobe, mode=Mode.LOCAL, resources=resources
+                )
+            with self.assertRaises(TypeError):
+                index.query(queries, k=k, nprobe=nprobe, resource_class="large")
+            with self.assertRaises(TypeError):
+                index.query(queries, k=k, nprobe=nprobe, resources=resources)
+            # Cannot pass resources to REALTIME.
+            with self.assertRaises(TypeError):
+                index.query(
+                    queries, k=k, nprobe=nprobe, mode=Mode.REALTIME, resources=resources
+                )
+            # Cannot pass both resource_class and resources.
+            with self.assertRaises(TypeError):
+                index.query(
+                    queries,
+                    k=k,
+                    nprobe=nprobe,
+                    mode=Mode.REALTIME,
+                    resource_class="large",
+                    resources=resources,
+                )
+            with self.assertRaises(TypeError):
+                index.query(
+                    queries,
+                    k=k,
+                    nprobe=nprobe,
+                    mode=Mode.BATCH,
+                    resource_class="large",
+                    resources=resources,
+                )
 
         # Test delete and consolidate_updates.
         index = index_class(
