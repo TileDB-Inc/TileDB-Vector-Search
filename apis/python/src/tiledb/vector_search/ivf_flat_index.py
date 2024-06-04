@@ -70,9 +70,9 @@ class IVFFlatIndex(index.Index):
         If not provided, all index data are loaded in main memory.
         Otherwise, no index data are loaded in main memory and this memory budget is
         applied during queries.
-    load_index_data: bool
-        If `False`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`. We then load index data in the taskgraph based on `memory_budget`.
-        If `True`, load index data in main memory locally according to `memory_budget`. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph..
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`. We then load index data in the taskgraph based on `memory_budget`.
+        If `False`, load index data in main memory locally according to `memory_budget`. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph..
     """
 
     def __init__(
@@ -81,7 +81,7 @@ class IVFFlatIndex(index.Index):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         memory_budget: int = -1,
-        load_index_data: bool = True,
+        open_for_remote_query_execution: bool = False,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -93,7 +93,10 @@ class IVFFlatIndex(index.Index):
         self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
         super().__init__(
-            uri=uri, config=config, timestamp=timestamp, load_index_data=load_index_data
+            uri=uri,
+            config=config,
+            timestamp=timestamp,
+            open_for_remote_query_execution=open_for_remote_query_execution,
         )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -138,7 +141,7 @@ class IVFFlatIndex(index.Index):
         else:
             self.partitions = self.partition_history[self.history_index]
 
-        if load_index_data:
+        if not open_for_remote_query_execution:
             self._centroids = load_as_matrix(
                 self.centroids_uri,
                 ctx=self.ctx,
@@ -160,7 +163,7 @@ class IVFFlatIndex(index.Index):
             self.size = self.base_size
 
         # TODO pass in a context
-        if load_index_data and self.memory_budget == -1:
+        if not open_for_remote_query_execution and self.memory_budget == -1:
             self._db = load_as_matrix(
                 self.db_uri,
                 ctx=self.ctx,
