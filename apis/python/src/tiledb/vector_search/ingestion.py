@@ -2855,9 +2855,7 @@ def ingest(
         if index_type == "FLAT":
             return flat_index.FlatIndex(uri=index_group_uri, config=config)
         elif index_type == "VAMANA":
-            return vamana_index.VamanaIndex(
-                uri=index_group_uri, config=config, debug=True
-            )
+            return vamana_index.VamanaIndex(uri=index_group_uri, config=config)
         elif index_type == "IVF_FLAT":
             return ivf_flat_index.IVFFlatIndex(
                 uri=index_group_uri, memory_budget=1000000, config=config

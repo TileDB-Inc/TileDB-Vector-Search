@@ -35,6 +35,9 @@ class FlatIndex(index.Index):
     timestamp: int or tuple(int)
         If int, open the index at a given timestamp.
         If tuple, open at the given start and end timestamps.
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
     def __init__(
@@ -42,10 +45,22 @@ class FlatIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        open_for_remote_query_execution: bool = False,
         **kwargs,
     ):
+        self.index_open_kwargs = {
+            "uri": uri,
+            "config": config,
+            "timestamp": timestamp,
+        }
+        self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
+        super().__init__(
+            uri=uri,
+            config=config,
+            timestamp=timestamp,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+        )
         self._index = None
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -69,7 +84,7 @@ class FlatIndex(index.Index):
             ].uri
         else:
             self.ids_uri = ""
-        if self.size > 0:
+        if self.size > 0 and not open_for_remote_query_execution:
             self._db = load_as_matrix(
                 self.db_uri,
                 ctx=self.ctx,
@@ -120,8 +135,6 @@ class FlatIndex(index.Index):
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
             )
-
-        assert queries.dtype == np.float32
 
         queries_m = array_to_matrix(np.transpose(queries))
         d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)

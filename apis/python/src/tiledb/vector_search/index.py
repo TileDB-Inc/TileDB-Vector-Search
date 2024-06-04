@@ -4,6 +4,7 @@ import os
 import time
 from typing import Any, Mapping, Optional
 
+from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import storage_formats
@@ -35,11 +36,15 @@ class Index:
     timestamp: int or tuple(int)
         If int, open the index at a given timestamp.
         If tuple, open at the given start and end timestamps.
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
     def __init__(
         self,
         uri: str,
+        open_for_remote_query_execution: bool,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
     ):
@@ -48,6 +53,7 @@ class Index:
             config = dict(config)
 
         self.uri = uri
+        self.open_for_remote_query_execution = open_for_remote_query_execution
         self.config = config
         self.ctx = vspy.Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
@@ -154,7 +160,66 @@ class Index:
         self.thread_executor = futures.ThreadPoolExecutor()
         self.has_updates = self._check_has_updates()
 
-    def query(self, queries: np.ndarray, k: int, **kwargs):
+    def _query_with_driver(
+        self,
+        queries: np.ndarray,
+        k: int,
+        driver_mode=None,
+        driver_resources=None,
+        driver_access_credentials_name=None,
+        **kwargs,
+    ):
+        from tiledb.cloud import dag
+
+        def query_udf(index_type, index_open_kwargs, query_kwargs):
+            from tiledb.vector_search.flat_index import FlatIndex
+            from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+            from tiledb.vector_search.vamana_index import VamanaIndex
+
+            # Open index
+            if index_type == "FLAT":
+                index = FlatIndex(**index_open_kwargs)
+            elif index_type == "IVF_FLAT":
+                index = IVFFlatIndex(**index_open_kwargs)
+            elif index_type == "VAMANA":
+                index = VamanaIndex(**index_open_kwargs)
+
+            # Query index
+            return index.query(**query_kwargs)
+
+        d = dag.DAG(
+            name="vector-query",
+            mode=driver_mode,
+            max_workers=1,
+        )
+        query_kwargs = {
+            "queries": queries,
+            "k": k,
+        }
+        query_kwargs.update(kwargs)
+        node = d.submit(
+            query_udf,
+            self.index_type,
+            self.index_open_kwargs,
+            query_kwargs,
+            name="vector-query-driver",
+            resources=driver_resources,
+            image_name="vectorsearch",
+            access_credentials_name=driver_access_credentials_name,
+        )
+        d.compute()
+        d.wait()
+        return node.result()
+
+    def query(
+        self,
+        queries: np.ndarray,
+        k: int,
+        driver_mode: Mode = None,
+        driver_resources: Optional[str] = None,
+        driver_access_credentials_name: Optional[str] = None,
+        **kwargs,
+    ):
         """
         Queries an index with a set of query vectors, retrieving the `k` most similar vectors for each query.
 
@@ -164,12 +229,23 @@ class Index:
         - Calls the algorithm specific implementation of `query_internal` to query the base data.
         - Merges the results applying the updated data.
 
+        You can control where the query is executed by setting the `driver_mode` parameter:
+        - With `driver_mode = None`, the driver logic for the query will be executed locally.
+        - If `driver_mode` is not `None`, we will use a TileDB cloud taskgraph to re-open the index and run the query.
+        With both options, certain implementations, i.e. IVF Flat, may let you create further TileDB taskgraphs as defined in the implementation specific `query_internal` methods.
+
         Parameters
         ----------
         queries: np.ndarray
             2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
             Number of results to return per query vector.
+        driver_mode: Mode
+            If not `None`, the query will be executed in a TileDB cloud taskgraph using the driver mode specified.
+        driver_resources: Optional[str]
+            If `driver_mode` was not `None`, the resources to use for the driver execution.
+        driver_access_credentials_name: Optional[str]
+            If `driver_mode` was not `None`, the access credentials name to use for the driver execution.
         **kwargs
             Extra kwargs passed here are passed to the `query_internal` implementation of the concrete index class.
         """
@@ -182,6 +258,32 @@ class Index:
         if query_dimensions != self.get_dimensions():
             raise TypeError(
                 f"A query in queries has {query_dimensions} dimensions, but the indexed data had {self.dimensions} dimensions"
+            )
+
+        if queries.dtype != np.float32:
+            raise TypeError(
+                f"Expected queries to have dtype np.float32, but it had dtype {queries.dtype}"
+            )
+
+        if driver_mode == Mode.LOCAL:
+            # @todo: Fix bug with driver_mode=Mode.LOCAL and remove this check.
+            raise TypeError(
+                "Cannot pass driver_mode=Mode.LOCAL to query() - use driver_mode=None to query locally."
+            )
+
+        if driver_mode is not None:
+            return self._query_with_driver(
+                queries,
+                k,
+                driver_mode,
+                driver_resources,
+                driver_access_credentials_name,
+                **kwargs,
+            )
+
+        if self.open_for_remote_query_execution:
+            raise ValueError(
+                "Cannot query an index with driver_mode=None without loading the index data in main memory. Set open_for_remote_query_execution=False when creating the index to load the index data before query."
             )
 
         with tiledb.scope_ctx(ctx_or_config=self.config):
@@ -575,7 +677,6 @@ class Index:
         timestamp=None,
         config=None,
     ):
-        assert queries.dtype == np.float32
         additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
             updates_array_uri, timestamp, config
         )
