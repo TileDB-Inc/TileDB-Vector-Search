@@ -64,6 +64,7 @@ class CloudTests(unittest.TestCase):
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
+        tiledb_index_uri = groups.info(index_uri).tiledb_uri
 
         # Test without loading index data into memory.
         index = index_class(
@@ -85,7 +86,6 @@ class CloudTests(unittest.TestCase):
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
         # Test query().
-        tiledb_index_uri = groups.info(index_uri).tiledb_uri
         index = index_class(
             uri=tiledb_index_uri,
             config=tiledb.cloud.Config().dict(),
