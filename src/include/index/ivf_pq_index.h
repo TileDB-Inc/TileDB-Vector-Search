@@ -720,6 +720,7 @@ class ivf_pq_index {
 
     train_pq(training_set);   // cluster_centroids_, distance_tables_
     train_ivf(training_set);  // flat_ivf_centroids_
+    return;
     unpartitioned_pq_vectors_ =
         pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(
             training_set);
