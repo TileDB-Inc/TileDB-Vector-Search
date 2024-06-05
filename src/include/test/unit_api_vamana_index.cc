@@ -123,9 +123,7 @@ TEST_CASE("init constructor", "[api_vamana_index]") {
 
   SECTION("uint8 uint64 uint64") {
     auto a = IndexVamana(std::make_optional<IndexOptions>(
-        {{"feature_type", "uint8"},
-         {"id_type", "uint64"},
-         {"adjacency_row_index_type", "uint64"}}));
+        {{"feature_type", "uint8"}, {"id_type", "uint64"}}));
     CHECK(a.feature_type() == TILEDB_UINT8);
     CHECK(a.id_type() == TILEDB_UINT64);
   }
@@ -479,7 +477,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
-  using adjacency_row_index_type_type = uint32_t;
+  using adjacency_row_index_type_type = uint64_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
   size_t dimensions = 3;
