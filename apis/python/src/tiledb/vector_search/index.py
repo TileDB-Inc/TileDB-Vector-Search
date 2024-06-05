@@ -361,6 +361,10 @@ class Index:
         """
         from tiledb.vector_search.ingestion import ingest
 
+        if self.index_type == "IVF_PQ":
+            # TODO(SC-48888): Fix consolidation for IVF_PQ.
+            raise ValueError("IVF_PQ indexes do not support consolidation yet.")
+
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )

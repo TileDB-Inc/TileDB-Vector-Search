@@ -112,7 +112,7 @@ class vamana_index_group : public base_index_group<index_type> {
 
   void clear_history_impl(uint64_t timestamp) {
     tiledb::Array::delete_fragments(
-        cached_ctx_, feature_vectors_uri(), 0, timestamp);
+        cached_ctx_, this->feature_vectors_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, adjacency_scores_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
@@ -179,9 +179,6 @@ class vamana_index_group : public base_index_group<index_type> {
     metadata_.medoid_ = size;
   }
 
-  [[nodiscard]] auto feature_vectors_uri() const {
-    return this->array_key_to_uri("parts_array_name");
-  }
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
   }
@@ -190,9 +187,6 @@ class vamana_index_group : public base_index_group<index_type> {
   }
   [[nodiscard]] auto adjacency_row_index_uri() const {
     return this->array_key_to_uri("adjacency_row_index_array_name");
-  }
-  [[nodiscard]] auto feature_vectors_array_name() const {
-    return this->array_key_to_array_name("parts_array_name");
   }
   [[nodiscard]] auto adjacency_scores_array_name() const {
     return this->array_key_to_array_name("adjacency_scores_array_name");
@@ -267,14 +261,16 @@ class vamana_index_group : public base_index_group<index_type> {
         typename index_type::feature_type,
         stdx::layout_left>(
         cached_ctx_,
-        feature_vectors_uri(),
+        this->feature_vectors_uri(),
         this->get_dimensions(),
         default_domain,
         this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, feature_vectors_uri(), feature_vectors_array_name());
+        write_group,
+        this->feature_vectors_uri(),
+        this->feature_vectors_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,

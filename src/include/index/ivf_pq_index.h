@@ -902,7 +902,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->ivf_index_uri(),
         group_->get_num_partitions() + 1,
-        group_->ivf_ids_uri(),
+        group_->ids_uri(),
         infinite_parts,
         0,
         temporal_policy_);
@@ -946,7 +946,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->ivf_index_uri(),
         group_->get_num_partitions() + 1,
-        group_->ivf_ids_uri(),
+        group_->ids_uri(),
         active_partitions,
         upper_bound,
         temporal_policy_);
@@ -1066,7 +1066,7 @@ class ivf_pq_index {
     write_vector(
         ctx,
         partitioned_pq_vectors_->ids(),
-        write_group.ivf_ids_uri(),
+        write_group.ids_uri(),
         0,
         false,
         temporal_policy_);

@@ -2610,6 +2610,7 @@ def ingest(
                             dimensions=dimensions,
                             vector_type=vector_type,
                             num_subspaces=num_subspaces,
+                            partitions=partitions,
                             config=config,
                             storage_version=storage_version,
                         )

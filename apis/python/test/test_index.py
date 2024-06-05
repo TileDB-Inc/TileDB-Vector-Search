@@ -328,6 +328,7 @@ def test_ivf_pq_index(tmp_path):
         uri=uri,
         dimensions=3,
         vector_type=np.dtype(vector_type),
+        num_subspaces=1,
     )
 
     ingestion_timestamps, base_sizes = load_metadata(uri)
@@ -357,46 +358,7 @@ def test_ivf_pq_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
 
-    index = index.consolidate_updates()
-
-    # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
-    ingestion_timestamps, base_sizes = load_metadata(uri)
-    assert base_sizes == [5]
-    timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
-    timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
-    assert (
-        ingestion_timestamps[0] > timestamp_5_minutes_ago
-        and ingestion_timestamps[0] < timestamp_5_minutes_from_now
-    )
-
-    # Test that we can query with multiple query vectors.
-    for i in range(5):
-        query_and_check_distances(
-            index,
-            np.array([[i, i, i], [i, i, i]], dtype=np.float32),
-            1,
-            [[0], [0]],
-            [[i], [i]],
-        )
-
-    # Test that we can query with k > 1.
-    query_and_check_distances(
-        index, np.array([[0, 0, 0]], dtype=np.float32), 2, [[0, 3]], [[0, 1]]
-    )
-
-    # Test that we can query with multiple query vectors and k > 1.
-    query_and_check_distances(
-        index,
-        np.array([[0, 0, 0], [4, 4, 4]], dtype=np.float32),
-        2,
-        [[0, 3], [0, 3]],
-        [[0, 1], [4, 3]],
-    )
-
-    vfs = tiledb.VFS()
-    assert vfs.dir_size(uri) > 0
-    Index.delete_index(uri=uri, config={})
-    assert vfs.dir_size(uri) == 0
+    # TODO(paris): Add tests for consolidation once we enable it.
 
 
 def test_delete_invalid_index(tmp_path):
@@ -412,7 +374,12 @@ def test_delete_index(tmp_path):
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
     for index_type, index_class in zip(indexes, index_classes):
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
-        ingest(index_type=index_type, index_uri=index_uri, input_vectors=data)
+        ingest(
+            index_type=index_type,
+            index_uri=index_uri,
+            input_vectors=data,
+            num_subspaces=1,
+        )
         Index.delete_index(uri=index_uri, config={})
         assert vfs.dir_size(index_uri) == 0
         with pytest.raises(tiledb.TileDBError) as error:
@@ -425,7 +392,9 @@ def test_index_with_incorrect_dimensions(tmp_path):
     indexes = [flat_index, ivf_flat_index, vamana_index, ivf_pq_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
-        index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
+        index = index_type.create(
+            uri=uri, dimensions=3, vector_type=np.dtype(np.uint8), num_subspaces=1
+        )
 
         # Wrong number of dimensions will raise a TypeError.
         with pytest.raises(TypeError):
@@ -456,6 +425,7 @@ def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
             index_uri=index_uri,
             source_uri=siftsmall_uri,
             source_type="FVEC",
+            num_subspaces=siftsmall_dimensions / 4,
         )
 
         # Wrong number of columns will raise a TypeError.
@@ -489,6 +459,7 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=os.path.join(dataset_dir, "data.f32bin"),
+                num_subspaces=num_columns,
             )
 
             # We have created a dataset with num_columns in each vector. Let's try creating queries
@@ -514,7 +485,9 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
     indexes = [flat_index, ivf_flat_index, vamana_index, ivf_pq_index]
     for index_type in indexes:
         uri = os.path.join(tmp_path, f"array_{index_type.__name__}")
-        index = index_type.create(uri=uri, dimensions=3, vector_type=np.dtype(np.uint8))
+        index = index_type.create(
+            uri=uri, dimensions=3, vector_type=np.dtype(np.uint8), num_subspaces=1
+        )
 
         # Wrong number of columns will raise a TypeError.
         with pytest.raises(TypeError):

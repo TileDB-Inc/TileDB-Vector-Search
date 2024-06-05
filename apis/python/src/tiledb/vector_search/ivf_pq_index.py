@@ -41,6 +41,7 @@ class IVFPQIndex(index.Index):
         super().__init__(uri=uri, config=config, timestamp=timestamp)
         self.index_type = INDEX_TYPE
         self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))
+        # TODO(paris): This is incorrect - should be fixed when we fix consolidation.
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -158,7 +159,7 @@ def create(
         id_type=np.dtype(np.uint64).name,
         partitioning_index_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
-        n_list=partitions if partitions is not None else 0,
+        n_list=partitions if (partitions is not None and partitions is not -1) else 0,
         num_subspaces=num_subspaces,
     )
     # TODO(paris): Run all of this with a single C++ call.
