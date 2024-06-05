@@ -514,3 +514,187 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
 
   init.verify(top_k_ivf);
 }
+
+TEST_CASE("ivf_pq_index write and read", "[ivf_pq_index]") {
+  tiledb::Context ctx;
+  std::string ivf_pq_index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(ivf_pq_index_uri)) {
+    vfs.remove_dir(ivf_pq_index_uri);
+  }
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
+  load(training_set);
+  std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
+  std::iota(begin(ids), end(ids), 0);
+
+  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+      10, siftsmall_dimensions / 2);
+  idx.train(training_set, ids);
+  idx.add(training_set, ids);
+  uint64_t write_timestamp = 1000;
+  idx.write_index(
+      ctx, ivf_pq_index_uri, TemporalPolicy(TimeTravel, write_timestamp));
+
+  {
+    // Load the index and check metadata.
+    auto idx2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_pq_index_uri);
+    CHECK(idx2.group().get_dimensions() == sift_dimensions);
+    CHECK(idx2.group().get_temp_size() == 0);
+
+    CHECK(idx2.group().get_all_num_partitions().size() == 1);
+    CHECK(idx2.group().get_all_base_sizes().size() == 1);
+    CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
+
+    CHECK(idx2.group().get_all_num_partitions()[0] > 0);
+    CHECK(idx2.group().get_all_base_sizes()[0] == num_sift_vectors);
+    CHECK(idx2.group().get_all_ingestion_timestamps()[0] == write_timestamp);
+
+    // Can't compare groups because a write_index does not create a group
+    // @todo Should it?
+    // CHECK(idx.compare_group(idx2));
+
+    auto idx3 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_pq_index_uri);
+    CHECK(idx2 == idx3);
+  }
+
+  {
+    // Clear history.
+    ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
+        ctx, ivf_pq_index_uri, write_timestamp + 10);
+    auto idx2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_pq_index_uri);
+
+    CHECK(idx2.group().get_dimensions() == sift_dimensions);
+    CHECK(idx2.group().get_temp_size() == 0);
+
+    CHECK(idx2.group().get_all_num_partitions().size() == 1);
+    CHECK(idx2.group().get_all_base_sizes().size() == 1);
+    CHECK(idx2.group().get_all_ingestion_timestamps().size() == 1);
+
+    CHECK(idx2.group().get_all_num_partitions()[0] == 0);
+    CHECK(idx2.group().get_all_base_sizes()[0] == 0);
+    CHECK(idx2.group().get_all_ingestion_timestamps()[0] == 0);
+  }
+}
+
+TEST_CASE("query empty index", "[ivf_pq_index]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  size_t num_vectors = 0;
+  size_t dimensions = 10;
+  size_t nlist = 1;
+  auto index = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+      nlist, dimensions / 2);
+  auto queries =
+      ColMajorMatrix<siftsmall_feature_type>{{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
+
+  // We can train and add to an empty index.
+  {
+    auto data =
+        ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
+    debug_matrix_with_ids(data, "data");
+    index.train(data, data.raveled_ids());
+    index.add(data, data.raveled_ids());
+  }
+
+  // We can query an empty index.
+  {
+    size_t k_nn = 1;
+    auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nlist);
+    CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
+    CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
+    CHECK(_cpo::dimensions(scores) == k_nn);
+    CHECK(_cpo::dimensions(ids) == k_nn);
+    CHECK(scores(0, 0) == std::numeric_limits<float>::max());
+    CHECK(ids(0, 0) == std::numeric_limits<uint64_t>::max());
+  }
+
+  // We can write an empty index.
+  auto ivf_index_uri =
+      (std::filesystem::temp_directory_path() / "ivf_index").string();
+  {
+    if (vfs.is_dir(ivf_index_uri)) {
+      vfs.remove_dir(ivf_index_uri);
+    }
+    index.write_index(ctx, ivf_index_uri);
+  }
+
+  // We can load and query an empty index.
+  {
+    auto index2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_index_uri);
+    size_t k_nn = 1;
+    auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nlist);
+    CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
+    CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
+    CHECK(_cpo::dimensions(scores) == k_nn);
+    CHECK(_cpo::dimensions(ids) == k_nn);
+    CHECK(scores(0, 0) == std::numeric_limits<float>::max());
+    CHECK(ids(0, 0) == std::numeric_limits<uint64_t>::max());
+  }
+}
+
+TEST_CASE("query simple", "[ivf_pq_index]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+
+  size_t num_vectors = 4;
+  size_t dimensions = 4;
+  size_t nlist = 1;
+  size_t num_subspaces = 2;
+  size_t max_iter = 1;
+  float tol = 0.000025;
+  std::optional<TemporalPolicy> temporal_policy = std::nullopt;
+  size_t num_clusters = 4;
+  using feature_type = float;
+  using id_type = uint32_t;
+  auto index = ivf_pq_index<feature_type, id_type>(
+      nlist, num_subspaces, max_iter, tol, temporal_policy, num_clusters);
+  auto ivf_index_uri =
+      (std::filesystem::temp_directory_path() / "ivf_index").string();
+
+  // We can train, add, query, and then write the index.
+  {
+    auto training = ColMajorMatrixWithIds<feature_type>{
+        {{1, 1, 1, 1}, {2, 2, 2, 2}, {3, 3, 3, 3}, {4, 4, 4, 4}},
+        {11, 22, 33, 44}};
+    index.train(training, training.raveled_ids());
+    index.add(training, training.raveled_ids());
+
+    size_t k_nn = 1;
+    size_t nprobe = nlist;
+    for (int i = 1; i <= 4; ++i) {
+      auto value = static_cast<feature_type>(i);
+      auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
+      auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
+      debug_matrix(scores, "scores");
+      debug_matrix(ids, "ids");
+      CHECK(scores(0, 0) == 0);
+      CHECK(ids(0, 0) == i * 11);
+    }
+
+    if (vfs.is_dir(ivf_index_uri)) {
+      vfs.remove_dir(ivf_index_uri);
+    }
+    index.write_index(ctx, ivf_index_uri);
+  }
+
+  // We can load and query the index.
+  {
+    auto index2 = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
+    size_t k_nn = 1;
+    size_t nprobe = nlist;
+    for (int i = 1; i <= 4; ++i) {
+      auto value = static_cast<feature_type>(i);
+      auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
+      auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
+      debug_matrix(scores, "scores");
+      debug_matrix(ids, "ids");
+      CHECK(scores(0, 0) == 0);
+      CHECK(ids(0, 0) == i * 11);
+    }
+  }
+}
