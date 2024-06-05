@@ -223,7 +223,7 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.ingestion.ingest" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.ingestion.ingest">ingest</h3>
-<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, training_sampling_policy=TrainingSamplingPolicy.FIRST_N, copy_centroids_uri=None, training_sample_size=-1, training_input_vectors=None, training_source_uri=None, training_source_type=None, workers=-1, input_vectors_per_work_item=-1, max_tasks_per_stage=-1, input_vectors_per_work_item_during_sampling=-1, max_sampling_tasks=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, use_sklearn=True, mode=Mode.LOCAL, acn=None, ingest_resources=None, consolidate_partition_resources=None, copy_centroids_resources=None, random_sample_resources=None, kmeans_resources=None, compute_new_centroids_resources=None, assign_points_and_partial_new_centroids_resources=None, write_centroids_resources=None, partial_index_resources=None, **kwargs)</code></p>
+<p><code>vector_search.ingestion.ingest(index_type, index_uri, *, input_vectors=None, source_uri=None, source_type=None, external_ids=None, external_ids_uri='', external_ids_type=None, updates_uri=None, index_timestamp=None, config=None, namespace=None, size=-1, partitions=-1, num_subspaces=-1, training_sampling_policy=TrainingSamplingPolicy.FIRST_N, copy_centroids_uri=None, training_sample_size=-1, training_input_vectors=None, training_source_uri=None, training_source_type=None, workers=-1, input_vectors_per_work_item=-1, max_tasks_per_stage=-1, input_vectors_per_work_item_during_sampling=-1, max_sampling_tasks=-1, storage_version=STORAGE_VERSION, verbose=False, trace_id=None, use_sklearn=True, mode=Mode.LOCAL, acn=None, ingest_resources=None, consolidate_partition_resources=None, copy_centroids_resources=None, random_sample_resources=None, kmeans_resources=None, compute_new_centroids_resources=None, assign_points_and_partial_new_centroids_resources=None, write_centroids_resources=None, partial_index_resources=None, **kwargs)</code></p>
 <p>Ingest vectors into TileDB.</p>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
@@ -246,7 +246,7 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>index_type</code></td>
 <td>str</td>
-<td>Type of vector index (FLAT, IVF_FLAT, VAMANA).</td>
+<td>Type of vector index (FLAT, IVF_FLAT, IVF_PQ, VAMANA).</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
@@ -324,154 +324,160 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><code>partitions</code></td>
 <td>int</td>
-<td>Number of partitions to load the data with, if not provided, is auto-configured based on the dataset size.</td>
+<td>For IVF indexes, the number of partitions to load the data with, if not provided, is auto-configured based on the dataset size.</td>
 <td><code>-1</code></td>
 </tr>
 <tr class="odd">
+<td><code>num_subspaces</code></td>
+<td>int</td>
+<td>For PQ encoded indexes, the number of subspaces to use in the PQ encoding. We will divide the dimensions into num_subspaces parts, and PQ encode each part separately. This means dimensions must be divisible by num_subspaces.</td>
+<td><code>-1</code></td>
+</tr>
+<tr class="even">
 <td><code>copy_centroids_uri</code></td>
 <td>str</td>
 <td>TileDB array URI to copy centroids from, if not provided, centroids are build running <code>k-means</code>.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>training_sample_size</code></td>
 <td>int</td>
 <td>Sample size to use for computing <code>k-means</code>. If not provided, is auto-configured based on the dataset sizes. Should not be provided if training_source_uri is provided.</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>training_input_vectors</code></td>
 <td>np.ndarray</td>
 <td>Training input vectors, if this is provided it takes precedence over <code>training_source_uri</code> and <code>training_source_type</code>. Should not be provided if <code>training_sample_size</code> or <code>training_source_uri</code> are provided.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>training_source_uri</code></td>
 <td>str</td>
 <td>The source URI to use for training centroids when building a <code>IVF_FLAT</code> vector index. If not provided, the first <code>training_sample_size</code> vectors from <code>source_uri</code> are used. Should not be provided if training_sample_size or training_input_vectors is provided.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>training_source_type</code></td>
 <td>str</td>
 <td>Type of the training source data in <code>training_source_uri</code>. If left empty, is auto-detected. Should only be provided when <code>training_source_uri</code> is provided.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>workers</code></td>
 <td>int</td>
 <td>Number of distributed workers to use for vector ingestion. If not provided, is auto-configured based on the dataset size.</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>input_vectors_per_work_item</code></td>
 <td>int</td>
 <td>Number of vectors per ingestion work item. If not provided, is auto-configured.</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>max_tasks_per_stage</code></td>
 <td>int</td>
 <td>Max number of tasks per execution stage of ingestion. If not provided, is auto-configured.</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>input_vectors_per_work_item_during_sampling</code></td>
 <td>int</td>
 <td>Number of vectors per sample ingestion work item. iIf not provided, is auto-configured. Only valid with <code>training_sampling_policy=TrainingSamplingPolicy.RANDOM</code>.</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>max_sampling_tasks</code></td>
 <td>int</td>
 <td>Max number of tasks per execution stage of sampling. If not provided, is auto-configured Only valid with <code>training_sampling_policy=TrainingSamplingPolicy.RANDOM</code>.</td>
 <td><code>-1</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>storage_version</code></td>
 <td>str</td>
 <td>Vector index storage format version. If not provided, defaults to the latest version.</td>
 <td><code>STORAGE_VERSION</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>verbose</code></td>
 <td>bool</td>
 <td>Enables verbose logging.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>trace_id</code></td>
 <td>Optional[str]</td>
 <td>trace ID for logging.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>use_sklearn</code></td>
 <td>bool</td>
 <td>Whether to use scikit-learn’s implementation of k-means clustering instead of tiledb.vector_search’s.</td>
 <td><code>True</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>mode</code></td>
 <td>Mode</td>
 <td>Execution mode, defaults to <code>LOCAL</code> use <code>BATCH</code> for distributed execution.</td>
 <td><code>Mode.LOCAL</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>acn</code></td>
 <td>Optional[str]</td>
 <td>Access credential name to be used when running in BATCH mode for object store access</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>ingest_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing vector ingestion, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>consolidate_partition_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing consolidation of a partition, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>copy_centroids_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing copy of centroids from input array to output array, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>random_sample_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing random sample selection, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>kmeans_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing kmeans task, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>compute_new_centroids_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing centroid computation, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>assign_points_and_partial_new_centroids_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing the computation of partial centroids, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>write_centroids_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing the write of centroids, only applies to BATCH mode</td>
 <td><code>None</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>partial_index_resources</code></td>
 <td>Optional[Mapping[str, Any]]</td>
 <td>Resources to request when performing the computation of partial indexing, only applies to BATCH mode</td>
