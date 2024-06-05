@@ -38,6 +38,9 @@ class VamanaIndex(index.Index):
         URI of the index.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
     def __init__(
@@ -45,10 +48,23 @@ class VamanaIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        open_for_remote_query_execution: bool = False,
         **kwargs,
     ):
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
+        self.index_open_kwargs = {
+            "uri": uri,
+            "config": config,
+            "timestamp": timestamp,
+        }
+        self.index_open_kwargs.update(kwargs)
+        super().__init__(
+            uri=uri,
+            config=config,
+            timestamp=timestamp,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+        )
         self.index_type = INDEX_TYPE
+        # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -96,13 +112,11 @@ class VamanaIndex(index.Index):
         opt_l: int
             How deep to search. Should be >= k, and if it's not, we will set it to k.
         """
-        warnings.warn("The Vamana index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
             )
 
-        assert queries.dtype == np.float32
         if opt_l < k:
             warnings.warn(f"opt_l ({opt_l}) should be >= k ({k}), setting to k")
             opt_l = k
@@ -144,7 +158,6 @@ def create(
         The TileDB vector search storage version to use.
         If not provided, use the latest stable storage version.
     """
-    warnings.warn("The Vamana index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
@@ -160,4 +173,4 @@ def create(
     index.train(empty_vector)
     index.add(empty_vector)
     index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
-    return VamanaIndex(uri=uri, config=config, memory_budget=1000000)
+    return VamanaIndex(uri=uri, config=config)

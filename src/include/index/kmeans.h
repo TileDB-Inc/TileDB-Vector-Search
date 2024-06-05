@@ -399,11 +399,14 @@ void sub_kmeans_random_init(
     size_t seed = 0) {
   scoped_timer _{__FUNCTION__};
 
-  std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
-  std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
-
   size_t num_clusters =
       std::min(num_vectors(training_set), num_vectors(centroids));
+  if (num_clusters == 0) {
+    return;
+  }
+
+  std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
+  std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
 
   std::vector<size_t> indices(num_clusters);
   std::unordered_set<size_t> visited;
