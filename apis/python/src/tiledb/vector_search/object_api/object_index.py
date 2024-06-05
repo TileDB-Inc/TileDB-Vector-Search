@@ -451,12 +451,20 @@ def create(
                 storage_version=storage_version,
             )
         elif index_type == "IVF_PQ":
+            if "num_subspaces" not in kwargs:
+                raise ValueError(
+                    "num_subspaces must be provided when creating an IVF_PQ index"
+                )
+            num_subspaces = kwargs["num_subspaces"]
+            partitions = kwargs.get("partitions", None)
             index = ivf_pq_index.create(
                 uri=uri,
                 dimensions=dimensions,
                 vector_type=vector_type,
                 config=config,
                 storage_version=storage_version,
+                partitions=partitions,
+                num_subspaces=num_subspaces,
             )
         else:
             raise ValueError(f"Unsupported index type {index_type}")
