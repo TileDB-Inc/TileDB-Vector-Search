@@ -266,21 +266,16 @@ def test_construct_IndexVamana():
     a = vspy.IndexVamana()
     assert a.feature_type_string() == "any"
     assert a.id_type_string() == "uint32"
-    assert a.adjacency_row_index_type_string() == "uint32"
     assert a.dimensions() == 0
 
     a = vspy.IndexVamana(feature_type="float32")
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "uint32"
-    assert a.adjacency_row_index_type_string() == "uint32"
     assert a.dimensions() == 0
 
-    a = vspy.IndexVamana(
-        feature_type="uint8", id_type="uint64", adjacency_row_index_type="int64"
-    )
+    a = vspy.IndexVamana(feature_type="uint8", id_type="uint64")
     assert a.feature_type_string() == "uint8"
     assert a.id_type_string() == "uint64"
-    assert a.adjacency_row_index_type_string() == "int64"
     assert a.dimensions() == 0
 
     a = vspy.IndexVamana(
@@ -288,7 +283,6 @@ def test_construct_IndexVamana():
     )
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "int64"
-    assert a.adjacency_row_index_type_string() == "uint64"
     assert a.dimensions() == 0
 
 
@@ -299,13 +293,11 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
     dimensions = 128
     feature_type = "float32"
     id_type = "uint64"
-    adjacency_row_index_type = "uint64"
 
     # First create an empty index.
     a = vspy.IndexVamana(
         feature_type=feature_type,
         id_type=id_type,
-        adjacency_row_index_type=adjacency_row_index_type,
         dimensions=dimensions,
     )
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
@@ -335,9 +327,7 @@ def test_inplace_build_query_IndexVamana():
     opt_l = 100
     k_nn = 10
 
-    a = vspy.IndexVamana(
-        id_type="uint32", adjacency_row_index_type="uint32", feature_type="float32"
-    )
+    a = vspy.IndexVamana(id_type="uint32", feature_type="float32")
 
     training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert training_set.feature_type_string() == "float32"

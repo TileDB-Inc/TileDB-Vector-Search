@@ -98,17 +98,22 @@ auto medoid(auto&& P, Distance distance = Distance{}) {
 }
 
 /**
- * @brief Index class for vamana search
- * @tparam feature_type Type of the elements in the feature vectors
- * @tparam id_type Type of the ids of the feature vectors
+ * @brief The Vamana index.
+ *
+ * @tparam FeatureType Type of the elements in the feature vectors.
+ * @tparam IdType Type of the ids of the feature vectors.
+ * @tparam AdjacencyRowIndexType Types of the indexes used in the graph.
  */
-template <class FeatureType, class IdType, class IndexType = uint64_t>
+template <
+    class FeatureType,
+    class IdType,
+    class AdjacencyRowIndexType = uint64_t>
 class vamana_index {
  public:
   using feature_type = FeatureType;
   using id_type = IdType;
-  using adjacency_row_index_type = IndexType;
-  using score_type = float;
+  using adjacency_row_index_type = AdjacencyRowIndexType;
+  using adjacency_scores_type = float;
 
   using group_type = vamana_index_group<vamana_index>;
   using metadata_type = vamana_index_metadata;
@@ -136,7 +141,7 @@ class vamana_index {
   uint64_t num_edges_{0};
 
   /** The graph representing the index over `feature_vectors_` */
-  ::detail::graph::adj_list<score_type, id_type> graph_;
+  ::detail::graph::adj_list<adjacency_scores_type, id_type> graph_;
 
   /*
    * The medoid of the feature vectors -- the vector in the set that is closest
@@ -250,7 +255,7 @@ class vamana_index {
      ****************************************************************************/
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
 
-    auto adj_scores = read_vector<score_type>(
+    auto adj_scores = read_vector<adjacency_scores_type>(
         group_->cached_ctx(),
         group_->adjacency_scores_uri(),
         0,
@@ -467,7 +472,7 @@ class vamana_index {
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
-        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+        ColMajorMatrix<adjacency_scores_type>(k_nn, ::num_vectors(queries));
 
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       auto&& [tk_scores, tk, V] = ::best_first_O2(
@@ -494,7 +499,7 @@ class vamana_index {
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
-        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+        ColMajorMatrix<adjacency_scores_type>(k_nn, ::num_vectors(queries));
 
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       auto&& [tk_scores, tk, V] = ::best_first_O3(
@@ -521,7 +526,7 @@ class vamana_index {
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
-        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+        ColMajorMatrix<adjacency_scores_type>(k_nn, ::num_vectors(queries));
 
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       auto&& [tk_scores, tk, V] = ::best_first_O4(
@@ -548,7 +553,7 @@ class vamana_index {
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
-        ColMajorMatrix<score_type>(k_nn, ::num_vectors(queries));
+        ColMajorMatrix<adjacency_scores_type>(k_nn, ::num_vectors(queries));
 
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       auto&& [tk_scores, tk, V] = ::best_first_O5(
@@ -588,7 +593,8 @@ class vamana_index {
     // L = std::min<size_t>(L, l_build_);
 
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
-    auto top_k_scores = ColMajorMatrix<score_type>(k, ::num_vectors(query_set));
+    auto top_k_scores =
+        ColMajorMatrix<adjacency_scores_type>(k, ::num_vectors(query_set));
 
 #if 0
     // Parallelized implementation -- we stay single-threaded for now
@@ -768,7 +774,7 @@ class vamana_index {
         false,
         temporal_policy_);
 
-    auto adj_scores = Vector<score_type>(graph_.num_edges());
+    auto adj_scores = Vector<adjacency_scores_type>(graph_.num_edges());
     auto adj_ids = Vector<id_type>(graph_.num_edges());
     auto adj_index =
         Vector<adjacency_row_index_type>(graph_.num_vertices() + 1);

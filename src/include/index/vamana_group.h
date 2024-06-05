@@ -243,12 +243,12 @@ class vamana_index_group : public base_index_group<index_type> {
      * @todo Make this table-driven
      *************************************************************************/
     metadata_.adjacency_scores_datatype_ =
-        type_to_tiledb_v<typename index_type::score_type>;
+        type_to_tiledb_v<typename index_type::adjacency_scores_type>;
     metadata_.adjacency_row_index_datatype_ =
         type_to_tiledb_v<typename index_type::adjacency_row_index_type>;
 
     metadata_.adjacency_scores_type_str_ =
-        type_to_string_v<typename index_type::score_type>;
+        type_to_string_v<typename index_type::adjacency_scores_type>;
     metadata_.adjacency_row_index_type_str_ =
         type_to_string_v<typename index_type::adjacency_row_index_type>;
 
@@ -285,7 +285,7 @@ class vamana_index_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, this->ids_uri(), this->ids_array_name());
 
-    create_empty_for_vector<typename index_type::score_type>(
+    create_empty_for_vector<typename index_type::adjacency_scores_type>(
         cached_ctx_,
         adjacency_scores_uri(),
         default_domain,
@@ -303,7 +303,7 @@ class vamana_index_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, adjacency_ids_uri(), adjacency_ids_array_name());
 
-    create_empty_for_vector<typename index_type::id_type>(
+    create_empty_for_vector<typename index_type::adjacency_row_index_type>(
         cached_ctx_,
         adjacency_row_index_uri(),
         default_domain,

@@ -90,7 +90,6 @@ class IndexVamana {
       const std::optional<IndexOptions>& config = std::nullopt) {
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
-    adjacency_row_index_datatype_ = TILEDB_UINT32;
 
     if (config) {
       for (auto&& c : *config) {
@@ -108,8 +107,6 @@ class IndexVamana {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
-        } else if (key == "adjacency_row_index_type") {
-          adjacency_row_index_datatype_ = string_to_datatype(value);
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -135,12 +132,7 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const URI& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
-    read_types(
-        ctx,
-        group_uri,
-        &feature_datatype_,
-        &id_datatype_,
-        &adjacency_row_index_datatype_);
+    read_types(ctx, group_uri, &feature_datatype_, &id_datatype_);
 
     auto type = std::tuple{
         feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
@@ -250,16 +242,10 @@ class IndexVamana {
       uint64_t timestamp) {
     tiledb_datatype_t feature_datatype{TILEDB_ANY};
     tiledb_datatype_t id_datatype{TILEDB_ANY};
-    tiledb_datatype_t adjacency_row_index_datatype{TILEDB_ANY};
-    read_types(
-        ctx,
-        group_uri,
-        &feature_datatype,
-        &id_datatype,
-        &adjacency_row_index_datatype);
+    read_types(ctx, group_uri, &feature_datatype, &id_datatype);
 
-    auto type =
-        std::tuple{feature_datatype, id_datatype, adjacency_row_index_datatype};
+    auto type = std::tuple{
+        feature_datatype, id_datatype, adjacency_row_index_datatype_};
     if (clear_history_dispatch_table.find(type) ==
         clear_history_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
@@ -307,29 +293,17 @@ class IndexVamana {
     return datatype_to_string(id_datatype_);
   }
 
-  constexpr auto adjacency_row_index_type() const {
-    return adjacency_row_index_datatype_;
-  }
-
-  inline auto adjacency_row_index_type_string() const {
-    return datatype_to_string(adjacency_row_index_datatype_);
-  }
-
  private:
   static void read_types(
       const tiledb::Context& ctx,
       const std::string& group_uri,
       tiledb_datatype_t* feature_datatype,
-      tiledb_datatype_t* id_datatype,
-      tiledb_datatype_t* adjacency_row_index_datatype) {
+      tiledb_datatype_t* id_datatype) {
     using metadata_element =
         std::tuple<std::string, tiledb_datatype_t*, tiledb_datatype_t>;
     std::vector<metadata_element> metadata{
         {"feature_datatype", feature_datatype, TILEDB_UINT32},
-        {"id_datatype", id_datatype, TILEDB_UINT32},
-        {"adjacency_row_index_datatype",
-         adjacency_row_index_datatype,
-         TILEDB_UINT32}};
+        {"id_datatype", id_datatype, TILEDB_UINT32}};
 
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
 
@@ -536,7 +510,8 @@ class IndexVamana {
   size_t b_backtrack_ = 0;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
-  tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
+  static constexpr tiledb_datatype_t adjacency_row_index_datatype_{
+      TILEDB_UINT64};
   std::unique_ptr<index_base> index_;
 };
 
