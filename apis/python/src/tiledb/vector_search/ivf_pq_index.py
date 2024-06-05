@@ -29,6 +29,12 @@ class IVFPQIndex(index.Index):
         URI of the index.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
+    timestamp: int or tuple(int)
+        If int, open the index at a given timestamp.
+        If tuple, open at the given start and end timestamps.
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
     def __init__(
@@ -36,10 +42,22 @@ class IVFPQIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        open_for_remote_query_execution: bool = False,
         **kwargs,
     ):
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
+        self.index_open_kwargs = {
+            "uri": uri,
+            "config": config,
+            "timestamp": timestamp,
+        }
+        self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
+        super().__init__(
+            uri=uri,
+            config=config,
+            timestamp=timestamp,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+        )
         self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))
         # TODO(paris): This is incorrect - should be fixed when we fix consolidation.
         self.db_uri = self.group[

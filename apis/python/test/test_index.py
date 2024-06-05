@@ -165,14 +165,6 @@ def test_ivf_flat_index(tmp_path):
     # timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
     # assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_5_minutes_from_now
 
-    # TODO(paris): Investigate whether we should overwrite the existing metadata during the first
-    # ingestion of Python indexes. I believe as it's currently written we have a bug here.
-    # ingestion_timestamps, base_sizes = load_metadata(uri)
-    # assert base_sizes == [5]
-    # timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
-    # timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
-    # assert ingestion_timestamps[0] > timestamp_5_minutes_ago and ingestion_timestamps[0] < timestamp_5_minutes_from_now
-
     query_and_check(
         index, np.array([[2, 2, 2]], dtype=np.float32), 3, {1, 2, 3}, nprobe=partitions
     )
@@ -460,6 +452,7 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                 index_uri=index_uri,
                 source_uri=os.path.join(dataset_dir, "data.f32bin"),
                 num_subspaces=num_columns,
+                partitions=1,
             )
 
             # We have created a dataset with num_columns in each vector. Let's try creating queries
@@ -468,10 +461,10 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
                 query_shape = (1, num_columns_for_query)
                 query = np.random.rand(*query_shape).astype(np.float32)
                 if query.shape[1] == num_columns:
-                    index.query(query, k=1)
+                    index.query(query, k=1, nprobe=1)
                 else:
                     with pytest.raises(TypeError):
-                        index.query(query, k=1)
+                        index.query(query, k=1, nprobe=1)
 
             assert vfs.dir_size(index_uri) > 0
             Index.delete_index(uri=index_uri, config={})

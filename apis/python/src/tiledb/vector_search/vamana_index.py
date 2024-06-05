@@ -57,13 +57,13 @@ class VamanaIndex(index.Index):
             "timestamp": timestamp,
         }
         self.index_open_kwargs.update(kwargs)
+        self.index_type = INDEX_TYPE
         super().__init__(
             uri=uri,
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
         )
-        self.index_type = INDEX_TYPE
         # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
         self.db_uri = self.group[
