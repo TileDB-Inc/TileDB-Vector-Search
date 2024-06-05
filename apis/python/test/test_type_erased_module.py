@@ -278,9 +278,7 @@ def test_construct_IndexVamana():
     assert a.id_type_string() == "uint64"
     assert a.dimensions() == 0
 
-    a = vspy.IndexVamana(
-        feature_type="float32", id_type="int64", adjacency_row_index_type="uint64"
-    )
+    a = vspy.IndexVamana(feature_type="float32", id_type="int64")
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "int64"
     assert a.dimensions() == 0
