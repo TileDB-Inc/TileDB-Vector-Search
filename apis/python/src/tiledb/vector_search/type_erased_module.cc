@@ -362,9 +362,6 @@ void init_type_erased_module(py::module_& m) {
           py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
-      .def(
-          "adjacency_row_index_type_string",
-          &IndexVamana::adjacency_row_index_type_string)
       .def("dimensions", &IndexVamana::dimensions)
       .def_static(
           "clear_history",
