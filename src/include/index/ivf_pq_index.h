@@ -902,7 +902,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->ivf_index_uri(),
         group_->get_num_partitions() + 1,
-        group_->ivf_ids_uri(),
+        group_->ids_uri(),
         infinite_parts,
         0,
         temporal_policy_);
@@ -946,7 +946,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->ivf_index_uri(),
         group_->get_num_partitions() + 1,
-        group_->ivf_ids_uri(),
+        group_->ids_uri(),
         active_partitions,
         upper_bound,
         temporal_policy_);
@@ -1066,7 +1066,7 @@ class ivf_pq_index {
     write_vector(
         ctx,
         partitioned_pq_vectors_->ids(),
-        write_group.ivf_ids_uri(),
+        write_group.ids_uri(),
         0,
         false,
         temporal_policy_);
@@ -1190,13 +1190,6 @@ class ivf_pq_index {
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
-      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" +
-                       std::to_string(nprobe) +
-                       ") was greater than than the number of centroids (" +
-                       std::to_string(::num_vectors(flat_ivf_centroids_)) +
-                       ") - setting nprobe to " +
-                       std::to_string(::num_vectors(flat_ivf_centroids_))
-                << std::endl;
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
     if (!partitioned_pq_vectors_ ||
@@ -1255,13 +1248,6 @@ class ivf_pq_index {
           "Cannot do finite query on in-memory index.");
     }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
-      std::cout << "[ivf_pq_index@query_infinite_ram] nprobe (" +
-                       std::to_string(nprobe) +
-                       ") was greater than than the number of centroids (" +
-                       std::to_string(::num_vectors(flat_ivf_centroids_)) +
-                       ") - setting nprobe to " +
-                       std::to_string(::num_vectors(flat_ivf_centroids_))
-                << std::endl;
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
     auto&& [active_partitions, active_queries] =

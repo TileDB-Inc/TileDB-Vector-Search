@@ -11,6 +11,7 @@ from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import is_type_erased_index
 
 DATASET_TYPE = "vector_search"
 
@@ -462,6 +463,10 @@ class Index:
         """
         from tiledb.vector_search.ingestion import ingest
 
+        if self.index_type == "IVF_PQ":
+            # TODO(SC-48888): Fix consolidation for IVF_PQ.
+            raise ValueError("IVF_PQ indexes do not support consolidation yet.")
+
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
         )
@@ -566,14 +571,19 @@ class Index:
                     f"Time traveling is not supported for index storage_version={storage_version}"
                 )
 
-            if index_type == "VAMANA":
+            if is_type_erased_index(index_type):
                 if storage_formats[storage_version]["UPDATES_ARRAY_NAME"] in group:
                     updates_array_uri = group[
                         storage_formats[storage_version]["UPDATES_ARRAY_NAME"]
                     ].uri
                     tiledb.Array.delete_fragments(updates_array_uri, 0, timestamp)
                 ctx = vspy.Ctx(config)
-                vspy.IndexVamana.clear_history(ctx, uri, timestamp)
+                if index_type == "VAMANA":
+                    vspy.IndexVamana.clear_history(ctx, uri, timestamp)
+                elif index_type == "IVF_PQ":
+                    vspy.IndexIVFPQ.clear_history(ctx, uri, timestamp)
+                else:
+                    raise ValueError(f"Unsupported index_type: {index_type}")
                 return
 
             ingestion_timestamps = [

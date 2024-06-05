@@ -442,6 +442,12 @@ class base_index_group {
   [[nodiscard]] auto ids_array_name() const {
     return array_key_to_array_name("ids_array_name");
   }
+  [[nodiscard]] auto feature_vectors_uri() const {
+    return array_key_to_uri("parts_array_name");
+  }
+  [[nodiscard]] auto feature_vectors_array_name() const {
+    return array_key_to_array_name("parts_array_name");
+  }
 
   [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
       const {

@@ -248,6 +248,7 @@ TEST_CASE(
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
   size_t dimensions = 3;
+  size_t num_subspaces = 1;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -257,11 +258,13 @@ TEST_CASE(
   }
 
   {
-    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
-        {{"feature_type", feature_type},
-         {"id_type", id_type},
-         {"partitioning_index_type", partitioning_index_type},
-         {"num_subspaces", "1"}}));
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>({
+        {"feature_type", feature_type},
+        {"id_type", id_type},
+        {"partitioning_index_type", partitioning_index_type},
+        {"dimensions", std::to_string(dimensions)},
+        {"num_subspaces", std::to_string(num_subspaces)},
+    }));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -273,6 +276,8 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
   }
 
   {
@@ -281,7 +286,8 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
@@ -307,7 +313,7 @@ TEST_CASE(
     CHECK(std::equal(
         scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(
-        ids.begin(), ids.end(), std::vector<int>{10, 11, 12, 13}.begin()));
+        ids.begin(), ids.end(), std::vector<uint32_t>{10, 11, 12, 13}.begin()));
   }
 }
 

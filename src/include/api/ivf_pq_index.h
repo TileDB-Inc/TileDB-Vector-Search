@@ -49,7 +49,7 @@
  * IndexIVFPQ
  ******************************************************************************/
 /**
- * A type-erased Vamana index class. This is a type-erased wrapper around
+ * A type-erased IVFPQ index class. This is a type-erased wrapper around
  * the `ivf_pq_index` class.
  *
  * An index class is provides

@@ -1,14 +1,5 @@
 """
-Vamana Index implementation.
-
-Vamana is based on Microsoft's DiskANN vector search library, as described in these papers:
-```
-  Subramanya, Suhas Jayaram, and Rohan Kadekodi. DiskANN: Fast Accurate Billion-Point Nearest Neighbor Search on a Single Node.
-
-  Singh, Aditi, et al. FreshDiskANN: A Fast and Accurate Graph-Based ANN Index for Streaming Similarity Search. arXiv:2105.09613, arXiv, 20 May 2021, http://arxiv.org/abs/2105.09613.
-
-  Gollapudi, Siddharth, et al. “Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search with Filters.” Proceedings of the ACM Web Conference 2023, ACM, 2023, pp. 3406-16, https://doi.org/10.1145/3543507.3583552.
-```
+IVFPQ Index implementation.
 """
 import warnings
 from typing import Any, Mapping
@@ -25,12 +16,12 @@ from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import to_temporal_policy
 
-INDEX_TYPE = "VAMANA"
+INDEX_TYPE = "IVF_PQ"
 
 
-class VamanaIndex(index.Index):
+class IVFPQIndex(index.Index):
     """
-    Opens a `VamanaIndex`.
+    Opens a `IVFPQIndex`.
 
     Parameters
     ----------
@@ -38,6 +29,9 @@ class VamanaIndex(index.Index):
         URI of the index.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
+    timestamp: int or tuple(int)
+        If int, open the index at a given timestamp.
+        If tuple, open at the given start and end timestamps.
     open_for_remote_query_execution: bool
         If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
         If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
@@ -64,8 +58,8 @@ class VamanaIndex(index.Index):
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
         )
-        # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
-        self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
+        self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))
+        # TODO(paris): This is incorrect - should be fixed when we fix consolidation.
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -97,11 +91,11 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        opt_l: Optional[int] = 100,
+        nprobe: Optional[int] = 100,
         **kwargs,
     ):
         """
-        Queries a `VamanaIndex`.
+        Queries a `IVFPQIndex`.
 
         Parameters
         ----------
@@ -109,17 +103,15 @@ class VamanaIndex(index.Index):
             2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
             Number of results to return per query vector.
-        opt_l: int
-            How deep to search. Should be >= k, and if it's not, we will set it to k.
+        nprobe: int
+            Number of partitions to check per query.
+            Use this parameter to trade-off accuracy for latency and cost.
         """
+        warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
             )
-
-        if opt_l < k:
-            warnings.warn(f"opt_l ({opt_l}) should be >= k ({k}), setting to k")
-            opt_l = k
 
         if queries.ndim == 1:
             queries = np.array([queries])
@@ -128,7 +120,9 @@ class VamanaIndex(index.Index):
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
 
-        distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
+        distances, ids = self.index.query(
+            vspy.QueryType.InfiniteRAM, queries_feature_vector_array, k, nprobe
+        )
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
@@ -137,12 +131,14 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
+    num_subspaces: int,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    partitions: Optional[int] = None,
     **kwargs,
-) -> VamanaIndex:
+) -> IVFPQIndex:
     """
-    Creates an empty VamanaIndex.
+    Creates an empty IVFPQIndex.
     Parameters
     ----------
     uri: str
@@ -152,19 +148,37 @@ def create(
     vector_type: np.dtype
         Datatype of vectors.
         Supported values (uint8, int8, float32).
+    num_subspaces: int
+        Number of subspaces to use in the PQ encoding. We will divide the dimensions into
+        num_subspaces parts, and PQ encode each part separately. This means dimensions must
+        be divisible by num_subspaces.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
     storage_version: str
         The TileDB vector search storage version to use.
         If not provided, use the latest stable storage version.
+    partitions: int
+        Number of partitions to load the data with, if not provided, is auto-configured
+        based on the dataset size.
     """
+    warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
     ctx = vspy.Ctx(config)
-    index = vspy.IndexVamana(
+    if num_subspaces <= 0:
+        raise ValueError(
+            f"Number of num_subspaces ({num_subspaces}) must be greater than 0."
+        )
+    if dimensions % num_subspaces != 0:
+        raise ValueError(
+            f"Number of dimensions ({dimensions}) must be divisible by num_subspaces ({num_subspaces})."
+        )
+    index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
-        adjacency_row_index_type=np.dtype(np.uint64).name,
+        partitioning_index_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
+        n_list=partitions if (partitions is not None and partitions is not -1) else 0,
+        num_subspaces=num_subspaces,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(
@@ -173,4 +187,4 @@ def create(
     index.train(empty_vector)
     index.add(empty_vector)
     index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
-    return VamanaIndex(uri=uri, config=config)
+    return IVFPQIndex(uri=uri, config=config)
