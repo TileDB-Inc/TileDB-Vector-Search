@@ -37,7 +37,7 @@ struct dummy_index {
   using feature_type = float;
   using id_type = int;
   using adjacency_row_index_type = int;
-  using score_type = float;
+  using adjacency_scores_type = float;
 
   using group_type = vamana_index_group<dummy_index>;
   using metadata_type = vamana_index_metadata;
