@@ -2105,6 +2105,9 @@ def ingest(
                 namespace=namespace,
             )
             threads = 16
+            if(size < input_vectors_per_work_item):
+                cpu_scale_factor = input_vectors_per_work_item/size
+                threads = max(4, int(threads / cpu_scale_factor))
             if acn:
                 kwargs["access_credentials_name"] = acn
         else:
@@ -2137,31 +2140,60 @@ def ingest(
             input_vectors_work_items_per_worker_during_sampling
         )
 
-        # We can't set as default in the function due to the use of `str(threads)`
-        # For consistency we then apply all defaults for resources here.
-        if ingest_resources is None:
-            ingest_resources = {"cpu": str(threads), "memory": "16Gi"}
 
-        if consolidate_partition_resources is None:
-            consolidate_partition_resources = {"cpu": str(threads), "memory": "16Gi"}
+        if(size >= input_vectors_per_work_item):
+            # We can't set as default in the function due to the use of `str(threads)`
+            # For consistency we then apply all defaults for resources here.
+            if ingest_resources is None:
+                ingest_resources = {"cpu": str(threads), "memory": "16Gi"}
 
-        if copy_centroids_resources is None:
-            copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
+            if consolidate_partition_resources is None:
+                consolidate_partition_resources = {"cpu": str(threads), "memory": "16Gi"}
 
-        if random_sample_resources is None:
-            random_sample_resources = {"cpu": "2", "memory": "6Gi"}
+            if copy_centroids_resources is None:
+                copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
 
-        if kmeans_resources is None:
-            kmeans_resources = {"cpu": "8", "memory": "32Gi"}
+            if random_sample_resources is None:
+                random_sample_resources = {"cpu": "2", "memory": "6Gi"}
 
-        if compute_new_centroids_resources is None:
-            compute_new_centroids_resources = {"cpu": "1", "memory": "8Gi"}
+            if kmeans_resources is None:
+                kmeans_resources = {"cpu": "8", "memory": "32Gi"}
 
-        if assign_points_and_partial_new_centroids_resources is None:
-            assign_points_and_partial_new_centroids_resources = {
-                "cpu": str(threads),
-                "memory": "12Gi",
-            }
+            if compute_new_centroids_resources is None:
+                compute_new_centroids_resources = {"cpu": "1", "memory": "8Gi"}
+
+            if assign_points_and_partial_new_centroids_resources is None:
+                assign_points_and_partial_new_centroids_resources = {
+                    "cpu": str(threads),
+                    "memory": "12Gi",
+                }
+        else:
+            scale_factor = input_vectors_per_work_item/size
+            print("Scale factor: ", scale_factor)
+            # Minimum RAM resource is 2Gi.
+            # CPU resources remain the same.
+            # Scales the memory resource by the scale factor, but keeps it at a minimum of 2Gi. RAM resource is a whole number.
+            if ingest_resources is None:
+                ingest_resources = {"cpu": str(threads), "memory": str(max(2, int(8/scale_factor))) + "Gi"}
+            
+            if consolidate_partition_resources is None:
+                consolidate_partition_resources = {"cpu": str(threads), "memory": str(max(2, int(8/scale_factor))) + "Gi"}
+            
+            if copy_centroids_resources is None:
+                copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
+            
+            if random_sample_resources is None:
+                random_sample_resources = {"cpu": "2", "memory": str(max(2, int(6/scale_factor))) + "Gi"}
+            
+            if kmeans_resources is None:
+                kmeans_resources = {"cpu": str(min(8, int(threads))), "memory": str(max(2, int(8/scale_factor))) + "Gi"}
+
+            if compute_new_centroids_resources is None:
+                compute_new_centroids_resources = {"cpu": "1", "memory": str(max(2, int(8/scale_factor))) + "Gi"}
+            
+            if assign_points_and_partial_new_centroids_resources is None:
+                assign_points_and_partial_new_centroids_resources = {"cpu": str(threads), "memory": str(max(3, int(12/scale_factor))) + "Gi"}
+                
 
         if write_centroids_resources is None:
             write_centroids_resources = {"cpu": "1", "memory": "2Gi"}
@@ -2661,8 +2693,9 @@ def ingest(
         logger.debug("Number of workers %d", workers)
 
         # Compute task parameters for main ingestion.
+        SCALED_VECTORS_PER_WORK_ITEM = int((VECTORS_PER_WORK_ITEM * 128) / dimensions / np.dtype(vector_type).itemsize)
         if input_vectors_per_work_item == -1:
-            input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
+            input_vectors_per_work_item = SCALED_VECTORS_PER_WORK_ITEM
         input_vectors_work_items = int(math.ceil(size / input_vectors_per_work_item))
         input_vectors_work_tasks = input_vectors_work_items
         input_vectors_work_items_per_worker = 1
