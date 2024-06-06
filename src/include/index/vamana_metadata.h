@@ -95,7 +95,7 @@ class vamana_index_metadata
   IndexKind index_kind_{IndexKind::Vamana};
 
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
-      // name, member_variable, default, expected, required
+      // name, member_variable, required
       {"index_type", index_type_, true},
       {"adjacency_scores_type", adjacency_scores_type_str_, false},
       {"adjacency_row_index_type", adjacency_row_index_type_str_, false},

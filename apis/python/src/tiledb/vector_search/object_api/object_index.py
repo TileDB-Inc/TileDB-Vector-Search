@@ -11,9 +11,11 @@ import tiledb.vector_search.object_api as object_api
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import FlatIndex
 from tiledb.vector_search import IVFFlatIndex
+from tiledb.vector_search import IVFPQIndex
 from tiledb.vector_search import VamanaIndex
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
+from tiledb.vector_search import ivf_pq_index
 from tiledb.vector_search import vamana_index
 from tiledb.vector_search.embeddings import ObjectEmbedding
 from tiledb.vector_search.object_readers import ObjectReader
@@ -57,6 +59,10 @@ class ObjectIndex:
                 )
             elif self.index_type == "VAMANA":
                 self.index = VamanaIndex(
+                    uri=uri, config=config, timestamp=timestamp, **kwargs
+                )
+            elif self.index_type == "IVF_PQ":
+                self.index = IVFPQIndex(
                     uri=uri, config=config, timestamp=timestamp, **kwargs
                 )
             else:
@@ -443,6 +449,22 @@ def create(
                 vector_type=vector_type,
                 config=config,
                 storage_version=storage_version,
+            )
+        elif index_type == "IVF_PQ":
+            if "num_subspaces" not in kwargs:
+                raise ValueError(
+                    "num_subspaces must be provided when creating an IVF_PQ index"
+                )
+            num_subspaces = kwargs["num_subspaces"]
+            partitions = kwargs.get("partitions", None)
+            index = ivf_pq_index.create(
+                uri=uri,
+                dimensions=dimensions,
+                vector_type=vector_type,
+                config=config,
+                storage_version=storage_version,
+                partitions=partitions,
+                num_subspaces=num_subspaces,
             )
         else:
             raise ValueError(f"Unsupported index type {index_type}")

@@ -13,7 +13,7 @@ MAX_FLOAT32 = np.finfo(np.dtype("float32")).max
 
 
 def is_type_erased_index(index_type: str) -> bool:
-    return index_type == "VAMANA"
+    return index_type == "VAMANA" or index_type == "IVF_PQ"
 
 
 def add_to_group(group, uri, name):
