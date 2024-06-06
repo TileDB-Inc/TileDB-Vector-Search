@@ -310,25 +310,22 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
     vfs.remove_dir(ivf_index_uri);
   }
 
+  // Create and write an index.
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
   std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
   std::iota(begin(ids), end(ids), 0);
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
-      /*dimension,*/ nlist, num_subspaces, max_iters, nthreads);
+      nlist, num_subspaces, max_iters, nthreads);
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
   idx.add(training_set, ids);
-  ivf_index_uri =
-      (std::filesystem::temp_directory_path() / "second_tmp_ivf_index")
-          .string();
-  if (vfs.is_dir(ivf_index_uri)) {
-    vfs.remove_dir(ivf_index_uri);
-  }
-
   idx.write_index(ctx, ivf_index_uri);
+
+  // Load it from URI.
   auto idx2 = ivf_pq_index<float, uint32_t, uint32_t>(ctx, ivf_index_uri);
   idx2.read_index_infinite();
 
+  // Check that the two indexes are the same.
   CHECK(idx.compare_cached_metadata(idx2));
   CHECK(idx.compare_cached_metadata(idx2));
   CHECK(idx.compare_cluster_centroids(idx2));
