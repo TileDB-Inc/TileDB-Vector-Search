@@ -59,7 +59,7 @@ else()
         )
     else() # Build from source
         fetch_source_tiledb(
-                VERSION 2.24.0-rc0
+                VERSION 2.24.0-rc1
                 RELLIST_HASH SHA256=2c54f8e7df3db36419cbdd20e1ba96fafd5d0e6ebcad0dde86533c5e8711170b
         )
     endif()
