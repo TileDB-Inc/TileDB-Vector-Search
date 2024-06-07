@@ -163,6 +163,11 @@ def create(
     """
     warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
+    # TODO(SC-49166): Support old storage versions with type-erased indexes.
+    if storage_version == "0.1" or storage_version == "0.2":
+        raise ValueError(
+            f"Storage version {storage_version} is not supported for IVFPQIndex. IVFPQIndex requires storage version 0.3 or higher."
+        )
     ctx = vspy.Ctx(config)
     if num_subspaces <= 0:
         raise ValueError(

@@ -118,8 +118,26 @@ TEST_CASE("test_query_old_indices", "[backwards_compatibility]") {
         // TODO(paris): Fix flat_l2_index and re-enable. Right now it just tries
         // to load the URI as a tdbMatrix.
       } else if (index_uri.find("vamana") != std::string::npos) {
-        // TODO(paris): Add once we save a vamana index in backwards
-        // compatibility data.
+        // First check that we can query the index.
+        auto index = IndexVamana(ctx, index_uri);
+        auto&& [scores, ids] = index.query(queries_feature_vector_array, 1);
+        auto scores_span =
+            MatrixView<siftsmall_feature_type, stdx::layout_left>{
+                (siftsmall_feature_type*)scores.data(),
+                extents(scores)[0],
+                extents(scores)[1]};
+
+        auto ids_span = MatrixView<siftsmall_ids_type, stdx::layout_left>{
+            (siftsmall_ids_type*)ids.data(), extents(ids)[0], extents(ids)[1]};
+
+        for (size_t i = 0; i < query_indices.size(); ++i) {
+          CHECK(ids_span[0][i] == query_indices[i]);
+          CHECK(scores_span[0][i] == 0);
+        }
+
+        // Next check that we can load the metadata.
+        auto metadata = vamana_index_metadata();
+        metadata.load_metadata(read_group);
       } else {
         REQUIRE(false);
       }
