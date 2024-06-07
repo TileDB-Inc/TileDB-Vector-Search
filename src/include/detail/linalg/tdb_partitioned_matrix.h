@@ -107,7 +107,6 @@ class tdbPartitionedMatrix
    *
    ****************************************************************************/
   using Base = PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I>;
-  // using Base::Base;
 
  public:
   using value_type = typename Base::value_type;  // should be same as T
@@ -166,15 +165,8 @@ class tdbPartitionedMatrix
   // non-resident)
   size_t total_num_parts_{0};
 
-  // The number of resident partitions
-  size_t num_resident_parts_{0};
-
-  // The offset of the first partitions in the resident vectors
-  // Should be equal to first element of part_view_
-  index_type resident_part_offset_{0};
-
   // The initial and final partition number of the resident partitions
-  index_type first_resident_part_{0};
+  index_type first_resident_part{0};
   index_type last_resident_part_{0};
 
   /*****************************************************************************
@@ -182,7 +174,7 @@ class tdbPartitionedMatrix
    ****************************************************************************/
 
   // The max number of columns that can fit in allocated memory
-  size_t column_capacity{0};
+  size_t column_capacity_{0};
 
   // The number of columns that are currently loaded into memory
   size_t num_resident_cols_{0};
@@ -192,15 +184,12 @@ class tdbPartitionedMatrix
   index_type resident_col_offset_{0};
 
   // The initial and final index numbers of the resident columns
-  index_type first_resident_col_{0};
   index_type last_resident_col_{0};
 
   /*****************************************************************************
    * Accounting information
    ****************************************************************************/
-  size_t max_part_size_{0};
   size_t max_resident_parts_{0};
-  size_t num_loads_{0};
 
  public:
   tdbPartitionedMatrix(const tdbPartitionedMatrix&) = delete;
@@ -291,12 +280,9 @@ class tdbPartitionedMatrix
             TILEDB_READ,
             temporal_policy))
       , ids_schema_{partitioned_ids_array_->schema()}
-      //      , master_indices_{std::move(indices)}
-      //      , relevant_parts_(std::move(relevant_parts))
       , master_indices_{indices}
       , relevant_parts_(relevant_parts)
       , squashed_indices_(size(relevant_parts_) + 1)
-      , first_resident_part_{0}
       , last_resident_part_{0} {
     if (relevant_parts_.size() >= indices.size()) {
       throw std::runtime_error(
@@ -344,23 +330,24 @@ class tdbPartitionedMatrix
 
     // indices might not be contiguous, so we need to explicitly add the deltas
     auto total_max_cols = 0UL;
+    size_t max_part_size{0};
     for (size_t i = 0; i < total_num_parts_; ++i) {
       auto part_size = master_indices_[relevant_parts_[i] + 1] -
                        master_indices_[relevant_parts_[i]];
       total_max_cols += part_size;
-      max_part_size_ = std::max<size_t>(max_part_size_, part_size);
+      max_part_size = std::max<size_t>(max_part_size, part_size);
     }
 
-    if (upper_bound != 0 && upper_bound < max_part_size_) {
+    if (upper_bound != 0 && upper_bound < max_part_size) {
       throw std::runtime_error(
           "Upper bound is less than max partition size: " +
-          std::to_string(upper_bound) + " < " + std::to_string(max_part_size_));
+          std::to_string(upper_bound) + " < " + std::to_string(max_part_size));
     }
 
     if (upper_bound == 0 || upper_bound > total_max_cols) {
-      column_capacity = total_max_cols;
+      column_capacity_ = total_max_cols;
     } else {
-      column_capacity = upper_bound;
+      column_capacity_ = upper_bound;
     }
 
     // auto max_resident_parts = 0UL;
@@ -370,7 +357,7 @@ class tdbPartitionedMatrix
       auto part_size = master_indices_[relevant_parts_[i] + 1] -
                        master_indices_[relevant_parts_[i]];
 
-      if (running_resident_size + part_size > column_capacity) {
+      if (running_resident_size + part_size > column_capacity_) {
         max_resident_parts_ =
             std::max(running_resident_parts, max_resident_parts_);
         running_resident_parts = 0;
@@ -404,7 +391,7 @@ class tdbPartitionedMatrix
      * Now that we have computed the parameters for storing the partitioned
      * data, we prep the storage for subsequent loads.
      *
-     * column_capacity is the max number of vectors we will ever make resident.
+     * column_capacity_ is the max number of vectors we will ever make resident.
      * We use this to size the "nnz" of the partitioned_matrix base class.
      *
      * max_resident_parts is the max number of partitions that will ever be
@@ -412,9 +399,7 @@ class tdbPartitionedMatrix
      * partitioned_matrix base class.
      */
     Base::operator=(
-        std::move(Base{dimension, column_capacity, max_resident_parts_}));
-    // this->num_vectors() = 0;
-    // this->num_partitions() = 0;
+        std::move(Base{dimension, column_capacity_, max_resident_parts_}));
     this->num_vectors_ = 0;
     this->num_parts_ = 0;
 
@@ -428,7 +413,9 @@ class tdbPartitionedMatrix
 
   /**
    * Read in the next partitions
-   * todo Allow to specify how many columns to read in
+   * @todo Allow to specify how many columns to read in
+   * @todo -- col oriented only for now, should generalize.
+   *
    */
   bool load() override {
     scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
@@ -440,7 +427,15 @@ class tdbPartitionedMatrix
           " != " + std::to_string(max_resident_parts_ + 1));
     }
 
-    // @todo -- col oriented only for now -- generalize!!
+    // The number of resident partitions.
+    size_t num_resident_parts{0};
+    // The offset of the first partitions in the resident vectors.
+    // Should be equal to first element of part_view_.
+    index_type resident_part_offset{0};
+    // The initial partition number of the resident partitions.
+    index_type first_resident_part{0};
+    // The initial index numbers of the resident columns.
+    index_type first_resident_col{0};
     {
       const size_t attr_idx = 0;
       auto attr = partitioned_vectors_schema_.attribute(attr_idx);
@@ -456,53 +451,53 @@ class tdbPartitionedMatrix
       auto dimension = num_array_rows_;
 
       /*
-       * Fit as many partitions as we can into column_capacity
+       * Fit as many partitions as we can into column_capacity_
        */
 
-      first_resident_col_ = last_resident_col_;    // # columns
-      first_resident_part_ = last_resident_part_;  // # partitions
+      first_resident_col = last_resident_col_;    // # columns
+      first_resident_part = last_resident_part_;  // # partitions
 
-      last_resident_part_ = first_resident_part_;
-      for (size_t i = first_resident_part_; i < total_num_parts_; ++i) {
+      last_resident_part_ = first_resident_part;
+      for (size_t i = first_resident_part; i < total_num_parts_; ++i) {
         auto next_part_size = squashed_indices_[i + 1] - squashed_indices_[i];
 
         if ((last_resident_col_ + next_part_size) >
-            first_resident_col_ + column_capacity) {
+            first_resident_col + column_capacity_) {
           break;
         }
         last_resident_col_ += next_part_size;  // FIXME ??
         last_resident_part_ = i + 1;
       }
-      num_resident_cols_ = last_resident_col_ - first_resident_col_;
-      resident_col_offset_ = first_resident_col_;
+      num_resident_cols_ = last_resident_col_ - first_resident_col;
+      resident_col_offset_ = first_resident_col;
 
-      assert(num_resident_cols_ <= column_capacity);
-      if (num_resident_cols_ > column_capacity) {
+      assert(num_resident_cols_ <= column_capacity_);
+      if (num_resident_cols_ > column_capacity_) {
         throw std::runtime_error(
             "Invalid partitioning, num_resident_cols_ " +
             std::to_string(num_resident_cols_) + " > " +
-            std::to_string(column_capacity));
+            std::to_string(column_capacity_));
       }
 
-      num_resident_parts_ = last_resident_part_ - first_resident_part_;
-      resident_part_offset_ = first_resident_part_;
+      num_resident_parts = last_resident_part_ - first_resident_part;
+      resident_part_offset = first_resident_part;
 
-      assert(num_resident_parts_ <= max_resident_parts_);
-      if (num_resident_parts_ > max_resident_parts_) {
+      assert(num_resident_parts <= max_resident_parts_);
+      if (num_resident_parts > max_resident_parts_) {
         throw std::runtime_error(
-            "Invalid partitioning, num_resident_parts_ " +
-            std::to_string(num_resident_parts_) + " > " +
+            "Invalid partitioning, num_resident_parts " +
+            std::to_string(num_resident_parts) + " > " +
             std::to_string(max_resident_parts_));
       }
 
       if (num_resident_cols_ == 0) {
         return false;
       }
-      if ((num_resident_cols_ == 0 && num_resident_parts_ != 0) ||
-          (num_resident_cols_ != 0 && num_resident_parts_ == 0)) {
+      if ((num_resident_cols_ == 0 && num_resident_parts != 0) ||
+          (num_resident_cols_ != 0 && num_resident_parts == 0)) {
         throw std::runtime_error(
             "Invalid partitioning, " + std::to_string(num_resident_cols_) +
-            " resident cols and " + std::to_string(num_resident_parts_) +
+            " resident cols and " + std::to_string(num_resident_parts) +
             " resident parts");
       }
 
@@ -512,10 +507,10 @@ class tdbPartitionedMatrix
             std::to_string(this->part_index_.size()) +
             " != " + std::to_string(max_resident_parts_ + 1));
       }
-      if (num_resident_parts_ > max_resident_parts_) {
+      if (num_resident_parts > max_resident_parts_) {
         throw std::runtime_error(
-            "Invalid partitioning, num_resident_parts_ " +
-            std::to_string(num_resident_parts_) + " > " +
+            "Invalid partitioning, num_resident_parts " +
+            std::to_string(num_resident_parts) + " > " +
             std::to_string(max_resident_parts_));
       }
 
@@ -531,7 +526,7 @@ class tdbPartitionedMatrix
        * Read in the next batch of partitions
        */
       size_t col_count = 0;
-      for (size_t j = first_resident_part_; j < last_resident_part_; ++j) {
+      for (size_t j = first_resident_part; j < last_resident_part_; ++j) {
         size_t start = master_indices_[relevant_parts_[j]];
         size_t stop = master_indices_[relevant_parts_[j] + 1];
         size_t len = stop - start;
@@ -541,7 +536,7 @@ class tdbPartitionedMatrix
         col_count += len;
         subarray.add_range(1, (int)start, (int)stop - 1);
       }
-      if (col_count != last_resident_col_ - first_resident_col_) {
+      if (col_count != last_resident_col_ - first_resident_col) {
         throw std::runtime_error("Column count mismatch");
       }
 
@@ -567,12 +562,9 @@ class tdbPartitionedMatrix
       }
     }
 
-    /**
-     * Lather, rinse, repeat for ids -- use separate scopes for partitions
-     * and ids to keep from cross pollinating identifiers
-     *
-     * @todo -- combine these two blocks
-     */
+    // Repeat for ids -- use separate scopes for partitions and ids to keep from
+    // cross pollinating identifiers
+    // @todo -- combine these two blocks
     {
       auto ids_attr_idx = 0;
 
@@ -582,7 +574,7 @@ class tdbPartitionedMatrix
       tiledb::Subarray ids_subarray(ctx_, *partitioned_ids_array_);
 
       size_t ids_col_count = 0;
-      for (size_t j = first_resident_part_; j < last_resident_part_; ++j) {
+      for (size_t j = first_resident_part; j < last_resident_part_; ++j) {
         size_t start = master_indices_[relevant_parts_[j]];
         size_t stop = master_indices_[relevant_parts_[j] + 1];
         size_t len = stop - start;
@@ -592,7 +584,7 @@ class tdbPartitionedMatrix
         ids_col_count += len;
         ids_subarray.add_range(0, (int)start, (int)stop - 1);
       }
-      if (ids_col_count != last_resident_col_ - first_resident_col_) {
+      if (ids_col_count != last_resident_col_ - first_resident_col) {
         throw std::runtime_error("Column count mismatch");
       }
 
@@ -612,20 +604,17 @@ class tdbPartitionedMatrix
 
     /*
      * Copy indices for resident partitions into Base::part_index_
-     * resident_part_offset_ will be the first index into squashed
-     * Also [first_resident_part_, last_resident_part_)
+     * resident_part_offset will be the first index into squashed
+     * Also [first_resident_part, last_resident_part_)
      */
-    auto sub = squashed_indices_[resident_part_offset_];
-    for (size_t i = 0; i < num_resident_parts_ + 1; ++i) {
-      this->part_index_[i] = squashed_indices_[i + resident_part_offset_] - sub;
+    auto sub = squashed_indices_[resident_part_offset];
+    for (size_t i = 0; i < num_resident_parts + 1; ++i) {
+      this->part_index_[i] = squashed_indices_[i + resident_part_offset] - sub;
     }
 
-    // this->num_vectors() =
-    // this->num_partitions() =
     this->num_vectors_ = num_resident_cols_;
-    this->num_parts_ = num_resident_parts_;
+    this->num_parts_ = num_resident_parts;
 
-    num_loads_++;
     return true;
   }
 

@@ -388,53 +388,6 @@ inline constexpr auto num_loads = _load::_gn{};
 }  // namespace _cpo
 
 // ----------------------------------------------------------------------------
-// resident_offset CPO
-// ----------------------------------------------------------------------------
-namespace _resident_offset {
-
-template <class T>
-concept _member_resident_part_offset = requires(T t) {
-  { t.resident_part_offset() } -> semi_integral;
-};
-
-template <class T>
-concept _member_num_resident_parts = requires(T t) {
-  { t.num_resident_parts() } -> semi_integral;
-};
-
-struct _gn {
-  template <_member_num_resident_parts T>
-  auto constexpr operator()(T&& t) const noexcept {
-    return t.num_resident_parts();
-  }
-
-  template <class T>
-    requires(!_member_num_resident_parts<T>)
-  auto constexpr operator()(T&& t) const noexcept {
-    return 0;
-  }
-};
-
-struct _hn {
-  template <_member_resident_part_offset T>
-  auto constexpr operator()(T&& t) const noexcept {
-    return t.resident_part_offset();
-  }
-
-  template <class T>
-    requires(!_member_resident_part_offset<T>)
-  auto constexpr operator()(T&& t) const noexcept {
-    return 0;
-  }
-};
-}  // namespace _resident_offset
-
-inline namespace _cpo {
-inline constexpr auto num_resident_parts = _resident_offset::_gn{};
-inline constexpr auto resident_part_offset = _resident_offset::_hn{};
-}  // namespace _cpo
-
-// ----------------------------------------------------------------------------
 // num_partitions CPO
 // ----------------------------------------------------------------------------
 namespace _num_partitions {
