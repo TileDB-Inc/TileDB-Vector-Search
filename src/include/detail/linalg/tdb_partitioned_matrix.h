@@ -166,7 +166,6 @@ class tdbPartitionedMatrix
   size_t total_num_parts_{0};
 
   // The initial and final partition number of the resident partitions
-  index_type first_resident_part{0};
   index_type last_resident_part_{0};
 
   /*****************************************************************************
@@ -178,10 +177,6 @@ class tdbPartitionedMatrix
 
   // The number of columns that are currently loaded into memory
   size_t num_resident_cols_{0};
-
-  // The offset of the first column in the resident vector
-  // Should be equal to first element of col_view_
-  index_type resident_col_offset_{0};
 
   // The initial and final index numbers of the resident columns
   index_type last_resident_col_{0};
@@ -454,35 +449,39 @@ class tdbPartitionedMatrix
        * Fit as many partitions as we can into column_capacity_
        */
 
-      first_resident_col = last_resident_col_;    // # columns
-      first_resident_part = last_resident_part_;  // # partitions
+      // In a previous load() we may have read in some partitions. Start from
+      // where we left off.
+      first_resident_col = last_resident_col_;
+      first_resident_part = last_resident_part_;
 
+      // Now our goal is to calculate the number of columns (i.e. vectors) that
+      // we can read in, and set num_resident_cols_ to that.
       last_resident_part_ = first_resident_part;
       for (size_t i = first_resident_part; i < total_num_parts_; ++i) {
         auto next_part_size = squashed_indices_[i + 1] - squashed_indices_[i];
 
-        if ((last_resident_col_ + next_part_size) >
+        if (last_resident_col_ + next_part_size >
             first_resident_col + column_capacity_) {
           break;
         }
         last_resident_col_ += next_part_size;  // FIXME ??
         last_resident_part_ = i + 1;
       }
-      num_resident_cols_ = last_resident_col_ - first_resident_col;
-      resident_col_offset_ = first_resident_col;
 
-      assert(num_resident_cols_ <= column_capacity_);
+      // This is the number of columns we will read in.
+      num_resident_cols_ = last_resident_col_ - first_resident_col;
+      // If we are trying to load in more columns than we have allocated memory
+      // for, throw.
       if (num_resident_cols_ > column_capacity_) {
         throw std::runtime_error(
-            "Invalid partitioning, num_resident_cols_ " +
-            std::to_string(num_resident_cols_) + " > " +
-            std::to_string(column_capacity_));
+            "Invalid partitioning, num_resident_cols_ (" +
+            std::to_string(num_resident_cols_) + ") > column_capacity_ (" +
+            std::to_string(column_capacity_) + ")");
       }
 
+      // This is the number of partitions we will read in.
       num_resident_parts = last_resident_part_ - first_resident_part;
       resident_part_offset = first_resident_part;
-
-      assert(num_resident_parts <= max_resident_parts_);
       if (num_resident_parts > max_resident_parts_) {
         throw std::runtime_error(
             "Invalid partitioning, num_resident_parts " +
@@ -503,15 +502,10 @@ class tdbPartitionedMatrix
 
       if (this->part_index_.size() != max_resident_parts_ + 1) {
         throw std::runtime_error(
-            "Invalid partitioning, part_index_ size " +
+            "Invalid partitioning, part_index_ size (" +
             std::to_string(this->part_index_.size()) +
-            " != " + std::to_string(max_resident_parts_ + 1));
-      }
-      if (num_resident_parts > max_resident_parts_) {
-        throw std::runtime_error(
-            "Invalid partitioning, num_resident_parts " +
-            std::to_string(num_resident_parts) + " > " +
-            std::to_string(max_resident_parts_));
+            ") != max_resident_parts_ + 1 (" +
+            std::to_string(max_resident_parts_ + 1) + ")");
       }
 
       /*
@@ -519,7 +513,7 @@ class tdbPartitionedMatrix
        */
       tiledb::Subarray subarray(ctx_, *(this->partitioned_vectors_array_));
 
-      // Dimension 0 goes from 0 to 127
+      // For a 128 dimension vector, Dimension 0 will go from 0 to 127.
       subarray.add_range(0, 0, (int)dimension - 1);
 
       /**
