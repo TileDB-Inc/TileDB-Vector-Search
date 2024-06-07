@@ -3,6 +3,7 @@ from common import *
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.vamana_index import VamanaIndex
 
 MINIMUM_ACCURACY = 0.85
 
@@ -60,6 +61,8 @@ def test_query_old_indices():
                 index = IVFFlatIndex(uri=index_uri)
             elif "flat" in index_name:
                 index = FlatIndex(uri=index_uri)
+            elif "vamana" in index_name:
+                index = VamanaIndex(uri=index_uri)
             else:
                 assert False, f"Unknown index name: {index_name}"
 
