@@ -35,10 +35,11 @@ from tiledb.vector_search.module import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
+from tiledb.vector_search.utils import MAX_FLOAT32
+from tiledb.vector_search.utils import MAX_INT32
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
 
-MAX_INT32 = np.iinfo(np.dtype("int32")).max
-MAX_UINT64 = np.iinfo(np.dtype("uint64")).max
 TILE_SIZE_BYTES = 64000000  # 64MB
 INDEX_TYPE = "IVF_FLAT"
 
@@ -69,6 +70,9 @@ class IVFFlatIndex(index.Index):
         If not provided, all index data are loaded in main memory.
         Otherwise, no index data are loaded in main memory and this memory budget is
         applied during queries.
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`. We then load index data in the taskgraph based on `memory_budget`.
+        If `False`, load index data in main memory locally according to `memory_budget`. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph..
     """
 
     def __init__(
@@ -77,10 +81,23 @@ class IVFFlatIndex(index.Index):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         memory_budget: int = -1,
+        open_for_remote_query_execution: bool = False,
         **kwargs,
     ):
+        self.index_open_kwargs = {
+            "uri": uri,
+            "config": config,
+            "timestamp": timestamp,
+            "memory_budget": memory_budget,
+        }
+        self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
-        super().__init__(uri=uri, config=config, timestamp=timestamp)
+        super().__init__(
+            uri=uri,
+            config=config,
+            timestamp=timestamp,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+        )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
             + self.index_version
@@ -124,20 +141,21 @@ class IVFFlatIndex(index.Index):
         else:
             self.partitions = self.partition_history[self.history_index]
 
-        self._centroids = load_as_matrix(
-            self.centroids_uri,
-            ctx=self.ctx,
-            size=self.partitions,
-            config=config,
-            timestamp=self.base_array_timestamp,
-        )
-        self._index = read_vector_u64(
-            self.ctx,
-            self.index_array_uri,
-            0,
-            self.partitions + 1,
-            self.base_array_timestamp,
-        )
+        if not open_for_remote_query_execution:
+            self._centroids = load_as_matrix(
+                self.centroids_uri,
+                ctx=self.ctx,
+                size=self.partitions,
+                config=config,
+                timestamp=self.base_array_timestamp,
+            )
+            self._index = read_vector_u64(
+                self.ctx,
+                self.index_array_uri,
+                0,
+                self.partitions + 1,
+                self.base_array_timestamp,
+            )
 
         if self.base_size == -1:
             self.size = self._index[self.partitions]
@@ -145,7 +163,7 @@ class IVFFlatIndex(index.Index):
             self.size = self.base_size
 
         # TODO pass in a context
-        if self.memory_budget == -1:
+        if not open_for_remote_query_execution and self.memory_budget == -1:
             self._db = load_as_matrix(
                 self.db_uri,
                 ctx=self.ctx,
@@ -215,16 +233,14 @@ class IVFFlatIndex(index.Index):
             If provided, this is the number of workers to use for the query execution.
         """
         if self.size == 0:
-            return np.full((queries.shape[0], k), index.MAX_FLOAT_32), np.full(
-                (queries.shape[0], k), index.MAX_UINT64
+            return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
+                (queries.shape[0], k), MAX_UINT64
             )
 
         if mode != Mode.BATCH and resources:
             raise TypeError("Can only pass resources in BATCH mode")
         if (mode != Mode.REALTIME and mode != Mode.BATCH) and resource_class:
             raise TypeError("Can only pass resource_class in REALTIME or BATCH mode")
-
-        assert queries.dtype == np.float32
 
         if queries.ndim == 1:
             queries = np.array([queries])
@@ -390,7 +406,6 @@ class IVFFlatIndex(index.Index):
                 results.append(tmp_results)
             return results
 
-        assert queries.dtype == np.float32
         if num_partitions == -1:
             num_partitions = 5
         if num_workers == -1:

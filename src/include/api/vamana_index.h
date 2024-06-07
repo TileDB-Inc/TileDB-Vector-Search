@@ -90,7 +90,6 @@ class IndexVamana {
       const std::optional<IndexOptions>& config = std::nullopt) {
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
-    adjacency_row_index_datatype_ = TILEDB_UINT32;
 
     if (config) {
       for (auto&& c : *config) {
@@ -108,12 +107,14 @@ class IndexVamana {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
-        } else if (key == "adjacency_row_index_type") {
-          adjacency_row_index_datatype_ = string_to_datatype(value);
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
       }
+    }
+
+    if (b_backtrack_ == 0) {
+      b_backtrack_ = l_build_;
     }
   }
 
@@ -131,12 +132,7 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const URI& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
-    read_types(
-        ctx,
-        group_uri,
-        &feature_datatype_,
-        &id_datatype_,
-        &adjacency_row_index_datatype_);
+    read_types(ctx, group_uri, &feature_datatype_, &id_datatype_);
 
     auto type = std::tuple{
         feature_datatype_, id_datatype_, adjacency_row_index_datatype_};
@@ -144,6 +140,9 @@ class IndexVamana {
       throw std::runtime_error("Unsupported datatype combination");
     }
     index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
+    l_build_ = index_->l_build();
+    r_max_degree_ = index_->r_max_degree();
+    b_backtrack_ = index_->b_backtrack();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -174,16 +173,18 @@ class IndexVamana {
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    // If we loaded an existing index, we should use the timestamp from it.
-    std::optional<TemporalPolicy> temporal_policy =
-        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
-                 std::nullopt;
+
+    // Create a new index. Note that we may have already loaded an existing
+    // index by URI. In that case, we have updated our local state (i.e.
+    // l_build_, r_max_degree_, b_backtrack_), but we should also use the
+    // timestamp from that already loaded index.
     index_ = dispatch_table.at(type)(
         training_set.num_vectors(),
         l_build_,
         r_max_degree_,
         b_backtrack_,
-        temporal_policy);
+        index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
+                 std::nullopt);
 
     index_->train(training_set);
 
@@ -241,16 +242,10 @@ class IndexVamana {
       uint64_t timestamp) {
     tiledb_datatype_t feature_datatype{TILEDB_ANY};
     tiledb_datatype_t id_datatype{TILEDB_ANY};
-    tiledb_datatype_t adjacency_row_index_datatype{TILEDB_ANY};
-    read_types(
-        ctx,
-        group_uri,
-        &feature_datatype,
-        &id_datatype,
-        &adjacency_row_index_datatype);
+    read_types(ctx, group_uri, &feature_datatype, &id_datatype);
 
-    auto type =
-        std::tuple{feature_datatype, id_datatype, adjacency_row_index_datatype};
+    auto type = std::tuple{
+        feature_datatype, id_datatype, adjacency_row_index_datatype_};
     if (clear_history_dispatch_table.find(type) ==
         clear_history_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
@@ -270,6 +265,18 @@ class IndexVamana {
     return dimensions_;
   }
 
+  constexpr auto l_build() const {
+    return l_build_;
+  }
+
+  constexpr auto r_max_degree() const {
+    return r_max_degree_;
+  }
+
+  constexpr auto b_backtrack() const {
+    return b_backtrack_;
+  }
+
   constexpr auto feature_type() const {
     return feature_datatype_;
   }
@@ -286,29 +293,17 @@ class IndexVamana {
     return datatype_to_string(id_datatype_);
   }
 
-  constexpr auto adjacency_row_index_type() const {
-    return adjacency_row_index_datatype_;
-  }
-
-  inline auto adjacency_row_index_type_string() const {
-    return datatype_to_string(adjacency_row_index_datatype_);
-  }
-
  private:
   static void read_types(
       const tiledb::Context& ctx,
       const std::string& group_uri,
       tiledb_datatype_t* feature_datatype,
-      tiledb_datatype_t* id_datatype,
-      tiledb_datatype_t* adjacency_row_index_datatype) {
+      tiledb_datatype_t* id_datatype) {
     using metadata_element =
         std::tuple<std::string, tiledb_datatype_t*, tiledb_datatype_t>;
     std::vector<metadata_element> metadata{
         {"feature_datatype", feature_datatype, TILEDB_UINT32},
-        {"id_datatype", id_datatype, TILEDB_UINT32},
-        {"adjacency_row_index_datatype",
-         adjacency_row_index_datatype,
-         TILEDB_UINT32}};
+        {"id_datatype", id_datatype, TILEDB_UINT32}};
 
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
 
@@ -351,6 +346,9 @@ class IndexVamana {
         const std::string& storage_version) = 0;
 
     [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual size_t l_build() const = 0;
+    [[nodiscard]] virtual size_t r_max_degree() const = 0;
+    [[nodiscard]] virtual size_t b_backtrack() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
   };
 
@@ -413,14 +411,6 @@ class IndexVamana {
       impl_index_.add(fspan);
     }
 
-    [[nodiscard]] auto query(
-        const tiledb::Context& ctx,
-        const URI& uri,
-        size_t top_k,
-        std::optional<size_t> opt_L) {
-      return impl_index_.query(ctx, uri, top_k, opt_L);
-    }
-
     /**
      * @brief Query the index with the given vectors.  The concrete query
      * function returns a tuple of arrays, which are type erased and returned as
@@ -477,6 +467,18 @@ class IndexVamana {
       return ::dimensions(impl_index_);
     }
 
+    size_t l_build() const override {
+      return impl_index_.l_build();
+    }
+
+    size_t r_max_degree() const override {
+      return impl_index_.r_max_degree();
+    }
+
+    size_t b_backtrack() const override {
+      return impl_index_.b_backtrack();
+    }
+
     TemporalPolicy temporal_policy() const override {
       return impl_index_.temporal_policy();
     }
@@ -508,7 +510,8 @@ class IndexVamana {
   size_t b_backtrack_ = 0;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
-  tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
+  static constexpr tiledb_datatype_t adjacency_row_index_datatype_{
+      TILEDB_UINT64};
   std::unique_ptr<index_base> index_;
 };
 

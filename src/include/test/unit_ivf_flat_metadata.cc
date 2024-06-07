@@ -40,17 +40,12 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 
-TEST_CASE("ivf_flat_metadata: test test", "[ivf_flat_metadata]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("ivf_flat_metadata: default constructor", "[ivf_flat_metadata]") {
+TEST_CASE("default constructor", "[ivf_flat_metadata]") {
   auto x = ivf_flat_index_metadata();
   ivf_flat_index_metadata y;
 }
 
-TEST_CASE(
-    "ivf_flat_metadata: load metadata from index", "[ivf_flat_metadata]") {
+TEST_CASE("load metadata from index", "[ivf_flat_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 

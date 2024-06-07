@@ -38,17 +38,8 @@
 #include "detail/linalg/matrix_with_ids.h"
 #include "mdspan/mdspan.hpp"
 
-TEST_CASE("matrix_with_ids: test test", "[matrix_with_ids]") {
-  REQUIRE(true);
-}
-
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: template arguments",
-    "[matrix_with_ids]",
-    char,
-    float,
-    int32_t,
-    int64_t) {
+    "template arguments", "[matrix_with_ids]", char, float, int32_t, int64_t) {
   auto vectors = std::unique_ptr<float[]>(new float[100]);
   auto ids = std::unique_ptr<TestType[]>(new TestType[100]);
   auto matrix = MatrixWithIds<float, TestType>{
@@ -57,7 +48,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: move constructor",
+    "move constructor",
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
@@ -80,12 +71,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: size constructor",
-    "[matrix_with_ids]",
-    char,
-    float,
-    int32_t,
-    int64_t) {
+    "size constructor", "[matrix_with_ids]", char, float, int32_t, int64_t) {
   auto row_matrix =
       MatrixWithIds<TestType, TestType, stdx::layout_right, size_t>{2, 5};
   CHECK(row_matrix.num_rows() == 2);
@@ -106,7 +92,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: initializer list",
+    "initializer list",
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
@@ -134,10 +120,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: copy",
-    "[matrix_with_ids]",
-    stdx::layout_right,
-    stdx::layout_left) {
+    "copy", "[matrix_with_ids]", stdx::layout_right, stdx::layout_left) {
   auto A = MatrixWithIds<float, float, TestType>{
       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}, {1, 2, 3, 4}};
 
@@ -167,10 +150,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: assign",
-    "[matrix_with_ids]",
-    stdx::layout_right,
-    stdx::layout_left) {
+    "assign", "[matrix_with_ids]", stdx::layout_right, stdx::layout_left) {
   auto A = MatrixWithIds<float, float, TestType>{
       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {0, 1, 2, 3}};
   auto a = std::vector<float>{8, 6, 7, 5, 3, 0, 9, 5, 0, 2, 7, 3};
@@ -195,7 +175,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: assign to matrix",
+    "assign to matrix",
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
@@ -217,7 +197,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "matrix_with_ids: vector of matrix",
+    "vector of matrix",
     "[matrix_with_ids]",
     stdx::layout_right,
     stdx::layout_left) {
@@ -286,13 +266,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEMPLATE_TEST_CASE(
-    "matrix_with_ids: view",
-    "[matrix_with_ids]",
-    char,
-    float,
-    int32_t,
-    int64_t) {
+TEMPLATE_TEST_CASE("view", "[matrix_with_ids]", char, float, int32_t, int64_t) {
   size_t major = 7;
   size_t minor = 13;
   auto v = std::vector<TestType>(major * minor);

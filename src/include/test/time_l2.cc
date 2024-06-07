@@ -220,8 +220,6 @@ float l22_just_swap(const V& u, const U& v) {
   return l22(v, u);
 }
 
-bool global_debug = false;
-
 using typelist = std::tuple<
     std::tuple<float, float>,
     std::tuple<uint8_t, float>,

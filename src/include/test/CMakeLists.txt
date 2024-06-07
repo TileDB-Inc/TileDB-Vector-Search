@@ -74,6 +74,8 @@ kmeans_add_test(unit_api_flat_l2_index)
 
 kmeans_add_test(unit_api_ivf_flat_index)
 
+kmeans_add_test(unit_api_ivf_pq_index)
+
 kmeans_add_test(unit_api_vamana_index)
 
 kmeans_add_test(unit_array_defs)
@@ -90,9 +92,9 @@ kmeans_add_test(unit_execution_policy)
 
 kmeans_add_test(unit_fixed_min_heap)
 
-kmeans_add_test(unit_flatpq_index)
-
 kmeans_add_test(unit_flat_l2_index)
+
+kmeans_add_test(unit_flat_pq_index)
 
 kmeans_add_test(unit_flat_qv)
 
@@ -107,6 +109,12 @@ kmeans_add_test(unit_ivf_flat_group)
 kmeans_add_test(unit_ivf_flat_index)
 
 kmeans_add_test(unit_ivf_flat_metadata)
+
+kmeans_add_test(unit_ivf_pq_group)
+
+kmeans_add_test(unit_ivf_pq_index)
+
+kmeans_add_test(unit_ivf_pq_metadata)
 
 kmeans_add_test(unit_index_defs)
 

@@ -11,7 +11,6 @@ from tiledb.vector_search.object_readers import ObjectPartition
 from tiledb.vector_search.object_readers import ObjectReader
 
 EMBED_DIM = 4
-INDEXES = ["FLAT", "IVF_FLAT", "VAMANA"]
 
 
 # TestEmbedding with vectors of EMBED_DIM size with all values being the id of the object
@@ -236,6 +235,8 @@ def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset, config=No
 
 
 def test_object_index(tmp_path):
+    from common import INDEXES
+
     for index_type in INDEXES:
         index_uri = os.path.join(tmp_path, f"object_index_{index_type}")
         reader = TestReader(
@@ -250,10 +251,16 @@ def test_object_index(tmp_path):
             index_type=index_type,
             object_reader=reader,
             embedding=embedding,
+            num_subspaces=4,
         )
 
         # Check initial ingestion
         index.update_index(partitions=10)
+
+        # TODO(SC-48908): Fix IVF_PQ with object index queries and remove.
+        if index_type == "IVF_PQ":
+            continue
+
         evaluate_query(
             index_uri=index_uri,
             query_kwargs={"nprobe": 10, "opt_l": 250},

@@ -36,12 +36,8 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 
-TEST_CASE("tdb_matrix_with_ids: test test", "[tdb_matrix_with_ids]") {
-  REQUIRE(true);
-}
-
 TEMPLATE_TEST_CASE(
-    "tdb_matrix_with_ids: constructors",
+    "constructors",
     "[tdb_matrix_with_ids]",
     float,
     double,
@@ -105,7 +101,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEST_CASE("tdb_matrix_with_ids: different types", "[tdb_matrix_with_ids]") {
+TEST_CASE("different types", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -147,10 +143,7 @@ TEST_CASE("tdb_matrix_with_ids: different types", "[tdb_matrix_with_ids]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "tdb_matrix_with_ids: assign to matrix",
-    "[tdb_matrix_with_ids]",
-    float,
-    uint8_t) {
+    "assign to matrix", "[tdb_matrix_with_ids]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -229,7 +222,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEST_CASE("tdb_matrix_with_ids: load from uri", "[tdb_matrix_with_ids]") {
+TEST_CASE("load from uri", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
 
   auto ck = tdbColMajorMatrixWithIds<float>(ctx, sift_inputs_uri, sift_ids_uri);
@@ -243,7 +236,7 @@ TEST_CASE("tdb_matrix_with_ids: load from uri", "[tdb_matrix_with_ids]") {
   CHECK(qk.num_ids() == num_queries);
 }
 
-TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
+TEST_CASE("empty matrix", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -306,8 +299,7 @@ TEST_CASE("tdb_matrix_with_ids: empty matrix", "[tdb_matrix_with_ids]") {
   }
 }
 
-TEMPLATE_TEST_CASE(
-    "tdb_matrix_with_ids: preload", "[tdb_matrix_with_ids]", float, uint8_t) {
+TEMPLATE_TEST_CASE("preload", "[tdb_matrix_with_ids]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -370,7 +362,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEST_CASE("tdb_matrix_with_ids: time travel", "[tdb_matrix_with_ids]") {
+TEST_CASE("time travel", "[tdb_matrix_with_ids]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();

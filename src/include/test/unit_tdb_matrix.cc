@@ -41,11 +41,7 @@
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
-TEST_CASE("tdb_matrix: test test", "[tdb_matrix]") {
-  REQUIRE(true);
-}
-
-TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
+TEMPLATE_TEST_CASE("constructors", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -82,8 +78,7 @@ TEMPLATE_TEST_CASE("tdb_matrix: constructors", "[tdb_matrix]", float, uint8_t) {
   }
 }
 
-TEMPLATE_TEST_CASE(
-    "tdb_matrix: assign to matrix", "[tdb_matrix]", float, uint8_t) {
+TEMPLATE_TEST_CASE("assign to matrix", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -164,7 +159,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
+TEMPLATE_TEST_CASE("preload", "[tdb_matrix]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -207,7 +202,7 @@ TEMPLATE_TEST_CASE("tdb_matrix: preload", "[tdb_matrix]", float, uint8_t) {
   }
 }
 
-TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
+TEST_CASE("MatrixBase template parameter", "[tdb_matrix]") {
   // Load data.
   tiledb::Context ctx;
   int offset = 13;
@@ -272,7 +267,7 @@ TEST_CASE("tdb_matrix: MatrixBase template parameter", "[tdb_matrix]") {
   }
 }
 
-TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
+TEST_CASE("empty matrix", "[tdb_matrix]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -337,7 +332,7 @@ TEST_CASE("tdb_matrix: empty matrix", "[tdb_matrix]") {
   }
 }
 
-TEST_CASE("tdb_matrix: time travel", "[tdb_matrix]") {
+TEST_CASE("time travel", "[tdb_matrix]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();

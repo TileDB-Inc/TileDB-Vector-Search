@@ -1,5 +1,5 @@
 /**
- * @file   flatpq_index.h
+ * @file   flat_pq_index.h
  *
  * @section LICENSE
  *
@@ -51,211 +51,6 @@
 #include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
-template <class T, class U>
-void sub_kmeans_random_init(
-    const ColMajorMatrix<T>& training_set,
-    ColMajorMatrix<U>& centroids,
-    size_t sub_begin,
-    size_t sub_end,
-    size_t seed = 0) {
-  scoped_timer _{__FUNCTION__};
-
-  if (num_vectors(training_set) < num_vectors(centroids)) {
-    throw std::invalid_argument(
-        "Number of vectors in training set must be greater than or equal to "
-        "number of centroids");
-  }
-
-  std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
-  std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
-
-  size_t num_clusters = num_vectors(centroids);
-
-  std::vector<size_t> indices(num_clusters);
-  std::unordered_set<size_t> visited;
-  for (size_t i = 0; i < num_clusters; ++i) {
-    size_t index;
-    do {
-      index = dis(gen);
-    } while (visited.contains(index));
-    indices[i] = index;
-    visited.insert(index);
-  }
-
-  for (size_t i = 0; i < num_clusters; ++i) {
-    for (size_t j = sub_begin; j < sub_end; ++j) {
-      centroids(j, i) = training_set(j, indices[i]);
-    }
-  }
-}
-
-// #define REASSIGN
-
-/**
- * @brief Run kmeans on a subspace
- * @tparam T Data type of the input vectors
- * @param training_set Training set
- * @param centroids Initial locations of centroids.  Will be updated in
- * locations [sub_begin, sub_end).
- * @param sub_begin Beginning of the subspace
- * @param sub_end End of the subspace
- * @param num_clusters Number of clusters to find
- * @return
- *
- * @todo update with concepts
- * @todo fix up zero sized partitions
- * @todo this would be more cache friendly to do sub_begin and sub_end
- * in an inner loop
- * @todo We can probably just reuse plain kmeans at some point.
- *
- * @note We use a distance function with cached view because we need to call
- * qv_partition with a plaing distance function.  We lose CTAD here since
- * SubDistance is not on the function parameter list.
- */
-template <
-    class T,
-    class U,
-    class SubDistance = cached_sub_sum_of_squares_distance>
-  requires cached_sub_distance_function<
-      SubDistance,
-      typename ColMajorMatrix<T>::span_type,
-      typename ColMajorMatrix<U>::span_type>
-auto sub_kmeans(
-    const ColMajorMatrix<T>& training_set,
-    ColMajorMatrix<U>& centroids,
-    size_t sub_begin,
-    size_t sub_end,
-    size_t num_clusters,
-    double tol,
-    size_t max_iter,
-    size_t num_threads,
-    float reassign_ratio = 0.05) {
-  size_t sub_dimensions_ = sub_end - sub_begin;
-  auto local_sub_distance = SubDistance{sub_begin, sub_end};
-
-  std::vector<size_t> degrees(num_clusters, 0);
-
-  // Copy centroids to new centroids -- note only one subspace will be changing
-  // @todo Keep new_centroids outside function so we don't need to copy all
-  ColMajorMatrix<U> new_centroids(
-      dimensions(centroids), num_vectors(centroids));
-  for (size_t i = 0; i < num_vectors(new_centroids); ++i) {
-    for (size_t j = 0; j < dimensions(new_centroids); ++j) {
-      new_centroids(j, i) = centroids(j, i);
-    }
-  }
-
-  size_t iter = 0;
-  double max_diff = 0.0;
-  double total_weight = 0.0;
-  for (iter = 0; iter < max_iter; ++iter) {
-    // @todo Get rid of pre-processor for this
-#ifdef REASSIGN
-    auto [scores, parts] = detail::flat::qv_partition_with_scores(
-        centroids, training_set, num_threads, local_sub_distance);
-#else
-    auto parts = detail::flat::qv_partition(
-        centroids, training_set, num_threads, local_sub_distance);
-#endif
-
-    for (size_t j = 0; j < num_vectors(new_centroids); ++j) {
-      for (size_t i = sub_begin; i < sub_end; ++i) {
-        new_centroids(i, j) = 0;
-      }
-    }
-    std::fill(begin(degrees), end(degrees), 0);
-
-#ifdef REASSIGN
-    // How many centroids should we try to fix up
-    size_t heap_size = std::ceil(reassign_ratio * num_clusters) + 5;
-    auto high_scores = fixed_min_pair_heap<
-        feature_type,
-        index_type,
-        std::greater<feature_type>>(heap_size, std::greater<feature_type>());
-    auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
-#endif
-
-    for (size_t i = 0; i < num_vectors(training_set); ++i) {
-      auto part = parts[i];
-      auto centroid = new_centroids[part];
-      auto vector = training_set[i];
-
-      for (size_t j = sub_begin; j < sub_end; ++j) {
-        centroid[j] += vector[j];
-      }
-      ++degrees[part];
-#ifdef REASSIGN
-      high_scores.insert(scores[i], i);
-#endif
-    }
-
-#ifdef REASSIGN
-    size_t max_degree = 0;
-
-    for (size_t i = 0; i < num_clusters; ++i) {
-      auto degree = degrees[i];
-      max_degree = std::max<size_t>(max_degree, degree);
-      low_degrees.insert(degree, i);
-    }
-    size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio);
-
-    if (iter != max_iter - 1) {
-      // Move vectors with high scores to replace zero-degree partitions
-      std::sort_heap(begin(low_degrees), end(low_degrees));
-      std::sort_heap(begin(high_scores), end(high_scores), [](auto a, auto b) {
-        return std::get<0>(a) > std::get<0>(b);
-      });
-      for (size_t i = 0; i < size(low_degrees) &&
-                         std::get<0>(low_degrees[i]) <= lower_degree_bound;
-           ++i) {
-        // std::cout << "i: " << i << " low_degrees: ("
-        //           << std::get<1>(low_degrees[i]) << " "
-        //           << std::get<0>(low_degrees[i]) << ") high_scores: ("
-        //           << parts[std::get<1>(high_scores[i])] << " "
-        //          << std::get<1>(high_scores[i]) << " "
-        //          << std::get<0>(high_scores[i]) << ")" << std::endl;
-
-        auto [degree, zero_part] = low_degrees[i];
-        auto [score, high_vector_id] = high_scores[i];
-        auto low_centroid = new_centroids[zero_part];
-        auto high_vector = training_set[high_vector_id];
-
-        for (size_t i = sub_begin; i < sub_end; ++i) {
-          low_centroid[i] = high_vector[i];
-        }
-        for (size_t i = sub_begin; i < sub_end; ++i) {
-          new_centroids[parts[high_vector_id]][i] -= high_vector[i];
-        }
-
-        ++degrees[zero_part];
-        --degrees[parts[high_vector_id]];
-      }
-    }
-#endif
-
-    // Check for convergence
-    max_diff = 0;
-    total_weight = 0;
-    for (size_t j = 0; j < num_vectors(centroids); ++j) {
-      if (degrees[j] != 0) {
-        auto centroid = new_centroids[j];
-        for (size_t k = sub_begin; k < sub_end; ++k) {
-          centroid[k] /= degrees[j];
-          total_weight += centroid[k] * centroid[k];
-        }
-      }
-      auto diff = local_sub_distance(centroids[j], new_centroids[j]);
-      max_diff = std::max<double>(max_diff, diff);
-    }
-    centroids.swap(new_centroids);
-
-    if (max_diff < tol * total_weight) {
-      break;
-    }
-  }
-  return std::make_tuple(iter, max_diff / total_weight);
-}
-
 /**
  * @brief Flat index that uses product quantization
  *
@@ -269,9 +64,9 @@ auto sub_kmeans(
  */
 template <
     class T,
-    class shuffled_ids_type = uint64_t,
-    class indices_type = uint64_t>
-class flatpq_index {
+    class shuffled_ids_type = size_t,
+    class indices_type = size_t>
+class flat_pq_index {
   using feature_type = T;
   using id_type = shuffled_ids_type;
 
@@ -319,7 +114,7 @@ class flatpq_index {
    *
    * @todo We don't really need dimension as an argument for any of our indexes
    */
-  flatpq_index(
+  flat_pq_index(
       size_t dimensions,
       size_t num_subspaces,
       size_t bits_per_subspace = 8,
@@ -344,7 +139,7 @@ class flatpq_index {
   /**
    * Load constructor
    */
-  flatpq_index(tiledb::Context ctx, const std::string& group_uri) {
+  flat_pq_index(tiledb::Context ctx, const std::string& group_uri) {
     auto read_group = tiledb::Group(ctx, group_uri, TILEDB_READ, ctx.config());
 
     for (auto& [name, value, datatype] : metadata) {
@@ -409,16 +204,18 @@ class flatpq_index {
           training_set, centroids_, sub_begin, sub_end, 0xdeadbeef);
       size_t iters;
       double conv;
-      std::tie(iters, conv) =
-          sub_kmeans<feature_type, centroids_type, SubDistance>(
-              training_set,
-              centroids_,
-              sub_begin,
-              sub_end,
-              num_clusters_,
-              tol_,
-              max_iter_,
-              num_threads_);
+      std::tie(iters, conv) = sub_kmeans<
+          std::remove_cvref_t<decltype(training_set)>,
+          std::remove_cvref_t<decltype(centroids_)>,
+          SubDistance>(
+          training_set,
+          centroids_,
+          sub_begin,
+          sub_end,
+          num_clusters_,
+          tol_,
+          max_iter_,
+          num_threads_);
 
       auto x = 0;
     }
@@ -440,6 +237,11 @@ class flatpq_index {
 
   template <class SubDistance = cached_sub_sum_of_squares_distance>
   auto add(const ColMajorMatrix<feature_type>& feature_vectors) {
+    // These will be encoded. We will still have the same number of vectors, but
+    // now each will have num_subspaces_ dimensions instead of the original
+    // dimensions_. This is because we will chunk up the original vector into
+    // num_subspaces_ chunks and then for each chunk the vector will get an ID
+    // which maps to a set of numbers which are stored in centroids_.
     pq_vectors_ =
         ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
 
@@ -463,18 +265,22 @@ class flatpq_index {
       for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
         pq_vectors_(subspace, i) = x[i];
 
-        // Debugging -- copy to std::vector so the debugger can inspect
+// Debugging -- copy to std::vector so the debugger can inspect
+#if 0
         std::vector<float> a(
             begin(feature_vectors[i]), end(feature_vectors[i]));
         std::vector<float> b{begin(pq_vectors_[i]), end(pq_vectors_[i])};
         // std::vector<float> c{begin(centroids_[i]), end(centroids_[i])};
         auto foo = 0;
+#endif
       }
     }
   }
 
   // @todo IMPORTANT: We need to do some abstraction penalty tests to make sure
   // that the distance functions are inlined.
+  // @todo Make this SIMD friendly -- do multiple subspaces at a time
+  // For each (i, j), distances should be stored contiguously
   float sub_distance_symmetric(auto&& a, auto&& b) const {
     float pq_distance = 0.0;
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -491,7 +297,7 @@ class flatpq_index {
     using A = decltype(pq_vectors_[0]);
     using B = decltype(pq_vectors_[0]);
     struct pq_distance {
-      const flatpq_index* outer_;
+      const flat_pq_index* outer_;
       inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_symmetric(a, b);
       }
@@ -500,12 +306,22 @@ class flatpq_index {
   }
 
   /**
-   *
+   * @brief Uncompress the b and compute the distance between a and b
    * @param a The uncompressed vector
    * @param b The compressed vector
-   * @return
+   * @tparam U The type of a, a feature vector
+   * @tparam V The type of b, a compressed feature vector, i.e., a vector of
+   * code types
+   * @return The distance between a and b
+   * @todo There is likely a copy constructor of the Distance functor.  That
+   * should be checked and possibly fixed so that there is just a reference to
+   * an existing object.
+   * @todo This also needs to be SIMDized.
    */
-  template <feature_vector U, feature_vector V>
+  template <
+      feature_vector U,
+      feature_vector V,
+      class Distance = sub_sum_of_squares_distance>
   float sub_distance_asymmetric(const U& a, const V& b) const {
     float pq_distance = 0.0;
 
@@ -526,7 +342,7 @@ class flatpq_index {
 
     // @todo Do we need to worry about function overhead here?
     struct pq_distance {
-      const flatpq_index* outer_;
+      const flat_pq_index* outer_;
       inline float operator()(const A& a, const B& b) {
         return outer_->sub_distance_asymmetric(a, b);
       }
@@ -816,11 +632,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the metadata information between two flatpq_index
+   * @brief Compare the metadata information between two flat_pq_index
    * @param rhs
    * @return
    */
-  bool compare_metadata(const flatpq_index& rhs) {
+  bool compare_metadata(const flat_pq_index& rhs) {
     if (dimensions_ != rhs.dimensions_) {
       std::cout << "dimensions_ " << dimensions_ << " != " << rhs.dimensions_
                 << std::endl;
@@ -864,11 +680,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the pq vectors information between two flatpq_index
+   * @brief Compare the pq vectors information between two flat_pq_index
    * @param rhs
    * @return
    */
-  auto compare_pq_vectors(const flatpq_index& rhs) {
+  auto compare_pq_vectors(const flat_pq_index& rhs) {
     // @todo use std::equal
     if (pq_vectors_.size() != rhs.pq_vectors_.size() ||
         num_vectors(pq_vectors_) != num_vectors(rhs.pq_vectors_)) {
@@ -890,11 +706,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the centroids information between two flatpq_index
+   * @brief Compare the centroids information between two flat_pq_index
    * @param rhs
    * @return
    */
-  auto compare_centroids(const flatpq_index& rhs) {
+  auto compare_centroids(const flat_pq_index& rhs) {
     // @todo use std::equal
     if (centroids_.size() != rhs.centroids_.size() ||
         num_vectors(centroids_) != num_vectors(rhs.centroids_)) {
@@ -916,11 +732,11 @@ class flatpq_index {
   }
 
   /**
-   * @brief Compare the distance table information between two flatpq_index
+   * @brief Compare the distance table information between two flat_pq_index
    * @param rhs
    * @return
    */
-  auto compare_distance_tables(const flatpq_index& rhs) {
+  auto compare_distance_tables(const flat_pq_index& rhs) {
     if (distance_tables_.size() != rhs.distance_tables_.size()) {
       std::cout << "distance_tables_.size() " << distance_tables_.size()
                 << " != " << rhs.distance_tables_.size() << std::endl;

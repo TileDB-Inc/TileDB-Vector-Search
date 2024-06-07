@@ -285,7 +285,11 @@ class tdbPartitionedMatrix
       , partitioned_vectors_schema_{partitioned_vectors_array_->schema()}
       , partitioned_ids_uri_{ids_uri}
       , partitioned_ids_array_(tiledb_helpers::open_array(
-            tdb_func__, ctx_, partitioned_ids_uri_, TILEDB_READ))
+            tdb_func__,
+            ctx_,
+            partitioned_ids_uri_,
+            TILEDB_READ,
+            temporal_policy))
       , ids_schema_{partitioned_ids_array_->schema()}
       //      , master_indices_{std::move(indices)}
       //      , relevant_parts_(std::move(relevant_parts))

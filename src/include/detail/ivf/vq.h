@@ -295,9 +295,7 @@ auto vq_query_infinite_ram(
     }
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /**
@@ -440,9 +438,7 @@ auto vq_query_infinite_ram_2(
     }
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /**
@@ -612,9 +608,7 @@ auto vq_query_finite_ram(
     _i.stop();
   } while (load(partitioned_db));
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 template <class feature_type, class id_type>
@@ -729,9 +723,7 @@ auto vq_query_finite_ram_2(
   }
 
   consolidate_scores(min_scores);
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 }  // namespace detail::ivf

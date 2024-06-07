@@ -34,16 +34,13 @@
 #include "detail/linalg/matrix.h"
 #include "detail/scoring/l2_distance.h"
 
-TEST_CASE("l2_distance: null test", "[l2_distance]") {
-}
-
-TEST_CASE("l2_distance: naive_sum_of_squares", "[l2_distance]") {
+TEMPLATE_TEST_CASE("naive_sum_of_squares", "[l2_distance]", int8_t, uint8_t) {
   // size_t n = GENERATE(1, 3, 127, 1021, 1024);
 
   size_t n = GENERATE(127);
 
-  auto u = std::vector<uint8_t>(n);
-  auto v = std::vector<uint8_t>(n);
+  auto u = std::vector<TestType>(n);
+  auto v = std::vector<TestType>(n);
   auto x = std::vector<float>(n);
   auto y = std::vector<float>(n);
 

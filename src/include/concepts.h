@@ -160,8 +160,9 @@ concept feature_vector_array = requires(D d, size_t n) {
 
 template <class D>
 concept feature_vector_array_with_ids =
-    feature_vector_array<D> && requires(D d) {
+    feature_vector_array<D> && requires(D d, size_t i) {
       { d.ids() };
+      { d.id(i) };
     };
 
 /**
@@ -251,11 +252,14 @@ concept distance_function =
 template <class F, class U, class V>
 concept sub_distance_function =
     feature_vector<U> && feature_vector<V> &&
+    // perhaps could also just use requires clause that f(u, v, i, j) is valid
     std::regular_invocable<F, U, V, size_t, size_t> &&
     std::regular_invocable<F, V, U, size_t, size_t> &&
     std::regular_invocable<F, U, U, size_t, size_t> &&
     std::regular_invocable<F, V, V, size_t, size_t>;
 
+template <class F, class U, class V>
+concept uncached_sub_distance_function = sub_distance_function<F, U, V>;
 /**
  * @brief A concept for distance functions operating on subranges of a feature
  * vector, where the subrange is specified at construction time.  Thereafter,

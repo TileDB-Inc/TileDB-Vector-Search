@@ -1,5 +1,5 @@
 /**
- * @file   unit_vamana_metadata.cc
+ * @file   unit_ivf_pq_metadata.cc
  *
  * @section LICENSE
  *
@@ -34,44 +34,46 @@
 #include <vector>
 #include "api/feature_vector_array.h"
 #include "detail/linalg/tdb_matrix.h"
-#include "index/vamana_index.h"
-#include "index/vamana_metadata.h"
+#include "index/ivf_pq_index.h"
+#include "index/ivf_pq_metadata.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 
-TEST_CASE("default constructor", "[vamana_metadata]") {
-  auto x = vamana_index_metadata();
-  vamana_index_metadata y;
+TEST_CASE("default constructor", "[ivf_pq_metadata]") {
+  auto x = ivf_pq_metadata();
+  ivf_pq_metadata y;
 }
 
-TEST_CASE("default constructor compare", "[vamana_metadata]") {
-  auto x = vamana_index_metadata();
-  vamana_index_metadata y;
+TEST_CASE("default constructor compare", "[ivf_pq_metadata]") {
+  auto x = ivf_pq_metadata();
+  ivf_pq_metadata y;
 
   CHECK(x.compare_metadata(y));
   CHECK(y.compare_metadata(x));
 }
 
-TEST_CASE("load metadata from index", "[vamana_metadata]") {
+TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 
   std::string uri =
-      (std::filesystem::temp_directory_path() / "tmp_vamana_index").string();
+      (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  auto idx =
-      vamana_index<siftsmall_feature_type, siftsmall_ids_type>(0, 20, 40, 30);
+  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(0, 16);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
       {"dimensions", 128},
       {"feature_datatype", 2},
       {"id_datatype", 10},
-      {"adjacency_scores_datatype", 2},
-      {"adjacency_row_index_datatype", 10},
+      {"px_datatype", 10},
+      {"num_subspaces", 16},
+      {"sub_dimensions", 8},
+      {"bits_per_subspace", 8},
+      {"num_clusters", 256},
   };
 
   {
@@ -80,30 +82,31 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
         ColMajorMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(
             128, 0);
     idx.train(training_vectors, training_vectors.raveled_ids());
-    idx.add(training_vectors);
+    idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
-
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
+        {"index_type", "IVF_PQ"},
         {"storage_version", current_storage_version},
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
+        {"indices_type", "uint64"},
         {"ingestion_timestamps", "[0]"},
         {"base_sizes", "[0]"},
-        {"adjacency_scores_type", "float32"},
-        {"adjacency_row_index_type", "uint64"},
+        {"partition_history", "[0]"},
     };
     validate_metadata(read_group, expected_str, expected_arithmetic);
 
-    auto x = vamana_index_metadata();
+    auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
     CHECK(x.ingestion_timestamps_.size() == 1);
     CHECK(x.ingestion_timestamps_[0] == 0);
     CHECK(x.base_sizes_.size() == 1);
     CHECK(x.base_sizes_[0] == 0);
-    CHECK(x.num_edges_history_.size() == 1);
+    CHECK(x.partition_history_.size() == 1);
+    CHECK(x.partition_history_[0] == 0);
   }
 
   {
@@ -116,30 +119,31 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
 
     idx.train(training_vectors, training_vectors.raveled_ids());
-    idx.add(training_vectors);
+    idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 2), "");
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
+        {"index_type", "IVF_PQ"},
         {"storage_version", current_storage_version},
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
+        {"indices_type", "uint64"},
         {"ingestion_timestamps", "[2]"},
         {"base_sizes", "[222]"},
-        {"adjacency_scores_type", "float32"},
-        {"adjacency_row_index_type", "uint64"},
+        {"partition_history", "[14]"},
     };
     validate_metadata(read_group, expected_str, expected_arithmetic);
 
-    auto x = vamana_index_metadata();
+    auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
     CHECK(x.ingestion_timestamps_.size() == 1);
     CHECK(x.ingestion_timestamps_[0] == 2);
     CHECK(x.base_sizes_.size() == 1);
     CHECK(x.base_sizes_[0] == 222);
-    CHECK(x.num_edges_history_.size() == 1);
+    CHECK(x.partition_history_.size() == 1);
   }
 
   {
@@ -149,24 +153,25 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 333);
 
     idx.train(training_vectors, training_vectors.raveled_ids());
-    idx.add(training_vectors);
+    idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 3));
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
+        {"index_type", "IVF_PQ"},
         {"storage_version", current_storage_version},
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
+        {"indices_type", "uint64"},
         {"ingestion_timestamps", "[2,3]"},
         {"base_sizes", "[222,333]"},
-        {"adjacency_scores_type", "float32"},
-        {"adjacency_row_index_type", "uint64"},
+        {"partition_history", "[14,14]"},
     };
     validate_metadata(read_group, expected_str, expected_arithmetic);
 
-    auto x = vamana_index_metadata();
+    auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
     CHECK(x.ingestion_timestamps_.size() == 2);
     CHECK(x.ingestion_timestamps_[0] == 2);
@@ -174,13 +179,13 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
     CHECK(x.base_sizes_.size() == 2);
     CHECK(x.base_sizes_[0] == 222);
     CHECK(x.base_sizes_[1] == 333);
-    CHECK(x.num_edges_history_.size() == 2);
+    CHECK(x.partition_history_.size() == 2);
   }
 
   {
     // Check we can clear history.
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
-    auto x = vamana_index_metadata();
+    auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
     // Will clear less than or equal to 2, so we should just have ingestion at
     // timestamp 3.
@@ -189,7 +194,7 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
     CHECK(x.ingestion_timestamps_[0] == 3);
     CHECK(x.base_sizes_.size() == 1);
     CHECK(x.base_sizes_[0] == 333);
-    CHECK(x.num_edges_history_.size() == 1);
+    CHECK(x.partition_history_.size() == 1);
 
     auto write_group = tiledb::Group(ctx, uri, TILEDB_WRITE, cfg);
     x.store_metadata(write_group);
@@ -200,14 +205,14 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
+        {"index_type", "IVF_PQ"},
         {"storage_version", current_storage_version},
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
         {"ingestion_timestamps", "[3]"},
         {"base_sizes", "[333]"},
-        {"adjacency_scores_type", "float32"},
-        {"adjacency_row_index_type", "uint64"},
+        {"partition_history", "[14]"},
     };
     validate_metadata(read_group, expected_str, expected_arithmetic);
   }

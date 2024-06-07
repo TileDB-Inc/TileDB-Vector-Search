@@ -27,6 +27,7 @@ siftsmall_ids_uri = siftsmall_root + "shuffled_vector_ids"
 siftsmall_parts_uri = siftsmall_root + "shuffled_vectors"
 siftsmall_query_uri = siftsmall_root + "queries"
 siftsmall_groundtruth_uri = siftsmall_root + "groundtruth"
+siftsmall_dimensions = 128
 
 siftsmall_uint8_root = test_array_root + "siftsmall_uint8/"
 siftsmall_uint8_inputs_uri = siftsmall_uint8_root + "input_vectors"

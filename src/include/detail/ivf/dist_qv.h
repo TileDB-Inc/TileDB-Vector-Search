@@ -353,9 +353,7 @@ auto dist_qv_finite_ram(
     }
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 }  // namespace detail::ivf

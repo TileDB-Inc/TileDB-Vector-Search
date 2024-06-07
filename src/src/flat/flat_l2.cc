@@ -140,7 +140,6 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  // global_debug = debug = args["--debug"].asBool();
   verbose = args["--verbose"].asBool();
   enable_stats = args["--stats"].asBool();
 

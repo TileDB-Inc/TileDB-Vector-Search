@@ -145,8 +145,7 @@ auto qv_query_heap_infinite_ram(
         });
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /**
@@ -251,9 +250,7 @@ auto nuv_query_heap_infinite_ram(
   }
 
   consolidate_scores(min_scores);
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /**
@@ -406,9 +403,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   }
 
   consolidate_scores(min_scores);
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /*******************************************************************************
@@ -552,8 +547,7 @@ auto nuv_query_heap_finite_ram(
   }
 
   consolidate_scores(min_scores);
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /**
@@ -744,9 +738,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   }
 
   consolidate_scores(min_scores);
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /**
@@ -1100,9 +1092,7 @@ auto query_finite_ram(
     _i.stop();
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 /**
@@ -1197,9 +1187,7 @@ auto query_infinite_ram(
     }
   }
 
-  auto top_k = get_top_k_with_scores(min_scores, k_nn);
-
-  return top_k;
+  return get_top_k_with_scores(min_scores, k_nn);
 }
 
 }  // namespace detail::ivf
