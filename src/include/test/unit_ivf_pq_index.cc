@@ -311,7 +311,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   }
 
   // Create and write an index.
-  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
+  auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 100);
   load(training_set);
   std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
   std::iota(begin(ids), end(ids), 0);

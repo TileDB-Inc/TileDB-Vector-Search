@@ -336,9 +336,9 @@ class tdbBlockedMatrix : public MatrixBase {
     first_resident_col_ = last_resident_col_;
     last_resident_col_ += elements_to_load;
 
-    if (last_resident_col_ != first_resident_col_) {
+    if (last_resident_col_ == first_resident_col_) {
       throw std::runtime_error(
-          "[tdb_matrix@load] last_resident_col_ != first_resident_col_");
+          "[tdb_matrix@load] last_resident_col_ == first_resident_col_");
     }
 
     // Create a subarray for the next block of columns
