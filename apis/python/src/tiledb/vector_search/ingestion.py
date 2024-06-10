@@ -303,7 +303,7 @@ def ingest(
     VECTORS_PER_SAMPLE_WORK_ITEM = 1000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
-    DEFAULT_KMEANS_BYTES_PER_SAMPLE = 128000000  # ~ 128MB 
+    DEFAULT_KMEANS_BYTES_PER_SAMPLE = 128000000  # ~ 128MB
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
     MAX_INT32 = 2**31 - 1
 
@@ -2099,7 +2099,9 @@ def ingest(
         logger.debug("Size: %d", size)
         this_batch_size_bytes = size * dimensions * np.dtype(vector_type).itemsize
         logger.debug("Batch size in bytes: %d", this_batch_size_bytes)
-        kmeans_batch_size_bytes = training_sample_size * dimensions * np.dtype(vector_type).itemsize
+        kmeans_batch_size_bytes = (
+            training_sample_size * dimensions * np.dtype(vector_type).itemsize
+        )
         logger.debug("Kmeans batch size in bytes: %d", kmeans_batch_size_bytes)
         logger.debug("Training sample size: %d", training_sample_size)
         if mode == Mode.BATCH:
@@ -2162,7 +2164,7 @@ def ingest(
             return int(task_memory_overhead[overhead]) * this_batch_size_bytes
 
         kmeans_requirement_bytes = kmeans_batch_size_bytes * 250
-        
+
         # Function to convert ram_requirement_bytes to ram string (approximates to nearest multiple of 2)
         def get_scaled_ram_gi(base):
             return (
@@ -2176,7 +2178,7 @@ def ingest(
                 )
                 + "Gi"
             )
-        
+
         def get_scaled_ram_gi_kmeans(base):
             return (
                 str(
@@ -2189,7 +2191,7 @@ def ingest(
                 )
                 + "Gi"
             )
-    
+
         # We can't set as default in the function due to the use of `str(threads)`
         # For consistency we then apply all defaults for resources here.
         if ingest_resources is None:
@@ -2208,7 +2210,10 @@ def ingest(
             copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
 
         if random_sample_resources is None:
-            random_sample_resources = {"cpu": "2", "memory": get_scaled_ram_gi_kmeans("6Gi")}
+            random_sample_resources = {
+                "cpu": "2",
+                "memory": get_scaled_ram_gi_kmeans("6Gi"),
+            }
 
         if kmeans_resources is None:
             kmeans_resources = {"cpu": "8", "memory": get_scaled_ram_gi_kmeans("32Gi")}
@@ -2230,19 +2235,6 @@ def ingest(
 
         if partial_index_resources is None:
             partial_index_resources = {"cpu": "1", "memory": "2Gi"}
-
-        # log all the resources
-        logger.debug(f"ingest_resources: {ingest_resources}")
-        logger.debug(f"consolidate_partition_resources: {consolidate_partition_resources}")
-        logger.debug(f"copy_centroids_resources: {copy_centroids_resources}")
-        logger.debug(f"random_sample_resources: {random_sample_resources}")
-        logger.debug(f"kmeans_resources: {kmeans_resources}")
-        logger.debug(f"compute_new_centroids_resources: {compute_new_centroids_resources}")
-        logger.debug(f"assign_points_and_partial_new_centroids_resources: {assign_points_and_partial_new_centroids_resources}")
-        logger.debug(f"write_centroids_resources: {write_centroids_resources}")
-        logger.debug(f"partial_index_resources: {partial_index_resources}")
-
-
 
         if index_type == "FLAT":
             ingest_node = submit(
