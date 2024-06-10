@@ -401,11 +401,20 @@ class ivf_flat_index {
 
     partitioned_vectors_->load();
 
-    assert(
-        ::num_vectors(*partitioned_vectors_) ==
-        size(partitioned_vectors_->ids()));
-    assert(
-        size(partitioned_vectors_->indices()) == ::num_vectors(centroids_) + 1);
+    if (::num_vectors(*partitioned_vectors_) !=
+        size(partitioned_vectors_->ids())) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "::num_vectors(*partitioned_vectors_) != "
+          "size(partitioned_vectors_->ids())");
+    }
+    if (size(partitioned_vectors_->indices()) !=
+        ::num_vectors(centroids_) + 1) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "size(partitioned_vectors_->indices()) != ::num_vectors(centroids_) "
+          "+ 1");
+    }
   }
 
   /**

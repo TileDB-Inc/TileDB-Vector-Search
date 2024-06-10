@@ -909,12 +909,20 @@ class ivf_pq_index {
 
     partitioned_pq_vectors_->load();
 
-    assert(
-        ::num_vectors(*partitioned_pq_vectors_) ==
-        size(partitioned_pq_vectors_->ids()));
-    assert(
-        size(partitioned_pq_vectors_->indices()) ==
-        ::num_vectors(flat_ivf_centroids_) + 1);
+    if (::num_vectors(*partitioned_pq_vectors_) !=
+        size(partitioned_pq_vectors_->ids())) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "::num_vectors(*partitioned_pq_vectors_) != "
+          "size(partitioned_pq_vectors_->ids())");
+    }
+    if (size(partitioned_pq_vectors_->indices()) !=
+        ::num_vectors(flat_ivf_centroids_) + 1) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "size(partitioned_pq_vectors_->indices()) != "
+          "::num_vectors(flat_ivf_centroids_) + 1");
+    }
   }
 
   /**
@@ -999,10 +1007,18 @@ class ivf_pq_index {
     write_group.set_bits_per_subspace(bits_per_subspace_);
     write_group.set_num_clusters(num_clusters_);
 
-    assert(num_subspaces_ * sub_dimensions_ == dimensions_);
+    if (num_subspaces_ * sub_dimensions_ != dimensions_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] num_subspaces_ * sub_dimensions_ != "
+          "dimensions_");
+    }
     // The code below checks if the number of clusters is equal to
     // 2^bits_per_subspace_.
-    assert(num_clusters_ == 1 << bits_per_subspace_);
+    if (num_clusters_ != 1 << bits_per_subspace_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] num_clusters_ != 1 << "
+          "bits_per_subspace_");
+    }
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
@@ -1281,8 +1297,16 @@ class ivf_pq_index {
   }
 
   auto num_partitions() const {
-    assert(num_partitions_ == ::num_vectors(flat_ivf_centroids_));
-    assert(num_partitions_ == ::num_vectors(pq_ivf_centroids_));
+    if (num_partitions_ != ::num_vectors(flat_ivf_centroids_)) {
+      throw std::runtime_error(
+          "[ivf_pq_index@num_partitions] num_partitions_ != "
+          "::num_vectors(flat_ivf_centroids_)");
+    }
+    if (num_partitions_ != ::num_vectors(pq_ivf_centroids_)) {
+      throw std::runtime_error(
+          "[ivf_pq_index@num_partitions] num_partitions_ != "
+          "::num_vectors(pq_ivf_centroids_)");
+    }
     // return ::num_vectors(flat_ivf_centroids_);
     return num_partitions_;
   }
