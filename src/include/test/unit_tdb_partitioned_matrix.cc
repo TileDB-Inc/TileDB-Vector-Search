@@ -86,7 +86,6 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 }
 
 TEST_CASE("can load correctly", "[tdb_partitioned_matrix]") {
-  return;
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 
