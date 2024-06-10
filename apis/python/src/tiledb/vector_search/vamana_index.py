@@ -159,6 +159,11 @@ def create(
         If not provided, use the latest stable storage version.
     """
     validate_storage_version(storage_version)
+    # TODO(SC-49166): Support old storage versions with type-erased indexes.
+    if storage_version == "0.1" or storage_version == "0.2":
+        raise ValueError(
+            f"Storage version {storage_version} is not supported for VamanaIndex. VamanaIndex requires storage version 0.3 or higher."
+        )
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,
