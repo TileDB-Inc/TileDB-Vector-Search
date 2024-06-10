@@ -427,19 +427,9 @@ class tdbPartitionedMatrix
     // - The initial index numbers of the resident columns.
     const index_type first_resident_col = last_resident_col_;
 
-    // The number of resident partitions.
+    // 1. Calculate the number of resident partitions to load.
     size_t num_resident_parts{0};
     {
-      auto attr = partitioned_vectors_schema_.attribute(0);
-
-      std::string attr_name = attr.name();
-      tiledb_datatype_t attr_type = attr.type();
-      if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
-        throw std::runtime_error(
-            "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
-            std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
-      }
-
       // Now our goal is to calculate the number of columns (i.e. vectors) that
       // we can read in, and set num_resident_cols_ to that. We want to fit as
       // many partitions as we can into column_capacity_.
@@ -493,6 +483,19 @@ class tdbPartitionedMatrix
             ") != max_resident_parts_ + 1 (" +
             std::to_string(max_resident_parts_ + 1) + ")");
       }
+    }
+
+    // 2. Load the vectors.
+    {
+      auto attr = partitioned_vectors_schema_.attribute(0);
+
+      std::string attr_name = attr.name();
+      tiledb_datatype_t attr_type = attr.type();
+      if (attr_type != tiledb::impl::type_to_tiledb<T>::tiledb_type) {
+        throw std::runtime_error(
+            "Attribute type mismatch: " + std::to_string(attr_type) + " != " +
+            std::to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
+      }
 
       /*
        * Set up the subarray to read the partitions
@@ -540,9 +543,8 @@ class tdbPartitionedMatrix
       }
     }
 
-    // Repeat for ids -- use separate scopes for partitions and ids to keep from
-    // cross pollinating identifiers
-    // @todo -- combine these two blocks
+    // 3. Load the IDs.
+    // @todo: combine #2 and #3.
     {
       auto ids_attr = ids_schema_.attribute(0);
       std::string ids_attr_name = ids_attr.name();
