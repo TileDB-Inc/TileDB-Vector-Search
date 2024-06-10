@@ -2212,7 +2212,7 @@ def ingest(
         if random_sample_resources is None:
             random_sample_resources = {
                 "cpu": "2",
-                "memory": get_scaled_ram_gi_kmeans("6Gi"),
+                "memory": "6Gi",
             }
 
         if kmeans_resources is None:
@@ -2221,13 +2221,13 @@ def ingest(
         if compute_new_centroids_resources is None:
             compute_new_centroids_resources = {
                 "cpu": "1",
-                "memory": get_scaled_ram_gi_kmeans("8Gi"),
+                "memory": "8Gi",
             }
 
         if assign_points_and_partial_new_centroids_resources is None:
             assign_points_and_partial_new_centroids_resources = {
                 "cpu": str(threads),
-                "memory": get_scaled_ram_gi_kmeans("12Gi"),
+                "memory": "12Gi",
             }
 
         if write_centroids_resources is None:
