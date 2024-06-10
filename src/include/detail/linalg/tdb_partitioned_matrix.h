@@ -580,11 +580,9 @@ class tdbPartitionedMatrix
       }
     }
 
-    /*
-     * Copy indices for resident partitions into Base::part_index_
-     * first_resident_part will be the first index into squashed
-     * Also [first_resident_part, last_resident_part_)
-     */
+    // 4. Copy indices for resident partitions into Base::part_index_
+    // first_resident_part will be the first index into squashed
+    // Also [first_resident_part, last_resident_part_)
     auto sub = squashed_indices_[first_resident_part];
     for (size_t i = 0; i < num_resident_parts + 1; ++i) {
       this->part_index_[i] = squashed_indices_[i + first_resident_part] - sub;
@@ -611,15 +609,15 @@ class tdbPartitionedMatrix
 
   void debug_tdb_partitioned_matrix(const std::string& msg, size_t max_size) {
     debug_partitioned_matrix(*this, msg, max_size);
-    debug_vector(master_indices_, "master_indices_", max_size);
-    debug_vector(relevant_parts_, "relevant_parts_", max_size);
-    debug_vector(squashed_indices_, "squashed_indices_", max_size);
-    std::cout << "total_num_parts_: " << total_num_parts_ << std::endl;
-    std::cout << "last_resident_part_: " << last_resident_part_ << std::endl;
-    std::cout << "column_capacity_: " << column_capacity_ << std::endl;
-    std::cout << "num_resident_cols_: " << num_resident_cols_ << std::endl;
-    std::cout << "last_resident_col_: " << last_resident_col_ << std::endl;
-    std::cout << "max_resident_parts_: " << max_resident_parts_ << std::endl;
+    debug_vector(master_indices_, "# master_indices_", max_size);
+    debug_vector(relevant_parts_, "# relevant_parts_", max_size);
+    debug_vector(squashed_indices_, "# squashed_indices_", max_size);
+    std::cout << "# total_num_parts_: " << total_num_parts_ << std::endl;
+    std::cout << "# last_resident_part_: " << last_resident_part_ << std::endl;
+    std::cout << "# column_capacity_: " << column_capacity_ << std::endl;
+    std::cout << "# num_resident_cols_: " << num_resident_cols_ << std::endl;
+    std::cout << "# last_resident_col_: " << last_resident_col_ << std::endl;
+    std::cout << "# max_resident_parts_: " << max_resident_parts_ << std::endl;
   }
 };
 
