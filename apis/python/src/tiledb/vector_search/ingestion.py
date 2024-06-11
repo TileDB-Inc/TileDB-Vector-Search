@@ -2097,11 +2097,11 @@ def ingest(
 
         # We compute the real size of the batch in bytes.
         size_in_bytes = size * dimensions * np.dtype(vector_type).itemsize
-        logger.debug("Batch size in bytes: %d", size_in_bytes)
+        logger.debug("Input size in bytes: %d", size_in_bytes)
         training_sample_size_in_bytes = (
             training_sample_size * dimensions * np.dtype(vector_type).itemsize
         )
-        logger.debug("Kmeans batch size in bytes: %d", training_sample_size_in_bytes)
+        logger.debug("Training sample size in bytes: %d", training_sample_size_in_bytes)
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -2147,45 +2147,52 @@ def ingest(
             input_vectors_work_items_per_worker_during_sampling
         )
 
-        def scale_resources(
-            min_resource_ram,
-            max_resource_ram,
-            min_resource_cpu,
-            max_resource_cpu,
-            max_input_size,
-            input_size,
-        ):
-            cpu = str(
+        def scale_resources(min_resource, max_resource, max_input_size, input_size):
+            """
+            Scales the resources based on the input size and the maximum input size.
+
+            Args:
+                min_resource (int): The minimum resource value (either cpu cores or ram gb).
+                max_resource (int): The maximum resource value.
+                max_input_size (int): The maximum input size.
+                input_size (int): The input size.
+
+            Returns:
+                str: The scaled resource value as a string.
+            """
+            return str(
                 max(
-                    min(max_resource_cpu, threads * input_size / max_input_size),
-                    min_resource_cpu,
+                    min_resource,
+                    min(
+                        max_resource,
+                        int(max_resource * input_size / max_input_size),
+                    ),
                 )
             )
-            ram = (
-                str(
-                    max(
-                        min_resource_ram,
-                        min(
-                            max_resource_ram,
-                            int(max_resource_ram * input_size / max_input_size),
-                        ),
-                    )
-                )
-                + "Gi"
-            )
-            return {"cpu": cpu, "memory": ram}
 
         # We can't set as default in the function due to the use of `str(threads)`
         # For consistency we then apply all defaults for resources here.
         if ingest_resources is None:
-            ingest_resources = scale_resources(
-                2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
-            )
+            ingest_resources = {
+                "cpu": scale_resources(
+                    2, threads, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                ),
+                "memory": scale_resources(
+                    2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                )
+                + "Gi",
+            }
 
         if consolidate_partition_resources is None:
-            consolidate_partition_resources = scale_resources(
-                2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
-            )
+            consolidate_partition_resources = {
+                "cpu": scale_resources(
+                    2, threads, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                ),
+                "memory": scale_resources(
+                    2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                )
+                + "Gi",
+            }
 
         if copy_centroids_resources is None:
             copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
@@ -2197,14 +2204,21 @@ def ingest(
             }
 
         if kmeans_resources is None:
-            kmeans_resources = scale_resources(
-                4,
-                32,
-                2,
-                8,
-                DEFAULT_KMEANS_BYTES_PER_SAMPLE,
-                training_sample_size_in_bytes,
-            )
+            kmeans_resources = {
+                "cpu": scale_resources(
+                    4,
+                    threads,
+                    DEFAULT_KMEANS_BYTES_PER_SAMPLE,
+                    training_sample_size_in_bytes,
+                ),
+                "memory": scale_resources(
+                    8,
+                    32,
+                    DEFAULT_KMEANS_BYTES_PER_SAMPLE,
+                    training_sample_size_in_bytes,
+                )
+                + "Gi",
+            }
 
         if compute_new_centroids_resources is None:
             compute_new_centroids_resources = {
