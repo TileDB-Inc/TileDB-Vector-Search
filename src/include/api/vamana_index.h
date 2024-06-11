@@ -217,11 +217,11 @@ class IndexVamana {
   [[nodiscard]] auto query(
       const QueryVectorArray& vectors,
       size_t top_k,
-      std::optional<size_t> opt_L = std::nullopt) {
+      std::optional<size_t> l_search = std::nullopt) {
     if (!index_) {
       throw std::runtime_error("Cannot query() because there is no index.");
     }
-    return index_->query(vectors, top_k, opt_L);
+    return index_->query(vectors, top_k, l_search);
   }
 
   void write_index(
@@ -337,7 +337,7 @@ class IndexVamana {
     query(
         const QueryVectorArray& vectors,
         size_t top_k,
-        std::optional<size_t> opt_L) = 0;
+        std::optional<size_t> l_search) = 0;
 
     virtual void write_index(
         const tiledb::Context& ctx,
@@ -424,7 +424,7 @@ class IndexVamana {
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors,
         size_t top_k,
-        std::optional<size_t> opt_L) override {
+        std::optional<size_t> l_search) override {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
 
@@ -435,7 +435,7 @@ class IndexVamana {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
+          auto [s, t] = impl_index_.query(qspan, top_k, l_search);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -445,7 +445,7 @@ class IndexVamana {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(qspan, top_k, opt_L);
+          auto [s, t] = impl_index_.query(qspan, top_k, l_search);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
