@@ -17,8 +17,8 @@ import logging
 import socket
 
 # You must fill these in before running the script:
-key_name = 'paris'
-key_path = '/Users/parismorgan/Documents/tiledb/paris.pem'
+key_name = 'key_name'
+key_path = '/path/to/key.pem'
 
 # You do not need to change these.
 security_group_ids = ['sg-04258b401ce76d246']
