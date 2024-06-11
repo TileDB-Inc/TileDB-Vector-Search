@@ -5,10 +5,8 @@
 # - Set up your AWS credentials locally. You can set them in `~/.aws/credentials` to be picked up automatically.
 # - Fill in the following details. You can create these in the EC2 console.
 #   1. key_name: Your EC2 key pair name.
-#   2. key_path: Path to your private key file.
+#   2. key_path: The to your local private key file.
 #     -  Make sure to `chmod 400 /path/to/key.pem` after download.
-#   3. security_group_ids: Your security group ID(s).
-#   4. subnet_id: Your subnet ID.
 # - python src/benchmarks/ann-benchmarks.py
 
 import boto3
@@ -32,7 +30,12 @@ username='ec2-user'
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
-file_handler = logging.FileHandler(os.path.join('results', 'application.txt'))
+results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
+os.makedirs(results_dir, exist_ok=True)
+log_file_path = os.path.join(results_dir, 'ann-benchmarks-logs.txt')
+if os.path.exists(log_file_path):
+  open(log_file_path, "w").close()
+file_handler = logging.FileHandler(log_file_path)
 file_handler.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 
@@ -70,11 +73,11 @@ def execute_commands(ssh, commands):
 
         # Stream stdout
         for line in iter(stdout.readline, ""):
-            print(line, end="")
+            logger.info(line.strip())
 
         # Stream stderr
         for line in iter(stderr.readline, ""):
-            print(line, end="")
+            logger.error(line.strip())
 
 try:
     # Launch an EC2 instance
@@ -84,20 +87,18 @@ try:
         InstanceType=instance_type,
         KeyName=key_name,
         SecurityGroupIds=security_group_ids,
-        # SubnetId=subnet_id,
         MinCount=1,
         MaxCount=1
     )
-
     instance_id = response['Instances'][0]['InstanceId']
     logger.info(f'Launched EC2 instance with ID: {instance_id}')
 
-    # Wait for the instance to be in a running state
+    # Wait for the instance to be in a running state.
     logger.info('Waiting for instance to enter running state...')
     waiter = ec2.get_waiter('instance_running')
     waiter.wait(InstanceIds=[instance_id])
 
-    # Get the public DNS name of the instance
+    # Get the public DNS name of the instance.
     instance_description = ec2.describe_instances(InstanceIds=[instance_id])
     public_dns = instance_description['Reservations'][0]['Instances'][0]['PublicDnsName']
     logger.info(f'Public DNS of the instance: {public_dns}')
@@ -123,53 +124,43 @@ try:
     ssh.connect(public_dns, username=username, key_filename=key_path)
     logger.info('Connected to the instance.')
 
-    # # Commands to execute on the instance
-    commands = [
+    # Initial setup commands
+    initial_commands = [
         'sudo yum update -y',
         'sudo yum install git -y',
         'sudo yum install python3.9-pip -y',
-        # 'sudo yum install python3.11 -y',
-        # 'sudo yum install python3.11-pip -y',
-        # 'sudo ln -sf /usr/bin/python3.11 /usr/bin/python',
-        # 'sudo ln -sf /usr/bin/pip3.11 /usr/bin/pip',
-        # 'sudo ln -sf /usr/bin/python3.11 /usr/bin/python3',
-        # 'sudo ln -sf /usr/bin/pip3.11 /usr/bin/pip3',
         'sudo yum install docker -y',
         'sudo service docker start',
         'sudo usermod -a -G docker ec2-user',
         'groups',
-        'newgrp docker',
-        'groups',
-        'mkdir repo',
-        'cd repo',
-        'git clone https://github.com/TileDB-Inc/ann-benchmarks.git',
-        'cd ann-benchmarks',
-        # 'git checkout npapa/tiledb',
-        'pip3 install -r requirements.txt',
-        'python3 install.py --algorithm tiledb',
-        # 'pip3 install requests==2.28.1',
-        'python3 run.py --dataset sift-128-euclidean --algorithm tiledb-ivf-flat --force --batch',
-        'python3 run.py --dataset sift-128-euclidean --algorithm tiledb-flat --force --batch',
-        # 'python3 run.py --dataset sift-128-euclidean --algorithm tiledb-vamana --force --batch',
-        'sudo chmod -R 777 results/sift-128-euclidean/10/tiledb-ivf-flat-batch',
-        'sudo chmod -R 777 results/sift-128-euclidean/10/tiledb-flat-batch',
-        # 'sudo chmod -R 777 results/sift-128-euclidean/10/tiledb-vamana-batch',
-        'python3 create_website.py'
     ]
+    execute_commands(ssh, initial_commands)
 
-    # Execute commands and stream output
-    execute_commands(ssh, commands)
+    # Reconnect to the instance to refresh group membership.
+    logger.info('Reconnecting to the instance to refresh group membership...')
+    ssh.close()
+    time.sleep(10)
+    ssh.connect(public_dns, username=username, key_filename=key_path)
+    logger.info('Reconnected to the instance.')
+
+    # Run the benchmarks.
+    post_reconnect_commands = [
+        'groups',
+        'git clone https://github.com/TileDB-Inc/ann-benchmarks.git',
+        'cd ann-benchmarks && pip3 install -r requirements.txt',
+        'cd ann-benchmarks && python3 install.py --algorithm tiledb',
+        'cd ann-benchmarks && python3 run.py --dataset sift-128-euclidean --algorithm tiledb-ivf-flat --force --batch',
+        'cd ann-benchmarks && sudo chmod -R 777 results/sift-128-euclidean/10/tiledb-ivf-flat-batch',
+        'cd ann-benchmarks && python3 create_website.py'
+    ]
+    execute_commands(ssh, post_reconnect_commands)
 
     # Download the results.
     remote_paths = [
-        '/home/ec2-user/repo/ann-benchmarks/sift-128-euclidean_10_euclidean-batch.png', 
-        '/home/ec2-user/repo/ann-benchmarks/sift-128-euclidean_10_euclidean-batch.html'
+        '/home/ec2-user/ann-benchmarks/sift-128-euclidean_10_euclidean-batch.png', 
+        '/home/ec2-user/ann-benchmarks/sift-128-euclidean_10_euclidean-batch.html'
     ]
-    results_dir = os.path.join(os.getcwd(), 'results')
-    os.makedirs(results_dir, exist_ok=True)  
-  
     sftp = ssh.open_sftp()
-
     for remote_path in remote_paths:
         local_filename = os.path.basename(remote_path)
         local_path = os.path.join(results_dir, local_filename)
