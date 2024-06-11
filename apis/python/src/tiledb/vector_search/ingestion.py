@@ -2096,14 +2096,12 @@ def ingest(
         kwargs = {}
 
         # We compute the real size of the batch in bytes.
-        logger.debug("Size: %d", size)
-        this_batch_size_bytes = size * dimensions * np.dtype(vector_type).itemsize
-        logger.debug("Batch size in bytes: %d", this_batch_size_bytes)
-        kmeans_batch_size_bytes = (
+        size_in_bytes = size * dimensions * np.dtype(vector_type).itemsize
+        logger.debug("Batch size in bytes: %d", size_in_bytes)
+        training_sample_size_in_bytes = (
             training_sample_size * dimensions * np.dtype(vector_type).itemsize
         )
-        logger.debug("Kmeans batch size in bytes: %d", kmeans_batch_size_bytes)
-        logger.debug("Training sample size: %d", training_sample_size)
+        logger.debug("Kmeans batch size in bytes: %d", training_sample_size_in_bytes)
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -2115,10 +2113,8 @@ def ingest(
                 ),
                 namespace=namespace,
             )
-            cpu_scale_factor = max(
-                1, int(DEFAULT_PARTITION_BYTE_SIZE / this_batch_size_bytes)
-            )
-            threads = max(4, int(16 / cpu_scale_factor))
+            cpu_scale_factor = max(1, int(DEFAULT_PARTITION_BYTE_SIZE / size_in_bytes))
+            threads = 16
 
             if acn:
                 kwargs["access_credentials_name"] = acn
@@ -2152,59 +2148,36 @@ def ingest(
             input_vectors_work_items_per_worker_during_sampling
         )
 
-        task_memory_overhead = {"6Gi": 2, "8Gi": 3, "12Gi": 4, "16Gi": 6, "32Gi": 12}
-
-        GB = 1024 * 1024 * 1024
-
-        # Drop last 2 characters from base and convert string to int
-        def convert_base_to_int(base):
-            return int(base[:-2])
-
-        def ram_requirement_bytes(overhead):
-            return int(task_memory_overhead[overhead]) * this_batch_size_bytes
-
-        kmeans_requirement_bytes = kmeans_batch_size_bytes * 250
-
-        # Function to convert ram_requirement_bytes to ram string (approximates to nearest multiple of 2)
-        def get_scaled_ram_gi(base):
-            return (
+        def scale_resources(
+            min_resource_ram,
+            max_resource_ram,
+            min_resource_cpu,
+            max_resource_cpu,
+            max_input_size,
+            input_size,
+        ):
+            cpu = str(min(max(min_resource_cpu, threads * input_size / max_input_size), max_resource_cpu))
+            ram = (
                 str(
-                    min(  # We keep the max memory equal to the base
-                        max(  # We don't want to go below 2Gi
-                            int(math.ceil(ram_requirement_bytes(base) / GB / 2) * 2), 2
+                    max(
+                        min_resource_ram,
+                        min(
+                            max_resource_ram,
+                            int(max_resource_ram * input_size / max_input_size),
                         ),
-                        convert_base_to_int(base),
                     )
                 )
                 + "Gi"
             )
-
-        def get_scaled_ram_gi_kmeans(base):
-            return (
-                str(
-                    min(  # We keep the max memory equal to the base
-                        max(  # We don't want to go below 4Gi
-                            int(math.ceil(kmeans_requirement_bytes / GB / 2) * 2), 4
-                        ),
-                        convert_base_to_int(base),
-                    )
-                )
-                + "Gi"
-            )
+            return {"cpu": cpu, "memory": ram}
 
         # We can't set as default in the function due to the use of `str(threads)`
         # For consistency we then apply all defaults for resources here.
         if ingest_resources is None:
-            ingest_resources = {
-                "cpu": str(threads),
-                "memory": get_scaled_ram_gi("16Gi"),
-            }
+            ingest_resources = scale_resources(2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes)
 
         if consolidate_partition_resources is None:
-            consolidate_partition_resources = {
-                "cpu": str(threads),
-                "memory": get_scaled_ram_gi("16Gi"),
-            }
+            consolidate_partition_resources = scale_resources(2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes)
 
         if copy_centroids_resources is None:
             copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
@@ -2216,7 +2189,8 @@ def ingest(
             }
 
         if kmeans_resources is None:
-            kmeans_resources = {"cpu": "8", "memory": get_scaled_ram_gi_kmeans("32Gi")}
+            kmeans_resources = scale_resources(4, 32, 2, 8, DEFAULT_KMEANS_BYTES_PER_SAMPLE, training_sample_size_in_bytes)
+
 
         if compute_new_centroids_resources is None:
             compute_new_centroids_resources = {
