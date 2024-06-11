@@ -2113,7 +2113,6 @@ def ingest(
                 ),
                 namespace=namespace,
             )
-            cpu_scale_factor = max(1, int(DEFAULT_PARTITION_BYTE_SIZE / size_in_bytes))
             threads = 16
 
             if acn:
@@ -2156,7 +2155,12 @@ def ingest(
             max_input_size,
             input_size,
         ):
-            cpu = str(min(max(min_resource_cpu, threads * input_size / max_input_size), max_resource_cpu))
+            cpu = str(
+                max(
+                    min(max_resource_cpu, threads * input_size / max_input_size),
+                    min_resource_cpu,
+                )
+            )
             ram = (
                 str(
                     max(
@@ -2174,10 +2178,14 @@ def ingest(
         # We can't set as default in the function due to the use of `str(threads)`
         # For consistency we then apply all defaults for resources here.
         if ingest_resources is None:
-            ingest_resources = scale_resources(2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes)
+            ingest_resources = scale_resources(
+                2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+            )
 
         if consolidate_partition_resources is None:
-            consolidate_partition_resources = scale_resources(2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes)
+            consolidate_partition_resources = scale_resources(
+                2, 16, 2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+            )
 
         if copy_centroids_resources is None:
             copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
@@ -2189,8 +2197,14 @@ def ingest(
             }
 
         if kmeans_resources is None:
-            kmeans_resources = scale_resources(4, 32, 2, 8, DEFAULT_KMEANS_BYTES_PER_SAMPLE, training_sample_size_in_bytes)
-
+            kmeans_resources = scale_resources(
+                4,
+                32,
+                2,
+                8,
+                DEFAULT_KMEANS_BYTES_PER_SAMPLE,
+                training_sample_size_in_bytes,
+            )
 
         if compute_new_centroids_resources is None:
             compute_new_centroids_resources = {
