@@ -27,6 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 test = ["nbmake", "pytest<8.0.0", "pytest-xdist"]
 formatting = ["pre-commit"]
+benchmarks = ["boto3", "paramiko"]
 
 [project.urls]
 homepage = "https://tiledb.com"
