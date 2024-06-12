@@ -289,7 +289,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="tiledb.vector_search.vamana_index.VamanaIndex.query_internal" class="level5">
 <h5 class="anchored" data-anchor-id="tiledb.vector_search.vamana_index.VamanaIndex.query_internal">query_internal</h5>
-<p><code>vector_search.vamana_index.VamanaIndex.query_internal(queries, k=10, opt_l=100, **kwargs)</code></p>
+<p><code>vector_search.vamana_index.VamanaIndex.query_internal(queries, k=10, l_search=100, **kwargs)</code></p>
 <p>Queries a <code>VamanaIndex</code>.</p>
 <section id="parameters-1" class="level6">
 <h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
@@ -322,7 +322,7 @@ ul.task-list li input[type="checkbox"] {
 <td><code>10</code></td>
 </tr>
 <tr class="odd">
-<td><code>opt_l</code></td>
+<td><code>l_search</code></td>
 <td>Optional[int]</td>
 <td>How deep to search. Should be &gt;= k, and if it’s not, we will set it to k.</td>
 <td><code>100</code></td>
