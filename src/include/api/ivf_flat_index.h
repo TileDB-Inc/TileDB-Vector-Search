@@ -43,7 +43,6 @@
 #include "api_defs.h"
 #include "index/ivf_flat_group.h"
 #include "index/ivf_flat_index.h"
-#include "tiledb/group_experimental.h"
 
 /*******************************************************************************
  * IndexIVFFlat

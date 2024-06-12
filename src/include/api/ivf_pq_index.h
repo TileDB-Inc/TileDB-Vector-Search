@@ -43,7 +43,6 @@
 #include "api_defs.h"
 #include "index/index_defs.h"
 #include "index/ivf_pq_index.h"
-#include "tiledb/group_experimental.h"
 
 /*******************************************************************************
  * IndexIVFPQ
