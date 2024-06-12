@@ -1,5 +1,5 @@
 /**
- * @file   l2_distance_avx.h
+ * @file   l2_distance.h
  *
  * @section LICENSE
  *
@@ -30,9 +30,10 @@
  * C++ functions for computing L2 distance between two feature vectors
  *
  * This file contains a number of different implementations of the L2 distance
- * computation, including naive, unrolled, and start/stop versions.  The
+ * computation, including naive, unrolled, and start/stop versions. The
  * implementations are templated on the type of the feature vector, and
- * concepts are used to select between feature vectors of float and uint8_t.
+ * concepts are used to select between feature vectors of float and uint8_t or
+ * int8_t.
  *
  * Implementations include:
  * - naive_sum_of_squares: single loop, one statement in inner loop
@@ -41,7 +42,7 @@
  * - unroll4_sum_of_squares with start and stop
  *
  * The unrolled versions use simple 4x unrolling, and are faster than the
- * naive versions.  The start/stop versions are useful for computing the
+ * naive versions. The start/stop versions are useful for computing the
  * "sub" distance, that is, the distance between just a portion of two vectors,
  * which is used in pq distance computation.
  *
@@ -292,7 +293,8 @@ inline float naive_sum_of_squares(
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           std::same_as<typename W::value_type, uint8_t>
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float naive_sum_of_squares(
     const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
@@ -307,8 +309,9 @@ inline float naive_sum_of_squares(
  * Compute l2 distance between vector of uint8_t and vector of float
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float naive_sum_of_squares(
     const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
@@ -323,8 +326,10 @@ inline float naive_sum_of_squares(
  * Compute l2 distance between vector of uint8_t and vector of uint8_t
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, uint8_t>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float naive_sum_of_squares(
     const V& a, const W& b, size_t start, size_t stop) {
   float sum = 0.0;
@@ -337,7 +342,7 @@ inline float naive_sum_of_squares(
 
 /****************************************************************
  *
- * 4x unrolled algorithms with start and stop.  We have separate
+ * 4x unrolled algorithms with start and stop. We have separate
  * functions despite the code duplication to make sure about
  * performance in the common case (no start / stop).
  *
@@ -375,7 +380,8 @@ inline float unroll4_sum_of_squares(
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           std::same_as<typename W::value_type, uint8_t>
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float unroll4_sum_of_squares(
     const V& a, const W& b, size_t begin, size_t end) {
   size_t loops = 4 * ((end - begin) / 4);
@@ -401,8 +407,9 @@ inline float unroll4_sum_of_squares(
  * Unrolled l2 distance between vector of uint8_t and vector of float
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float unroll4_sum_of_squares(
     const V& a, const W& b, size_t begin, size_t end) {
   size_t loops = 4 * ((end - begin) / 4);
@@ -428,8 +435,10 @@ inline float unroll4_sum_of_squares(
  * Unrolled l2 distance between vector of uint8_t and vector of uint8_t
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, uint8_t>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float unroll4_sum_of_squares(
     const V& a, const W& b, size_t begin, size_t end) {
   size_t loops = 4 * ((end - begin) / 4);

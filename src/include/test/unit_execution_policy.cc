@@ -49,4 +49,8 @@ TEST_CASE("construct", "[execution_policy]") {
 }
 #else
 
+TEST_CASE("default", "[execution_policy]") {
+  CHECK(true);
+}
+
 #endif

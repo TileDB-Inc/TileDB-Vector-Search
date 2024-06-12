@@ -52,7 +52,6 @@
          {"pq_ivf_centroids_array_name", "partition_centroids"},
 
          {"ivf_index_array_name", "partition_indexes"},
-         {"ivf_ids_array_name", "shuffled_vector_ids"},
 
          {"pq_ivf_vectors_array_name", "shuffled_vectors"},
 
@@ -129,6 +128,25 @@ class ivf_pq_group : public base_index_group<index_type> {
     }
   }
 
+  void clear_history_impl(uint64_t timestamp) {
+    tiledb::Array::delete_fragments(
+        cached_ctx_, cluster_centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, flat_ivf_centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, pq_ivf_centroids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, ivf_index_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, this->ids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
+    for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
+      std::string this_table_uri =
+          distance_tables_uri() + "_" + std::to_string(i);
+      tiledb::Array::delete_fragments(
+          cached_ctx_, this_table_uri, 0, timestamp);
+    }
+  }
+
   /*****************************************************************************
    * Partitioning / repartitioning history information
    ****************************************************************************/
@@ -166,9 +184,6 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto ivf_index_uri() const {
     return this->array_key_to_uri("ivf_index_array_name");
   }
-  [[nodiscard]] auto ivf_ids_uri() const {
-    return this->array_key_to_uri("ivf_ids_array_name");
-  }
   [[nodiscard]] auto pq_ivf_vectors_uri() const {
     return this->array_key_to_uri("pq_ivf_vectors_array_name");
   }
@@ -187,9 +202,6 @@ class ivf_pq_group : public base_index_group<index_type> {
   }
   [[nodiscard]] auto ivf_index_array_name() const {
     return this->array_key_to_array_name("ivf_index_array_name");
-  }
-  [[nodiscard]] auto ivf_ids_array_name() const {
-    return this->array_key_to_array_name("ivf_ids_array_name");
   }
   [[nodiscard]] auto pq_ivf_vectors_array_name() const {
     return this->array_key_to_array_name("pq_ivf_vectors_array_name");
@@ -269,9 +281,9 @@ class ivf_pq_group : public base_index_group<index_type> {
         type_to_string_v<typename index_type::indices_type>;
 
     // Initialize IVF related metadata
-    metadata_.ingestion_timestamps_ = {0};
-    metadata_.base_sizes_ = {0};
-    metadata_.partition_history_ = {0};
+    metadata_.ingestion_timestamps_ = {};
+    metadata_.base_sizes_ = {};
+    metadata_.partition_history_ = {};
     metadata_.temp_size_ = 0;
     metadata_.dimensions_ = this->get_dimensions();
 
@@ -328,12 +340,12 @@ class ivf_pq_group : public base_index_group<index_type> {
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
-        ivf_ids_uri(),
+        this->ids_uri(),
         default_domain,
         tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, ivf_ids_uri(), ivf_ids_array_name());
+        write_group, this->ids_uri(), this->ids_array_name());
 
     create_empty_for_matrix<
         typename index_type::pq_code_type,
