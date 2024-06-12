@@ -341,13 +341,13 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& index,
              FeatureVectorArray& vectors,
              size_t top_k,
-             size_t opt_l) {
-            auto r = index.query(vectors, top_k, opt_l);
+             size_t l_search) {
+            auto r = index.query(vectors, top_k, l_search);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
           py::arg("top_k"),
-          py::arg("opt_l"))
+          py::arg("l_search"))
       .def(
           "write_index",
           [](IndexVamana& index,

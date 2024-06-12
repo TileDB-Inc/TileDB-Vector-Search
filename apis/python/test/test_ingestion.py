@@ -1244,14 +1244,14 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
 
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
-        _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k * 2)
+        _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
 
         if index_type == "IVF_PQ":
             # TODO(SC-48888): Fix consolidation for IVF_PQ.
             continue
         index = index.consolidate_updates()
-        _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k * 2)
+        _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
 
         assert vfs.dir_size(index_uri) > 0

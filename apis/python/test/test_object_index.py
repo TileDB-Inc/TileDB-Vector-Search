@@ -263,7 +263,7 @@ def test_object_index(tmp_path):
 
         evaluate_query(
             index_uri=index_uri,
-            query_kwargs={"nprobe": 10, "opt_l": 250},
+            query_kwargs={"nprobe": 10, "l_search": 250},
             dim_id=42,
             vector_dim_offset=0,
         )
@@ -273,7 +273,7 @@ def test_object_index(tmp_path):
         index.update_index(partitions=10)
         evaluate_query(
             index_uri=index_uri,
-            query_kwargs={"nprobe": 10, "opt_l": 500},
+            query_kwargs={"nprobe": 10, "l_search": 500},
             dim_id=42,
             vector_dim_offset=0,
         )
@@ -289,7 +289,7 @@ def test_object_index(tmp_path):
         index.update_index(partitions=10)
         evaluate_query(
             index_uri=index_uri,
-            query_kwargs={"nprobe": 10, "opt_l": 500},
+            query_kwargs={"nprobe": 10, "l_search": 500},
             dim_id=1042,
             vector_dim_offset=0,
         )
@@ -305,7 +305,7 @@ def test_object_index(tmp_path):
         index.update_index(partitions=10)
         evaluate_query(
             index_uri=index_uri,
-            query_kwargs={"nprobe": 10, "opt_l": 500},
+            query_kwargs={"nprobe": 10, "l_search": 500},
             dim_id=2042,
             vector_dim_offset=1000,
         )
