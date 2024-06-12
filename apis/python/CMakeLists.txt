@@ -64,14 +64,23 @@ target_compile_definitions(
         VERSION_INFO=${PROJECT_VERSION}
 )
 
-if (APPLE)
-  set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")
-elseif(UNIX)
-  set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN/lib")
-endif()
-
 # Install the extension module
 install(TARGETS ${VSPY_TARGET_NAME} LIBRARY DESTINATION .)
 
-# Install libtiledb so that we can repackage it with the extension
-install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION lib)
+if (TILEDB_DOWNLOADED)
+  message(STATUS "Adding libtiledb into install group")
+  # Install libtiledb so that we can repackage it with the extension
+  install(IMPORTED_RUNTIME_ARTIFACTS TileDB::tiledb_shared DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+  if (APPLE)
+    set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "@loader_path/lib")
+  elseif(UNIX)
+    set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH "\$ORIGIN/lib")
+  endif()
+else()
+  # If using external TileDB core library force it to be linked at runtime using RPATH
+  get_property(TILEDB_LOCATION TARGET TileDB::tiledb_shared PROPERTY LOCATION)
+  get_filename_component(TILEDB_LOCATION ${TILEDB_LOCATION} DIRECTORY)
+  message(STATUS "Setting RPATH to ${TILEDB_LOCATION}")
+  set_target_properties(${VSPY_TARGET_NAME} PROPERTIES INSTALL_RPATH ${TILEDB_LOCATION})
+endif()

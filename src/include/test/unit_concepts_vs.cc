@@ -266,11 +266,3 @@ TEST_CASE("tdbMatrixWithIds", "[concepts_vs]") {
   CHECK(!contiguous_partitioned_feature_vector_array<tdbMatrixWithIds<double>>);
   CHECK(!contiguous_partitioned_feature_vector_array<tdbMatrixWithIds<bool>>);
 }
-
-TEST_CASE("tdbMatrix", "[concepts_vs]") {
-  REQUIRE(true);
-}
-
-TEST_CASE("tdbPartitionedMatrix", "[concepts_vs]") {
-  REQUIRE(true);
-}

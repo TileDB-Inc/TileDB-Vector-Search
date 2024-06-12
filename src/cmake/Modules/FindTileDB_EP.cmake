@@ -66,6 +66,7 @@ else()
 
     list(APPEND FORWARD_EP_CMAKE_ARGS -DEP_TILEDB_BUILT=TRUE)
     list(APPEND EXTERNAL_PROJECTS ep_tiledb)
+    set(TILEDB_DOWNLOADED "True")
   else()
     message(FATAL_ERROR "Unable to find TileDB library.")
   endif()

@@ -1542,7 +1542,7 @@ class ivf_pq_index {
     if (::num_vectors(lhs) != ::num_vectors(rhs) ||
         ::dimensions(lhs) != ::dimensions(rhs)) {
       std::cout << "num_vectors(lhs) != num_vectors(rhs) || dimensions(lhs) != "
-                   "dimensions(rhs)n"
+                   "dimensions(rhs)"
                 << std::endl;
       std::cout << "num_vectors(lhs): " << ::num_vectors(lhs)
                 << " num_vectors(rhs): " << ::num_vectors(rhs) << std::endl;
@@ -1577,13 +1577,32 @@ class ivf_pq_index {
    * @return
    */
   template <feature_vector L, feature_vector R>
-  auto compare_feature_vectors(const L& lhs, const R& rhs) const {
+  auto compare_feature_vectors(
+      const L& lhs, const R& rhs, const std::string& msg = "") const {
     if (::dimensions(lhs) != ::dimensions(rhs)) {
-      std::cout << "dimensions(lhs) != dimensions(rhs) (" << ::dimensions(lhs)
+      std::cout << "[ivf_pq_index@compare_feature_vectors] " << msg
+                << " dimensions(lhs) != dimensions(rhs) (" << ::dimensions(lhs)
                 << " != " << ::dimensions(rhs) << ")" << std::endl;
       return false;
     }
-    return std::equal(begin(lhs), end(lhs), begin(rhs));
+    auto equal = std::equal(begin(lhs), end(lhs), begin(rhs));
+    if (!equal) {
+      std::cout << "[ivf_pq_index@compare_feature_vectors] " << msg
+                << " failed the equality check." << std::endl;
+      auto printed = 0;
+      for (size_t i = 0; i < ::dimensions(lhs); ++i) {
+        if (lhs[i] != rhs[i]) {
+          std::cout << "  lhs[" << i << "]: " << lhs[i] << " - rhs[" << i
+                    << "]: " << rhs[i] << std::endl;
+          printed++;
+        }
+        if (printed > 50) {
+          std::cout << "  ..." << std::endl;
+          break;
+        }
+      }
+    }
+    return equal;
   }
 
   auto compare_cluster_centroids(const ivf_pq_index& rhs) const {
@@ -1610,7 +1629,8 @@ class ivf_pq_index {
     }
     return compare_feature_vectors(
         partitioned_pq_vectors_->indices(),
-        rhs.partitioned_pq_vectors_->indices());
+        rhs.partitioned_pq_vectors_->indices(),
+        "partitioned_pq_vectors_->indices()");
   }
 
   auto compare_ivf_ids(const ivf_pq_index& rhs) const {
@@ -1621,7 +1641,9 @@ class ivf_pq_index {
       return false;
     }
     return compare_feature_vectors(
-        partitioned_pq_vectors_->ids(), rhs.partitioned_pq_vectors_->ids());
+        partitioned_pq_vectors_->ids(),
+        rhs.partitioned_pq_vectors_->ids(),
+        "partitioned_pq_vectors_->ids()");
   }
 
   auto compare_pq_ivf_vectors(const ivf_pq_index& rhs) const {
