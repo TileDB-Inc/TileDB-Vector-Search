@@ -28,6 +28,7 @@ if not os.path.exists(key_path):
 
 # You do not need to change these.
 security_group_ids = ["sg-04258b401ce76d246"]
+# 64 vCPU, 512 GiB, EBS-Only.
 instance_type = "r6i.16xlarge"
 # Amazon Linux 2023 AMI 2023.4.20240528.0 x86_64 HVM kernel-6.1 - 64 bit (x86) - uefi-preferred.
 ami_id = "ami-09e647bf7a368e505"
