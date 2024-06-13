@@ -215,10 +215,6 @@ try:
     for algorithm in algorithms:
         post_reconnect_commands += [
             f"cd {ann_benchmarks_dir} && python3 run.py --dataset sift-128-euclidean --algorithm {algorithm} --force --batch",
-            f"cd {ann_benchmarks_dir} && ls -fal",
-            f"cd {ann_benchmarks_dir} && ls -fal results",
-            f"cd {ann_benchmarks_dir} && ls -fal results/sift-128-euclidean",
-            f"cd {ann_benchmarks_dir} && ls -fal results/sift-128-euclidean/10",
             f"cd {ann_benchmarks_dir} && sudo chmod -R 777 results/sift-128-euclidean/10/{algorithm}-batch",
         ]
     post_reconnect_commands.append(
