@@ -299,7 +299,11 @@ auto greedy_search_O1(
 
   static_assert(std::integral<id_type>);
 
-  assert(L >= k_nn);
+  if (L < k_nn) {
+    throw std::runtime_error(
+        "[greedy_search_O1] L (" + std::to_string(L) + ") < k_nn (" +
+        std::to_string(k_nn) + ")");
+  }
 
   std::unordered_set<id_type> visited_vertices;
   auto visited = [&visited_vertices](auto&& v) {
@@ -550,7 +554,10 @@ auto robust_prune(
           return std::get<0>(a) < std::get<0>(b);
         }));
 
-    assert(p_star != p);
+    if (p_star == p) {
+      throw std::runtime_error("[robust_prune] p_star == p");
+    }
+
     if (noisy_robust_prune) {
       std::cout << "::::" << p_star << std::endl;
       debug_min_heap(V, "V: ", 1);

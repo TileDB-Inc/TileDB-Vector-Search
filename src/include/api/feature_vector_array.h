@@ -361,7 +361,11 @@ const FeatureVectorArray::tdb_col_major_matrix_with_ids_table_type FeatureVector
 using QueryVectorArray = FeatureVectorArray;
 
 bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
-  // assert(a.datatype() == b.datatype());
+  if (a.feature_type() != b.feature_type()) {
+    throw std::runtime_error(
+        "[feature_vector_array@validate_top_k] Feature types do not match: " +
+        a.feature_type_string() + " vs " + b.feature_type_string());
+  }
 
   auto proc_b = [&b](auto& aview) {
     switch (b.feature_type()) {

@@ -180,7 +180,10 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
         ids_[ibin] = i;
       }
 
-      assert(ibin < this->num_cols());
+      if (ibin >= this->num_cols()) {
+        throw std::runtime_error(
+            "[partitioned_matrix@PartitionedMatrix] ibin >= this->num_cols()");
+      }
       for (size_t j = 0; j < dimensions(training_set); ++j) {
         this->operator()(j, ibin) = training_set(j, i);
       }

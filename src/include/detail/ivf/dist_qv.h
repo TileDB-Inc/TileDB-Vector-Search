@@ -123,7 +123,11 @@ auto dist_qv_finite_ram_part(
           num_queries,
           fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
 
-  assert(::num_partitions(partitioned_vectors) == size(dist_active_partitions));
+  if (::num_partitions(partitioned_vectors) != size(dist_active_partitions)) {
+    throw std::runtime_error(
+        "[dist_qv_finite_ram_part] num_partitions(partitioned_vectors) != "
+        "size(dist_active_partitions)");
+  }
 
   auto current_part_size = ::num_partitions(partitioned_vectors);
   size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
@@ -267,7 +271,12 @@ auto dist_qv_finite_ram(
   scoped_timer _{tdb_func__ + " " + part_uri};
 
   // Check that the size of the indices vector is correct
-  assert(size(indices) == centroids.num_cols() + 1);
+  if (size(indices) != centroids.num_cols() + 1) {
+    throw std::runtime_error(
+        "[dist_qv_finite_ram] size(indices) (" + std::to_string(size(indices)) +
+        ") != centroids.num_cols() + 1 (" +
+        std::to_string(centroids.num_cols() + 1) + ")");
+  }
 
   using score_type = float;
   using indices_type =
