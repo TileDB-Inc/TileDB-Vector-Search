@@ -38,7 +38,6 @@
 #include <tiledb/tiledb>
 #include "detail/time/temporal_policy.h"
 #include "stats.h"
-#include "tiledb/group_experimental.h"
 
 namespace tiledb_helpers {
 

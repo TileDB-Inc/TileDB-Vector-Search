@@ -108,7 +108,6 @@
 #include "detail/ivf/partition.h"
 #include "detail/ivf/qv.h"
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 #include <type_traits>
 

@@ -305,10 +305,11 @@ def ingest(
         + "".join(random.choices(string.ascii_letters, k=10))
     )
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
-    VECTORS_PER_WORK_ITEM = 20000000
+    DEFAULT_PARTITION_BYTE_SIZE = 2560000000  # 2.5GB
     VECTORS_PER_SAMPLE_WORK_ITEM = 1000000
     MAX_TASKS_PER_STAGE = 100
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
+    DEFAULT_KMEANS_BYTES_PER_SAMPLE = 128000000  # ~ 128MB
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
     MAX_INT32 = 2**31 - 1
 
@@ -2105,6 +2106,14 @@ def ingest(
         partial_index_resources: Optional[Mapping[str, Any]] = None,
     ) -> dag.DAG:
         kwargs = {}
+
+        # We compute the real size of the batch in bytes.
+        size_in_bytes = size * dimensions * np.dtype(vector_type).itemsize
+        logger.debug("Input size in bytes: %d", size_in_bytes)
+        training_sample_size_in_bytes = (
+            training_sample_size * dimensions * np.dtype(vector_type).itemsize
+        )
+        logger.debug("Training sample size in bytes: %d", training_sample_size_in_bytes)
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -2117,6 +2126,7 @@ def ingest(
                 namespace=namespace,
             )
             threads = 16
+
             if acn:
                 kwargs["access_credentials_name"] = acn
         else:
@@ -2149,25 +2159,84 @@ def ingest(
             input_vectors_work_items_per_worker_during_sampling
         )
 
+        def scale_resources(min_resource, max_resource, max_input_size, input_size):
+            """
+            Scales the resources based on the input size and the maximum input size.
+
+            Args:
+                min_resource (int): The minimum resource value (either cpu cores or ram gb).
+                max_resource (int): The maximum resource value.
+                max_input_size (int): The maximum input size.
+                input_size (int): The input size.
+
+            Returns:
+                str: The scaled resource value as a string.
+            """
+            return str(
+                max(
+                    min_resource,
+                    min(
+                        max_resource,
+                        int(max_resource * input_size / max_input_size),
+                    ),
+                )
+            )
+
         # We can't set as default in the function due to the use of `str(threads)`
         # For consistency we then apply all defaults for resources here.
         if ingest_resources is None:
-            ingest_resources = {"cpu": str(threads), "memory": "16Gi"}
+            ingest_resources = {
+                "cpu": scale_resources(
+                    2, threads, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                ),
+                "memory": scale_resources(
+                    2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                )
+                + "Gi",
+            }
 
         if consolidate_partition_resources is None:
-            consolidate_partition_resources = {"cpu": str(threads), "memory": "16Gi"}
+            consolidate_partition_resources = {
+                "cpu": scale_resources(
+                    2, threads, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                ),
+                "memory": scale_resources(
+                    2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                )
+                + "Gi",
+            }
 
         if copy_centroids_resources is None:
             copy_centroids_resources = {"cpu": "1", "memory": "2Gi"}
 
         if random_sample_resources is None:
-            random_sample_resources = {"cpu": "2", "memory": "6Gi"}
+            random_sample_resources = {
+                "cpu": "2",
+                "memory": "6Gi",
+            }
 
         if kmeans_resources is None:
-            kmeans_resources = {"cpu": "8", "memory": "32Gi"}
+            kmeans_resources = {
+                "cpu": scale_resources(
+                    4,
+                    threads,
+                    DEFAULT_KMEANS_BYTES_PER_SAMPLE,
+                    training_sample_size_in_bytes,
+                ),
+                "memory": scale_resources(
+                    8,
+                    32,
+                    DEFAULT_KMEANS_BYTES_PER_SAMPLE,
+                    training_sample_size_in_bytes,
+                )
+                + "Gi",
+            }
 
         if compute_new_centroids_resources is None:
-            compute_new_centroids_resources = {"cpu": "1", "memory": "8Gi"}
+            compute_new_centroids_resources = {
+                "cpu": "1",
+                "memory": "8Gi",
+            }
 
         if assign_points_and_partial_new_centroids_resources is None:
             assign_points_and_partial_new_centroids_resources = {
@@ -2688,7 +2757,12 @@ def ingest(
 
         # Compute task parameters for main ingestion.
         if input_vectors_per_work_item == -1:
-            input_vectors_per_work_item = VECTORS_PER_WORK_ITEM
+            # We scale the input_vectors_per_work_item to maintain the DEFAULT_PARTITION_BYTE_SIZE
+            input_vectors_per_work_item = int(
+                DEFAULT_PARTITION_BYTE_SIZE
+                / dimensions
+                / np.dtype(vector_type).itemsize
+            )
         input_vectors_work_items = int(math.ceil(size / input_vectors_per_work_item))
         input_vectors_work_tasks = input_vectors_work_items
         input_vectors_work_items_per_worker = 1

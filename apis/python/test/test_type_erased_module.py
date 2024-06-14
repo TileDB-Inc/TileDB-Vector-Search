@@ -285,7 +285,7 @@ def test_construct_IndexVamana():
 
 
 def test_construct_IndexVamana_with_empty_vector(tmp_path):
-    opt_l = 100
+    l_search = 100
     k_nn = 10
     index_uri = os.path.join(tmp_path, "array")
     dimensions = 128
@@ -313,7 +313,7 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
 
     a.train(training_set)
 
-    s, t = a.query(query_set, k_nn, opt_l)
+    s, t = a.query(query_set, k_nn, l_search)
 
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
     nt = np.double(t.num_vectors()) * np.double(k_nn)
@@ -322,7 +322,7 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
 
 
 def test_inplace_build_query_IndexVamana():
-    opt_l = 100
+    l_search = 100
     k_nn = 10
 
     a = vspy.IndexVamana(id_type="uint32", feature_type="float32")
@@ -335,7 +335,7 @@ def test_inplace_build_query_IndexVamana():
     assert groundtruth_set.feature_type_string() == "uint64"
 
     a.train(training_set)
-    s, t = a.query(query_set, k_nn, opt_l)
+    s, t = a.query(query_set, k_nn, l_search)
 
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
 

@@ -97,7 +97,7 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        opt_l: Optional[int] = 100,
+        l_search: Optional[int] = 100,
         **kwargs,
     ):
         """
@@ -109,7 +109,7 @@ class VamanaIndex(index.Index):
             2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
             Number of results to return per query vector.
-        opt_l: int
+        l_search: int
             How deep to search. Should be >= k, and if it's not, we will set it to k.
         """
         if self.size == 0:
@@ -117,9 +117,9 @@ class VamanaIndex(index.Index):
                 (queries.shape[0], k), MAX_UINT64
             )
 
-        if opt_l < k:
-            warnings.warn(f"opt_l ({opt_l}) should be >= k ({k}), setting to k")
-            opt_l = k
+        if l_search < k:
+            warnings.warn(f"l_search ({l_search}) should be >= k ({k}), setting to k")
+            l_search = k
 
         if queries.ndim == 1:
             queries = np.array([queries])
@@ -128,7 +128,7 @@ class VamanaIndex(index.Index):
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
 
-        distances, ids = self.index.query(queries_feature_vector_array, k, opt_l)
+        distances, ids = self.index.query(queries_feature_vector_array, k, l_search)
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
