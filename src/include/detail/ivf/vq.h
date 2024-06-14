@@ -228,10 +228,17 @@ auto vq_query_infinite_ram(
       typename std::remove_reference_t<decltype(partitioned_ids)>::value_type;
   using score_type = float;
 
-  assert(partitioned_db.num_cols() == partitioned_ids.size());
+  if (partitioned_db.num_cols() != partitioned_ids.size()) {
+    throw std::runtime_error(
+        "[vq@vq_query_infinite_ram] partitioned_db.num_cols() != "
+        "partitioned_ids.size()");
+  }
 
   // Check that the indices vector is the right size
-  assert(size(indices) == centroids.num_cols() + 1);
+  if (size(indices) != centroids.num_cols() + 1) {
+    throw std::runtime_error(
+        "[vq@vq_query_infinite_ram] size(indices) != centroids.num_cols() + 1");
+  }
 
   auto num_queries = num_vectors(query);
 
@@ -349,10 +356,18 @@ auto vq_query_infinite_ram_2(
     size_t nthreads) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
-  assert(partitioned_db.num_cols() == partitioned_ids.size());
+  if (partitioned_db.num_cols() != partitioned_ids.size()) {
+    throw std::runtime_error(
+        "[vq@vq_query_infinite_ram_2] partitioned_db.num_cols() != "
+        "partitioned_ids.size()");
+  }
 
   // Check that the indices vector is the right size
-  assert(size(indices) == centroids.num_cols() + 1);
+  if (size(indices) != centroids.num_cols() + 1) {
+    throw std::runtime_error(
+        "[vq@vq_query_infinite_ram_2] size(indices) != centroids.num_cols() + "
+        "1");
+  }
 
   // using feature_type = typename
   // std::remove_reference<decltype(partitioned_db)>::value_type;
@@ -501,7 +516,10 @@ auto vq_query_finite_ram(
   scoped_timer _{tdb_func__ + " " + part_uri};
 
   // Check that the size of the indices vector is correct
-  assert(size(indices) == centroids.num_cols() + 1);
+  if (size(indices) != centroids.num_cols() + 1) {
+    throw std::runtime_error(
+        "[vq@vq_query_finite_ram] size(indices) != centroids.num_cols() + 1");
+  }
 
   using score_type = float;
 
@@ -547,7 +565,11 @@ auto vq_query_finite_ram(
         nprobe * num_queries * sizeof(feature_type) * max_partition_size);
   }
 
-  assert(partitioned_db.num_cols() == size(partitioned_db.ids()));
+  if (partitioned_db.num_cols() != size(partitioned_db.ids())) {
+    throw std::runtime_error(
+        "[vq@vq_query_finite_ram] partitioned_db.num_cols() != "
+        "size(partitioned_db.ids())");
+  }
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));

@@ -155,7 +155,10 @@ int ivf_index(
 
         shuffled_ids[ibin] = external_ids[i];
 
-        assert(ibin < shuffled_db.num_cols());
+        if (ibin >= shuffled_db.num_cols()) {
+          throw std::runtime_error(
+              "[ivf_index] ibin >= shuffled_db.num_cols()");
+        }
         for (size_t j = 0; j < db.num_rows(); ++j) {
           shuffled_db(j, ibin) = db(j, i);
         }
@@ -170,7 +173,10 @@ int ivf_index(
 
           shuffled_ids[ibin] = external_ids[i];
 
-          assert(ibin < shuffled_db.num_cols());
+          if (ibin >= shuffled_db.num_cols()) {
+            throw std::runtime_error(
+                "[ivf_index] ibin >= shuffled_db.num_cols()");
+          }
           for (size_t j = 0; j < db.num_rows(); ++j) {
             shuffled_db(j, ibin) = db(j, i);
           }
