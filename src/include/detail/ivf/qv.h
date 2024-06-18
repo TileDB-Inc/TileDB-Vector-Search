@@ -132,7 +132,11 @@ auto qv_query_heap_infinite_ram(
         [&, nprobe](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
           for (size_t p = 0; p < nprobe; ++p) {
             auto aa = top_centroids(p, j);
-            assert(top_centroids(p, j) < size(indices) - 1);
+            if (top_centroids(p, j) >= size(indices) - 1) {
+              throw std::runtime_error(
+                  "[qv_query_heap_infinite_ram] top_centroids(p, j) >= "
+                  "size(indices) - 1");
+            }
 
             size_t start = indices[top_centroids(p, j)];
             size_t stop = indices[top_centroids(p, j) + 1];
@@ -648,7 +652,11 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                     p +
                     part_offset;  // resident_part_offset(partitioned_vectors);
 
-                assert(p + 1 < size(indices));
+                if (p + 1 >= size(indices)) {
+                  throw std::runtime_error(
+                      "[nuv_query_heap_finite_ram_reg_blocked] p + 1 >= "
+                      "size(indices)");
+                }
 
                 auto start = indices[p];
                 auto stop = indices[p + 1];

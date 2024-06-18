@@ -1238,14 +1238,14 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
 
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
-        _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k * 2)
+        _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
 
         if index_type == "IVF_PQ":
             # TODO(SC-48888): Fix consolidation for IVF_PQ.
             continue
         index = index.consolidate_updates()
-        _, result = index.query(queries, k=k, nprobe=partitions, opt_l=k * 2)
+        _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
 
         assert vfs.dir_size(index_uri) > 0
@@ -1886,3 +1886,30 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
         expected_result_d=[[0]],
         expected_result_i=[[1003]],
     )
+
+
+def test_ivf_flat_taskgraph_query(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    k = 10
+    size = 10000
+    partitions = 100
+    dimensions = 129
+    nqueries = 100
+    nprobe = 20
+    create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    dtype = np.uint8
+
+    queries = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
+    )
+    _, result = index._taskgraph_query(
+        queries, k=k, nprobe=nprobe, nthreads=8, mode=Mode.LOCAL, num_partitions=10
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY

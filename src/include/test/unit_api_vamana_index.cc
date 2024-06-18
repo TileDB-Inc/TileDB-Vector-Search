@@ -503,7 +503,8 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
          {"b_backtrack", std::to_string(b_backtrack)}}));
 
     size_t num_vectors = 0;
-    auto empty_training_vector_array = FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    auto empty_training_vector_array =
+        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 1));
@@ -599,25 +600,25 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 99);
   }
 
-    // Load it by URI and query.
-    {
-        auto index = IndexVamana(ctx, index_uri);
+  // Load it by URI and query.
+  {
+    auto index = IndexVamana(ctx, index_uri);
 
-        auto queries = ColMajorMatrix<feature_type_type>{
+    auto queries = ColMajorMatrix<feature_type_type>{
         {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
-        auto query_vector_array = FeatureVectorArray(queries);
-        auto&& [scores_vector_array, ids_vector_array] =
-            index.query(query_vector_array, 1);
+    auto query_vector_array = FeatureVectorArray(queries);
+    auto&& [scores_vector_array, ids_vector_array] =
+        index.query(query_vector_array, 1);
 
-        auto scores = std::span<float>(
-            (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-        auto ids = std::span<uint32_t>(
-            (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-        CHECK(std::equal(
-            scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
-        CHECK(std::equal(
-            ids.begin(), ids.end(), std::vector<int>{1, 2, 3, 4}.begin()));
-    }
+    auto scores = std::span<float>(
+        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+    auto ids = std::span<uint32_t>(
+        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+    CHECK(std::equal(
+        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.begin(), ids.end(), std::vector<int>{1, 2, 3, 4}.begin()));
+  }
 
   // Train it at timestamp 100.
   {
@@ -760,7 +761,9 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     auto index = IndexVamana(ctx, index_uri, temporal_policy);
 
     CHECK(index.temporal_policy().timestamp_start() == 0);
-    CHECK(index.temporal_policy().timestamp_end() == temporal_policy.timestamp_end());
+    CHECK(
+        index.temporal_policy().timestamp_end() ==
+        temporal_policy.timestamp_end());
     CHECK(index.l_build() == l_build);
     CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);

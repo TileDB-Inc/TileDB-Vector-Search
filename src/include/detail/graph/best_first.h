@@ -121,7 +121,9 @@ auto best_first_O1(
     auto&& [_, p_star] = frontier.back();
     frontier.pop_back();
 
-    assert(!(visited.count(p_star) > 0));
+    if (visited.count(p_star) > 0) {
+      throw std::runtime_error("[best_first@best_first_O1] Vertex was visited");
+    }
     visited.insert(p_star);
 
     for (auto&& [_, neighbor_id] : graph[p_star]) {
@@ -176,10 +178,13 @@ auto best_first_O2(
   enfrontiered.insert(source);
 
   while (!frontier.empty()) {
-    assert(is_minmax_heap(
-        frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
-          return std::get<0>(a) < std::get<0>(b);
-        }));
+    if (!is_minmax_heap(
+            frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
+              return std::get<0>(a) < std::get<0>(b);
+            })) {
+      throw std::runtime_error(
+          "[best_first@best_first_O2] Frontier is not a min-max heap");
+    }
 
 #if 0
     std::cout << "\n\n{\n";
@@ -211,7 +216,9 @@ auto best_first_O2(
     frontier.pop_back();
     enfrontiered.erase(p_star);
 
-    assert(p_star == q_star);
+    if (p_star != q_star) {
+      throw std::runtime_error("[best_first@best_first_O2] p_star != q_star");
+    }
 
     visited.insert(p_star);
 
@@ -384,7 +391,11 @@ auto best_first_O3(
   pq.insert(heuristic, source);
   auto&& [source_iter, success] =
       vertex_state_map.emplace(std::make_pair(source, 0));
-  assert(success);
+  if (!success) {
+    throw std::runtime_error(
+        "[best_first@best_first_O3] Could not insert source into "
+        "vertex_state_map");
+  }
 
   set_enpqd(source_iter->second);
 
@@ -396,10 +407,13 @@ auto best_first_O3(
   set_enpqd(source_iter->second);
 
   while (!frontier.empty()) {
-    assert(is_minmax_heap(
-        frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
-          return std::get<0>(a) < std::get<0>(b);
-        }));
+    if (!is_minmax_heap(
+            frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
+              return std::get<0>(a) < std::get<0>(b);
+            })) {
+      throw std::runtime_error(
+          "[best_first@best_first_O3] Frontier is not a min-max heap");
+    }
 
 #if 0
     std::cout << "\n\n{\n";
@@ -414,9 +428,11 @@ auto best_first_O3(
 
     auto debug_p_star = p_star;
 
-    // assert(vertex_state_map.find(p_star) == vertex_state_map.end());
     auto p_star_iter = vertex_state_map.find(p_star);
-    assert(p_star_iter != vertex_state_map.end());
+    if (p_star_iter == vertex_state_map.end()) {
+      throw std::runtime_error(
+          "[best_first@best_first_O3] p_star_iter == vertex_state_map.end()");
+    }
 
     pop_minmax_heap_min(
         frontier.begin(), frontier.end(), [](auto&& a, auto&& b) {
@@ -443,7 +459,9 @@ auto best_first_O3(
     clear_enfrontiered(p_star_iter->second);
     set_visited(p_star_iter->second);
 
-    assert(p_star == q_star);
+    if (p_star != q_star) {
+      throw std::runtime_error("[best_first@best_first_O3] p_star != q_star");
+    }
 
     score_type min_evicted_score = std::numeric_limits<score_type>::max();
     auto evicted_pq = std::vector<node_type>{};
@@ -454,7 +472,11 @@ auto best_first_O3(
       if (neighbor_state_iter == vertex_state_map.end()) {
         auto [local_neighbor_state_iter, success] =
             vertex_state_map.emplace(neighbor_id, 0);
-        assert(success);
+        if (!success) {
+          throw std::runtime_error(
+              "[best_first@best_first_O3] Could not insert neighbor_id into "
+              "vertex_state_map");
+        }
         neighbor_state_iter = local_neighbor_state_iter;
       } else {
         if (!is_unvisited(neighbor_state_iter->second)) {
@@ -472,7 +494,11 @@ auto best_first_O3(
         set_enpqd(neighbor_state_iter->second);
         if (evicted) {
           auto evicted_state_iter = vertex_state_map.find(evicted_id);
-          assert(evicted_state_iter != vertex_state_map.end());
+          if (evicted_state_iter == vertex_state_map.end()) {
+            throw std::runtime_error(
+                "[best_first@best_first_O3] evicted_state_iter == "
+                "vertex_state_map.end()");
+          }
 
           if (is_visited(evicted_state_iter->second)) {
             // Only mark as evicted if not visited
@@ -498,7 +524,12 @@ auto best_first_O3(
       return std::get<0>(a) < std::get<0>(b);
     });
 
-    assert(size(frontier) <= size(pq));
+    if (size(frontier) > size(pq)) {
+      throw std::runtime_error(
+          "[best_first@best_first_O3] size(frontier) (" +
+          std::to_string(size(frontier)) + ") > size(pq) (" +
+          std::to_string(size(pq)) + ")");
+    }
     // vertex_state_map.erase(p_star);
   }
   auto top_k = std::vector<id_type>(k_nn);
@@ -585,9 +616,17 @@ auto best_first_O4(
     }
     clear_enfrontiered(vertex_state_property_map[p_star]);
     //    std::cout << "p_star " << p_star << std::endl;
-    assert(is_visited(vertex_state_property_map[p_star]));
-    assert(!is_evicted(vertex_state_property_map[p_star]));
-    assert(!is_enfrontiered(vertex_state_property_map[p_star]));
+    if (!is_visited(vertex_state_property_map[p_star])) {
+      throw std::runtime_error(
+          "[best_first@best_first_O4] p_star is not visited");
+    }
+    if (is_evicted(vertex_state_property_map[p_star])) {
+      throw std::runtime_error("[best_first@best_first_O4] p_star is evicted");
+    }
+    if (is_enfrontiered(vertex_state_property_map[p_star])) {
+      throw std::runtime_error(
+          "[best_first@best_first_O4] p_star is enfrontiered");
+    }
 
     p_star = std::numeric_limits<id_type>::max();
     auto p_min_score = std::numeric_limits<score_type>::max();
@@ -595,8 +634,15 @@ auto best_first_O4(
     for (auto&& [pq_score, pq_id] : pq) {
       if (pq_score < p_min_score) {
         auto pq_state = vertex_state_property_map[pq_id];
-        assert(!is_evicted(pq_state));
-        assert(is_enpqd(pq_state));
+
+        if (is_evicted(pq_state)) {
+          throw std::runtime_error(
+              "[best_first@best_first_O4] pq_state is evicted");
+        }
+        if (!is_enpqd(pq_state)) {
+          throw std::runtime_error(
+              "[best_first@best_first_O4] pq_state is not enpqd");
+        }
         if (!is_visited(pq_state)) {
           p_star = pq_id;
           p_min_score = pq_score;
@@ -646,7 +692,11 @@ auto best_first_O5(
   pq.insert(heuristic, source);
   auto&& [source_iter, success] =
       vertex_state_map.emplace(std::make_pair(source, 0));
-  assert(success);
+  if (!success) {
+    throw std::runtime_error(
+        "[best_first@best_first_O3] Could not insert source into "
+        "vertex_state_map");
+  }
 
   set_enpqd(source_iter->second);
 
@@ -656,7 +706,10 @@ auto best_first_O5(
     visited.insert(p_star);
 
     auto p_star_iter = vertex_state_map.find(p_star);
-    assert(p_star_iter != vertex_state_map.end());
+    if (p_star_iter == vertex_state_map.end()) {
+      throw std::runtime_error(
+          "[best_first@best_first_O3] p_star_iter == vertex_state_map.end()");
+    }
     clear_enfrontiered(p_star_iter->second);
     set_visited(p_star_iter->second);
 
@@ -666,7 +719,11 @@ auto best_first_O5(
       if (neighbor_state_iter == vertex_state_map.end()) {
         auto [local_neighbor_state_iter, success] =
             vertex_state_map.emplace(neighbor_id, 0);
-        assert(success);
+        if (!success) {
+          throw std::runtime_error(
+              "[best_first@best_first_O3] Could not insert neighbor_id into "
+              "vertex_state_map");
+        }
         neighbor_state_iter = local_neighbor_state_iter;
       } else {
         if (!is_unvisited(neighbor_state_iter->second)) {
@@ -684,7 +741,11 @@ auto best_first_O5(
         set_enpqd(neighbor_state_iter->second);
         if (evicted) {
           auto evicted_state_iter = vertex_state_map.find(evicted_id);
-          assert(evicted_state_iter != vertex_state_map.end());
+          if (evicted_state_iter == vertex_state_map.end()) {
+            throw std::runtime_error(
+                "[best_first@best_first_O3] evicted_state_iter == "
+                "vertex_state_map.end()");
+          }
           set_evicted(evicted_state_iter->second);
         }
       } else {
@@ -697,8 +758,16 @@ auto best_first_O5(
 
     for (auto&& [pq_score, pq_id] : pq) {
       auto pq_state_iter = vertex_state_map.find(pq_id);
-      assert(!is_evicted(pq_state_iter->second));
-      assert(is_enpqd(pq_state_iter->second));
+
+      if (is_evicted(pq_state_iter->second)) {
+        throw std::runtime_error(
+            "[best_first@best_first_O3] pq_state_iter is evicted");
+      }
+      if (!is_enpqd(pq_state_iter->second)) {
+        throw std::runtime_error(
+            "[best_first@best_first_O3] pq_state_iter is not enpqd");
+      }
+
       if (!is_visited(pq_state_iter->second)) {
         if (pq_score < p_min_score) {
           p_star = pq_id;

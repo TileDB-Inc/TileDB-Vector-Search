@@ -152,13 +152,19 @@ auto read_diskann_mem_index_with_scores(
     for (size_t i = 0; i < num_neighbors; ++i) {
       uint32_t id;
       binary_file.read((char*)&id, 4);
-      assert(id < num_nodes);
+      if (id >= num_nodes) {
+        throw std::runtime_error(
+            "[read_diskann_mem_index_with_scores] id >= num_nodes");
+      }
       g.add_edge(node, id, l2_distance(x[node], x[id]));
     }
     ++node;
   }
   binary_file.close();
-  assert(node == num_nodes);
+  if (node != num_nodes) {
+    throw std::runtime_error(
+        "[read_diskann_mem_index_with_scores] node != num_nodes");
+  }
 
   return g;
 }

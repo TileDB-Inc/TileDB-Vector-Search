@@ -65,7 +65,6 @@
 #include "detail/ivf/partition.h"
 #include "detail/ivf/qv.h"
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
 /**
@@ -401,11 +400,20 @@ class ivf_flat_index {
 
     partitioned_vectors_->load();
 
-    assert(
-        ::num_vectors(*partitioned_vectors_) ==
-        size(partitioned_vectors_->ids()));
-    assert(
-        size(partitioned_vectors_->indices()) == ::num_vectors(centroids_) + 1);
+    if (::num_vectors(*partitioned_vectors_) !=
+        size(partitioned_vectors_->ids())) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "::num_vectors(*partitioned_vectors_) != "
+          "size(partitioned_vectors_->ids())");
+    }
+    if (size(partitioned_vectors_->indices()) !=
+        ::num_vectors(centroids_) + 1) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "size(partitioned_vectors_->indices()) != ::num_vectors(centroids_) "
+          "+ 1");
+    }
   }
 
   /**
@@ -1011,22 +1019,13 @@ class ivf_flat_index {
     return indices;
   }
 
-  void dump_group(const std::string& msg) {
+  void dump(const std::string& msg) {
     if (!group_) {
       throw std::runtime_error(
-          "[ivf_flat_index@dump_group] Cannot dump group because there is no "
+          "[ivf_flat_index@dump] Cannot dump group because there is no "
           "group");
     }
     group_->dump(msg);
-  }
-
-  void dump_metadata(const std::string& msg) {
-    if (!group_) {
-      throw std::runtime_error(
-          "[ivf_flat_index@dump_metadata] Cannot dump metadata because there "
-          "is no group");
-    }
-    group_->metadata.dump(msg);
   }
 };
 

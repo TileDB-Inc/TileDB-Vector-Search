@@ -50,7 +50,6 @@
 #ifndef TILEDB_INDEX_METADATA_H
 #define TILEDB_INDEX_METADATA_H
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
 #include "index/index_defs.h"

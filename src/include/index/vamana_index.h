@@ -55,7 +55,6 @@
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 
 /**
@@ -467,8 +466,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O2(
-      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
-    size_t Lbuild = opt_L ? *opt_L : l_build_;
+      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+    size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -494,8 +493,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O3(
-      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
-    size_t Lbuild = opt_L ? *opt_L : l_build_;
+      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+    size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -521,8 +520,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O4(
-      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
-    size_t Lbuild = opt_L ? *opt_L : l_build_;
+      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+    size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -548,8 +547,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O5(
-      const Q& queries, size_t k_nn, std::optional<size_t> opt_L) {
-    size_t Lbuild = opt_L ? *opt_L : l_build_;
+      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+    size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -578,18 +577,18 @@ class vamana_index {
    * @tparam Q Type of query set
    * @param query_set Container of query vectors
    * @param k How many nearest neighbors to return
-   * @param opt_L How deep to search
+   * @param l_search How deep to search
    * @return Tuple of top k scores and top k ids
    */
   template <query_vector_array Q, class Distance = sum_of_squares_distance>
   auto query(
       const Q& query_set,
       size_t k,
-      std::optional<size_t> opt_L = std::nullopt,
+      std::optional<size_t> l_search = std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
-    size_t L = opt_L ? *opt_L : l_build_;
+    size_t L = l_search ? *l_search : l_build_;
     // L = std::min<size_t>(L, l_build_);
 
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
@@ -646,16 +645,16 @@ class vamana_index {
    * @tparam Q Type of query vector
    * @param query_vec The vector to query
    * @param k How many nearest neighbors to return
-   * @param opt_L How deep to search
+   * @param l_search How deep to search
    * @return Top k scores and top k ids
    */
   template <query_vector Q, class Distance = sum_of_squares_distance>
   auto query(
       const Q& query_vec,
       size_t k,
-      std::optional<size_t> opt_L = std::nullopt,
+      std::optional<size_t> l_search = std::nullopt,
       Distance distance = Distance{}) {
-    size_t L = opt_L ? *opt_L : l_build_;
+    size_t L = l_search ? *l_search : l_build_;
     auto&& [top_k_scores, top_k, V] = greedy_search(
         graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
 
@@ -746,8 +745,10 @@ class vamana_index {
     // here we make sure we end up with the same metadata that Python indexes
     // do.
     if (write_group.get_all_ingestion_timestamps().size() == 1 &&
-        // Note that we check for 0 b/c it will be that after clear_history(), and 1 b/c it will be that after the first write_index() call.
-        (write_group.get_previous_ingestion_timestamp() == 0 || write_group.get_previous_ingestion_timestamp() == 1) &&
+        // Note that we check for 0 b/c it will be that after clear_history(),
+        // and 1 b/c it will be that after the first write_index() call.
+        (write_group.get_previous_ingestion_timestamp() == 0 ||
+         write_group.get_previous_ingestion_timestamp() == 1) &&
         write_group.get_all_base_sizes().size() == 1 &&
         write_group.get_previous_base_size() == 0) {
       write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());

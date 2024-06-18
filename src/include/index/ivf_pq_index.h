@@ -108,7 +108,6 @@
 #include "detail/ivf/partition.h"
 #include "detail/ivf/qv.h"
 
-#include <tiledb/group_experimental.h>
 #include <tiledb/tiledb>
 #include <type_traits>
 
@@ -898,7 +897,7 @@ class ivf_pq_index {
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
         group_->pq_ivf_indices_uri(),
-        group_->get_num_partitions() + 1, // this should be the number of indexes in pq_ivf_indices_uri.
+        group_->get_num_partitions() + 1,
         group_->ids_uri(),
         infinite_parts,
         0,
@@ -906,12 +905,20 @@ class ivf_pq_index {
 
     partitioned_pq_vectors_->load();
 
-    assert(
-        ::num_vectors(*partitioned_pq_vectors_) ==
-        size(partitioned_pq_vectors_->ids()));
-    assert(
-        size(partitioned_pq_vectors_->indices()) ==
-        ::num_vectors(flat_ivf_centroids_) + 1);
+    if (::num_vectors(*partitioned_pq_vectors_) !=
+        size(partitioned_pq_vectors_->ids())) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "::num_vectors(*partitioned_pq_vectors_) != "
+          "size(partitioned_pq_vectors_->ids())");
+    }
+    if (size(partitioned_pq_vectors_->indices()) !=
+        ::num_vectors(flat_ivf_centroids_) + 1) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "size(partitioned_pq_vectors_->indices()) != "
+          "::num_vectors(flat_ivf_centroids_) + 1");
+    }
   }
 
   /**
@@ -996,10 +1003,18 @@ class ivf_pq_index {
     write_group.set_bits_per_subspace(bits_per_subspace_);
     write_group.set_num_clusters(num_clusters_);
 
-    assert(num_subspaces_ * sub_dimensions_ == dimensions_);
+    if (num_subspaces_ * sub_dimensions_ != dimensions_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] num_subspaces_ * sub_dimensions_ != "
+          "dimensions_");
+    }
     // The code below checks if the number of clusters is equal to
     // 2^bits_per_subspace_.
-    assert(num_clusters_ == 1 << bits_per_subspace_);
+    if (num_clusters_ != 1 << bits_per_subspace_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] num_clusters_ != 1 << "
+          "bits_per_subspace_");
+    }
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
@@ -1013,8 +1028,10 @@ class ivf_pq_index {
     // here we make sure we end up with the same metadata that Python indexes
     // do.
     if (write_group.get_all_ingestion_timestamps().size() == 1 &&
-        // Note that we check for 0 b/c it will be that after clear_history(), and 1 b/c it will be that after the first write_index() call.
-        (write_group.get_previous_ingestion_timestamp() == 0 || write_group.get_previous_ingestion_timestamp() == 1) &&
+        // Note that we check for 0 b/c it will be that after clear_history(),
+        // and 1 b/c it will be that after the first write_index() call.
+        (write_group.get_previous_ingestion_timestamp() == 0 ||
+         write_group.get_previous_ingestion_timestamp() == 1) &&
         write_group.get_all_base_sizes().size() == 1 &&
         write_group.get_previous_base_size() == 0) {
       write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
@@ -1262,8 +1279,16 @@ class ivf_pq_index {
   }
 
   auto num_partitions() const {
-    assert(num_partitions_ == ::num_vectors(flat_ivf_centroids_));
-    assert(num_partitions_ == ::num_vectors(pq_ivf_centroids_));
+    if (num_partitions_ != ::num_vectors(flat_ivf_centroids_)) {
+      throw std::runtime_error(
+          "[ivf_pq_index@num_partitions] num_partitions_ != "
+          "::num_vectors(flat_ivf_centroids_)");
+    }
+    if (num_partitions_ != ::num_vectors(pq_ivf_centroids_)) {
+      throw std::runtime_error(
+          "[ivf_pq_index@num_partitions] num_partitions_ != "
+          "::num_vectors(pq_ivf_centroids_)");
+    }
     // return ::num_vectors(flat_ivf_centroids_);
     return num_partitions_;
   }
@@ -1747,7 +1772,7 @@ class ivf_pq_index {
   void dump(const std::string& msg) const {
     if (!group_) {
       throw std::runtime_error(
-          "[ivf_flat_index@dump_group] Cannot dump group because there is no "
+          "[ivf_flat_index@dump] Cannot dump group because there is no "
           "group");
     }
     group_->dump(msg);

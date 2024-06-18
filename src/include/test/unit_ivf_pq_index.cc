@@ -699,7 +699,8 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
 TEST_CASE("ivf_pq_index test", "[ivf_pq_index]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
-  std::string index_uri = (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);
   }
@@ -715,11 +716,15 @@ TEST_CASE("ivf_pq_index test", "[ivf_pq_index]") {
   size_t num_subspaces = 1;
   float convergence_tolerance = 0.00003f;
   size_t max_iterations = 3;
-  
+
   // Write the empty index.
   {
-    auto index = ivf_pq_index<feature_type_type, id_type_type, partitioning_index_type_type>(n_list, dimensions / 2);
-    auto data = ColMajorMatrixWithIds<feature_type_type, id_type_type>(dimensions, 0);
+    auto index = ivf_pq_index<
+        feature_type_type,
+        id_type_type,
+        partitioning_index_type_type>(n_list, dimensions / 2);
+    auto data =
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>(dimensions, 0);
     index.train(data, data.raveled_ids());
     index.add(data, data.raveled_ids());
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 1));
@@ -727,8 +732,12 @@ TEST_CASE("ivf_pq_index test", "[ivf_pq_index]") {
 
   // Train the index at timestamp 99.
   {
-    auto index = ivf_pq_index<feature_type_type, id_type_type, partitioning_index_type_type>(ctx, index_uri);
-    auto data = ColMajorMatrixWithIds<feature_type_type, id_type_type>{{{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+    auto index = ivf_pq_index<
+        feature_type_type,
+        id_type_type,
+        partitioning_index_type_type>(ctx, index_uri);
+    auto data = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
     index.train(data, data.raveled_ids());
     index.add(data, data.raveled_ids());
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
@@ -736,8 +745,12 @@ TEST_CASE("ivf_pq_index test", "[ivf_pq_index]") {
 
   // Load the index and query.
   {
-    auto index = ivf_pq_index<feature_type_type, id_type_type, partitioning_index_type_type>(ctx, index_uri);
-    auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+    auto index = ivf_pq_index<
+        feature_type_type,
+        id_type_type,
+        partitioning_index_type_type>(ctx, index_uri);
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
     auto&& [scores, ids] = index.query_infinite_ram(queries, 1, n_list);
     debug_matrix(scores, "scores");
     debug_matrix(ids, "ids");
