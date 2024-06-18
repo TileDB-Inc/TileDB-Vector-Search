@@ -524,20 +524,6 @@ class ivf_flat_index {
     return true;
   }
 
-  auto write_index_arrays(
-      const tiledb::Context& ctx,
-      const std::string& centroids_uri,
-      const std::string& parts_uri,
-      const std::string& ids_uri,
-      const std::string& indices_uri) const {
-    write_matrix(ctx, centroids_, centroids_uri, 0, true);
-    write_matrix(ctx, *partitioned_vectors_, parts_uri, 0, true);
-    write_vector(ctx, partitioned_vectors_->ids(), ids_uri, 0, true);
-    write_vector(ctx, partitioned_vectors_->indices(), indices_uri, 0, true);
-
-    return true;
-  }
-
   /*****************************************************************************
    *
    * Queries, infinite and finite.
@@ -1033,22 +1019,13 @@ class ivf_flat_index {
     return indices;
   }
 
-  void dump_group(const std::string& msg) {
+  void dump(const std::string& msg) {
     if (!group_) {
       throw std::runtime_error(
-          "[ivf_flat_index@dump_group] Cannot dump group because there is no "
+          "[ivf_flat_index@dump] Cannot dump group because there is no "
           "group");
     }
     group_->dump(msg);
-  }
-
-  void dump_metadata(const std::string& msg) {
-    if (!group_) {
-      throw std::runtime_error(
-          "[ivf_flat_index@dump_metadata] Cannot dump metadata because there "
-          "is no group");
-    }
-    group_->metadata.dump(msg);
   }
 };
 
