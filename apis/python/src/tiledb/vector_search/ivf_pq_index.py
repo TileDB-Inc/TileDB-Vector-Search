@@ -191,5 +191,5 @@ def create(
     )
     index.train(empty_vector)
     index.add(empty_vector)
-    index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
+    index.write_index(ctx, uri, vspy.TemporalPolicy(1), storage_version)
     return IVFPQIndex(uri=uri, config=config)

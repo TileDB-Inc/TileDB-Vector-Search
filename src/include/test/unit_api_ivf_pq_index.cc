@@ -587,9 +587,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
-    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
+    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 1));
 
-    CHECK(index.temporal_policy().timestamp_end() == 0);
+    CHECK(index.temporal_policy().timestamp_end() == 1);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.n_list() == n_list);
     CHECK(index.num_subspaces() == num_subspaces);
@@ -608,7 +608,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(typed_index.group().get_history_index() == 0);
 
     CHECK(typed_index.group().get_base_size() == 0);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 0);
+    CHECK(typed_index.group().get_ingestion_timestamp() == 1);
 
     CHECK(typed_index.group().get_all_num_partitions().size() == 1);
     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
@@ -616,7 +616,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     CHECK(typed_index.group().get_all_num_partitions()[0] == n_list);
     CHECK(typed_index.group().get_all_base_sizes()[0] == 0);
-    CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 0);
+    CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 1);
   }
 
   // Train it at timestamp 99.
@@ -821,11 +821,11 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   // Load it at timestamp 5 (before ingestion) and make sure we can query and be
   // returned fill values.
   {
-    auto temporal_policy = TemporalPolicy{TimeTravel, 0};
+    auto temporal_policy = TemporalPolicy{TimeTravel, 1};
     auto index = IndexIVFPQ(ctx, index_uri, temporal_policy);
 
     CHECK(index.temporal_policy().timestamp_start() == 0);
-    CHECK(index.temporal_policy().timestamp_end() == 0);
+    CHECK(index.temporal_policy().timestamp_end() == 1);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);

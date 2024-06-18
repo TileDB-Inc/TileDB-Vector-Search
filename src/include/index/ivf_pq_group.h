@@ -51,7 +51,7 @@
          {"flat_ivf_centroids_array_name", "uncompressed_centroids"},
          {"pq_ivf_centroids_array_name", "partition_centroids"},
 
-         {"ivf_index_array_name", "partition_indexes"},
+         {"pq_ivf_indices_array_name", "partition_indices"},
 
          {"pq_ivf_vectors_array_name", "shuffled_vectors"},
 
@@ -108,18 +108,17 @@ class ivf_pq_group : public base_index_group<index_type> {
         for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
           valid_array_keys_.insert(array_key + "_" + std::to_string(i));
           valid_array_names_.insert(array_name + "_" + std::to_string(i));
-          array_key_to_array_name_[array_key + "_" + std::to_string(i)] =
-              array_name + "_" + std::to_string(i);
-          array_name_to_uri_[array_name] =
-              array_name_to_uri(group_uri_, array_name);
+          array_key_to_array_name_[array_key + "_" + std::to_string(i)] = array_name + "_" + std::to_string(i);
+          array_name_to_uri_[array_name] = array_name_to_uri(group_uri_, array_name);
         }
-      } else {
-        valid_array_keys_.insert(array_key);
-        valid_array_names_.insert(array_name);
-        array_key_to_array_name_[array_key] = array_name;
-        array_name_to_uri_[array_name] =
-            array_name_to_uri(group_uri_, array_name);
       }
+      //  else {
+      //   valid_array_keys_.insert(array_key);
+      //   valid_array_names_.insert(array_name);
+      //   array_key_to_array_name_[array_key] = array_name;
+      //   array_name_to_uri_[array_name] =
+      //       array_name_to_uri(group_uri_, array_name);
+      // }
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
@@ -135,10 +134,9 @@ class ivf_pq_group : public base_index_group<index_type> {
         cached_ctx_, flat_ivf_centroids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_centroids_uri(), 0, timestamp);
-    tiledb::Array::delete_fragments(cached_ctx_, ivf_index_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(cached_ctx_, pq_ivf_indices_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(cached_ctx_, this->ids_uri(), 0, timestamp);
-    tiledb::Array::delete_fragments(
-        cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
     for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
       std::string this_table_uri =
           distance_tables_uri() + "_" + std::to_string(i);
@@ -181,8 +179,8 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto pq_ivf_centroids_uri() const {
     return this->array_key_to_uri("pq_ivf_centroids_array_name");
   }
-  [[nodiscard]] auto ivf_index_uri() const {
-    return this->array_key_to_uri("ivf_index_array_name");
+  [[nodiscard]] auto pq_ivf_indices_uri() const {
+    return this->array_key_to_uri("pq_ivf_indices_array_name");
   }
   [[nodiscard]] auto pq_ivf_vectors_uri() const {
     return this->array_key_to_uri("pq_ivf_vectors_array_name");
@@ -200,8 +198,8 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto pq_ivf_centroids_array_name() const {
     return this->array_key_to_array_name("pq_ivf_centroids_array_name");
   }
-  [[nodiscard]] auto ivf_index_array_name() const {
-    return this->array_key_to_array_name("ivf_index_array_name");
+  [[nodiscard]] auto pq_ivf_indices_array_name() const {
+    return this->array_key_to_array_name("pq_ivf_indices_array_name");
   }
   [[nodiscard]] auto pq_ivf_vectors_array_name() const {
     return this->array_key_to_array_name("pq_ivf_vectors_array_name");
@@ -331,12 +329,12 @@ class ivf_pq_group : public base_index_group<index_type> {
 
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
-        ivf_index_uri(),
+        pq_ivf_indices_uri(),
         default_domain,
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, ivf_index_uri(), ivf_index_array_name());
+        write_group, pq_ivf_indices_uri(), pq_ivf_indices_array_name());
 
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,

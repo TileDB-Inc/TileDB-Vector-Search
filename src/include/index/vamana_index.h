@@ -738,7 +738,7 @@ class vamana_index {
     // once with empty data and once with the actual data. Here we add custom
     // logic so that during that second call to write_index(), we will overwrite
     // the metadata lists. If we don't do this we will end up with
-    // ingestion_timestamps = [0, timestamp] and base_sizes = [0, initial size],
+    // ingestion_timestamps = [1, timestamp] and base_sizes = [0, initial size],
     // whereas indexes created just in Python will end up with
     // ingestion_timestamps = [timestamp] and base_sizes = [initial size]. If we
     // have 2 item lists it causes crashes and subtle issues when we try to
@@ -746,7 +746,8 @@ class vamana_index {
     // here we make sure we end up with the same metadata that Python indexes
     // do.
     if (write_group.get_all_ingestion_timestamps().size() == 1 &&
-        write_group.get_previous_ingestion_timestamp() == 0 &&
+        // Note that we check for 0 b/c it will be that after clear_history(), and 1 b/c it will be that after the first write_index() call.
+        (write_group.get_previous_ingestion_timestamp() == 0 || write_group.get_previous_ingestion_timestamp() == 1) &&
         write_group.get_all_base_sizes().size() == 1 &&
         write_group.get_previous_base_size() == 0) {
       write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());

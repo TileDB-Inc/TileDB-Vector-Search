@@ -81,7 +81,7 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
             128, 0);
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors);
-    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 1));
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
@@ -90,7 +90,7 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
         {"dtype", "float32"},
         {"feature_type", "float32"},
         {"id_type", "uint64"},
-        {"ingestion_timestamps", "[0]"},
+        {"ingestion_timestamps", "[1]"},
         {"base_sizes", "[0]"},
         {"adjacency_scores_type", "float32"},
         {"adjacency_row_index_type", "uint64"},
@@ -100,7 +100,7 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
     auto x = vamana_index_metadata();
     x.load_metadata(read_group);
     CHECK(x.ingestion_timestamps_.size() == 1);
-    CHECK(x.ingestion_timestamps_[0] == 0);
+    CHECK(x.ingestion_timestamps_[0] == 1);
     CHECK(x.base_sizes_.size() == 1);
     CHECK(x.base_sizes_[0] == 0);
     CHECK(x.num_edges_history_.size() == 1);

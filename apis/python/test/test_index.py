@@ -65,7 +65,10 @@ def check_default_metadata(
     assert type(group.meta["base_sizes"]) == str
 
     assert "ingestion_timestamps" in group.meta
-    assert group.meta["ingestion_timestamps"] == json.dumps([0])
+    if is_type_erased_index(expected_index_type):
+        assert group.meta["ingestion_timestamps"] == json.dumps([1])
+    else:
+        assert group.meta["ingestion_timestamps"] == json.dumps([0])
     assert type(group.meta["ingestion_timestamps"]) == str
 
     if not is_type_erased_index(expected_index_type):
@@ -243,7 +246,7 @@ def test_vamana_index(tmp_path):
 
     ingestion_timestamps, base_sizes = load_metadata(uri)
     assert base_sizes == [0]
-    assert ingestion_timestamps == [0]
+    assert ingestion_timestamps == [1]
 
     queries = np.array([[2, 2, 2]], dtype=np.float32)
     distances, ids = index.query(queries, k=1)
@@ -325,7 +328,7 @@ def test_ivf_pq_index(tmp_path):
 
     ingestion_timestamps, base_sizes = load_metadata(uri)
     assert base_sizes == [0]
-    assert ingestion_timestamps == [0]
+    assert ingestion_timestamps == [1]
 
     queries = np.array([[2, 2, 2]], dtype=np.float32)
     distances, ids = index.query(queries, k=1)

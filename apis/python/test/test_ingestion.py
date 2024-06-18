@@ -949,12 +949,12 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             index_uri=index_uri,
             source_uri=os.path.join(dataset_dir, "data.u8bin"),
             partitions=partitions,
-            index_timestamp=1,
+            index_timestamp=2,
             num_subspaces=num_subspaces,
         )
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
-        assert ingestion_timestamps == [1]
+        assert ingestion_timestamps == [2]
         assert base_sizes == [size]
 
         if index_type == "IVF_PQ":
@@ -969,8 +969,8 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         update_ids_offset = MAX_UINT64 - size
         updated_ids = {}
-        timestamp_end = 102
-        for i in range(2, timestamp_end):
+        timestamp_end = 103
+        for i in range(3, timestamp_end):
             index.delete(external_id=i, timestamp=i)
             index.update(
                 vector=data[i].astype(dtype),
@@ -980,7 +980,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             updated_ids[i] = i + update_ids_offset
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
-        assert ingestion_timestamps == [1]
+        assert ingestion_timestamps == [2]
         assert base_sizes == [size]
 
         index = index_class(uri=index_uri)
@@ -989,24 +989,24 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-        index = index_class(uri=index_uri, timestamp=101)
+        index = index_class(uri=index_uri, timestamp=102)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index_uri = move_local_index_to_new_location(index_uri)
-        index = index_class(uri=index_uri, timestamp=(0, 101))
+        index = index_class(uri=index_uri, timestamp=(0, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-        index = index_class(uri=index_uri, timestamp=(2, 101))
+        index = index_class(uri=index_uri, timestamp=(3, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
             0.05
             <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
             <= 0.15
         )
-        index = index_class(uri=index_uri, timestamp=(2, None))
+        index = index_class(uri=index_uri, timestamp=(3, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
             0.05
@@ -1016,16 +1016,16 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         # Timetravel with partial read from updates table
         updated_ids_part = {}
-        for i in range(2, 52):
+        for i in range(3, 53):
             updated_ids_part[i] = i + update_ids_offset
-        index = index_class(uri=index_uri, timestamp=51)
+        index = index_class(uri=index_uri, timestamp=52)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
         index_uri = move_local_index_to_new_location(index_uri)
-        index = index_class(uri=index_uri, timestamp=(0, 51))
+        index = index_class(uri=index_uri, timestamp=(0, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
-        index = index_class(uri=index_uri, timestamp=(2, 51))
+        index = index_class(uri=index_uri, timestamp=(3, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
             0.02
@@ -1034,7 +1034,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         )
 
         # Timetravel at previous ingestion timestamp
-        index = index_class(uri=index_uri, timestamp=1)
+        index = index_class(uri=index_uri, timestamp=2)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i) == 1.0
 
@@ -1045,30 +1045,30 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index = index.consolidate_updates()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
-        assert ingestion_timestamps == [1, timestamp_end]
+        assert ingestion_timestamps == [2, timestamp_end]
         assert base_sizes == [size, size]
 
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-        index = index_class(uri=index_uri, timestamp=101)
+        index = index_class(uri=index_uri, timestamp=102)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index_uri = move_local_index_to_new_location(index_uri)
-        index = index_class(uri=index_uri, timestamp=(0, 101))
+        index = index_class(uri=index_uri, timestamp=(0, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-        index = index_class(uri=index_uri, timestamp=(2, 101))
+        index = index_class(uri=index_uri, timestamp=(3, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
             0.05
             <= accuracy(result, gt_i, updated_ids=updated_ids, only_updated_ids=True)
             <= 0.15
         )
-        index = index_class(uri=index_uri, timestamp=(2, None))
+        index = index_class(uri=index_uri, timestamp=(3, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
             0.05
@@ -1078,16 +1078,16 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         # Timetravel with partial read from updates table
         updated_ids_part = {}
-        for i in range(2, 52):
+        for i in range(3, 52):
             updated_ids_part[i] = i + update_ids_offset
-        index = index_class(uri=index_uri, timestamp=51)
+        index = index_class(uri=index_uri, timestamp=52)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
         index_uri = move_local_index_to_new_location(index_uri)
-        index = index_class(uri=index_uri, timestamp=(0, 51))
+        index = index_class(uri=index_uri, timestamp=(0, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
-        index = index_class(uri=index_uri, timestamp=(2, 51))
+        index = index_class(uri=index_uri, timestamp=(3, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
             0.02
@@ -1096,15 +1096,15 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         )
 
         # Timetravel at previous ingestion timestamp
-        index = index_class(uri=index_uri, timestamp=1)
+        index = index_class(uri=index_uri, timestamp=2)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i) == 1.0
-        index = index_class(uri=index_uri, timestamp=(0, 1))
+        index = index_class(uri=index_uri, timestamp=(0, 2))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i) == 1.0
 
         with tiledb.Group(index_uri, "r") as group:
-            assert metadata_to_list(group, "ingestion_timestamps") == [1, 102]
+            assert metadata_to_list(group, "ingestion_timestamps") == [2, 103]
             assert metadata_to_list(group, "base_sizes") == [size, size]
             if index_type == "VAMANA":
                 num_edges_history = metadata_to_list(group, "num_edges_history")
@@ -1112,13 +1112,13 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
                 second_num_edges = num_edges_history[1]
 
         # Clear history before the latest ingestion
-        assert index.latest_ingestion_timestamp == 102
+        assert index.latest_ingestion_timestamp == 103
         Index.clear_history(
             uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1
         )
 
         with tiledb.Group(index_uri, "r") as group:
-            assert metadata_to_list(group, "ingestion_timestamps") == [102]
+            assert metadata_to_list(group, "ingestion_timestamps") == [103]
             assert metadata_to_list(group, "base_sizes") == [size]
             if index_type == "VAMANA":
                 assert metadata_to_list(group, "num_edges_history") == [
@@ -1128,32 +1128,32 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=51)
+        index = index_class(uri=index_uri, timestamp=52)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=101)
+        index = index_class(uri=index_uri, timestamp=102)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-        index = index_class(uri=index_uri, timestamp=(0, 51))
+        index = index_class(uri=index_uri, timestamp=(0, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index_uri = move_local_index_to_new_location(index_uri)
-        index = index_class(uri=index_uri, timestamp=(0, 101))
+        index = index_class(uri=index_uri, timestamp=(0, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
-        index = index_class(uri=index_uri, timestamp=(2, 51))
+        index = index_class(uri=index_uri, timestamp=(3, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=(2, 101))
+        index = index_class(uri=index_uri, timestamp=(3, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=(2, None))
+        index = index_class(uri=index_uri, timestamp=(3, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
@@ -1162,32 +1162,32 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=51)
+        index = index_class(uri=index_uri, timestamp=52)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=101)
+        index = index_class(uri=index_uri, timestamp=102)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=(0, 51))
+        index = index_class(uri=index_uri, timestamp=(0, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=(0, 101))
+        index = index_class(uri=index_uri, timestamp=(0, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=(2, 51))
+        index = index_class(uri=index_uri, timestamp=(3, 52))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=(2, 101))
+        index = index_class(uri=index_uri, timestamp=(3, 102))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
-        index = index_class(uri=index_uri, timestamp=(2, None))
+        index = index_class(uri=index_uri, timestamp=(3, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
 
@@ -1221,7 +1221,7 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
             index_uri=index_uri,
             source_uri=os.path.join(dataset_dir, "data.u8bin"),
             partitions=partitions,
-            index_timestamp=1,
+            index_timestamp=2,
             num_subspaces=num_subspaces,
         )
         if index_type == "IVF_FLAT":
@@ -1238,7 +1238,7 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
             index.update(
                 vector=data[i].astype(dtype),
                 external_id=i + update_ids_offset,
-                timestamp=i + 2,
+                timestamp=i + 3,
             )
             updated_ids[i] = i + update_ids_offset
 

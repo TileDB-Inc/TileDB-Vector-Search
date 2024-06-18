@@ -83,7 +83,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
             128, 0);
     idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors, training_vectors.raveled_ids());
-    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
+    idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 1));
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
         {"dataset_type", "vector_search"},
@@ -93,7 +93,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         {"feature_type", "float32"},
         {"id_type", "uint64"},
         {"indices_type", "uint64"},
-        {"ingestion_timestamps", "[0]"},
+        {"ingestion_timestamps", "[1]"},
         {"base_sizes", "[0]"},
         {"partition_history", "[0]"},
     };
@@ -102,7 +102,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
     CHECK(x.ingestion_timestamps_.size() == 1);
-    CHECK(x.ingestion_timestamps_[0] == 0);
+    CHECK(x.ingestion_timestamps_[0] == 1);
     CHECK(x.base_sizes_.size() == 1);
     CHECK(x.base_sizes_[0] == 0);
     CHECK(x.partition_history_.size() == 1);
