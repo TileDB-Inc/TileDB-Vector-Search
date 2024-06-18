@@ -523,7 +523,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(typed_index.group().get_history_index() == 0);
 
     CHECK(typed_index.group().get_base_size() == 0);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 0);
+    CHECK(typed_index.group().get_ingestion_timestamp() == 1);
 
     CHECK(typed_index.group().get_all_num_edges().size() == 1);
     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
@@ -531,7 +531,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
 
     CHECK(typed_index.group().get_all_num_edges()[0] == 0);
     CHECK(typed_index.group().get_all_base_sizes()[0] == 0);
-    CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 0);
+    CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 1);
   }
 
   // Train it at timestamp 99.
@@ -756,11 +756,11 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   // Load it at timestamp 5 (before ingestion) and make sure we can query and be
   // returned fill values.
   {
-    auto temporal_policy = TemporalPolicy{TimeTravel, 0};
+    auto temporal_policy = TemporalPolicy{TimeTravel, 5};
     auto index = IndexVamana(ctx, index_uri, temporal_policy);
 
     CHECK(index.temporal_policy().timestamp_start() == 0);
-    CHECK(index.temporal_policy().timestamp_end() == 1);
+    CHECK(index.temporal_policy().timestamp_end() == temporal_policy.timestamp_end());
     CHECK(index.l_build() == l_build);
     CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
