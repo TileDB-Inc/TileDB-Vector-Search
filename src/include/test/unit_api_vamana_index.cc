@@ -508,6 +508,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 1));
+
     CHECK(index.temporal_policy().timestamp_end() == 1);
     CHECK(index.l_build() == l_build);
     CHECK(index.r_max_degree() == r_max_degree);

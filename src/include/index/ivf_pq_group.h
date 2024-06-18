@@ -113,13 +113,6 @@ class ivf_pq_group : public base_index_group<index_type> {
               array_name_to_uri(group_uri_, array_name);
         }
       }
-      //  else {
-      //   valid_array_keys_.insert(array_key);
-      //   valid_array_names_.insert(array_name);
-      //   array_key_to_array_name_[array_key] = array_name;
-      //   array_name_to_uri_[array_name] =
-      //       array_name_to_uri(group_uri_, array_name);
-      // }
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
@@ -136,10 +129,10 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_centroids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
-        cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
-    tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_indices_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(cached_ctx_, this->ids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
     for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
       std::string this_table_uri =
           distance_tables_uri() + "_" + std::to_string(i);
