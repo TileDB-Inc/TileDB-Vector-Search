@@ -22,6 +22,7 @@ dependencies = [
     "tiledb>=0.30.0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
+    "numpy<2.0.0",
 ]
 
 [project.optional-dependencies]
