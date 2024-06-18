@@ -78,6 +78,9 @@ auto dist_qv_finite_ram_part(
     const std::string& id_uri,
     size_t k_nn,
     uint64_t timestamp = 0,
+    // The default upper_bound of 200k is selected by assuming vectors with
+    // 1k dimensions each using 4 bytes.
+    // In this case, each load() operation would fetch at most 800MB of data.
     size_t upper_bound = 200000,
     size_t nthreads = std::thread::hardware_concurrency(),
     Distance&& distance = Distance{}) {
