@@ -80,6 +80,7 @@ def ingest(
     ] = None,
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
+    distance_metric: Optional[str] = "L2",
     **kwargs,
 ):
     """
@@ -183,6 +184,8 @@ def ingest(
         Resources to request when performing the write of centroids, only applies to BATCH mode
     partial_index_resources: Optional[Mapping[str, Any]]
         Resources to request when performing the computation of partial indexing, only applies to BATCH mode
+    distance_metric: Optional[str]
+        Distance metric to use for the index, defaults to 'L2'. Options are 'L2', 'IP', 'COSINE'.
     """
     import enum
     import json
@@ -2948,6 +2951,8 @@ def ingest(
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
+            group.meta["distance_metric"] = str(distance_metric)
+            
             group.close()
 
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)

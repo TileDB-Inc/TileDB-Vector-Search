@@ -573,11 +573,23 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
          ColMajorMatrix<float>& query_vectors,
          const std::vector<uint64_t>& ids,
          int k,
-         size_t nthreads)
+         size_t nthreads,
+         std::string distance_metric = "L2")
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        auto r =
-            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
-        return r;
+
+        if(distance_metric == "L2"){
+          auto r =
+            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads, sum_of_squares_distance{});
+          return r;
+        }
+        else if(distance_metric == "IP" || distance_metric == "COSINE"){
+          auto r =
+            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads, inner_product_distance{});
+          return r;
+        }
+        else{
+          throw std::runtime_error("Invalid distance metric");
+        }
       });
 }
 

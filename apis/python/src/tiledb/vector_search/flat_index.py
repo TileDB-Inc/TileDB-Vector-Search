@@ -135,9 +135,17 @@ class FlatIndex(index.Index):
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
             )
+        distance_metric = self.group.meta.get("distance_metric", "L2")
+
+        if distance_metric == "COSINE":
+            norms = np.linalg.norm(queries, axis=1, keepdims=True)
+            # Avoid division by zero by setting zero norms to one (or small number)
+            norms[norms == 0] = 1
+            # Normalize each row in the array
+            queries = queries / norms
 
         queries_m = array_to_matrix(np.transpose(queries))
-        d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
+        d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads, distance_metric)
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
 
