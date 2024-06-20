@@ -135,18 +135,21 @@ class FlatIndex(index.Index):
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
             )
-        
+
         try:
-            distance_metric = vspy.DistanceMetric(self.group.meta.get("distance_metric", vspy.DistanceMetric.L2))
+            distance_metric = vspy.DistanceMetric(
+                self.group.meta.get("distance_metric", vspy.DistanceMetric.L2)
+            )
         except ValueError:
             distance_metric = vspy.DistanceMetric.L2
             raise ValueError(
                 f"Invalid distance metric in metadata: {self.group.meta.get('distance_metric')}. Using default L2."
             )
-        
-        
+
         queries_m = array_to_matrix(np.transpose(queries))
-        d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads, distance_metric)
+        d, i = query_vq_heap(
+            self._db, queries_m, self._ids, k, nthreads, distance_metric
+        )
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
 

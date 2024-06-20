@@ -19,13 +19,13 @@ from typing import Any, Mapping, Optional, Tuple
 import numpy as np
 
 from tiledb.cloud.dag import Mode
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import to_temporal_policy
-from tiledb.vector_search import _tiledbvspy as vspy
 
 
 class TrainingSamplingPolicy(enum.Enum):
@@ -82,7 +82,7 @@ def ingest(
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
     distance_metric: Optional[vspy.DistanceMetric] = vspy.DistanceMetric.L2,
-    **kwargs,   
+    **kwargs,
 ):
     """
     Ingest vectors into TileDB.
@@ -2757,10 +2757,12 @@ def ingest(
             training_source_type,
         )
         logger.debug("Number of workers %d", workers)
-        
-        if(distance_metric!= vspy.DistanceMetric.L2 and index_type != "FLAT"):
-            raise ValueError(f"Distance metric {distance_metric} is not supported with index type {index_type} yet.")
-        
+
+        if distance_metric != vspy.DistanceMetric.L2 and index_type != "FLAT":
+            raise ValueError(
+                f"Distance metric {distance_metric} is not supported with index type {index_type} yet."
+            )
+
         # Compute task parameters for main ingestion.
         if input_vectors_per_work_item == -1:
             # We scale the input_vectors_per_work_item to maintain the DEFAULT_PARTITION_BYTE_SIZE
@@ -2955,7 +2957,7 @@ def ingest(
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
             group.meta["distance_metric"] = int(distance_metric)
-            
+
             group.close()
 
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)

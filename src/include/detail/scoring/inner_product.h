@@ -50,7 +50,8 @@ inline float naive_inner_product(const V& a, const W& b) {
 
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float naive_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
@@ -61,8 +62,9 @@ inline float naive_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float naive_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
@@ -73,8 +75,10 @@ inline float naive_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float naive_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
@@ -113,7 +117,8 @@ inline float unroll4_inner_product(const V& a, const W& b) {
 
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float unroll4_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);
@@ -134,8 +139,9 @@ inline float unroll4_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float unroll4_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);
@@ -156,8 +162,10 @@ inline float unroll4_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float unroll4_inner_product(const V& a, const W& b) {
   size_t size_a = size(a);
   size_t stop = 4 * (size_a / 4);

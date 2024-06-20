@@ -576,23 +576,19 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
          size_t nthreads,
          DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-
-        if(distance_metric == DistanceMetric::L2){
-          auto r =
-            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads, sum_of_squares_distance{});
+        if (distance_metric == DistanceMetric::L2) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, sum_of_squares_distance{});
           return r;
-        }
-        else if(distance_metric == DistanceMetric::INNER_PRODUCT){
-          auto r =
-            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads, inner_product_distance{});
+        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, inner_product_distance{});
           return r;
-        }
-        else if(distance_metric == DistanceMetric::COSINE){
-          auto r =
-            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads, cosine_distance{});
+        } else if (distance_metric == DistanceMetric::COSINE) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, cosine_distance{});
           return r;
-        }
-        else{
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       });
