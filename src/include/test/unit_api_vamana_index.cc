@@ -498,7 +498,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     auto index = IndexVamana(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
          {"id_type", id_type},
-         {"l_build", std::to_string(l_build)},
+         {"max_candidates", std::to_string(l_build)},
          {"r_max_degree", std::to_string(r_max_degree)},
          {"b_backtrack", std::to_string(b_backtrack)}}));
 
