@@ -286,6 +286,28 @@ using inner_product_distance = _inner_product_distance::inner_product_distance;
 inline constexpr auto inner_product =
     _inner_product_distance::inner_product_distance{};
 
+
+/**
+ * @brief Function object for computing the cosine distance between two vectors.
+ * @tparam T
+*/
+namespace _cosine_distance {
+
+struct cosine_distance {
+
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return 1 - inner_product(a, b) / (sqrt(l2_distance(a)) * sqrt(l2_distance(b)));
+  }
+
+};
+
+
+}  // namespace _cosine_distance
+using cosine_distance = _cosine_distance::cosine_distance;
+
+
+enum class DistanceMetric { L2, INNER_PRODUCT, COSINE };
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
 // ----------------------------------------------------------------------------
