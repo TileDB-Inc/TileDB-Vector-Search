@@ -25,6 +25,7 @@ from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import to_temporal_policy
+from tiledb.vector_search import _tiledbvspy as vspy
 
 
 class TrainingSamplingPolicy(enum.Enum):
@@ -80,8 +81,8 @@ def ingest(
     ] = None,
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
-    distance_metric: Optional[str] = "L2",
-    **kwargs,
+    distance_metric: Optional[vspy.DistanceMetric] = vspy.DistanceMetric.L2,
+    **kwargs,   
 ):
     """
     Ingest vectors into TileDB.
@@ -184,8 +185,8 @@ def ingest(
         Resources to request when performing the write of centroids, only applies to BATCH mode
     partial_index_resources: Optional[Mapping[str, Any]]
         Resources to request when performing the computation of partial indexing, only applies to BATCH mode
-    distance_metric: Optional[str]
-        Distance metric to use for the index, defaults to 'L2'. Options are 'L2', 'IP', 'COSINE'.
+    distance_metric: Optional[vspy.DistanceMetric]
+        Distance metric to use for the index, defaults to 'vspy.DistanceMetric.L2'. Options are 'vspy.DistanceMetric.L2', 'vspy.DistanceMetric.INNER_PRODUCT', 'vspy.DistanceMetric.COSINE'.
     """
     import enum
     import json
@@ -1644,7 +1645,6 @@ def ingest(
             ids_array.close()
 
         # Now that we've ingested the vectors and their IDs, train the index with the data.
-        from tiledb.vector_search import _tiledbvspy as vspy
 
         ctx = vspy.Ctx(config)
         if index_type == "VAMANA":
@@ -2757,7 +2757,10 @@ def ingest(
             training_source_type,
         )
         logger.debug("Number of workers %d", workers)
-
+        
+        if(distance_metric!= vspy.DistanceMetric.L2 and index_type != "FLAT"):
+            raise ValueError(f"Distance metric {distance_metric} is not supported with index type {index_type} yet.")
+        
         # Compute task parameters for main ingestion.
         if input_vectors_per_work_item == -1:
             # We scale the input_vectors_per_work_item to maintain the DEFAULT_PARTITION_BYTE_SIZE
@@ -2951,7 +2954,7 @@ def ingest(
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
-            group.meta["distance_metric"] = str(distance_metric)
+            group.meta["distance_metric"] = int(distance_metric)
             
             group.close()
 
