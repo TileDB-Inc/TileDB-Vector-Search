@@ -1040,6 +1040,15 @@ class ivf_pq_index {
       write_group.append_num_partitions(num_partitions_);
     }
 
+    // When creating from Python we initially call write_index() at timestamp 0.
+    // The goal here is just to create the arrays and save metadata. Return here
+    // so that we don't write the arrays, as if we write with timestamp=0 then
+    // TileDB Core will interpret this as the current timestamp instead, leading
+    // to array fragments created at the current time.
+    if (temporal_policy_.timestamp_end() == 0) {
+      return true;
+    }
+
     // flat_ivf_centroids_, cluster_centroids_, distance_tables_
     // pq_ivf_centroids_, partitioned_pq_vectors_, unpartitioned_pq_vectors_
 

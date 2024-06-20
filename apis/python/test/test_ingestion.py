@@ -957,10 +957,6 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert ingestion_timestamps == [1]
         assert base_sizes == [size]
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48897): Fix time travelling for IVF_PQ and re-enable.
-            continue
-
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
 
@@ -1226,9 +1222,6 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
         )
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
-        if index_type == "IVF_PQ":
-            # TODO(SC-48897): Fix time travelling for IVF_PQ and re-enable.
-            continue
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i) == 1.0
 
