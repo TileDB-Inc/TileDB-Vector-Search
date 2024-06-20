@@ -836,8 +836,8 @@ class vamana_index {
   void log_index() {
     _count_data.insert_entry("dimensions", dimensions_);
     _count_data.insert_entry("num_vectors", num_vectors_);
-    _count_data.insert_entry("max_candidates", l_build_);
-    _count_data.insert_entry("max_connections", r_max_degree_);
+    _count_data.insert_entry("l_build", l_build_);
+    _count_data.insert_entry("r_max_degree", r_max_degree_);
     _count_data.insert_entry("num_edges", graph_.num_edges());
     _count_data.insert_entry("num_comps", num_comps());
     _count_data.insert_entry("num_visited_vertices", num_visited_vertices());
