@@ -52,9 +52,8 @@ def ingest(
     size: int = -1,
     partitions: int = -1,
     num_subspaces: int = -1,
-    l_build: int = -1,
-    r_max_degree: int = -1,
-    b_backtrack: int = -1,
+    max_candidates: int = -1,
+    max_connections: int = -1,
     training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
     copy_centroids_uri: str = None,
     training_sample_size: int = -1,
@@ -123,17 +122,12 @@ def ingest(
         For PQ encoded indexes, the number of subspaces to use in the PQ encoding. We will divide the dimensions into
         num_subspaces parts, and PQ encode each part separately. This means dimensions must
         be divisible by num_subspaces.
-    l_build: int
+    max_candidates: int
         For Vamana indexes, the number of neighbors considered for each node during construction of the graph.
         If not provided, use the default value of 100.
-    r_max_degree: int
+    max_connections: int
         For Vamana indexes, the maximum degree for each node in the final graph.
         If not provided, use the default value of 64.
-    b_backtrack: int
-        For Vamana indexes, how much backtracking is allowed during the greedy search. Higher values allow the search to
-        revisit previously explored vectors, which can improve accuracy at the cost of increased
-        computation time.
-        If not provided, use the default value of l_build.
     copy_centroids_uri: str
         TileDB array URI to copy centroids from, if not provided, centroids are build running `k-means`.
     training_sample_size: int
@@ -2685,9 +2679,8 @@ def ingest(
                             dimensions=dimensions,
                             vector_type=vector_type,
                             config=config,
-                            l_build=l_build,
-                            r_max_degree=r_max_degree,
-                            b_backtrack=b_backtrack,
+                            max_candidates=max_candidates,
+                            max_connections=max_connections,
                             storage_version=storage_version,
                         )
                     elif index_type == "IVF_PQ":

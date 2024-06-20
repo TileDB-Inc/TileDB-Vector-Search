@@ -137,9 +137,8 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
-    l_build: int = -1,
-    r_max_degree: int = -1,
-    b_backtrack: int = -1,
+    max_candidates: int = 100,
+    max_connections: int = 64,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     **kwargs,
@@ -155,17 +154,10 @@ def create(
     vector_type: np.dtype
         Datatype of vectors.
         Supported values (uint8, int8, float32).
-    l_build: int
+    max_candidates: int
         The number of neighbors considered for each node during construction of the graph.
-        If not provided, use the default value of 100.
-    r_max_degree: int
+    max_connections: int
         The maximum degree for each node in the final graph.
-        If not provided, use the default value of 64.
-    b_backtrack: int
-        How much backtracking is allowed during the greedy search. Higher values allow the search to
-        revisit previously explored vectors, which can improve accuracy at the cost of increased
-        computation time.
-        If not provided, use the default value of l_build.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
     storage_version: str
@@ -180,17 +172,12 @@ def create(
         )
     ctx = vspy.Ctx(config)
 
-    l_build = 100 if l_build == -1 else l_build
-    r_max_degree = 64 if r_max_degree == -1 else r_max_degree
-    b_backtrack = l_build if b_backtrack == -1 else b_backtrack
-
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
-        l_build=l_build,
-        r_max_degree=r_max_degree,
-        b_backtrack=b_backtrack,
+        max_candidates=max_candidates,
+        max_connections=max_connections,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

@@ -365,6 +365,8 @@ void init_type_erased_module(py::module_& m) {
       .def("feature_type_string", &IndexVamana::feature_type_string)
       .def("id_type_string", &IndexVamana::id_type_string)
       .def("dimensions", &IndexVamana::dimensions)
+      .def("max_candidates", &IndexVamana::l_build)
+      .def("max_connections", &IndexVamana::r_max_degree)
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,
