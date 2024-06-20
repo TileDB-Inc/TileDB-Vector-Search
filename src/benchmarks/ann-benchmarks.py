@@ -7,7 +7,7 @@
 #   1. TILEDB_EC2_KEY_NAME: Your EC2 key pair name.
 #   2. TILEDB_EC2_KEY_PATH: The to your local private key file.
 #     -  Make sure to `chmod 400 /path/to/key.pem` after download.
-# - python src/benchmarks/ann-benchmarks.py
+# - caffeinate python src/benchmarks/ann-benchmarks.py
 
 import logging
 import os
@@ -18,19 +18,38 @@ from datetime import datetime
 import boto3
 import paramiko
 
-also_benchmark_others = True
 installations = ["tiledb"]
-algorithms = ["tiledb-ivf-flat", "tiledb-flat"]
+algorithms = [
+    "tiledb-ivf-flat",
+    "tiledb-ivf-pq",
+    "tiledb-flat",
+    # NOTE(paris): Commented out until Vamana disk space usage is optimized.
+    # "tiledb-vamana"
+]
+
+also_benchmark_others = True
 if also_benchmark_others:
-    installations += ["qdrant", "weaviate", "milvus", "pgvector"]
+    # TODO(paris): Some of these are failing so commented out. Investigate and re-enable.
+    installations += [
+        # "flann",
+        # "faiss",
+        # "hnswlib",
+        # "weaviate"
+        # "milvus",
+        "pgvector"
+    ]
     algorithms += [
-        "qdrant",
-        "weaviate",
-        "milvus-flat",
-        "milvus-ivfflat",
-        "milvus-ivfpq",
-        "milvus-scann",
-        "milvus-hnsw",
+        # "flann",
+        # "faiss-ivf",
+        # "faiss-lsh",
+        # "faiss-ivfpqfs",
+        # "hnswlib",
+        # "weaviate",
+        # "milvus-flat",
+        # "milvus-ivfflat",
+        # "milvus-ivfpq",
+        # "milvus-scann",
+        # "milvus-hnsw",
         "pgvector",
     ]
 
