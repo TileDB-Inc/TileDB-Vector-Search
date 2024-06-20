@@ -482,7 +482,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   auto id_type = "uint32";
   size_t dimensions = 3;
   size_t l_build = 100;
-  size_t r_max_degree = 64;
   size_t b_backtrack = 50;
 
   std::string index_uri =
@@ -499,7 +498,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
         {{"feature_type", feature_type},
          {"id_type", id_type},
          {"max_candidates", std::to_string(l_build)},
-         {"r_max_degree", std::to_string(r_max_degree)},
          {"b_backtrack", std::to_string(b_backtrack)}}));
 
     size_t num_vectors = 0;
@@ -511,7 +509,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
 
     CHECK(index.temporal_policy().timestamp_end() == 0);
     CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -547,7 +544,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
         index.temporal_policy().timestamp_end() ==
         std::numeric_limits<uint64_t>::max());
     CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -564,7 +560,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     // This also updates the timestamp of the index - we're now at timestamp 99.
     CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -612,7 +607,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
         index.temporal_policy().timestamp_end() ==
         std::numeric_limits<uint64_t>::max());
     CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -685,7 +679,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
 
     CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -744,7 +737,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(index.temporal_policy().timestamp_start() == 0);
     CHECK(index.temporal_policy().timestamp_end() == 0);
     CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
@@ -808,7 +800,6 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
 
     CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
     CHECK(index.b_backtrack() == b_backtrack);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
