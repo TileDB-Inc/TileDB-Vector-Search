@@ -757,6 +757,15 @@ class vamana_index {
       write_group.append_num_edges(graph_.num_edges());
     }
 
+    // When creating from Python we initially call write_index() at timestamp 0.
+    // The goal here is just to create the arrays and save metadata. Return here
+    // so that we don't write the arrays, as if we write with timestamp=0 then
+    // TileDB Core will interpret this as the current timestamp instead, leading
+    // to array fragments created at the current time.
+    if (temporal_policy_.timestamp_end() == 0) {
+      return true;
+    }
+
     write_matrix(
         ctx,
         feature_vectors_,
