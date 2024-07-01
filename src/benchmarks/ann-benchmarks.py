@@ -3,24 +3,63 @@
 # To run:
 # - pip install ".[benchmarks]"
 # - Set up your AWS credentials locally. You can set them in `~/.aws/credentials` to be picked up automatically.
-# - Fill in the following details. You can create these in the EC2 console.
-#   1. key_name: Your EC2 key pair name.
-#   2. key_path: The to your local private key file.
+# - Add environment variables which hold the values below. You can create these in the EC2 console.
+#   1. TILEDB_EC2_KEY_NAME: Your EC2 key pair name.
+#   2. TILEDB_EC2_KEY_PATH: The path to your local private key file.
 #     -  Make sure to `chmod 400 /path/to/key.pem` after download.
-# - python src/benchmarks/ann-benchmarks.py
+# - caffeinate python src/benchmarks/ann-benchmarks.py
 
 import logging
 import os
 import socket
 import time
+from datetime import datetime
 
 import boto3
 import paramiko
 
-# You must fill these in before running the script:
-key_name = "key_name"
-key_path = "/path/to/key.pem"
+installations = ["tiledb"]
+algorithms = [
+    "tiledb-ivf-flat",
+    "tiledb-ivf-pq",
+    "tiledb-flat",
+    # NOTE(paris): Commented out until Vamana disk space usage is optimized.
+    # "tiledb-vamana"
+]
 
+also_benchmark_others = True
+if also_benchmark_others:
+    # TODO(paris): Some of these are failing so commented out. Investigate and re-enable.
+    installations += [
+        # "flann",
+        # "faiss",
+        # "hnswlib",
+        # "weaviate"
+        # "milvus",
+        "pgvector"
+    ]
+    algorithms += [
+        # "flann",
+        # "faiss-ivf",
+        # "faiss-lsh",
+        # "faiss-ivfpqfs",
+        # "hnswlib",
+        # "weaviate",
+        # "milvus-flat",
+        # "milvus-ivfflat",
+        # "milvus-ivfpq",
+        # "milvus-scann",
+        # "milvus-hnsw",
+        "pgvector",
+    ]
+
+# You must set these before running the script:
+key_name = os.environ.get("TILEDB_EC2_KEY_NAME")
+key_path = os.environ.get("TILEDB_EC2_KEY_PATH")
+if key_name is None:
+    raise ValueError("Please set TILEDB_EC2_KEY_NAME before running.")
+if key_path is None:
+    raise ValueError("Please set TILEDB_EC2_KEY_PATH before running.")
 if not os.path.exists(key_path):
     raise FileNotFoundError(
         f"Key file not found at {key_path}. Please set the correct path before running."
@@ -34,14 +73,20 @@ instance_type = "r6i.16xlarge"
 ami_id = "ami-09e647bf7a368e505"
 username = "ec2-user"
 
-# Configure logging
+# Configure logging.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
-results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+
+# Create a new folder in results_dir with the current date and time.
+results_dir = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "results",
+    datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+)
 os.makedirs(results_dir, exist_ok=True)
+
+# Also log to a text file.
 log_file_path = os.path.join(results_dir, "ann-benchmarks-logs.txt")
-if os.path.exists(log_file_path):
-    open(log_file_path, "w").close()
 file_handler = logging.FileHandler(log_file_path)
 file_handler.setLevel(logging.INFO)
 logger.addHandler(file_handler)
@@ -102,6 +147,17 @@ try:
         SecurityGroupIds=security_group_ids,
         MinCount=1,
         MaxCount=1,
+        BlockDeviceMappings=[
+            {
+                "DeviceName": "/dev/xvda",
+                "Ebs": {
+                    # Size in GiB.
+                    "VolumeSize": 30,
+                    # General Purpose SSD (gp3).
+                    "VolumeType": "gp3",
+                },
+            }
+        ],
     )
     instance_id = response["Instances"][0]["InstanceId"]
     logger.info(f"Launched EC2 instance with ID: {instance_id}")
@@ -150,6 +206,7 @@ try:
         "sudo yum install docker -y",
         "sudo service docker start",
         "sudo usermod -a -G docker ec2-user",
+        # Docker will not yet be in the groups:
         "groups",
     ]
     execute_commands(ssh, initial_commands)
@@ -159,25 +216,44 @@ try:
     ssh.close()
     time.sleep(10)
     ssh.connect(public_dns, username=username, key_filename=key_path)
-    logger.info("Reconnected to the instance.")
+    logger.info("Reconnected to the instance to refresh group membership.")
+
+    ann_benchmarks_dir = "/home/ec2-user/ann-benchmarks"
 
     # Run the benchmarks.
     post_reconnect_commands = [
+        # Docker should now be in the groups:
         "groups",
         "git clone https://github.com/TileDB-Inc/ann-benchmarks.git",
-        "cd ann-benchmarks && pip3 install -r requirements.txt",
-        "cd ann-benchmarks && python3 install.py --algorithm tiledb",
-        "cd ann-benchmarks && python3 run.py --dataset sift-128-euclidean --algorithm tiledb-ivf-flat --force --batch",
-        "cd ann-benchmarks && sudo chmod -R 777 results/sift-128-euclidean/10/tiledb-ivf-flat-batch",
-        "cd ann-benchmarks && python3 create_website.py",
+        f"cd {ann_benchmarks_dir} && pip3 install -r requirements.txt",
     ]
+    for installation in installations:
+        post_reconnect_commands.append(
+            f"cd {ann_benchmarks_dir} && python3 install.py --algorithm {installation}"
+        )
+    for algorithm in algorithms:
+        post_reconnect_commands += [
+            f"cd {ann_benchmarks_dir} && python3 run.py --dataset sift-128-euclidean --algorithm {algorithm} --force --batch",
+            f"cd {ann_benchmarks_dir} && sudo chmod -R 777 results/sift-128-euclidean/10/{algorithm}-batch",
+        ]
+    post_reconnect_commands.append(
+        f"cd {ann_benchmarks_dir} && python3 create_website.py"
+    )
     execute_commands(ssh, post_reconnect_commands)
+
+    logger.info("Finished running the benchmarks.")
 
     # Download the results.
     remote_paths = [
-        "/home/ec2-user/ann-benchmarks/sift-128-euclidean_10_euclidean-batch.png",
-        "/home/ec2-user/ann-benchmarks/sift-128-euclidean_10_euclidean-batch.html",
+        f"{ann_benchmarks_dir}/index.html",
+        f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.png",
+        f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.html",
     ]
+    for algorithm in algorithms:
+        remote_paths += [
+            f"{ann_benchmarks_dir}/{algorithm}-batch.png",
+            f"{ann_benchmarks_dir}/{algorithm}-batch.html",
+        ]
     sftp = ssh.open_sftp()
     for remote_path in remote_paths:
         local_filename = os.path.basename(remote_path)
@@ -194,11 +270,15 @@ try:
 except Exception as e:
     logger.error(f"Error occurred: {e}")
     if "instance_id" in locals():
-        logger.info(f"Will terminate instance {instance_id}.")
+        logger.info(
+            f"Will terminate instance {instance_id} available at public_dns: {public_dns}."
+        )
         terminate_instance(instance_id)
 
 else:
-    logger.info(f"Finished, will try to terminate instance {instance_id}.")
+    logger.info(
+        f"Finished, will try to terminate instance {instance_id} available at public_dns: {public_dns}."
+    )
     if "instance_id" in locals():
         logger.info(f"Will terminate instance {instance_id}.")
         terminate_instance(instance_id)
