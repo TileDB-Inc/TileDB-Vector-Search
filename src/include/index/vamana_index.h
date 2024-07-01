@@ -186,8 +186,7 @@ class vamana_index {
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
       , l_build_{l_build}
-      , r_max_degree_{r_max_degree}
-       {
+      , r_max_degree_{r_max_degree} {
   }
 
   /**
