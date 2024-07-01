@@ -63,7 +63,7 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
     vfs.remove_dir(uri);
   }
   auto idx =
-      vamana_index<siftsmall_feature_type, siftsmall_ids_type>(0, 20, 40, 30);
+      vamana_index<siftsmall_feature_type, siftsmall_ids_type>(0, 20, 40);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
