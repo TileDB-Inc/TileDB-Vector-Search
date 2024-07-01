@@ -5,7 +5,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 Tileinput_vectors, Inc.
+ * @copyright Copyright (c) 2023 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -95,8 +95,7 @@ int ivf_index(
       0,
       centroid_read_temporal_policy);
   centroids.load();
-  // Find the centroid that is closest to each vector in the database. We'll put
-  // the vector in the partition corresponding to that centroid.
+  // Find the centroid that is closest to each input vector.
   auto parts = detail::flat::qv_partition(centroids, input_vectors, nthreads);
   {
     scoped_timer _{"shuffling data"};
