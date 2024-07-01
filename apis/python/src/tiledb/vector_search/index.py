@@ -59,6 +59,7 @@ class Index:
         self.ctx = vspy.Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
+        self.distance_metric = self.group.meta.get("distance_metric", "L2")
         if (
             not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
             and timestamp is not None

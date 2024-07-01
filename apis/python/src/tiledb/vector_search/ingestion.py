@@ -19,6 +19,7 @@ from typing import Any, Mapping, Optional, Tuple
 import numpy as np
 
 from tiledb.cloud.dag import Mode
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
@@ -82,6 +83,7 @@ def ingest(
     ] = None,
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ):
     """
@@ -191,6 +193,8 @@ def ingest(
         Resources to request when performing the write of centroids, only applies to BATCH mode
     partial_index_resources: Optional[Mapping[str, Any]]
         Resources to request when performing the computation of partial indexing, only applies to BATCH mode
+    distance_metric: Optional[vspy.DistanceMetric]
+        Distance metric to use for the index, defaults to 'vspy.DistanceMetric.L2'. Options are 'vspy.DistanceMetric.L2', 'vspy.DistanceMetric.INNER_PRODUCT', 'vspy.DistanceMetric.COSINE'.
     """
     import enum
     import json
@@ -690,6 +694,7 @@ def ingest(
                     group_exists=True,
                     config=config,
                     storage_version=storage_version,
+                    distance_metric=distance_metric,
                 )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
@@ -700,6 +705,7 @@ def ingest(
                     group_exists=True,
                     config=config,
                     storage_version=storage_version,
+                    distance_metric=distance_metric,
                 )
             partial_write_array_index_uri = create_partial_write_array_group(
                 temp_data_group=temp_data_group,
@@ -1649,7 +1655,6 @@ def ingest(
             ids_array.close()
 
         # Now that we've ingested the vectors and their IDs, train the index with the data.
-        from tiledb.vector_search import _tiledbvspy as vspy
 
         ctx = vspy.Ctx(config)
         if index_type == "VAMANA":
@@ -2682,6 +2687,7 @@ def ingest(
                             l_build=l_build,
                             r_max_degree=r_max_degree,
                             storage_version=storage_version,
+                            distance_metric=distance_metric,
                         )
                     elif index_type == "IVF_PQ":
                         ivf_pq_index.create(
@@ -2692,6 +2698,7 @@ def ingest(
                             partitions=partitions,
                             config=config,
                             storage_version=storage_version,
+                            distance_metric=distance_metric,
                         )
                     else:
                         raise ValueError(f"Unsupported index type {index_type}")
@@ -2958,6 +2965,7 @@ def ingest(
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
+
             group.close()
 
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)

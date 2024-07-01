@@ -503,6 +503,7 @@ def create(
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> IVFFlatIndex:
     """
@@ -528,6 +529,11 @@ def create(
     """
     validate_storage_version(storage_version)
 
+    if distance_metric != vspy.DistanceMetric.L2:
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in IVF_FLAT"
+        )
+
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,
@@ -539,6 +545,7 @@ def create(
     )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
+        group.meta["distance_metric"] = int(distance_metric)
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
         group.meta["partition_history"] = json.dumps([0])
         centroids_array_name = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
