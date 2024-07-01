@@ -26,8 +26,10 @@ from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import to_temporal_policy
 
 INDEX_TYPE = "VAMANA"
+
 L_BUILD_DEFAULT = 100
 R_MAX_DEGREE_DEFAULT = 64
+L_SEARCH_DEFAULT = 100
 
 
 class VamanaIndex(index.Index):
@@ -99,7 +101,7 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        l_search: Optional[int] = L_BUILD_DEFAULT,
+        l_search: Optional[int] = L_SEARCH_DEFAULT,
         **kwargs,
     ):
         """
@@ -112,7 +114,8 @@ class VamanaIndex(index.Index):
         k: int
             Number of results to return per query vector.
         l_search: int
-            How deep to search. Should be >= k, and if it's not, we will set it to k.
+            How deep to search. Larger parameters will result in slower latencies, but higher accuracies.
+            Should be >= k, and if it's not, we will set it to k.
         """
         if self.size == 0:
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
