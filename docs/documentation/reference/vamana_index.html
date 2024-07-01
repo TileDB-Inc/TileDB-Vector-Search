@@ -289,16 +289,16 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="tiledb.vector_search.vamana_index.VamanaIndex.query_internal" class="level5">
 <h5 class="anchored" data-anchor-id="tiledb.vector_search.vamana_index.VamanaIndex.query_internal">query_internal</h5>
-<p><code>vector_search.vamana_index.VamanaIndex.query_internal(queries, k=10, l_search=100, **kwargs)</code></p>
+<p><code>vector_search.vamana_index.VamanaIndex.query_internal(queries, k=10, l_search=L_SEARCH_DEFAULT, **kwargs)</code></p>
 <p>Queries a <code>VamanaIndex</code>.</p>
 <section id="parameters-1" class="level6">
 <h6 class="anchored" data-anchor-id="parameters-1">Parameters</h6>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
-<col style="width: 11%">
-<col style="width: 73%">
-<col style="width: 7%">
+<col style="width: 6%">
+<col style="width: 8%">
+<col style="width: 75%">
+<col style="width: 10%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -324,8 +324,8 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>l_search</code></td>
 <td>Optional[int]</td>
-<td>How deep to search. Should be &gt;= k, and if it’s not, we will set it to k.</td>
-<td><code>100</code></td>
+<td>How deep to search. Larger parameters will result in slower latencies, but higher accuracies. Should be &gt;= k, and if it’s not, we will set it to k.</td>
+<td><code>L_SEARCH_DEFAULT</code></td>
 </tr>
 </tbody>
 </table>
@@ -352,16 +352,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.vamana_index.create" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.vamana_index.create">create</h3>
-<p><code>vector_search.vamana_index.create(uri, dimensions, vector_type, config=None, storage_version=STORAGE_VERSION, **kwargs)</code></p>
+<p><code>vector_search.vamana_index.create(uri, dimensions, vector_type, l_build=L_BUILD_DEFAULT, r_max_degree=R_MAX_DEGREE_DEFAULT, config=None, storage_version=STORAGE_VERSION, **kwargs)</code></p>
 <p>Creates an empty VamanaIndex.</p>
 <section id="parameters-2" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 10%">
-<col style="width: 18%">
-<col style="width: 59%">
-<col style="width: 10%">
+<col style="width: 4%">
+<col style="width: 7%">
+<col style="width: 83%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -389,6 +389,18 @@ ul.task-list li input[type="checkbox"] {
 <td>np.dtype</td>
 <td>Datatype of vectors. Supported values (uint8, int8, float32).</td>
 <td><em>required</em></td>
+</tr>
+<tr class="even">
+<td><code>l_build</code></td>
+<td>int</td>
+<td>The number of neighbors considered for each node during construction of the graph. Larger values will take more time to build but result in indices that provide higher recall for the same search complexity. l_build should be &gt;= r_max_degree unless you need to build indices quickly and can compromise on quality. Typically between 75 and 200. If not provided, use the default value of 100.</td>
+<td><code>L_BUILD_DEFAULT</code></td>
+</tr>
+<tr class="odd">
+<td><code>r_max_degree</code></td>
+<td>int</td>
+<td>The maximum degree for each node in the final graph. Larger values will result in larger indices and longer indexing times, but better search quality. Typically between 60 and 150. If not provided, use the default value of 64.</td>
+<td><code>R_MAX_DEGREE_DEFAULT</code></td>
 </tr>
 <tr class="even">
 <td><code>config</code></td>
