@@ -283,6 +283,18 @@ def test_construct_IndexVamana():
     assert a.id_type_string() == "int64"
     assert a.dimensions() == 0
 
+    a = vspy.IndexVamana(feature_type="float32", id_type="int64", l_build=11)
+    assert a.l_build() == 11
+
+    a = vspy.IndexVamana(feature_type="float32", id_type="int64", r_max_degree=22)
+    assert a.r_max_degree() == 22
+
+    a = vspy.IndexVamana(
+        feature_type="float32", id_type="int64", l_build=11, r_max_degree=22
+    )
+    assert a.l_build() == 11
+    assert a.r_max_degree() == 22
+
 
 def test_construct_IndexVamana_with_empty_vector(tmp_path):
     l_search = 100
@@ -291,12 +303,16 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
     dimensions = 128
     feature_type = "float32"
     id_type = "uint64"
+    l_build = 100
+    r_max_degree = 101
 
     # First create an empty index.
     a = vspy.IndexVamana(
         feature_type=feature_type,
         id_type=id_type,
         dimensions=dimensions,
+        l_build=l_build,
+        r_max_degree=r_max_degree,
     )
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
     a.train(empty_vector)
@@ -310,6 +326,8 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
     assert query_set.feature_type_string() == "float32"
     groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert groundtruth_set.feature_type_string() == "uint64"
+    assert a.l_build() == l_build
+    assert a.r_max_degree() == r_max_degree
 
     a.train(training_set)
 
