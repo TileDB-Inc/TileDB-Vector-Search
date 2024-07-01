@@ -26,8 +26,8 @@ from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import to_temporal_policy
 
 INDEX_TYPE = "VAMANA"
-MAX_CANDIDATES_DEFAULT = 100
-MAX_CONNECTIONS_DEFAULT = 64
+L_BUILD_DEFAULT = 100
+R_MAX_DEGREE_DEFAULT = 64
 
 
 class VamanaIndex(index.Index):
@@ -99,7 +99,7 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        l_search: Optional[int] = MAX_CANDIDATES_DEFAULT,
+        l_search: Optional[int] = L_BUILD_DEFAULT,
         **kwargs,
     ):
         """
@@ -139,8 +139,8 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
-    max_candidates: int = MAX_CANDIDATES_DEFAULT,
-    max_connections: int = MAX_CONNECTIONS_DEFAULT,
+    l_build: int = L_BUILD_DEFAULT,
+    r_max_degree: int = R_MAX_DEGREE_DEFAULT,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     **kwargs,
@@ -156,10 +156,12 @@ def create(
     vector_type: np.dtype
         Datatype of vectors.
         Supported values (uint8, int8, float32).
-    max_candidates: int
-        The number of neighbors considered for each node during construction of the graph.
-    max_connections: int
-        The maximum degree for each node in the final graph.
+    l_build: int
+        The number of neighbors considered for each node during construction of the graph. Larger values will take more time to build but result in indices that provide higher recall for the same search complexity. l_build should be >= r_max_degree unless you need to build indices quickly and can compromise on quality.
+        Typically between 75 and 200. If not provided, use the default value of 100.
+    r_max_degree: int
+        The maximum degree for each node in the final graph. Larger values will result in larger indices and longer indexing times, but better search quality.
+        Typically between 60 and 150. If not provided, use the default value of 64.
     config: Optional[Mapping[str, Any]]
         TileDB config dictionary.
     storage_version: str
@@ -177,10 +179,8 @@ def create(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
-        max_candidates=max_candidates if max_candidates > 0 else MAX_CANDIDATES_DEFAULT,
-        max_connections=max_connections
-        if max_candidates > 0
-        else MAX_CONNECTIONS_DEFAULT,
+        l_build=l_build if l_build > 0 else L_BUILD_DEFAULT,
+        r_max_degree=r_max_degree if l_build > 0 else R_MAX_DEGREE_DEFAULT,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

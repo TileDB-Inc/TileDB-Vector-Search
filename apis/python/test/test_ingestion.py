@@ -42,8 +42,8 @@ def test_vamana_ingestion_u8(tmp_path):
     if os.path.exists(index_uri):
         shutil.rmtree(index_uri)
 
-    max_candidates = 101
-    max_connections = 65
+    l_build = 101
+    r_max_degree = 65
     dimensions = 100
     create_random_dataset_u8(nb=10000, d=dimensions, nq=100, k=10, path=dataset_dir)
     dtype = np.dtype(np.uint8)
@@ -56,8 +56,8 @@ def test_vamana_ingestion_u8(tmp_path):
         index_type="VAMANA",
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
-        max_candidates=max_candidates,
-        max_connections=max_connections,
+        l_build=l_build,
+        r_max_degree=r_max_degree,
     )
 
     # This is not a public API, but we directly load the C++ type-erased index to test it. If you
@@ -65,8 +65,8 @@ def test_vamana_ingestion_u8(tmp_path):
     ctx = vspy.Ctx({})
     type_erased_index = vspy.IndexVamana(ctx, index_uri, None)
     assert type_erased_index.dimensions() == dimensions
-    assert type_erased_index.max_candidates() == max_candidates
-    assert type_erased_index.max_connections() == max_connections
+    assert type_erased_index.l_build() == l_build
+    assert type_erased_index.r_max_degree() == r_max_degree
 
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY

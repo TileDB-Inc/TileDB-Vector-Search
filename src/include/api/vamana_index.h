@@ -96,9 +96,9 @@ class IndexVamana {
         auto value = c.second;
         if (key == "dimensions") {
           dimensions_ = std::stol(value);
-        } else if (key == "max_candidates") {
+        } else if (key == "l_build") {
           l_build_ = std::stol(value);
-        } else if (key == "max_connections") {
+        } else if (key == "r_max_degree") {
           r_max_degree_ = std::stol(value);
         } else if (key == "b_backtrack") {
           b_backtrack_ = std::stol(value);
