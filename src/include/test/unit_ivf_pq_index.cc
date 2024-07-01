@@ -373,15 +373,8 @@ TEST_CASE(
   }
 }
 
-// Current code requires that the number of vectors in the training set be at
-// least as large as the number of clusters.
-//
-#if 0
 TEMPLATE_TEST_CASE(
-    "query stacked hypercube",
-    "[flativf_index]",
-    float,
-    uint8_t) {
+    "query stacked hypercube", "[flativf_index]", float, uint8_t) {
   size_t k_dist = GENERATE(0, 32);
   size_t k_near = k_dist;
   size_t k_far = k_dist;
@@ -406,74 +399,75 @@ TEMPLATE_TEST_CASE(
       hypercube4(j + 9, i) = hypercube1(j, i);
     }
   }
-  SECTION("nlist = 1") {
-    size_t k_nn = 6;
-    size_t nlist = 1;
 
-    auto ivf_idx2 = ivf_pq_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 2, 4, 1.e-4);  // dim nlist maxiter eps nthreads
-    ivf_idx2.train_ivf(hypercube2);
-    ivf_idx2.add(hypercube2, ids);
-    auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 2, 4, 1.e-4);
-    ivf_idx4.train_ivf(hypercube4);
-    ivf_idx4.add(hypercube4, ids);
+  size_t k_nn = 6;
+  size_t nlist = 1;
+  size_t num_subspaces = 3;
+  size_t max_iter = 4;
+  float tol = 1.e-4;
 
-    auto top_k_ivf_scores = ColMajorMatrix<float>();
-    auto top_k_ivf = ColMajorMatrix<unsigned>();
-    auto top_k_scores = ColMajorMatrix<float>();
-    auto top_k = ColMajorMatrix<uint64_t>();
-    auto query2 = ColMajorMatrix<TestType>();
-    auto query4 = ColMajorMatrix<TestType>();
+  auto ivf_idx2 = ivf_pq_index<TestType, uint32_t, uint32_t>(
+      nlist, dimensions(hypercube2), max_iter, tol);
+  ivf_idx2.train_ivf(hypercube2);
+  ivf_idx2.add(hypercube2, ids);
+  auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(
+      nlist, dimensions(hypercube4), max_iter, tol);
+  ivf_idx4.train_ivf(hypercube4);
+  ivf_idx4.add(hypercube4, ids);
 
-    SECTION("query2/4 = 0...") {
-      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
-      query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-    }
-    SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
-      query4 = ColMajorMatrix<TestType>{
-          {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
-    }
-    SECTION("query2/4 = 0...") {
-      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
-      query4 = ColMajorMatrix<TestType>{
-          {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
-    }
-    SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
-      query4 = ColMajorMatrix<TestType>{
-          {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
-    }
-    SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{
-          {127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}};
-      query4 = ColMajorMatrix<TestType>{
-          {127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
-          {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
-    }
-
-    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
-        hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
-    std::tie(top_k_ivf_scores, top_k_ivf) =
-        ivf_idx2.query_infinite_ram(query2, k_nn, 1);  // k, nprobe
-    size_t intersections0 = count_intersections(top_k_ivf, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-    CHECK(intersections0 == k_nn * num_vectors(query2));
-    CHECK(recall0 == 1.0);
-
-    std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
-        hypercube4, query4, k_nn, 1, sum_of_squares_distance{});
-    std::tie(top_k_ivf_scores, top_k_ivf) =
-        ivf_idx4.query_infinite_ram(query4, k_nn, 1);  // k, nprobe
-
-    size_t intersections1 = (long)count_intersections(top_k_ivf, top_k, k_nn);
-    double recall1 = intersections1 / ((double)top_k.num_cols() * k_nn);
-    CHECK(intersections1 == k_nn * num_vectors(query4));
-    CHECK(recall1 == 1.0);
+  auto query2 = ColMajorMatrix<TestType>();
+  auto query4 = ColMajorMatrix<TestType>();
+  SECTION("query with all 0's") {
+    query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
+    query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
   }
+  SECTION("query with all 127's") {
+    query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
+    query4 = ColMajorMatrix<TestType>{
+        {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
+  }
+  SECTION("query with all 0's and then 127's") {
+    query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
+    query4 = ColMajorMatrix<TestType>{
+        {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
+  }
+  SECTION("query with all 127's and then 0's") {
+    query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
+    query4 = ColMajorMatrix<TestType>{
+        {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
+  }
+  SECTION("query with alternating 127's and 0's") {
+    query2 = ColMajorMatrix<TestType>{
+        {127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}};
+    query4 = ColMajorMatrix<TestType>{
+        {127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
+        {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
+  }
+
+  auto top_k_scores = ColMajorMatrix<float>();
+  auto top_k_ids = ColMajorMatrix<uint64_t>();
+  auto top_k_ivf_scores = ColMajorMatrix<float>();
+  auto top_k_ivf_ids = ColMajorMatrix<uint32_t>();
+
+  std::tie(top_k_scores, top_k_ids) = detail::flat::qv_query_heap(
+      hypercube2, query2, k_nn, 1, sum_of_squares_distance{});
+  std::tie(top_k_ivf_scores, top_k_ivf_ids) =
+      ivf_idx2.query_infinite_ram(query2, k_nn, nlist);
+  size_t intersections0 = count_intersections(top_k_ivf_ids, top_k_ids, k_nn);
+  double recall0 = intersections0 / ((double)top_k_ids.num_cols() * k_nn);
+  CHECK(intersections0 == k_nn * num_vectors(query2));
+  CHECK(recall0 == 1.0);
+
+  std::tie(top_k_scores, top_k_ids) = detail::flat::qv_query_heap(
+      hypercube4, query4, k_nn, 1, sum_of_squares_distance{});
+  std::tie(top_k_ivf_scores, top_k_ivf_ids) =
+      ivf_idx4.query_infinite_ram(query4, k_nn, nlist);
+  size_t intersections1 =
+      (long)count_intersections(top_k_ivf_ids, top_k_ids, k_nn);
+  double recall1 = intersections1 / ((double)top_k_ids.num_cols() * k_nn);
+  CHECK(intersections1 == k_nn * num_vectors(query4));
+  CHECK(recall1 == 1.0);
 }
-#endif
 
 TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
   tiledb::Context ctx;
