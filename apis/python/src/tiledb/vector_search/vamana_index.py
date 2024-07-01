@@ -26,6 +26,8 @@ from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import to_temporal_policy
 
 INDEX_TYPE = "VAMANA"
+MAX_CANDIDATES_DEFAULT = 100
+MAX_CONNECTIONS_DEFAULT = 64
 
 
 class VamanaIndex(index.Index):
@@ -97,7 +99,7 @@ class VamanaIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        l_search: Optional[int] = 100,
+        l_search: Optional[int] = MAX_CANDIDATES_DEFAULT,
         **kwargs,
     ):
         """
@@ -137,8 +139,8 @@ def create(
     uri: str,
     dimensions: int,
     vector_type: np.dtype,
-    max_candidates: int = 100,
-    max_connections: int = 64,
+    max_candidates: int = MAX_CANDIDATES_DEFAULT,
+    max_connections: int = MAX_CONNECTIONS_DEFAULT,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     **kwargs,
@@ -175,8 +177,10 @@ def create(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
-        max_candidates=max_candidates,
-        max_connections=max_connections,
+        max_candidates=max_candidates if max_candidates > 0 else MAX_CANDIDATES_DEFAULT,
+        max_connections=max_connections
+        if max_candidates > 0
+        else MAX_CONNECTIONS_DEFAULT,
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

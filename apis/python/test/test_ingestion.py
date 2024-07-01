@@ -7,6 +7,7 @@ from common import *
 from common import load_metadata
 
 from tiledb.cloud.dag import Mode
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.index import Index
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
@@ -40,7 +41,11 @@ def test_vamana_ingestion_u8(tmp_path):
     index_uri = os.path.join(tmp_path, "array")
     if os.path.exists(index_uri):
         shutil.rmtree(index_uri)
-    create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
+
+    max_candidates = 101
+    max_connections = 65
+    dimensions = 100
+    create_random_dataset_u8(nb=10000, d=dimensions, nq=100, k=10, path=dataset_dir)
     dtype = np.dtype(np.uint8)
     k = 10
 
@@ -51,7 +56,18 @@ def test_vamana_ingestion_u8(tmp_path):
         index_type="VAMANA",
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        max_candidates=max_candidates,
+        max_connections=max_connections,
     )
+
+    # This is not a public API, but we directly load the C++ type-erased index to test it. If you
+    # are a library user, you should not do this yourself, as the API may change.
+    ctx = vspy.Ctx({})
+    type_erased_index = vspy.IndexVamana(ctx, index_uri, None)
+    assert type_erased_index.dimensions() == dimensions
+    assert type_erased_index.max_candidates() == max_candidates
+    assert type_erased_index.max_connections() == max_connections
+
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
