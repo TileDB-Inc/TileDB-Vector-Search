@@ -251,7 +251,6 @@ class Index:
         **kwargs
             Extra kwargs passed here are passed to the `query_internal` implementation of the concrete index class.
         """
-        # print all kwargs
         if queries.ndim != 2:
             raise TypeError(
                 f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions"

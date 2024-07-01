@@ -81,7 +81,7 @@ def ingest(
     ] = None,
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
-    distance_metric: Optional[vspy.DistanceMetric] = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ):
     """
@@ -686,6 +686,7 @@ def ingest(
                     group_exists=True,
                     config=config,
                     storage_version=storage_version,
+                    distance_metric=distance_metric
                 )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
@@ -696,6 +697,7 @@ def ingest(
                     group_exists=True,
                     config=config,
                     storage_version=storage_version,
+                    distance_metric=distance_metric
                 )
             partial_write_array_index_uri = create_partial_write_array_group(
                 temp_data_group=temp_data_group,
@@ -2675,6 +2677,7 @@ def ingest(
                             vector_type=vector_type,
                             config=config,
                             storage_version=storage_version,
+                            distance_metric=distance_metric,
                         )
                     elif index_type == "IVF_PQ":
                         ivf_pq_index.create(
@@ -2685,6 +2688,7 @@ def ingest(
                             partitions=partitions,
                             config=config,
                             storage_version=storage_version,
+                            distance_metric=distance_metric,
                         )
                     else:
                         raise ValueError(f"Unsupported index type {index_type}")
@@ -2956,7 +2960,6 @@ def ingest(
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
-            group.meta["distance_metric"] = int(distance_metric)
 
             group.close()
 

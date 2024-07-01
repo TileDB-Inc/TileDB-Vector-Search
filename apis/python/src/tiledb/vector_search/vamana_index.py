@@ -139,6 +139,7 @@ def create(
     vector_type: np.dtype,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> VamanaIndex:
     """
@@ -170,6 +171,9 @@ def create(
         id_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
     )
+    group = tiledb.Group(uri, "w")
+    group.meta["distance_metric"] = int(distance_metric)
+    group.close()
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(
         dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name

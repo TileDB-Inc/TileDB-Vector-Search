@@ -141,9 +141,8 @@ class FlatIndex(index.Index):
                 self.group.meta.get("distance_metric", vspy.DistanceMetric.L2)
             )
         except ValueError:
-            distance_metric = vspy.DistanceMetric.L2
             raise ValueError(
-                f"Invalid distance metric in metadata: {self.group.meta.get('distance_metric')}. Using default L2."
+                f"Invalid distance metric in metadata: {self.group.meta.get('distance_metric')}."
             )
 
         queries_m = array_to_matrix(np.transpose(queries))
@@ -161,6 +160,7 @@ def create(
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> FlatIndex:
     """
@@ -197,6 +197,7 @@ def create(
     )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
+        group.meta["distance_metric"] = int(distance_metric)
         tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
         parts_array_name = storage_formats[storage_version]["PARTS_ARRAY_NAME"]

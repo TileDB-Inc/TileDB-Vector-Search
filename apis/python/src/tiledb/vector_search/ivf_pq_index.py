@@ -135,6 +135,7 @@ def create(
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     partitions: Optional[int] = None,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> IVFPQIndex:
     """
@@ -177,6 +178,9 @@ def create(
         raise ValueError(
             f"Number of dimensions ({dimensions}) must be divisible by num_subspaces ({num_subspaces})."
         )
+    group = tiledb.Group(uri, "w")
+    group.meta["distance_metric"] = int(distance_metric)
+    group.close()
     index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
