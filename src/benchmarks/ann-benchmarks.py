@@ -5,7 +5,7 @@
 # - Set up your AWS credentials locally. You can set them in `~/.aws/credentials` to be picked up automatically.
 # - Add environment variables which hold the values below. You can create these in the EC2 console.
 #   1. TILEDB_EC2_KEY_NAME: Your EC2 key pair name.
-#   2. TILEDB_EC2_KEY_PATH: The to your local private key file.
+#   2. TILEDB_EC2_KEY_PATH: The path to your local private key file.
 #     -  Make sure to `chmod 400 /path/to/key.pem` after download.
 # - caffeinate python src/benchmarks/ann-benchmarks.py
 
