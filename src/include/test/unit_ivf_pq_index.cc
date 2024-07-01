@@ -374,7 +374,7 @@ TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "query stacked hypercube", "[flativf_index]", float, uint8_t) {
+    "query stacked hypercube", "[flativf_index]", float) {
   size_t k_dist = GENERATE(0, 32);
   std::cout << "k_dist: " << k_dist
             << " -----------------------------------------" << std::endl;
