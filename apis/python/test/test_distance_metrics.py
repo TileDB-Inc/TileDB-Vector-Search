@@ -35,13 +35,13 @@ def test_cosine_similarity(tmp_path):
     nn_cosine_sklearn.fit(dataset_vectors)
     distances_sklearn, indices_sklearn = nn_cosine_sklearn.kneighbors(query_vectors)
 
-    indices_yourlib = index.query(query_vectors, k=5)
+    distances, indices = index.query(query_vectors, k=5)
 
     assert np.allclose(
-        distances_sklearn, indices_yourlib[0], 1e-4
+        distances_sklearn, distances, 1e-4
     ), "Cosine similarity distances do not match"
     assert np.array_equal(
-        indices_sklearn, indices_yourlib[1]
+        indices_sklearn, indices
     ), "Cosine similarity indices do not match"
 
 
@@ -62,15 +62,14 @@ def test_inner_product(tmp_path):
 
     sorted_inner_products_sklearn = np.sort(inner_products_sklearn, axis=1)
 
-    results = index.query(query_vectors, k=5)
-    inner_products_yourlib = results[0]  # Assuming results are [distances, indices]
+    distances, _ = index.query(query_vectors, k=5)
 
-    sorted_inner_products_yourlib = np.sort(inner_products_yourlib, axis=1)
+    sorted_distances = np.sort(distances, axis=1)
 
     for i in range(len(sorted_inner_products_sklearn)):
         compare = sorted_inner_products_sklearn[i][:5]
         assert np.allclose(
-            compare, sorted_inner_products_yourlib[i], 1e-4
+            compare, sorted_distances[i], 1e-4
         ), "Inner products do not match"
 
 

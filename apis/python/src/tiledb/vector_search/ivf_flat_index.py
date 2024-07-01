@@ -529,6 +529,11 @@ def create(
     """
     validate_storage_version(storage_version)
 
+    if distance_metric != vspy.DistanceMetric.L2:
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in IVF_FLAT"
+        )
+
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,

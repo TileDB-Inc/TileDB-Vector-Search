@@ -171,6 +171,10 @@ def create(
         id_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
     )
+    if distance_metric != vspy.DistanceMetric.L2:
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in VAMANA"
+        )
     group = tiledb.Group(uri, "w")
     group.meta["distance_metric"] = int(distance_metric)
     group.close()

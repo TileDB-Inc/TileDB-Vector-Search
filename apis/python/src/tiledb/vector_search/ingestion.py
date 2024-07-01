@@ -686,7 +686,7 @@ def ingest(
                     group_exists=True,
                     config=config,
                     storage_version=storage_version,
-                    distance_metric=distance_metric
+                    distance_metric=distance_metric,
                 )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
@@ -697,7 +697,7 @@ def ingest(
                     group_exists=True,
                     config=config,
                     storage_version=storage_version,
-                    distance_metric=distance_metric
+                    distance_metric=distance_metric,
                 )
             partial_write_array_index_uri = create_partial_write_array_group(
                 temp_data_group=temp_data_group,
@@ -2761,11 +2761,6 @@ def ingest(
             training_source_type,
         )
         logger.debug("Number of workers %d", workers)
-
-        if distance_metric != vspy.DistanceMetric.L2 and index_type != "FLAT":
-            raise ValueError(
-                f"Distance metric {distance_metric} is not supported with index type {index_type} yet."
-            )
 
         # Compute task parameters for main ingestion.
         if input_vectors_per_work_item == -1:
