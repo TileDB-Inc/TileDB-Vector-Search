@@ -393,16 +393,16 @@ class IndexIVFPQ {
     }
 
     index_impl(
-        size_t num_vectors,
-        size_t l_build,
-        size_t r_max_degree,
-        size_t b_backtrack,
+        size_t n_list,
+        size_t num_subspaces,
+        size_t max_iterations,
+        size_t convergence_tolerance,
         std::optional<TemporalPolicy> temporal_policy)
         : impl_index_(
-              num_vectors,
-              l_build,
-              r_max_degree,
-              b_backtrack,
+              n_list,
+              num_subspaces,
+              max_iterations,
+              convergence_tolerance,
               temporal_policy) {
     }
 
