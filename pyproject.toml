@@ -21,8 +21,9 @@ dependencies = [
     "tiledb-cloud>=0.11",
     "tiledb>=0.30.1",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
+    # scikit-learn>=1.4.2 may be needed?
     "scikit-learn",
-    "numpy<2.0.0",
+    "numpy>=1.25.0",
 ]
 
 [project.optional-dependencies]
@@ -35,7 +36,8 @@ homepage = "https://tiledb.com"
 repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 
 [build-system]
-requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm"]
+# pybind11>=2.12 may be needed?
+requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm", "numpy>=2.0.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
@@ -69,6 +71,8 @@ version_file = "apis/python/src/tiledb/vector_search/version.py"
 extend-select = ["I"]
 ignore = ["F403", "F405", "E501", "E741"]
 exclude = [".ipynb"]
+# Numpy 2 rule: https://numpy.org/devdocs/numpy_2_0_migration_guide.html#ruff-plugin
+# select = ["NPY201"]
 
 [tool.ruff.isort]
 known-first-party = ["tiledb"]
