@@ -154,12 +154,6 @@ class vamana_index_group : public base_index_group<index_type> {
   auto set_r_max_degree(size_t size) {
     metadata_.r_max_degree_ = size;
   }
-  auto get_b_backtrack() const {
-    return metadata_.b_backtrack_;
-  }
-  auto set_b_backtrack(size_t size) {
-    metadata_.b_backtrack_ = size;
-  }
   auto get_alpha_min() const {
     return metadata_.alpha_min_;
   }

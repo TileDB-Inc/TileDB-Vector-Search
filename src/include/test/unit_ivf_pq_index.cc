@@ -695,3 +695,69 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     }
   }
 }
+
+TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
+  std::cout << "index_uri: " << index_uri << std::endl;
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  using partitioning_index_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto partitioning_index_type = "uint32";
+  size_t dimensions = 3;
+  size_t n_list = 1;
+  size_t num_subspaces = 1;
+  float convergence_tolerance = 0.00003f;
+  size_t max_iterations = 3;
+
+  // Write the empty index.
+  {
+    auto index = ivf_pq_index<
+        feature_type_type,
+        id_type_type,
+        partitioning_index_type_type>(n_list, dimensions / 2);
+    auto data =
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>(dimensions, 0);
+    index.train(data, data.raveled_ids());
+    index.add(data, data.raveled_ids());
+    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
+  }
+
+  // Train the index at timestamp 99.
+  {
+    auto index = ivf_pq_index<
+        feature_type_type,
+        id_type_type,
+        partitioning_index_type_type>(ctx, index_uri);
+    auto data = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+    index.train(data, data.raveled_ids());
+    index.add(data, data.raveled_ids());
+    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
+  }
+
+  // Load the index and query.
+  {
+    auto index = ivf_pq_index<
+        feature_type_type,
+        id_type_type,
+        partitioning_index_type_type>(ctx, index_uri);
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+    auto&& [scores, ids] = index.query_infinite_ram(queries, 1, n_list);
+    CHECK(std::equal(
+        scores.data(),
+        scores.data() + 4,
+        std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids.data(), ids.data() + 4, std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+  }
+}

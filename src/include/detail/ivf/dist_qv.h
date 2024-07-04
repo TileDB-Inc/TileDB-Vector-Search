@@ -78,6 +78,10 @@ auto dist_qv_finite_ram_part(
     const std::string& id_uri,
     size_t k_nn,
     uint64_t timestamp = 0,
+    // The default upper_bound of 200k is selected by assuming vectors with
+    // 1k dimensions each using 4 bytes.
+    // In this case, each load() operation would fetch at most 800MB of data.
+    size_t upper_bound = 200000,
     size_t nthreads = std::thread::hardware_concurrency(),
     Distance&& distance = Distance{}) {
   if (nthreads == 0) {
@@ -109,12 +113,8 @@ auto dist_qv_finite_ram_part(
       global_indices,
       id_uri,
       dist_active_partitions,
-      0,
+      upper_bound,
       temporal_policy);
-
-  // We are assuming that we are not doing out of core computation here.
-  // (It is easy enough to change this if we need to.)
-  partitioned_vectors.load();
 
   scoped_timer _i{tdb_func__ + " in RAM"};
 
@@ -123,56 +123,58 @@ auto dist_qv_finite_ram_part(
           num_queries,
           fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
 
-  if (::num_partitions(partitioned_vectors) != size(dist_active_partitions)) {
-    throw std::runtime_error(
-        "[dist_qv_finite_ram_part] num_partitions(partitioned_vectors) != "
-        "size(dist_active_partitions)");
-  }
+  size_t part_offset = 0;
+  while (partitioned_vectors.load()) {
+    _i.start();
+    auto current_part_size = ::num_partitions(partitioned_vectors);
+    size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-  auto current_part_size = ::num_partitions(partitioned_vectors);
-  size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
+    std::vector<std::future<decltype(min_scores)>> futs;
+    futs.reserve(nthreads);
 
-  std::vector<std::future<decltype(min_scores)>> futs;
-  futs.reserve(nthreads);
+    for (size_t n = 0; n < nthreads; ++n) {
+      auto first_part =
+          std::min<size_t>(n * parts_per_thread, current_part_size);
+      auto last_part =
+          std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
 
-  for (size_t n = 0; n < nthreads; ++n) {
-    auto first_part = std::min<size_t>(n * parts_per_thread, current_part_size);
-    auto last_part =
-        std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
-
-    if (first_part != last_part) {
-      futs.emplace_back(std::async(
-          std::launch::async,
-          [&query,
-           &partitioned_vectors,
-           &active_queries = dist_active_queries,
-           &distance,
-           k_nn,
-           first_part,
-           last_part]() {
-            return apply_query(
-                partitioned_vectors,
-                std::optional<std::vector<int>>{},
-                // std::optional{active_partitions},
-                query,
-                active_queries,
-                k_nn,
-                first_part,
-                last_part,
-                0,
-                distance);
-          }));
-    }
-  }
-
-  for (size_t n = 0; n < size(futs); ++n) {
-    auto min_n = futs[n].get();
-
-    for (size_t j = 0; j < num_queries; ++j) {
-      for (auto&& [e, f] : min_n[j]) {
-        min_scores[j].insert(e, f);
+      if (first_part != last_part) {
+        futs.emplace_back(std::async(
+            std::launch::async,
+            [&query,
+             &partitioned_vectors,
+             &active_queries = dist_active_queries,
+             &distance,
+             k_nn,
+             first_part,
+             last_part,
+             part_offset]() {
+              return apply_query(
+                  partitioned_vectors,
+                  std::optional<std::vector<int>>{},
+                  // std::optional{dist_active_partitions},
+                  query,
+                  active_queries,
+                  k_nn,
+                  first_part,
+                  last_part,
+                  part_offset,
+                  distance);
+            }));
       }
     }
+    for (size_t n = 0; n < size(futs); ++n) {
+      auto min_n = futs[n].get();
+
+      for (size_t j = 0; j < num_queries; ++j) {
+        for (auto&& [e, f] : min_n[j]) {
+          min_scores[j].insert(e, f);
+        }
+      }
+    }
+
+    part_offset += current_part_size;
+    _i.stop();
   }
   return min_scores;
 }
@@ -334,6 +336,7 @@ auto dist_qv_finite_ram(
               id_uri,
               k_nn,
               timestamp,
+              upper_bound,
               nthreads,
               distance);
 #else

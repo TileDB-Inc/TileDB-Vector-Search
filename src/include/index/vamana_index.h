@@ -156,7 +156,6 @@ class vamana_index {
    */
   uint64_t l_build_{0};       // diskANN paper says default = 100
   uint64_t r_max_degree_{0};  // diskANN paper says default = 64
-  uint64_t b_backtrack_{0};   //
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
 
@@ -180,7 +179,6 @@ class vamana_index {
       size_t num_nodes,
       size_t l_build,
       size_t r_max_degree,
-      size_t b_backtrack,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
@@ -188,8 +186,7 @@ class vamana_index {
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
       , l_build_{l_build}
-      , r_max_degree_{r_max_degree}
-      , b_backtrack_{b_backtrack} {
+      , r_max_degree_{r_max_degree} {
   }
 
   /**
@@ -210,7 +207,6 @@ class vamana_index {
     num_edges_ = group_->get_num_edges();
     l_build_ = group_->get_l_build();
     r_max_degree_ = group_->get_r_max_degree();
-    b_backtrack_ = group_->get_b_backtrack();
     alpha_min_ = group_->get_alpha_min();
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
@@ -683,10 +679,6 @@ class vamana_index {
     return r_max_degree_;
   }
 
-  constexpr auto b_backtrack() const {
-    return b_backtrack_;
-  }
-
   /**
    * @brief Write the index to a TileDB group. The group consists of the
    * original feature vectors, and the graph index, which comprises the
@@ -728,7 +720,6 @@ class vamana_index {
     write_group.set_dimensions(dimensions_);
     write_group.set_l_build(l_build_);
     write_group.set_r_max_degree(r_max_degree_);
-    write_group.set_b_backtrack(b_backtrack_);
     write_group.set_alpha_min(alpha_min_);
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
@@ -755,6 +746,15 @@ class vamana_index {
       write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
       write_group.append_base_size(::num_vectors(feature_vectors_));
       write_group.append_num_edges(graph_.num_edges());
+    }
+
+    // When creating from Python we initially call write_index() at timestamp 0.
+    // The goal here is just to create the arrays and save metadata. Return here
+    // so that we don't write the arrays, as if we write with timestamp=0 then
+    // TileDB Core will interpret this as the current timestamp instead, leading
+    // to array fragments created at the current time.
+    if (temporal_policy_.timestamp_end() == 0) {
+      return true;
     }
 
     write_matrix(
@@ -894,11 +894,6 @@ class vamana_index {
     if (r_max_degree_ != rhs.r_max_degree_) {
       std::cout << "r_max_degree_ != rhs.r_max_degree_" << r_max_degree_
                 << " ! = " << rhs.r_max_degree_ << std::endl;
-      return false;
-    }
-    if (b_backtrack_ != rhs.b_backtrack_) {
-      std::cout << "b_backtrack_ != rhs.b_backtrack_" << b_backtrack_
-                << " ! = " << rhs.b_backtrack_ << std::endl;
       return false;
     }
     if (alpha_min_ != rhs.alpha_min_) {

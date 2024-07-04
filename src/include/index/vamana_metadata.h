@@ -86,7 +86,6 @@ class vamana_index_metadata
 
   uint64_t l_build_{0};
   uint64_t r_max_degree_{0};
-  uint64_t b_backtrack_{0};
   float alpha_min_{1.0};
   float alpha_max_{1.2};
   uint64_t medoid_{0};
@@ -113,7 +112,6 @@ class vamana_index_metadata
        false},
       {"l_build", &l_build_, TILEDB_UINT64, false},
       {"r_max_degree", &r_max_degree_, TILEDB_UINT64, false},
-      {"b_backtrack", &b_backtrack_, TILEDB_UINT64, false},
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32, false},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
       {"medoid", &medoid_, TILEDB_UINT64, false},

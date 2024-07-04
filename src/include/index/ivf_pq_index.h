@@ -873,9 +873,6 @@ class ivf_pq_index {
    * This will read the centroids, indices, partitioned_ids, and
    * and the complete set of partitioned_pq_vectors, along with metadata
    * from a group_uri.
-   *
-   * @param group_uri
-   * @return bool indicating success or failure of read
    */
   auto read_index_infinite() {
     if (!group_) {
@@ -899,7 +896,7 @@ class ivf_pq_index {
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
-        group_->ivf_index_uri(),
+        group_->pq_ivf_indices_uri(),
         group_->get_num_partitions() + 1,
         group_->ids_uri(),
         infinite_parts,
@@ -951,7 +948,7 @@ class ivf_pq_index {
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
-        group_->ivf_index_uri(),
+        group_->pq_ivf_indices_uri(),
         group_->get_num_partitions() + 1,
         group_->ids_uri(),
         active_partitions,
@@ -1043,6 +1040,15 @@ class ivf_pq_index {
       write_group.append_num_partitions(num_partitions_);
     }
 
+    // When creating from Python we initially call write_index() at timestamp 0.
+    // The goal here is just to create the arrays and save metadata. Return here
+    // so that we don't write the arrays, as if we write with timestamp=0 then
+    // TileDB Core will interpret this as the current timestamp instead, leading
+    // to array fragments created at the current time.
+    if (temporal_policy_.timestamp_end() == 0) {
+      return true;
+    }
+
     // flat_ivf_centroids_, cluster_centroids_, distance_tables_
     // pq_ivf_centroids_, partitioned_pq_vectors_, unpartitioned_pq_vectors_
 
@@ -1073,7 +1079,7 @@ class ivf_pq_index {
     write_vector(
         ctx,
         partitioned_pq_vectors_->indices(),
-        write_group.ivf_index_uri(),
+        write_group.pq_ivf_indices_uri(),
         0,
         false,
         temporal_policy_);
@@ -1100,23 +1106,6 @@ class ivf_pq_index {
       write_matrix(
           ctx, distance_tables_[i], this_table_uri, 0, false, temporal_policy_);
     }
-
-    return true;
-  }
-
-  auto write_index_arrays(
-      const tiledb::Context& ctx,
-      const std::string& centroids_uri,
-      const std::string& parts_uri,
-      const std::string& ids_uri,
-      const std::string& indices_uri,
-      bool overwrite) const {
-    tiledb::VFS vfs(ctx);
-
-    write_matrix(ctx, flat_ivf_centroids_, centroids_uri, 0, true);
-    write_matrix(ctx, *partitioned_pq_vectors_, parts_uri, 0, true);
-    write_vector(ctx, partitioned_pq_vectors_->ids(), ids_uri, 0, true);
-    write_vector(ctx, partitioned_pq_vectors_->indices(), indices_uri, 0, true);
 
     return true;
   }
@@ -1786,22 +1775,13 @@ class ivf_pq_index {
     return indices;
   }
 
-  void dump_group(const std::string& msg) const {
+  void dump(const std::string& msg) const {
     if (!group_) {
       throw std::runtime_error(
-          "[ivf_flat_index@dump_group] Cannot dump group because there is no "
+          "[ivf_flat_index@dump] Cannot dump group because there is no "
           "group");
     }
     group_->dump(msg);
-  }
-
-  void dump_metadata(const std::string& msg) const {
-    if (!group_) {
-      throw std::runtime_error(
-          "[ivf_flat_index@dump_metadata] Cannot dump metadata because there "
-          "is no group");
-    }
-    group_->metadata.dump(msg);
   }
 };
 

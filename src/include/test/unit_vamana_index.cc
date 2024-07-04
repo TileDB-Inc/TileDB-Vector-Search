@@ -1151,9 +1151,8 @@ TEST_CASE("vamana_index vector diskann_test_256bin", "[vamana]") {
 
   size_t l_build = 50;
   size_t r_max_degree = 4;
-  size_t b_backtrack = l_build;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors(x), l_build, r_max_degree, b_backtrack);
+      num_vectors(x), l_build, r_max_degree);
 
   auto x0 = std::vector<float>(ndim);
   std::copy(x.data(), x.data() + ndim, begin(x0));
@@ -1183,7 +1182,6 @@ TEST_CASE("vamana by hand random index", "[vamana]") {
 
   size_t l_build = 2;
   size_t r_max_degree = 2;
-  size_t b_backtrack = l_build;
 
   auto training_set_ = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", training_set_);
@@ -1265,14 +1263,13 @@ TEST_CASE("vamana_index geometric 2D graph", "[vamana]") {
 
   size_t l_build = 15;
   size_t r_max_degree = 15;
-  size_t b_backtrack = l_build;
 
   size_t k_nn = 5;
 
   auto training_set = random_geometric_2D(num_nodes);
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors(training_set), l_build, r_max_degree, b_backtrack);
+      num_vectors(training_set), l_build, r_max_degree);
   std::vector<siftsmall_ids_type> ids(num_nodes);
   auto ids_start = 10;
   std::iota(begin(ids), end(ids), ids_start);
@@ -1319,7 +1316,6 @@ TEST_CASE("vamana_index siftsmall", "[vamana]") {
 
   size_t l_build = 15;
   size_t r_max_degree = 12;
-  size_t b_backtrack = l_build;
 
   size_t k_nn = 10;
 
@@ -1335,7 +1331,7 @@ TEST_CASE("vamana_index siftsmall", "[vamana]") {
   queries.load();
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors(training_set), l_build, r_max_degree, b_backtrack);
+      num_vectors(training_set), l_build, r_max_degree);
   idx.train(training_set, ids);
 
   auto&& [mat_scores, mat_top_k] = idx.query(queries, k_nn);
@@ -1366,7 +1362,6 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
   size_t l_build{37};
   size_t r_max_degree{41};
   size_t k_nn{10};
-  size_t b_backtrack{3};
 
   tiledb::Context ctx;
   std::string vamana_index_uri =
@@ -1381,7 +1376,7 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
   std::iota(begin(ids), end(ids), 0);
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors(training_set), l_build, r_max_degree, b_backtrack);
+      num_vectors(training_set), l_build, r_max_degree);
   idx.train(training_set, ids);
   uint64_t write_timestamp = 1000;
   idx.write_index(
@@ -1394,7 +1389,6 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 
     CHECK(idx2.group().get_l_build() == l_build);
     CHECK(idx2.group().get_r_max_degree() == r_max_degree);
-    CHECK(idx2.group().get_b_backtrack() == b_backtrack);
     CHECK(idx2.group().get_dimensions() == sift_dimensions);
     CHECK(idx2.group().get_temp_size() == 0);
 
@@ -1426,7 +1420,6 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 
     CHECK(idx2.group().get_l_build() == l_build);
     CHECK(idx2.group().get_r_max_degree() == r_max_degree);
-    CHECK(idx2.group().get_b_backtrack() == b_backtrack);
     CHECK(idx2.group().get_dimensions() == sift_dimensions);
     CHECK(idx2.group().get_temp_size() == 0);
 
@@ -1443,11 +1436,10 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 TEST_CASE("query empty index", "[vamana]") {
   size_t l_build = 100;
   size_t r_max_degree = 100;
-  size_t b_backtrack = 2;
   size_t num_vectors = 0;
   size_t dimensions = 5;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
-      num_vectors, l_build, r_max_degree, b_backtrack);
+      num_vectors, l_build, r_max_degree);
   auto data =
       ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
   index.train(data, data.raveled_ids());

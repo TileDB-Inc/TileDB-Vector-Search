@@ -19,9 +19,10 @@ classifiers = [
 
 dependencies = [
     "tiledb-cloud>=0.11",
-    "tiledb>=0.30.0",
+    "tiledb>=0.30.1",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
+    "numpy<2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -53,6 +54,9 @@ wheel.packages = ["apis/python/src/tiledb"]
 # We need to run cmake during packaging step in order to generate src/config.h and
 # thus not including .git to generate it later
 sdist.cmake = true
+
+cmake.build-type = "RelWithDebInfo"
+install.strip = false
 
 [tool.scikit-build.cmake.define]
 TILEDB_VS_PYTHON = "ON"

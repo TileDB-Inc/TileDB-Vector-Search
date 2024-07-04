@@ -7,6 +7,7 @@ from common import *
 from common import load_metadata
 
 from tiledb.cloud.dag import Mode
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.index import Index
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
@@ -40,7 +41,11 @@ def test_vamana_ingestion_u8(tmp_path):
     index_uri = os.path.join(tmp_path, "array")
     if os.path.exists(index_uri):
         shutil.rmtree(index_uri)
-    create_random_dataset_u8(nb=10000, d=100, nq=100, k=10, path=dataset_dir)
+
+    l_build = 101
+    r_max_degree = 65
+    dimensions = 100
+    create_random_dataset_u8(nb=10000, d=dimensions, nq=100, k=10, path=dataset_dir)
     dtype = np.dtype(np.uint8)
     k = 10
 
@@ -51,7 +56,18 @@ def test_vamana_ingestion_u8(tmp_path):
         index_type="VAMANA",
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        l_build=l_build,
+        r_max_degree=r_max_degree,
     )
+
+    # This is not a public API, but we directly load the C++ type-erased index to test it. If you
+    # are a library user, you should not do this yourself, as the API may change.
+    ctx = vspy.Ctx({})
+    type_erased_index = vspy.IndexVamana(ctx, index_uri, None)
+    assert type_erased_index.dimensions() == dimensions
+    assert type_erased_index.l_build() == l_build
+    assert type_erased_index.r_max_degree() == r_max_degree
+
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -957,10 +973,6 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert ingestion_timestamps == [1]
         assert base_sizes == [size]
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48897): Fix time travelling for IVF_PQ and re-enable.
-            continue
-
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
 
@@ -1226,9 +1238,6 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
         )
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
-        if index_type == "IVF_PQ":
-            # TODO(SC-48897): Fix time travelling for IVF_PQ and re-enable.
-            continue
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i) == 1.0
 
@@ -1892,3 +1901,30 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
         expected_result_d=[[0]],
         expected_result_i=[[1003]],
     )
+
+
+def test_ivf_flat_taskgraph_query(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    k = 10
+    size = 10000
+    partitions = 100
+    dimensions = 129
+    nqueries = 100
+    nprobe = 20
+    create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    dtype = np.uint8
+
+    queries = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
+    )
+    _, result = index._taskgraph_query(
+        queries, k=k, nprobe=nprobe, nthreads=8, mode=Mode.LOCAL, num_partitions=10
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
