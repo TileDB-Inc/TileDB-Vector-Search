@@ -69,9 +69,7 @@ def test_inner_product(tmp_path):
 
     for i in range(len(sorted_inner_products_sklearn)):
         compare = sorted_inner_products_sklearn[i][:5]
-        assert np.allclose(
-            compare, distances[i], 1e-4
-        ), "Inner products do not match"
+        assert np.allclose(compare, distances[i], 1e-4), "Inner products do not match"
 
 
 def test_l2_distance(tmp_path):

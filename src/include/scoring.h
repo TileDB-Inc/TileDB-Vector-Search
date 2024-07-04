@@ -295,8 +295,11 @@ namespace _cosine_distance {
 struct cosine_distance {
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return 1 -
-           (-inner_product(a, b)) / sqrt(l2_distance(a) * l2_distance(b)); // our inner product is negative so we have to flip it
+    return 1 - (-inner_product(a, b)) /
+                   sqrt(
+                       l2_distance(a) *
+                       l2_distance(b));  // our inner product is negative so we
+                                         // have to flip it
   }
 };
 
