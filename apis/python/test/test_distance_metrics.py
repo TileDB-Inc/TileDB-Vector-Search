@@ -60,16 +60,17 @@ def test_inner_product(tmp_path):
 
     inner_products_sklearn = np.dot(query_vectors, dataset_vectors.T)
 
-    sorted_inner_products_sklearn = np.sort(inner_products_sklearn, axis=1)
+    sorted_inner_products_sklearn = np.sort(inner_products_sklearn, axis=1)[:, ::-1]
 
     distances, _ = index.query(query_vectors, k=5)
 
-    sorted_distances = np.sort(distances, axis=1)
+    # multiply distances by -1 to get inner products, since library returns negative inner products
+    distances = -1 * distances
 
     for i in range(len(sorted_inner_products_sklearn)):
         compare = sorted_inner_products_sklearn[i][:5]
         assert np.allclose(
-            compare, sorted_distances[i], 1e-4
+            compare, distances[i], 1e-4
         ), "Inner products do not match"
 
 
