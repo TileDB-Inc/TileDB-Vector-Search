@@ -252,17 +252,19 @@ void create_empty_for_vector(
     const tiledb::Context& ctx,
     const std::string& uri,
     size_t rows,
-    size_t row_extent,
-    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
+    int32_t row_extent,
+    tiledb_filter_type_t filter) {
   tiledb::Domain domain(ctx);
-  domain.add_dimensions(tiledb::Dimension::create<int>(
+  domain.add_dimensions(tiledb::Dimension::create<int32_t>(
       ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
 
-  // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_COL_MAJOR, TILEDB_COL_MAJOR}});
 
-  schema.add_attribute(tiledb::Attribute::create<feature_type>(ctx, "values"));
+  tiledb::FilterList filter_list(ctx);
+  filter_list.add_filter({ctx, filter});
+  schema.add_attribute(
+      tiledb::Attribute::create<feature_type>(ctx, "values", filter_list));
 
   tiledb::Array::create(uri, schema);
 }
@@ -279,7 +281,7 @@ void create_vector(
     const tiledb::Context& ctx,
     const V& v,
     const std::string& uri,
-    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
+    tiledb_filter_type_t filter) {
   using value_type = std::ranges::range_value_t<V>;
 
   size_t num_parts = 10;
@@ -313,7 +315,7 @@ void write_vector(
   using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
 
   if (create) {
-    create_vector(ctx, v, uri);
+    create_vector(ctx, v, uri, TILEDB_FILTER_NONE);
   }
 
   if (size(v) == 0) {
