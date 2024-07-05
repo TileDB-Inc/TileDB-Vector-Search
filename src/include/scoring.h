@@ -306,7 +306,7 @@ struct cosine_distance {
 }  // namespace _cosine_distance
 using cosine_distance = _cosine_distance::cosine_distance;
 
-enum class DistanceMetric { L2, INNER_PRODUCT, COSINE };
+enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
 // ----------------------------------------------------------------------------

@@ -54,9 +54,9 @@
 
 #include "index/index_defs.h"
 #include "index/index_group.h"
-#include "tdb_defs.h"
-
 #include "nlohmann/json.hpp"
+#include "scoring.h"
+#include "tdb_defs.h"
 
 /**
  * @brief Metadata for an IVF_FLAT index.
@@ -141,6 +141,37 @@ class base_index_metadata {
       vec.push_back(item.get<T>());
     }
     return vec;
+  }
+
+  static void set_distance_metric_metadata(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      const DistanceMetric& distance_metric) {
+    tiledb::Group write_group(ctx, group_uri, TILEDB_WRITE);
+    uint32_t metric_value = static_cast<uint32_t>(distance_metric);
+    write_group.put_metadata(
+        "distance_metric", TILEDB_UINT32, 1, &metric_value);
+    write_group.close();
+  }
+
+  static void get_distance_metric_metadata(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      DistanceMetric& distance_metric) {
+    tiledb::Group read_group(ctx, group_uri, TILEDB_READ);
+    tiledb_datatype_t type;
+    if (read_group.has_metadata("distance_metric", &type)) {
+      uint32_t value_num;
+      const void* value;
+      read_group.get_metadata("distance_metric", &type, &value_num, &value);
+      if (type == TILEDB_UINT32 && value_num == 1) {
+        uint32_t metric_value = *static_cast<const uint32_t*>(value);
+        distance_metric = static_cast<DistanceMetric>(metric_value);
+      }
+    } else {
+      distance_metric = DistanceMetric::L2;  // Default value
+    }
+    read_group.close();
   }
 
   /**

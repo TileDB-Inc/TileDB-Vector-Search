@@ -18,7 +18,7 @@ def normalize_vectors(vectors):
     return vectors / norms
 
 
-def test_cosine_similarity(tmp_path):
+def test_cosine_DISTANCE(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_FLAT")
     index = ingest(
         index_type="FLAT",
@@ -33,19 +33,17 @@ def test_cosine_similarity(tmp_path):
 
     nn_cosine_sklearn = NearestNeighbors(n_neighbors=5, metric="cosine")
     nn_cosine_sklearn.fit(dataset_vectors)
-    distances_sklearn, indices_sklearn = nn_cosine_sklearn.kneighbors(query_vectors)
+    distances_sklearn, ids_sklearn = nn_cosine_sklearn.kneighbors(query_vectors)
 
-    distances, indices = index.query(query_vectors, k=5)
+    distances, ids = index.query(query_vectors, k=5)
 
     assert np.allclose(
         distances_sklearn, distances, 1e-4
-    ), "Cosine similarity distances do not match"
-    assert np.array_equal(
-        indices_sklearn, indices
-    ), "Cosine similarity indices do not match"
+    ), "Cosine distances do not match"
+    assert np.array_equal(ids_sklearn, ids), "Cosine distance ids do not match"
 
 
-def test_inner_product(tmp_path):
+def test_inner_product_distances(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_IP")
     index = ingest(
         index_type="FLAT",
@@ -69,7 +67,9 @@ def test_inner_product(tmp_path):
 
     for i in range(len(sorted_inner_products_sklearn)):
         compare = sorted_inner_products_sklearn[i][:5]
-        assert np.allclose(compare, distances[i], 1e-4), "Inner products do not match"
+        assert np.allclose(
+            compare, distances[i], 1e-4
+        ), "Inner product distances do not match"
 
 
 def test_l2_distance(tmp_path):
@@ -86,12 +86,12 @@ def test_l2_distance(tmp_path):
 
     nn_l2 = NearestNeighbors(n_neighbors=5, metric="euclidean")
     nn_l2.fit(dataset_vectors)
-    distances_l2, indices_l2 = nn_l2.kneighbors(query_vectors)
+    distances_l2, ids_l2 = nn_l2.kneighbors(query_vectors)
 
-    distances, indices = index.query(query_vectors, k=5)
+    distances, ids = index.query(query_vectors, k=5)
     distances = np.sqrt(distances)
     assert np.allclose(distances_l2, distances, 1e-4), "L2 distances do not match"
-    assert np.array_equal(indices_l2, indices), "L2 indices do not match"
+    assert np.array_equal(ids_l2, ids), "L2 ids do not match"
 
 
 def test_wrong_distance_metric(tmp_path):
@@ -116,3 +116,48 @@ def test_wrong_type_with_distance_metric(tmp_path):
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.COSINE,
         )
+
+
+def test_vamana_create_l2(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+    ingest(
+        index_type="VAMANA",
+        index_uri=index_uri,
+        source_uri=siftsmall_uri,
+        source_type="FVEC",
+        distance_metric=vspy.DistanceMetric.L2,
+    )
+
+
+def test_vamana_create_cosine(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
+    with pytest.raises(RuntimeError):
+        ingest(
+            index_type="VAMANA",
+            index_uri=index_uri,
+            source_uri=siftsmall_uri,
+            source_type="FVEC",
+            distance_metric=vspy.DistanceMetric.COSINE,
+        )
+
+
+# def test_ivfpq_create_l2(tmp_path):
+#     index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+#     index = ingest(
+#         index_type="IVFPQ",
+#         index_uri=index_uri,
+#         source_uri=siftsmall_uri,
+#         source_type="FVEC",
+#         distance_metric=vspy.DistanceMetric.L2,
+#     )
+
+# def test_ivfpq_create_cosine(tmp_path):
+#     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
+#     with pytest.raises(RuntimeError):
+#         ingest(
+#             index_type="IVFPQ",
+#             index_uri=index_uri,
+#             source_uri=siftsmall_uri,
+#             source_type="FVEC",
+#             distance_metric=vspy.DistanceMetric.COSINE,
+#         )

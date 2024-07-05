@@ -41,6 +41,7 @@
 #include "api/feature_vector.h"
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
+#include "index/index_metadata.h"
 #include "index/vamana_index.h"
 
 /*******************************************************************************
@@ -69,7 +70,6 @@ class IndexVamana {
   IndexVamana(IndexVamana&&) = default;
   IndexVamana& operator=(const IndexVamana&) = delete;
   IndexVamana& operator=(IndexVamana&&) = default;
-
   /**
    * @brief Create an index with the given configuration. The index in this
    * state must next be trained. The sequence for creating an index in this
@@ -104,6 +104,23 @@ class IndexVamana {
           feature_datatype_ = string_to_datatype(value);
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
+        } else if (key == "distance_metric") {
+          try {
+            int metric_value = std::stoi(value);
+            if (metric_value < 0 ||
+                metric_value > static_cast<int>(DistanceMetric::COSINE)) {
+              throw std::runtime_error(
+                  "Invalid distance metric value: " + value);
+            }
+            distance_metric = static_cast<DistanceMetric>(metric_value);
+            if (distance_metric != DistanceMetric::L2) {
+              throw std::runtime_error(
+                  "Invalid distance metric for Vamana: " + value);
+            }
+          } catch (const std::exception& e) {
+            throw std::runtime_error(
+                "Error setting distance metric: " + std::string(e.what()));
+          }
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -141,6 +158,8 @@ class IndexVamana {
           "Dimensions mismatch: " + std::to_string(dimensions_) +
           " != " + std::to_string(index_->dimensions()));
     }
+    base_index_metadata<IndexVamana>::get_distance_metric_metadata(
+        ctx, group_uri, distance_metric);
     dimensions_ = index_->dimensions();
   }
 
@@ -225,6 +244,8 @@ class IndexVamana {
           "Cannot write_index() because there is no index.");
     }
     index_->write_index(ctx, group_uri, temporal_policy, storage_version);
+    base_index_metadata<IndexVamana>::set_distance_metric_metadata(
+        ctx, group_uri, distance_metric);
   }
 
   static void clear_history(
@@ -488,6 +509,7 @@ class IndexVamana {
   static constexpr tiledb_datatype_t adjacency_row_index_datatype_{
       TILEDB_UINT64};
   std::unique_ptr<index_base> index_;
+  DistanceMetric distance_metric;
 };
 
 // clang-format off

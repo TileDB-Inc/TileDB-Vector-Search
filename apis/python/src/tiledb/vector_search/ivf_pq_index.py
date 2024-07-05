@@ -183,9 +183,6 @@ def create(
             f"Distance metric {distance_metric} is not supported in IVF_PQ"
         )
 
-    group = tiledb.Group(uri, "w")
-    group.meta["distance_metric"] = int(distance_metric)
-    group.close()
     index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
@@ -193,6 +190,7 @@ def create(
         dimensions=dimensions,
         n_list=partitions if (partitions is not None and partitions is not -1) else 0,
         num_subspaces=num_subspaces,
+        distance_metric=int(distance_metric),
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

@@ -42,6 +42,7 @@
 #include "api/feature_vector_array.h"
 #include "api_defs.h"
 #include "index/index_defs.h"
+#include "index/index_metadata.h"
 #include "index/ivf_pq_index.h"
 
 /*******************************************************************************
@@ -112,6 +113,19 @@ class IndexIVFPQ {
           id_datatype_ = string_to_datatype(value);
         } else if (key == "partitioning_index_type") {
           partitioning_index_datatype_ = string_to_datatype(value);
+        } else if (key == "distance_metric") {
+          try {
+            int metric_value = std::stoi(value);
+            if (metric_value < 0 ||
+                metric_value > static_cast<int>(DistanceMetric::COSINE)) {
+              throw std::runtime_error(
+                  "Invalid distance metric value: " + value);
+            }
+            distance_metric = static_cast<DistanceMetric>(metric_value);
+          } catch (const std::exception& e) {
+            throw std::runtime_error(
+                "Error setting distance metric: " + std::string(e.what()));
+          }
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -157,6 +171,8 @@ class IndexIVFPQ {
           " != " + std::to_string(index_->dimensions()));
     }
     dimensions_ = index_->dimensions();
+    base_index_metadata<IndexIVFPQ>::get_distance_metric_metadata(
+        ctx, group_uri, distance_metric);
   }
 
   /**
@@ -242,6 +258,8 @@ class IndexIVFPQ {
           "Cannot write_index() because there is no index.");
     }
     index_->write_index(ctx, group_uri, temporal_policy, storage_version);
+    base_index_metadata<IndexIVFPQ>::set_distance_metric_metadata(
+        ctx, group_uri, distance_metric);
   }
 
   static void clear_history(
@@ -562,6 +580,7 @@ class IndexIVFPQ {
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t partitioning_index_datatype_{TILEDB_ANY};
   std::unique_ptr<index_base> index_;
+  DistanceMetric distance_metric;
 };
 
 // clang-format off
