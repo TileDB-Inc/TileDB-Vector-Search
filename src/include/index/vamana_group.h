@@ -198,20 +198,9 @@ class vamana_index_group : public base_index_group<index_type> {
     }
     this->init_valid_array_names();
 
-    static const int32_t tile_size{static_cast<int32_t>(
-        tile_size_bytes / sizeof(typename index_type::feature_type) /
-        this->get_dimensions())};
-    static const int32_t tile_size_ids{static_cast<int32_t>(
-        tile_size_bytes / sizeof(typename index_type::id_type) /
-        this->get_dimensions())};
-    static const int32_t tile_size_adjacency_row_index{static_cast<int32_t>(
-        tile_size_bytes /
-        sizeof(typename index_type::adjacency_row_index_type) /
-        this->get_dimensions())};
-    static const int32_t tile_size_adjacency_scores{static_cast<int32_t>(
-        tile_size_bytes / sizeof(typename index_type::adjacency_scores_type) /
-        this->get_dimensions())};
-
+    static const int32_t tile_size{
+        (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
+                  this->get_dimensions())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
@@ -281,7 +270,7 @@ class vamana_index_group : public base_index_group<index_type> {
         cached_ctx_,
         this->ids_uri(),
         default_domain,
-        tile_size_ids,
+        tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
         write_group, this->ids_uri(), this->ids_array_name());
@@ -290,7 +279,7 @@ class vamana_index_group : public base_index_group<index_type> {
         cached_ctx_,
         adjacency_scores_uri(),
         default_domain,
-        tile_size_adjacency_scores,
+        tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
         write_group, adjacency_scores_uri(), adjacency_scores_array_name());
@@ -299,7 +288,7 @@ class vamana_index_group : public base_index_group<index_type> {
         cached_ctx_,
         adjacency_ids_uri(),
         default_domain,
-        tile_size_ids,
+        tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
         write_group, adjacency_ids_uri(), adjacency_ids_array_name());
@@ -308,7 +297,7 @@ class vamana_index_group : public base_index_group<index_type> {
         cached_ctx_,
         adjacency_row_index_uri(),
         default_domain,
-        tile_size_adjacency_row_index,
+        tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
         write_group,

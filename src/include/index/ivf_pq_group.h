@@ -245,8 +245,8 @@ class ivf_pq_group : public base_index_group<index_type> {
     }
     this->init_valid_array_names();
 
-    static const int32_t tile_size_ids{
-        (int32_t)(tile_size_bytes / sizeof(typename index_type::id_type) /
+    static const int32_t tile_size{
+        (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
                   this->get_dimensions())};
     static const tiledb_filter_type_t default_compression{
         string_to_filter(storage_formats[version_]["default_attr_filters"])};
@@ -336,7 +336,7 @@ class ivf_pq_group : public base_index_group<index_type> {
         cached_ctx_,
         this->ids_uri(),
         default_domain,
-        tile_size_ids,
+        tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
         write_group, this->ids_uri(), this->ids_array_name());
