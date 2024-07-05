@@ -185,7 +185,6 @@ def create(
     )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
-        tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
         parts_array_name = storage_formats[storage_version]["PARTS_ARRAY_NAME"]
         updates_array_name = storage_formats[storage_version]["UPDATES_ARRAY_NAME"]
@@ -196,7 +195,7 @@ def create(
         ids_array_rows_dim = tiledb.Dim(
             name="rows",
             domain=(0, MAX_INT32),
-            tile=tile_size,
+            tile=int(TILE_SIZE_BYTES / np.dtype(np.uint64).itemsize / dimensions),
             dtype=np.dtype(np.int32),
         )
         ids_array_dom = tiledb.Domain(ids_array_rows_dim)
@@ -224,7 +223,7 @@ def create(
         parts_array_cols_dim = tiledb.Dim(
             name="cols",
             domain=(0, MAX_INT32),
-            tile=tile_size,
+            tile=int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions),
             dtype=np.dtype(np.int32),
         )
         parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
