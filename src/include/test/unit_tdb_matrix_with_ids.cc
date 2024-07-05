@@ -260,7 +260,8 @@ TEST_CASE("empty matrix", "[tdb_matrix_with_ids]") {
       matrix_dimension,
       matrix_domain,
       matrix_dimension,
-      tile_extent);
+      tile_extent,
+      TILEDB_FILTER_NONE);
   create_empty_for_vector<uint64_t>(
       ctx, tmp_ids_uri, matrix_domain, tile_extent);
 

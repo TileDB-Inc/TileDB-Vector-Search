@@ -286,7 +286,8 @@ TEST_CASE("empty matrix", "[tdb_matrix]") {
       matrix_dimension,
       matrix_domain,
       matrix_dimension,
-      tile_extent);
+      tile_extent,
+      TILEDB_FILTER_NONE);
 
   {
     // No rows and no cols.
