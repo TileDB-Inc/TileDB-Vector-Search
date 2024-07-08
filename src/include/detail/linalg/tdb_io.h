@@ -146,7 +146,6 @@ void create_empty_for_matrix(
   schema.set_domain(domain).set_order({{order, order}});
   schema.add_attribute(
       tiledb::Attribute::create<T>(ctx, "values", filter_list));
-  schema.set_coords_filter_list(filter_list);
 
   tiledb::Array::create(uri, schema);
 }
@@ -263,7 +262,6 @@ void create_empty_for_vector(
   schema.set_domain(domain).set_order({{TILEDB_COL_MAJOR, TILEDB_COL_MAJOR}});
   schema.add_attribute(
       tiledb::Attribute::create<feature_type>(ctx, "values", filter_list));
-  schema.set_coords_filter_list(filter_list);
 
   tiledb::Array::create(uri, schema);
 }
