@@ -313,11 +313,30 @@ def ingest(
         + "".join(random.choices(string.ascii_letters, k=10))
     )
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
-    DEFAULT_PARTITION_BYTE_SIZE = 2560000000  # 2.5GB
+
+    # This is used to auto-configure `input_vectors_per_work_item`
+    # We set it to a size that based on testing allowed ingestion to complete without
+    # OOM errors in small local servers (<16GB). This also avoids large TileDB write
+    # operations that can cause a problem with the REST server.
+    DEFAULT_PARTITION_BYTE_SIZE = 2**30  # 1GB
+    # This is used to auto-configure the resources of vector ingestion DAG tasks.
+    # It is not actually enforcing a maximum vector partition size as the client can
+    # override `input_vectors_per_work_item` and the UDF resources.
+    MAX_PARTITION_BYTE_SIZE = 2**31  # 2GB
+
     VECTORS_PER_SAMPLE_WORK_ITEM = 1000000
     MAX_TASKS_PER_STAGE = 100
+
+    # This is used to auto-configure `kmeans_resources`, `training_sample_size`
+    # and `partitions` selected for different datasets. It is based on the kmeans
+    # algorithm complexity which is O(vectors * dimensions * centroids).
+    # We set this to a value that based on testing allowed kmeans to complete
+    # without OOM errors in small local servers (<16GB).
+    MAX_CENTRALISED_KMEANS_COMPLEXITY = (
+        1000000 * 1024 * 10000
+    )  # 1M vectors of 1024 float32 values, 10k partitions
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
-    DEFAULT_KMEANS_BYTES_PER_SAMPLE = 128000000  # ~ 128MB
+
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
     MAX_INT32 = 2**31 - 1
 
@@ -1290,7 +1309,7 @@ def ingest(
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
-            )
+            ).astype(np.float32)
 
     def assign_points_and_partial_new_centroids(
         centroids: np.ndarray,
@@ -1407,7 +1426,7 @@ def ingest(
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
-            )
+            ).astype(np.float32)
             logger.debug("Input centroids: %s", centroids[0:5])
             logger.debug("Assigning vectors to centroids")
             if use_sklearn:
@@ -2116,12 +2135,11 @@ def ingest(
         kwargs = {}
 
         # We compute the real size of the batch in bytes.
-        size_in_bytes = size * dimensions * np.dtype(vector_type).itemsize
-        logger.debug("Input size in bytes: %d", size_in_bytes)
-        training_sample_size_in_bytes = (
-            training_sample_size * dimensions * np.dtype(vector_type).itemsize
+        size_in_bytes = (
+            min(size, input_vectors_per_work_item)
+            * dimensions
+            * np.dtype(vector_type).itemsize
         )
-        logger.debug("Training sample size in bytes: %d", training_sample_size_in_bytes)
         if mode == Mode.BATCH:
             d = dag.DAG(
                 name="vector-ingestion",
@@ -2185,7 +2203,14 @@ def ingest(
                     min_resource,
                     min(
                         max_resource,
-                        int(max_resource * input_size / max_input_size),
+                        int(
+                            math.ceil(
+                                min_resource
+                                + (max_resource - min_resource)
+                                * input_size
+                                / max_input_size
+                            )
+                        ),
                     ),
                 )
             )
@@ -2195,22 +2220,16 @@ def ingest(
         if ingest_resources is None:
             ingest_resources = {
                 "cpu": scale_resources(
-                    2, threads, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
+                    2, threads, MAX_PARTITION_BYTE_SIZE, size_in_bytes
                 ),
-                "memory": scale_resources(
-                    2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
-                )
+                "memory": scale_resources(2, 16, MAX_PARTITION_BYTE_SIZE, size_in_bytes)
                 + "Gi",
             }
 
         if consolidate_partition_resources is None:
             consolidate_partition_resources = {
-                "cpu": scale_resources(
-                    2, threads, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
-                ),
-                "memory": scale_resources(
-                    2, 16, DEFAULT_PARTITION_BYTE_SIZE, size_in_bytes
-                )
+                "cpu": scale_resources(2, 8, MAX_PARTITION_BYTE_SIZE, size_in_bytes),
+                "memory": scale_resources(2, 16, MAX_PARTITION_BYTE_SIZE, size_in_bytes)
                 + "Gi",
             }
 
@@ -2223,19 +2242,20 @@ def ingest(
                 "memory": "6Gi",
             }
 
+        kmeans_complexity = training_sample_size * dimensions * partitions
         if kmeans_resources is None:
             kmeans_resources = {
                 "cpu": scale_resources(
                     4,
                     threads,
-                    DEFAULT_KMEANS_BYTES_PER_SAMPLE,
-                    training_sample_size_in_bytes,
+                    MAX_CENTRALISED_KMEANS_COMPLEXITY,
+                    kmeans_complexity,
                 ),
                 "memory": scale_resources(
-                    8,
+                    16,
                     32,
-                    DEFAULT_KMEANS_BYTES_PER_SAMPLE,
-                    training_sample_size_in_bytes,
+                    MAX_CENTRALISED_KMEANS_COMPLEXITY,
+                    kmeans_complexity,
                 )
                 + "Gi",
             }
@@ -2659,7 +2679,6 @@ def ingest(
             in_size, dimensions, vector_type = read_source_metadata(
                 source_uri=source_uri, source_type=source_type
             )
-
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
         if is_type_erased_index(index_type):
@@ -2749,8 +2768,18 @@ def ingest(
 
         if partitions == -1:
             partitions = max(1, int(math.sqrt(size)))
+            # Make sure that we can have at least 100 vectors per partition for kmeans training.
+            # Otherwise kmeans might not have enough sample vectors to converge.
+            partitions = min(
+                math.floor(CENTRALISED_KMEANS_MAX_SAMPLE_SIZE / 100), partitions
+            )
         if training_sample_size == -1:
-            training_sample_size = min(size, 100 * partitions)
+            max_training_sample_size = int(
+                math.floor(MAX_CENTRALISED_KMEANS_COMPLEXITY / dimensions / partitions)
+            )
+            training_sample_size = min(
+                min(size, 100 * partitions), max_training_sample_size
+            )
         if mode == Mode.BATCH:
             if workers == -1:
                 workers = 10
