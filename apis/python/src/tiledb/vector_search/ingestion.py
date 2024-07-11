@@ -39,14 +39,14 @@ def ingest(
     index_type: str,
     index_uri: str,
     *,
-    input_vectors: np.ndarray = None,
-    source_uri: str = None,
-    source_type: str = None,
-    external_ids: np.array = None,
-    external_ids_uri: str = "",
-    external_ids_type: str = None,
-    updates_uri: str = None,
-    index_timestamp: int = None,
+    input_vectors: Optional[np.ndarray] = None,
+    source_uri: Optional[str] = None,
+    source_type: Optional[str] = None,
+    external_ids: Optional[np.array] = None,
+    external_ids_uri: Optional[str] = "",
+    external_ids_type: Optional[str] = None,
+    updates_uri: Optional[str] = None,
+    index_timestamp: Optional[int] = None,
     config: Optional[Mapping[str, Any]] = None,
     namespace: Optional[str] = None,
     size: int = -1,
@@ -55,11 +55,11 @@ def ingest(
     l_build: int = -1,
     r_max_degree: int = -1,
     training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
-    copy_centroids_uri: str = None,
+    copy_centroids_uri: Optional[str] = None,
     training_sample_size: int = -1,
-    training_input_vectors: np.ndarray = None,
-    training_source_uri: str = None,
-    training_source_type: str = None,
+    training_input_vectors: Optional[np.ndarray] = None,
+    training_source_uri: Optional[str] = None,
+    training_source_type: Optional[str] = None,
     workers: int = -1,
     input_vectors_per_work_item: int = -1,
     max_tasks_per_stage: int = -1,
@@ -397,7 +397,7 @@ def ingest(
             return "TILEDB_ARRAY"
 
     def read_source_metadata(
-        source_uri: str, source_type: str = None
+        source_uri: str, source_type: Optional[str] = None
     ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
