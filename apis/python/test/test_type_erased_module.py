@@ -226,7 +226,6 @@ def test_numpy_to_feature_vector_array():
 
 
 def test_numpy_to_feature_vector_array_with_ids():
-    print()
     a = np.array(np.random.rand(10000, 128), dtype=np.float32)
     ids = np.arange(10000, dtype=np.uint64)
     b = vspy.FeatureVectorArray(a, ids)

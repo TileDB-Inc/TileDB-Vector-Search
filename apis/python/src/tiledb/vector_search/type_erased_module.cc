@@ -219,8 +219,8 @@ void init_type_erased_module(py::module_& m) {
           throw std::runtime_error(
               "[type_erased_module@FeatureVector] Incompatible format: "
               "expected array of " +
-              dtype_str + " (" + datatype_format + "), but was " + info.format +
-              ".");
+              datatype_to_string(datatype) + " (" + datatype_format +
+              "), but was " + info.format + ".");
         }
 
         size_t sz = datatype_to_size(datatype);
@@ -294,8 +294,8 @@ void init_type_erased_module(py::module_& m) {
               throw std::runtime_error(
                   "[type_erased_module@FeatureVectorArray] Incompatible format "
                   "- expected array of " +
-                  dtype_str + " (" + datatype_format + "), but was " +
-                  info.format + ".");
+                  datatype_to_string(datatype) + " (" + datatype_format +
+                  "), but was " + info.format + ".");
             }
 
             // The ids vector buffer info.
@@ -318,8 +318,9 @@ void init_type_erased_module(py::module_& m) {
                 throw std::runtime_error(
                     "[type_erased_module@FeatureVectorArray] Incompatible ids "
                     "format - expected array of " +
-                    ids_dtype_str + " (" + ids_datatype_format + "), but was " +
-                    ids_info.format + ".");
+                    datatype_to_string(ids_datatype) + " (" +
+                    ids_datatype_format + "), but was " + ids_info.format +
+                    ".");
               }
             }
 
