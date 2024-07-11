@@ -128,7 +128,10 @@ void create_empty_for_matrix(
     size_t cols,
     size_t row_extent,
     size_t col_extent,
-    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
+    tiledb_filter_type_t filter) {
+  tiledb::FilterList filter_list(ctx);
+  filter_list.add_filter({ctx, filter});
+
   tiledb::Domain domain(ctx);
   domain
       .add_dimensions(tiledb::Dimension::create<int>(
@@ -137,18 +140,12 @@ void create_empty_for_matrix(
           ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
-
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
                    TILEDB_ROW_MAJOR :
                    TILEDB_COL_MAJOR;
   schema.set_domain(domain).set_order({{order, order}});
-  schema.add_attribute(tiledb::Attribute::create<T>(ctx, "values"));
-
-  if (filter) {
-    tiledb::FilterList fl(ctx);
-    fl.add_filter(tiledb::Filter(ctx, *filter));
-    schema.set_coords_filter_list(fl);
-  }
+  schema.add_attribute(
+      tiledb::Attribute::create<T>(ctx, "values", filter_list));
 
   tiledb::Array::create(uri, schema);
 }
@@ -161,7 +158,7 @@ void create_matrix(
     const tiledb::Context& ctx,
     const Matrix<T, LayoutPolicy, I>& A,
     const std::string& uri,
-    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
+    tiledb_filter_type_t filter) {
   // @todo: make this a parameter
   size_t num_parts = 10;
 
@@ -201,7 +198,7 @@ void write_matrix(
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   if (create) {
-    create_matrix<T, LayoutPolicy, I>(ctx, A, uri);
+    create_matrix<T, LayoutPolicy, I>(ctx, A, uri, TILEDB_FILTER_NONE);
   }
 
   if (A.num_rows() == 0 || A.num_cols() == 0) {
@@ -252,17 +249,19 @@ void create_empty_for_vector(
     const tiledb::Context& ctx,
     const std::string& uri,
     size_t rows,
-    size_t row_extent,
-    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
+    int32_t row_extent,
+    tiledb_filter_type_t filter) {
+  tiledb::FilterList filter_list(ctx);
+  filter_list.add_filter({ctx, filter});
+
   tiledb::Domain domain(ctx);
-  domain.add_dimensions(tiledb::Dimension::create<int>(
+  domain.add_dimensions(tiledb::Dimension::create<int32_t>(
       ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
 
-  // The array will be dense.
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_COL_MAJOR, TILEDB_COL_MAJOR}});
-
-  schema.add_attribute(tiledb::Attribute::create<feature_type>(ctx, "values"));
+  schema.add_attribute(
+      tiledb::Attribute::create<feature_type>(ctx, "values", filter_list));
 
   tiledb::Array::create(uri, schema);
 }
@@ -279,7 +278,7 @@ void create_vector(
     const tiledb::Context& ctx,
     const V& v,
     const std::string& uri,
-    std::optional<tiledb_filter_type_t> filter = std::nullopt) {
+    tiledb_filter_type_t filter) {
   using value_type = std::ranges::range_value_t<V>;
 
   size_t num_parts = 10;
@@ -313,7 +312,7 @@ void write_vector(
   using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
 
   if (create) {
-    create_vector(ctx, v, uri);
+    create_vector(ctx, v, uri, TILEDB_FILTER_NONE);
   }
 
   if (size(v) == 0) {
