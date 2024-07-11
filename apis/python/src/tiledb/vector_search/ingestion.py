@@ -864,8 +864,11 @@ def ingest(
         ) as updates_array:
             q = updates_array.query(attrs=("vector",), coords=True)
             data = q[:]
+            print('[ingestion@read_additions] data:', data)
             additions_filter = [len(item) > 0 for item in data["vector"]]
+            print('[ingestion@read_additions] additions_filter:', additions_filter)
             filtered_vectors = data["vector"][additions_filter]
+            print('[ingestion@read_additions] filtered_vectors:', filtered_vectors)
             if len(filtered_vectors) == 0:
                 return None, None
             else:
@@ -1454,6 +1457,7 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
+            print('[ingestion@ingest_flat] updated_ids:', updated_ids)
             group = tiledb.Group(index_group_uri)
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
@@ -1478,6 +1482,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                print('[ingestion@ingest_flat] in_vectors:', in_vectors)
                 external_ids = read_external_ids(
                     external_ids_uri=external_ids_uri,
                     external_ids_type=external_ids_type,
@@ -1487,11 +1492,15 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                print('[ingestion@ingest_flat] external_ids:', external_ids)
                 updates_filter = np.in1d(
                     external_ids, updated_ids, assume_unique=True, invert=True
                 )
+                print('[ingestion@ingest_flat] updates_filter:', updates_filter)
                 in_vectors = in_vectors[updates_filter]
+                print('[ingestion@ingest_flat] after filter in_vectors:', in_vectors)
                 external_ids = external_ids[updates_filter]
+                print('[ingestion@ingest_flat] after filter external_ids:', external_ids)
                 vector_len = len(in_vectors)
                 if vector_len > 0:
                     end_offset = write_offset + vector_len
@@ -1511,6 +1520,8 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
+            print('[ingestion@ingest_flat] additions_vectors:', additions_vectors)
+            print('[ingestion@ingest_flat] additions_external_ids:', additions_external_ids)
             end = write_offset
             if additions_vectors is not None:
                 end += len(additions_external_ids)
@@ -1538,6 +1549,7 @@ def ingest(
         dimensions: int,
         size: int,
         batch: int,
+        arrays_created: bool,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1546,15 +1558,39 @@ def ingest(
 
         import tiledb.cloud
         from tiledb.vector_search.storage_formats import storage_formats
+        from tiledb.vector_search import _tiledbvspy as vspy
 
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
+            # These are the vector IDs which have been updated. We will remove them from the index data.
             updated_ids = read_updated_ids(
                 updates_uri=updates_uri,
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
             )
+            print('[ingestion@ingest_type_erased] updated_ids:', updated_ids)
+
+            # These are the updated vectors which we need to add to the index. Note that 
+            # `additions_external_ids` is a subset of `updated_ids` which only includes vectors 
+            # which were not deleted.
+            additions_vectors, additions_external_ids = read_additions(
+                updates_uri=updates_uri,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+
+            if arrays_created and index_type == "IVF_PQ":
+                # For IVF_PQ, we cannot re-ingest the data, as we only store the PQ encoded 
+                # vectors. Instead leave the centroids and just update the stored vectors.
+                ctx = vspy.Ctx(config)
+                index = vspy.IndexIVFPQ(ctx, index_group_uri)
+                vectors_to_add = vspy.FeatureVectorArray(additions_vectors, additions_external_ids)
+                vector_ids_to_remove = vspy.FeatureVector(updated_ids)
+                index.update(vectors_to_add, vector_ids_to_remove)
+                index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
+                return
 
             temp_data_group_uri = f"{index_group_uri}/{PARTIAL_WRITE_ARRAY_DIR}"
             temp_data_group = tiledb.Group(temp_data_group_uri, "w")
@@ -1624,13 +1660,8 @@ def ingest(
                     ids_array[write_offset:end_offset] = external_ids
                     write_offset = end_offset
 
+            # NOTE(paris): These are the vectors which we need to add to the index.
             # Ingest additions
-            additions_vectors, additions_external_ids = read_additions(
-                updates_uri=updates_uri,
-                config=config,
-                verbose=verbose,
-                trace_id=trace_id,
-            )
             end = write_offset
             if additions_vectors is not None:
                 end += len(additions_external_ids)
@@ -1649,8 +1680,6 @@ def ingest(
             ids_array.close()
 
         # Now that we've ingested the vectors and their IDs, train the index with the data.
-        from tiledb.vector_search import _tiledbvspy as vspy
-
         ctx = vspy.Ctx(config)
         if index_type == "VAMANA":
             index = vspy.IndexVamana(ctx, index_group_uri)
@@ -2294,6 +2323,7 @@ def ingest(
                 dimensions=dimensions,
                 size=size,
                 batch=input_vectors_batch_size,
+                arrays_created=arrays_created,
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
@@ -2708,6 +2738,7 @@ def ingest(
                     logger.debug(f"Group '{index_group_uri}' already exists")
                 else:
                     raise err
+        print('[ingestion] arrays_created: ', arrays_created)
         group = tiledb.Group(index_group_uri, "r")
         ingestion_timestamps = list(
             json.loads(group.meta.get("ingestion_timestamps", "[]"))

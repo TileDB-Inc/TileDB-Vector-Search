@@ -325,6 +325,7 @@ TEST_CASE("MatrixWithIds constructors and destructors", "[api]") {
         (DataType*)b.data(), extents(b)[0], extents(b)[1]};
     CHECK(data(0, 0) == 0);
     CHECK(data(5, 0) == 5);
+    debug_matrix(data, "data");
 
     CHECK(b.ids() != nullptr);
     auto ids = std::span<IdsType>((IdsType*)b.ids(), b.num_vectors());

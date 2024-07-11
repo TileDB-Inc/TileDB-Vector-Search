@@ -199,8 +199,9 @@ class ivf_pq_index {
   uint64_t dimensions_{0};
   uint64_t num_partitions_{0};
 
-  // Cached information about the pq encoding
+  // The number of subspaces that we will divide each vector into.
   uint64_t num_subspaces_{0};
+  // The number of dimensions in each subspace.
   uint64_t sub_dimensions_{0};
   constexpr static const uint64_t bits_per_subspace_{8};
   constexpr static const uint64_t num_clusters_{256};
@@ -223,7 +224,7 @@ class ivf_pq_index {
   // These are the original training vectors encoded using the
   // cluster_centroids_. So each vector has been chunked up into num_subspaces_
   // sections, and for each section we find the closest centroid from
-  // cluster_centroids_ and appen that index as the next number in the
+  // cluster_centroids_ and append that index as the next number in the
   // pq_vector.
   std::unique_ptr<ColMajorMatrixWithIds<pq_code_type, id_type>>
       unpartitioned_pq_vectors_;
@@ -441,6 +442,7 @@ class ivf_pq_index {
           "num_subspaces (" + std::to_string(num_subspaces_) +
           ") must be greater than zero");
     }
+    // The number of dimensions in each subspace.
     sub_dimensions_ = dimensions_ / num_subspaces_;
     if (dimensions_ % num_subspaces_ != 0) {
       throw std::runtime_error(
@@ -450,14 +452,17 @@ class ivf_pq_index {
           ", num_subspaces: " + std::to_string(num_subspaces_));
     }
 
+    // We have num_clusters_ (256) vectors, each of size dimensions_.
     cluster_centroids_ =
         ColMajorMatrix<flat_vector_feature_type>(dimensions_, num_clusters_);
 
     // Lookup table for the distance between centroids of each subspace
+    // We have num_subspaces_ distance tables. After encoding the input vectors, each vector will 
+    // have num_subspaces_ dimensions. So each index in the distance table holds distances for a
+    // single number in the encoded vector. Those 
     distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
     for (size_t i = 0; i < num_subspaces_; ++i) {
-      distance_tables_[i] =
-          ColMajorMatrix<score_type>(num_clusters_, num_clusters_);
+      distance_tables_[i] = ColMajorMatrix<score_type>(num_clusters_, num_clusters_);
     }
 
     size_t max_local_iters_taken = 0;
@@ -469,14 +474,17 @@ class ivf_pq_index {
     // through the training set. We need to move iteration over subspaces to
     // the inner loop -- and SIMDize it
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      std::cout << " ============ " << std::endl;
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
+      std::cout << "[ivf_pq_index@train_pq] sub_begin: " << sub_begin << ", sub_end: " << sub_end << std::endl;
 
-      auto local_sub_distance = SubDistance{sub_begin, sub_end};
+      // auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       // @todo Make choice of kmeans init configurable
       sub_kmeans_random_init(
           training_set, cluster_centroids_, sub_begin, sub_end, 0xdeadbeef);
+      debug_matrix(cluster_centroids_, "cluster_centroids_ before");
 
       // sub_kmeans will invoke the sub_distance function with centroids
       // against new_centroids, and will call flat::qv_partition with centroids
@@ -497,11 +505,12 @@ class ivf_pq_index {
           tol_,
           max_iter_,
           num_threads_);
+      debug_matrix(cluster_centroids_, "cluster_centroids_ after");
 
       max_local_iters_taken = std::max(max_local_iters_taken, iters);
       min_local_conv = std::min(min_local_conv, conv);
     }
-
+    std::cout << "New we create table! ~~~~~~~~~~~~~~~~~~~~~~~ " << std::endl;
     // Create tables of distances storing distance between encoding keys,
     // one table for each subspace. That is, distance_tables_[i](j, k) is
     // the distance between the jth and kth centroids in the ith subspace.
@@ -510,17 +519,18 @@ class ivf_pq_index {
     // from each subspace).
     // @todo SIMDize with subspace iteration in inner loop
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      std::cout << " ~~~~~~~~~~~ " << std::endl;
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
+      std::cout << "[ivf_pq_index@train_pq] sub_begin: " << sub_begin << ", sub_end: " << sub_end << std::endl;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       for (size_t i = 0; i < num_clusters_; ++i) {
         for (size_t j = 0; j < num_clusters_; ++j) {
-          auto sub_distance =
-              local_sub_distance(cluster_centroids_[i], cluster_centroids_[j]);
-          distance_tables_[subspace](i, j) = sub_distance;
+          distance_tables_[subspace](i, j) = local_sub_distance(cluster_centroids_[i], cluster_centroids_[j]);
         }
       }
+      debug_matrix(distance_tables_[subspace], "distance_tables_[" + std::to_string(subspace) + "]");
     }
 
     return std::make_tuple(max_local_iters_taken, min_local_conv);
@@ -693,6 +703,16 @@ class ivf_pq_index {
     train_ivf(training_set);
   }
 
+  inline indices_type find_partition(const std::vector<indices_type>& part_indices, int i) {
+    for (indices_type part = 0; part < part_indices.size() - 1; ++part) {
+        if (i >= part_indices[part] && i < part_indices[part + 1]) {
+            return part;
+        }
+    }
+    // Return -1 if `i` is out of the range of any partitions
+    return -1;
+}
+
   /**
    * @brief Build the index from a training set, given the centroids. This
    * will partition the training set into a contiguous array, with one
@@ -705,7 +725,6 @@ class ivf_pq_index {
    * @param training_set_ids IDs for each vector.
    *
    * @todo Create and write index that is larger than RAM
-   * @todo Use training_set_ids as the external IDs.
    */
   template <
       feature_vector_array Array,
@@ -715,10 +734,19 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
-    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
-
+    std::cout << "[ivf_pq_index@add] train_pq(training_set) ================" << std::endl;
     train_pq(training_set);   // cluster_centroids_, distance_tables_
+    std::cout << "[ivf_pq_index@add] train_ivf(training_set) ================" << std::endl;
     train_ivf(training_set);  // flat_ivf_centroids_
+    std::cout << "[ivf_pq_index@add] pq_ivf_centroids_ = pq_encode(flat_ivf_centroids_) ================" << std::endl;
+    pq_ivf_centroids_ =
+        std::move(*pq_encode<
+                  flat_ivf_centroid_storage_type,
+                  pq_ivf_centroid_storage_type>(flat_ivf_centroids_));
+    debug_matrix(pq_ivf_centroids_, "pq_ivf_centroids_");
+    
+    
+    std::cout << "[ivf_pq_index@add] unpartitioned_pq_vectors_ = pq_encode(training_set) ================" << std::endl;
     unpartitioned_pq_vectors_ =
         pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(
             training_set);
@@ -726,10 +754,8 @@ class ivf_pq_index {
         training_set_ids.begin(),
         training_set_ids.end(),
         unpartitioned_pq_vectors_->ids());
-    pq_ivf_centroids_ =
-        std::move(*pq_encode<
-                  flat_ivf_centroid_storage_type,
-                  pq_ivf_centroid_storage_type>(flat_ivf_centroids_));
+    debug_matrix_with_ids(*unpartitioned_pq_vectors_, "[ivf_pq_index@update] unpartitioned_pq_vectors_");
+
     /*
     auto partition_labels = detail::flat::qv_partition(
         pq_ivf_centroids_,
@@ -738,13 +764,117 @@ class ivf_pq_index {
         // @todo -- make_pq_distance_* need to be parameterized by Distance
         make_pq_distance_symmetric());
     */
-
+    std::cout << "[ivf_pq_index@add] partition_labels = qv_partition(flat_ivf_centroids_, training_set) ================" << std::endl;
     auto partition_labels = detail::flat::qv_partition(
         flat_ivf_centroids_, training_set, num_threads_, distance);
+    debug_vector(partition_labels, "[ivf_pq_index@update] partition_labels");
+
+    std::cout << "[ivf_pq_index@add] partition_labels.size(): " << partition_labels.size() << std::endl;
 
     // This just reorders based on partition_labels
+    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
+    std::cout << "[ivf_pq_index@add] ::num_vectors(flat_ivf_centroids_): " << ::num_vectors(flat_ivf_centroids_) << std::endl;
     partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(
         *unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
+    debug_partitioned_matrix(*partitioned_pq_vectors_, "partitioned_pq_vectors_");
+  }
+        // Two cases:
+        // 1) We have vectors in vectors_to_add to add to the index, just replace the deleted vector with that one.
+        // 2) We don't have vectors in vectors_to_add to add to the index, so we need to delete this vector. Replace it with the last vector in the list and then pop the last vector.
+
+    template <
+      feature_vector_array Array,
+      feature_vector Vector,
+      feature_vector VectorToRemove,
+      class Distance = sum_of_squares_distance>
+  void update(
+      const Array& vectors_to_add,
+      const Vector& vectors_to_add_ids,
+      const VectorToRemove& vector_ids_to_remove,
+      Distance distance = Distance{}) {
+    debug_matrix(vectors_to_add, "[ivf_pq_index@update] vectors_to_add");
+    debug_vector(vectors_to_add_ids, "[ivf_pq_index@update] vectors_to_add_ids");
+    debug_vector(vector_ids_to_remove, "[ivf_pq_index@update] vector_ids_to_remove");
+      
+    read_index_infinite();
+    debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@update] partitioned_pq_vectors_");
+
+    std::cout << "[ivf_pq_index@update] num_vectors(*partitioned_pq_vectors_): " << ::num_vectors(*partitioned_pq_vectors_) << std::endl;
+    std::cout << "[ivf_pq_index@update] ::dimensions(vector_ids_to_remove): " << ::dimensions(vector_ids_to_remove) << std::endl;
+    std::cout << "[ivf_pq_index@update] ::num_vectors(vectors_to_add): " << ::num_vectors(vectors_to_add) << std::endl;
+
+    // // 0. First we need to check how many of the ids in `vector_ids_to_remove` are actually in the data.
+    // auto num_vector_ids_to_remove = 0;
+    // for (int i = 0; i < ::num_vectors(*partitioned_pq_vectors_); ++i) {
+    //   if (std::find(vector_ids_to_remove.begin(), vector_ids_to_remove.end(), (*partitioned_pq_vectors_).ids()[i]) != vector_ids_to_remove.end()) {
+    //     num_vector_ids_to_remove++;
+    //   }
+    // }
+
+    auto final_num_vectors = ::num_vectors(*partitioned_pq_vectors_) - ::dimensions(vector_ids_to_remove) + ::num_vectors(vectors_to_add);
+    std::cout << "[ivf_pq_index@update] final_num_vectors: " << final_num_vectors << std::endl;
+    std::vector<indices_type> partition_labels;
+    partition_labels.reserve(final_num_vectors);
+    auto unpartitioned_pq_vectors = ColMajorMatrixWithIds<pq_code_type, id_type>(::dimensions(*partitioned_pq_vectors_), final_num_vectors);
+    size_t idx = 0;
+
+    debug_vector(vector_ids_to_remove, "[ivf_pq_index@update] vector_ids_to_remove");
+
+    // 1. Find the vectors in unpartitioned_pq_vectors_ to delete. where the id is in vector_ids_to_remove.
+    // Instead of deleting outright, we will
+    auto part_indices = partitioned_pq_vectors_->indices();
+    debug_vector(part_indices, "[ivf_pq_index@update] part_indices");
+    for (int i = 0; i < ::num_vectors(*partitioned_pq_vectors_); ++i) {
+      std::cout << "i: " << i << " (" + std::to_string((*partitioned_pq_vectors_).ids()[i]) + ")~~~" << std::endl;
+      if (std::find(vector_ids_to_remove.begin(), vector_ids_to_remove.end(), (*partitioned_pq_vectors_).ids()[i]) == vector_ids_to_remove.end()) {
+        std::cout << "will copy over into idx: " << idx << std::endl;
+        // This vector is not marked for deletion, copy it over.
+//        unpartitioned_pq_vectors[idx] = (*partitioned_pq_vectors_)[i];
+        std::copy(
+            partitioned_pq_vectors_->data() + i * ::dimensions(*partitioned_pq_vectors_),
+            partitioned_pq_vectors_->data() + (i + 1) * ::dimensions(*partitioned_pq_vectors_),
+            unpartitioned_pq_vectors.data() + idx * ::dimensions(*partitioned_pq_vectors_));
+        unpartitioned_pq_vectors.ids()[idx] = (*partitioned_pq_vectors_).ids()[i];
+
+        // part_indices is a vector like [0, 1, 4]. This means that:
+        // - vector 0 is part of partition 0
+        // - vector 1 is part of partition 1
+        // - vector 2 is part of partition 1
+        // - vector 3 is part of partition 1
+        // So right now we know that we're looking at vector `i`. Determine which partition it belongs to using part_indices.
+        auto partition = find_partition(part_indices, i);
+        std::cout << "partition: " << partition << std::endl;
+        partition_labels.push_back(partition);
+
+        idx++;
+      }
+      debug_matrix_with_ids(unpartitioned_pq_vectors, "  [ivf_pq_index@update] unpartitioned_pq_vectors");
+    }
+    debug_matrix_with_ids(unpartitioned_pq_vectors, "[ivf_pq_index@update] unpartitioned_pq_vectors");
+    debug_vector(partition_labels, "[ivf_pq_index@update] partition_labels");
+
+    // 2. Add vectors_to_add to unpartitioned_pq_vectors_.
+    auto vectors_to_add_partition_labels = detail::flat::qv_partition(flat_ivf_centroids_, vectors_to_add, num_threads_, distance);
+//    auto& pqv = *unpartitioned_pq_vectors;
+    for (int i = 0; i < ::num_vectors(vectors_to_add); ++i) {
+//      pq_encode_one(vectors_to_add[i], pqv[idx++]);
+       pq_encode_one(vectors_to_add[i], unpartitioned_pq_vectors[idx]);
+       unpartitioned_pq_vectors.ids()[idx] = vectors_to_add_ids[i];
+      // unpartitioned_pq_vectors[idx++] = vectors_to_add[i];
+
+      partition_labels.push_back(vectors_to_add_partition_labels[i]);
+
+      idx++;
+    }
+    debug_matrix_with_ids(unpartitioned_pq_vectors, "[ivf_pq_index@update] unpartitioned_pq_vectors");
+    debug_vector(partition_labels, "[ivf_pq_index@update] partition_labels");
+
+    // 3. Partition unpartitioned_pq_vectors_ into partitioned_pq_vectors_.
+    unpartitioned_pq_vectors_ = std::make_unique<ColMajorMatrixWithIds<pq_code_type, id_type>>(std::move(unpartitioned_pq_vectors));
+    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
+    partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(*unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
+    debug_matrix_with_ids(*unpartitioned_pq_vectors_, "[ivf_pq_index@update] unpartitioned_pq_vectors_");
+    debug_partitioned_matrix(*partitioned_pq_vectors_, "partitioned_pq_vectors_");
   }
 
   template <
@@ -787,82 +917,82 @@ class ivf_pq_index {
     return pq_vectors;
   }
 
-  /**
-   * @brief PQ encode the training set using the cluster_centroids_ to get
-   * unpartitioned_pq_vectors_. PQ encode the flat_ivf_centroids_ to get
-   * pq_ivf_centroids_.
-   *
-   * @return
-   */
-  template <feature_vector_array V>
-  auto encode(const V& training_set) {
-    // unpartitioned_pq_vectors_ :
-  }
+  // /**
+  //  * @brief PQ encode the training set using the cluster_centroids_ to get
+  //  * unpartitioned_pq_vectors_. PQ encode the flat_ivf_centroids_ to get
+  //  * pq_ivf_centroids_.
+  //  *
+  //  * @return
+  //  */
+  // template <feature_vector_array V>
+  // auto encode(const V& training_set) {
+  //   // unpartitioned_pq_vectors_ :
+  // }
 
-  template <
-      feature_vector V,
-      feature_vector W,
-      class SubDistance = sub_sum_of_squares_distance>
-    requires uncached_sub_distance_function<
-        SubDistance,
-        V,
-        decltype(cluster_centroids_[0])>
-  inline auto encode(const V& v, W& pq) const {
-    auto local_sub_distance = SubDistance{};
+  // template <
+  //     feature_vector V,
+  //     feature_vector W,
+  //     class SubDistance = sub_sum_of_squares_distance>
+  //   requires uncached_sub_distance_function<
+  //       SubDistance,
+  //       V,
+  //       decltype(cluster_centroids_[0])>
+  // inline auto encode(const V& v, W& pq) const {
+  //   auto local_sub_distance = SubDistance{};
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = sub_dimensions_ * subspace;
-      auto sub_end = sub_begin + sub_dimensions_;
+  //   for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+  //     auto sub_begin = sub_dimensions_ * subspace;
+  //     auto sub_end = sub_begin + sub_dimensions_;
 
-      auto min_score = std::numeric_limits<score_type>::max();
-      pq_code_type idx{0};
-      for (size_t i = 0; i < num_vectors(cluster_centroids_); ++i) {
-        auto score =
-            local_sub_distance(v, cluster_centroids_[i], sub_begin, sub_end);
-        if (score < min_score) {
-          min_score = score;
-          idx = i;
-        }
-      }
-      pq[subspace] = idx;
-    }
-  }
+  //     auto min_score = std::numeric_limits<score_type>::max();
+  //     pq_code_type idx{0};
+  //     for (size_t i = 0; i < num_vectors(cluster_centroids_); ++i) {
+  //       auto score =
+  //           local_sub_distance(v, cluster_centroids_[i], sub_begin, sub_end);
+  //       if (score < min_score) {
+  //         min_score = score;
+  //         idx = i;
+  //       }
+  //     }
+  //     pq[subspace] = idx;
+  //   }
+  // }
 
-  template <
-      feature_vector_array V,
-      class SubDistance = cached_sub_sum_of_squares_distance>
-    requires cached_sub_distance_function<
-        SubDistance,
-        typename V::span_type,
-        decltype(cluster_centroids_[0])>
-  auto encode(const V& v) {
-    /*
-     * Encode the training set using the cluster_centroids_ to get the
-     * unpartitioned_pq_vectors_.
-     */
-    unpartitioned_pq_vectors_ = std::make_unique<flat_storage_type>(
-        flat_storage_type(num_subspaces_, num_vectors(v)));
-    for (size_t i = 0; i < num_vectors(v); ++i) {
-      auto x = (*unpartitioned_pq_vectors_)[i];
-      encode<
-          typename V::span_type,
-          decltype((*unpartitioned_pq_vectors_)[0]),
-          SubDistance>(v[i], x);
-    }
+  // template <
+  //     feature_vector_array V,
+  //     class SubDistance = cached_sub_sum_of_squares_distance>
+  //   requires cached_sub_distance_function<
+  //       SubDistance,
+  //       typename V::span_type,
+  //       decltype(cluster_centroids_[0])>
+  // auto encode(const V& v) {
+  //   /*
+  //    * Encode the training set using the cluster_centroids_ to get the
+  //    * unpartitioned_pq_vectors_.
+  //    */
+  //   unpartitioned_pq_vectors_ = std::make_unique<flat_storage_type>(
+  //       flat_storage_type(num_subspaces_, num_vectors(v)));
+  //   for (size_t i = 0; i < num_vectors(v); ++i) {
+  //     auto x = (*unpartitioned_pq_vectors_)[i];
+  //     encode<
+  //         typename V::span_type,
+  //         decltype((*unpartitioned_pq_vectors_)[0]),
+  //         SubDistance>(v[i], x);
+  //   }
 
-    /*
-     * Encode the flat_ivf_centroids_ to get the pq_ivf_centroids_.
-     */
-    pq_ivf_centroids_ =
-        pq_ivf_centroid_storage_type(num_subspaces_, num_partitions_);
-    for (size_t i = 0; i < num_partitions_; ++i) {
-      auto x = pq_ivf_centroids_[i];
-      encode<
-          decltype(cluster_centroids_[0]),
-          decltype(pq_ivf_centroids_[0]),
-          SubDistance>(cluster_centroids_[i], x);
-    }
-  }
+  //   /*
+  //    * Encode the flat_ivf_centroids_ to get the pq_ivf_centroids_.
+  //    */
+  //   pq_ivf_centroids_ =
+  //       pq_ivf_centroid_storage_type(num_subspaces_, num_partitions_);
+  //   for (size_t i = 0; i < num_partitions_; ++i) {
+  //     auto x = pq_ivf_centroids_[i];
+  //     encode<
+  //         decltype(cluster_centroids_[0]),
+  //         decltype(pq_ivf_centroids_[0]),
+  //         SubDistance>(cluster_centroids_[i], x);
+  //   }
+  // }
 
   /*****************************************************************************
    * Methods for reading and reading the index from a group.
@@ -1010,11 +1140,11 @@ class ivf_pq_index {
     }
     // The code below checks if the number of clusters is equal to
     // 2^bits_per_subspace_.
-    if (num_clusters_ != 1 << bits_per_subspace_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@write_index] num_clusters_ != 1 << "
-          "bits_per_subspace_");
-    }
+    // if (num_clusters_ != 1 << bits_per_subspace_) {
+    //   throw std::runtime_error(
+    //       "[ivf_pq_index@write_index] num_clusters_ != 1 << "
+    //       "bits_per_subspace_");
+    // }
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom

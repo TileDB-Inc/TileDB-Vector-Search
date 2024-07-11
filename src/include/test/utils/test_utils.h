@@ -34,7 +34,8 @@
 
 #include <catch2/catch_all.hpp>
 #include <ranges>
-
+#include "api/feature_vector_array.h"
+#include "index/index_defs.h"
 #include <tiledb/tiledb>
 #include "detail/linalg/tdb_io.h"
 
@@ -177,6 +178,60 @@ void validate_metadata(
         break;
     }
   }
+}
+
+template <class Index>
+void query_and_check_equals(Index &index, const FeatureVectorArray &queries, size_t k, const ColMajorMatrix<uint32_t> &expected_ids, const ColMajorMatrix<float> &expected_scores, size_t n_list = 1, bool print_results = false) {
+  auto&& [scores_vector_array, ids_vector_array] = index.query(QueryType::InfiniteRAM, queries, k, n_list);
+
+  auto ids = MatrixView<uint32_t, stdx::layout_left>{(uint32_t*)ids_vector_array.data(), extents(ids_vector_array)[0], extents(ids_vector_array)[1]};
+  auto scores = MatrixView<float, stdx::layout_left>{(float*)scores_vector_array.data(), extents(scores_vector_array)[0], extents(scores_vector_array)[1]};
+
+  CHECK(scores.num_rows() == k);
+  CHECK(ids.num_rows() == k);
+  CHECK(ids.num_cols() == scores.num_cols());
+
+  bool ids_did_not_match = false;
+  bool scores_did_not_match = false;
+  for (size_t i = 0; i < scores.num_rows(); ++i) {
+    for (size_t j = 0; j < scores.num_cols(); j++) {
+      if (ids(i, j) != expected_ids(i, j)) {
+        ids_did_not_match = true;
+        break;
+      }
+      if (scores(i, j) != expected_scores(i, j)) {
+        scores_did_not_match = true;
+        break;
+      }
+    }
+  }
+
+  if (print_results || scores_did_not_match || ids_did_not_match) {
+    debug_matrix(expected_ids, "expected_ids");
+    debug_matrix(expected_scores, "expected_scores");
+
+    debug_matrix(ids, "ids");
+    debug_matrix(scores, "scores");
+
+    if (ids_did_not_match) {
+      CHECK_THROWS_WITH(false, "[test_utils@query_and_check_equals] Ids did not match");
+    }
+    if (scores_did_not_match) {
+      CHECK_THROWS_WITH(false, "[test_utils@query_and_check_equals] Scores did not match");
+    }
+  }
+
+//   CHECK(std::equal(
+//     scores.begin(),
+//     scores.end(),
+//     std::vector<float>{
+//         default_score, default_score, default_score, default_score}
+//         .begin()));
+// CHECK(std::equal(
+//     ids.begin(),
+//     ids.end(),
+//     std::vector<uint32_t>{default_id, default_id, default_id, default_id}
+//         .begin()));
 }
 
 #endif  // TILEDB_TEST_UTILS_H
