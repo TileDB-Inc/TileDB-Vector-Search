@@ -525,6 +525,53 @@ def test_ingestion_external_ids_numpy(tmp_path):
         Index.delete_index(uri=index_uri, config={})
         assert vfs.dir_size(index_uri) == 0
 
+# TODO(paris): Fix consolidate_updates() if it's called immediately after an ingest().
+
+def test_ivf_pq_consolidation(tmp_path):
+    index_uri = os.path.join(tmp_path, f"array_IVF_PQ")
+    if shutil.os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
+    print('[test_ingestion] ingest() =====================================================================')
+    ingest(
+        # index_type="FLAT",
+        index_type="IVF_PQ",
+        index_uri=index_uri,
+        input_vectors=data,
+        index_timestamp=10,
+        num_subspaces=2,
+    )
+    
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3]], dtype=np.float32)
+    print('[test_ingestion] IVFPQIndex() =====================================================================')
+    # index = FlatIndex(uri=index_uri)
+    index = IVFPQIndex(uri=index_uri)
+
+
+    print('[test_ingestion] index.update() =====================================================================')
+    index.update(
+        vector=data[1],
+        external_id=11,
+        timestamp=20,
+    )
+
+    print('[test_ingestion] index.update() =====================================================================')
+    index.update(
+        vector=data[2],
+        external_id=22,
+        timestamp=20,
+    )
+
+    # print('[test_ingestion] index.delete() =====================================================================')
+    # index.delete(external_id=1, timestamp=20)
+
+    print('[test_ingestion] index.consolidate_updates() =====================================================================')
+    index = index.consolidate_updates()
+
+    print('[test_ingestion] index.query() =====================================================================')
+    result_d, result_i = index.query(data, k=1)
+    print('[test_ingestion] scores', result_d)
+    print('[test_ingestion] ids', result_i)
 
 def test_ingestion_timetravel(tmp_path):
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
@@ -617,9 +664,9 @@ def test_ingestion_timetravel(tmp_path):
             timestamp=20,
         )
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
+        # if index_type == "IVF_PQ":
+        #     # TODO(SC-48888): Fix consolidation for IVF_PQ.
+        #     continue
         index = index.consolidate_updates()
 
         # We still have no results before timestamp 10.
@@ -928,9 +975,9 @@ def test_ingestion_with_batch_updates(tmp_path):
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
+        # if index_type == "IVF_PQ":
+        #     # TODO(SC-48888): Fix consolidation for IVF_PQ.
+        #     continue
         index = index.consolidate_updates()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, updated_ids=updated_ids) > minimum_accuracy
@@ -1051,9 +1098,9 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i) == 1.0
 
         # Consolidate updates
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
+        # if index_type == "IVF_PQ":
+        #     # TODO(SC-48888): Fix consolidation for IVF_PQ.
+        #     continue
         index = index.consolidate_updates()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
@@ -1256,9 +1303,9 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
         _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
+        # if index_type == "IVF_PQ":
+        #     # TODO(SC-48888): Fix consolidation for IVF_PQ.
+        #     continue
         index = index.consolidate_updates()
         _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)

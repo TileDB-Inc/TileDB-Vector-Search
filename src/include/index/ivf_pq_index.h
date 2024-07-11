@@ -803,15 +803,15 @@ class ivf_pq_index {
     std::cout << "[ivf_pq_index@update] ::dimensions(vector_ids_to_remove): " << ::dimensions(vector_ids_to_remove) << std::endl;
     std::cout << "[ivf_pq_index@update] ::num_vectors(vectors_to_add): " << ::num_vectors(vectors_to_add) << std::endl;
 
-    // // 0. First we need to check how many of the ids in `vector_ids_to_remove` are actually in the data.
-    // auto num_vector_ids_to_remove = 0;
-    // for (int i = 0; i < ::num_vectors(*partitioned_pq_vectors_); ++i) {
-    //   if (std::find(vector_ids_to_remove.begin(), vector_ids_to_remove.end(), (*partitioned_pq_vectors_).ids()[i]) != vector_ids_to_remove.end()) {
-    //     num_vector_ids_to_remove++;
-    //   }
-    // }
+    // 0. First we need to check how many of the ids in `vector_ids_to_remove` are actually in the data.
+    auto num_vector_ids_to_remove = 0;
+    for (int i = 0; i < ::num_vectors(*partitioned_pq_vectors_); ++i) {
+      if (std::find(vector_ids_to_remove.begin(), vector_ids_to_remove.end(), (*partitioned_pq_vectors_).ids()[i]) != vector_ids_to_remove.end()) {
+        num_vector_ids_to_remove++;
+      }
+    }
 
-    auto final_num_vectors = ::num_vectors(*partitioned_pq_vectors_) - ::dimensions(vector_ids_to_remove) + ::num_vectors(vectors_to_add);
+    auto final_num_vectors = ::num_vectors(*partitioned_pq_vectors_) - num_vector_ids_to_remove + ::num_vectors(vectors_to_add);
     std::cout << "[ivf_pq_index@update] final_num_vectors: " << final_num_vectors << std::endl;
     std::vector<indices_type> partition_labels;
     partition_labels.reserve(final_num_vectors);

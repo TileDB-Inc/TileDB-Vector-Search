@@ -1584,9 +1584,11 @@ def ingest(
             if arrays_created and index_type == "IVF_PQ":
                 # For IVF_PQ, we cannot re-ingest the data, as we only store the PQ encoded 
                 # vectors. Instead leave the centroids and just update the stored vectors.
+                print('[ingestion@ingest_type_erased] additions_vectors:', additions_vectors)
+                print('[ingestion@ingest_type_erased] additions_external_ids:', additions_external_ids)
                 ctx = vspy.Ctx(config)
                 index = vspy.IndexIVFPQ(ctx, index_group_uri)
-                vectors_to_add = vspy.FeatureVectorArray(additions_vectors, additions_external_ids)
+                vectors_to_add = vspy.FeatureVectorArray(np.transpose(additions_vectors), np.transpose(additions_external_ids))
                 vector_ids_to_remove = vspy.FeatureVector(updated_ids)
                 index.update(vectors_to_add, vector_ids_to_remove)
                 index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
