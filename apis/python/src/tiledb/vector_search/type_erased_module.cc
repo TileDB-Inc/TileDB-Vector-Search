@@ -214,13 +214,13 @@ void init_type_erased_module(py::module_& m) {
 
         auto dtype_str = vector.dtype().str();
         tiledb_datatype_t datatype = string_to_datatype(dtype_str);
-
-        if (!check_datatype_format(datatype_to_format(datatype), info.format)) {
+        auto datatype_format = datatype_to_format(datatype);
+        if (!check_datatype_format(datatype_format, info.format)) {
           throw std::runtime_error(
               "[type_erased_module@FeatureVector] Incompatible format: "
               "expected array of " +
-              datatype_to_string(datatype) + " (" +
-              datatype_to_format(datatype) + "), but was " + info.format + ".");
+              dtype_str + " (" + datatype_format + "), but was " + info.format +
+              ".");
         }
 
         size_t sz = datatype_to_size(datatype);
@@ -289,14 +289,13 @@ void init_type_erased_module(py::module_& m) {
 
             auto dtype_str = vectors.dtype().str();
             tiledb_datatype_t datatype = string_to_datatype(dtype_str);
-            if (!check_datatype_format(
-                    datatype_to_format(datatype), info.format)) {
+            auto datatype_format = datatype_to_format(datatype);
+            if (!check_datatype_format(datatype_format, info.format)) {
               throw std::runtime_error(
                   "[type_erased_module@FeatureVectorArray] Incompatible format "
                   "- expected array of " +
-                  datatype_to_string(datatype) + " (" +
-                  datatype_to_format(datatype) + "), but was " + info.format +
-                  ".");
+                  dtype_str + " (" + datatype_format + "), but was " +
+                  info.format + ".");
             }
 
             // The ids vector buffer info.
@@ -313,14 +312,14 @@ void init_type_erased_module(py::module_& m) {
             if (ids.size() != 0) {
               ids_dtype_str = ids.dtype().str();
               ids_datatype = string_to_datatype(ids_dtype_str);
+              auto ids_datatype_format = datatype_to_format(ids_datatype);
               if (!check_datatype_format(
-                      datatype_to_format(ids_datatype), ids_info.format)) {
+                      ids_datatype_format, ids_info.format)) {
                 throw std::runtime_error(
                     "[type_erased_module@FeatureVectorArray] Incompatible ids "
                     "format - expected array of " +
-                    datatype_to_string(datatype) + " (" +
-                    datatype_to_format(datatype) + "), but was " + info.format +
-                    ".");
+                    ids_dtype_str + " (" + ids_datatype_format + "), but was " +
+                    ids_info.format + ".");
               }
             }
 
