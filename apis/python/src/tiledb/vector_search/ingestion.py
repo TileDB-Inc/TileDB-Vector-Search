@@ -401,13 +401,13 @@ def ingest(
     ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
-            size = schema.domain.dim(1).domain[1] + 1
-            dimensions = schema.domain.dim(0).domain[1] + 1
+            size = np.int64(schema.domain.dim(1).domain[1]) + 1
+            dimensions = np.int64(schema.domain.dim(0).domain[1]) + 1
             return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_SPARSE_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
-            size = schema.domain.dim(0).domain[1] + 1
-            dimensions = schema.domain.dim(1).domain[1] + 1
+            size = np.int64(schema.domain.dim(0).domain[1]) + 1
+            dimensions = np.int64(schema.domain.dim(1).domain[1]) + 1
             return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(source_uri, "r", config=config) as source_array:
