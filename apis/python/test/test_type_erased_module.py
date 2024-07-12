@@ -28,6 +28,30 @@ def test_feature_vector_to_numpy():
     assert b.dtype == np.uint64
 
 
+def test_numpy_to_feature_vector_data_types():
+    for dtype in [
+        np.float32,
+        np.int8,
+        np.uint8,
+        np.int32,
+        np.uint32,
+        np.uint64,
+    ]:
+        if np.issubdtype(dtype, np.integer):
+            max_val = np.iinfo(dtype).max
+        elif np.issubdtype(dtype, np.floating):
+            max_val = np.finfo(dtype).max
+        else:
+            raise TypeError(f"Unsupported data type {dtype}")
+
+        vector = np.array([max_val], dtype=dtype)
+        feature_vector = vspy.FeatureVector(vector)
+        assert feature_vector.feature_type_string() == np.dtype(dtype).name
+        assert np.array_equal(
+            vector, np.array(feature_vector)
+        ), f"Arrays were not equal for dtype: {dtype}"
+
+
 def test_numpy_to_feature_vector_array_simple():
     a = np.array(np.random.rand(10000), dtype=np.float32)
     b = vspy.FeatureVector(a)
@@ -81,6 +105,8 @@ def test_feature_vector_array_to_numpy():
     a = vspy.FeatureVectorArray(ctx, bigann10k_inputs_uri)
     assert a.num_vectors() == 10000
     assert a.dimensions() == 128
+    assert a.num_ids() == 0
+    assert a.ids_type_string() == "any"
     b = np.array(a)
     assert b.shape == (10000, 128)
 
@@ -113,6 +139,8 @@ def test_numpy_to_feature_vector_array_data_types():
             vectors = np.array([[max_val]], dtype=dtype)
             ids = np.array([max_val_ids], dtype=dtype_ids)
             feature_vector_array = vspy.FeatureVectorArray(vectors, ids)
+            assert feature_vector_array.feature_type_string() == np.dtype(dtype).name
+            assert feature_vector_array.ids_type_string() == np.dtype(dtype_ids).name
             assert np.array_equal(
                 vectors, np.array(feature_vector_array)
             ), f"Arrays were not equal for dtype: {dtype}, dtype_ids: {dtype_ids}"
@@ -198,7 +226,6 @@ def test_numpy_to_feature_vector_array():
 
 
 def test_numpy_to_feature_vector_array_with_ids():
-    print()
     a = np.array(np.random.rand(10000, 128), dtype=np.float32)
     ids = np.arange(10000, dtype=np.uint64)
     b = vspy.FeatureVectorArray(a, ids)
