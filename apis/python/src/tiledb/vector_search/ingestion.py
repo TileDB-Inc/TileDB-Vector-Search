@@ -2623,32 +2623,43 @@ def ingest(
         index_group_uri: str,
         config: Optional[Mapping[str, Any]] = None,
     ):
+        """
+        Consolidate fragments. Needed because during ingestion we have multiple workers that write
+        different fragments.
+
+        We don't consolidate CENTROIDS_ARRAY_NAME (and others) because they are only written once.
+
+        We also don't consolidate type-erased indexes because they are only written once. If we add
+        distributed ingestion we should write a C++ method to consolidate them.
+        """
         with tiledb.Group(index_group_uri) as group:
             write_group = tiledb.Group(index_group_uri, "w")
-            try:
-                if INPUT_VECTORS_ARRAY_NAME in group:
-                    tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
-                    write_group.remove(INPUT_VECTORS_ARRAY_NAME)
-                if EXTERNAL_IDS_ARRAY_NAME in group:
-                    tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
-                    write_group.remove(EXTERNAL_IDS_ARRAY_NAME)
-            except tiledb.TileDBError as err:
-                message = str(err)
-                if "does not exist" not in message:
-                    raise err
-            write_group.close()
 
-            modes = ["fragment_meta", "commits", "array_meta"]
-            for mode in modes:
-                conf = tiledb.Config(config)
-                conf["sm.consolidation.mode"] = mode
-                conf["sm.vacuum.mode"] = mode
-                ids_uri = group[IDS_ARRAY_NAME].uri
-                parts_uri = group[PARTS_ARRAY_NAME].uri
-                tiledb.consolidate(parts_uri, config=conf)
-                tiledb.vacuum(parts_uri, config=conf)
-                tiledb.consolidate(ids_uri, config=conf)
-                tiledb.vacuum(ids_uri, config=conf)
+            if not is_type_erased_index(index_type):
+                try:
+                    if INPUT_VECTORS_ARRAY_NAME in group:
+                        tiledb.Array.delete_array(group[INPUT_VECTORS_ARRAY_NAME].uri)
+                        write_group.remove(INPUT_VECTORS_ARRAY_NAME)
+                    if EXTERNAL_IDS_ARRAY_NAME in group:
+                        tiledb.Array.delete_array(group[EXTERNAL_IDS_ARRAY_NAME].uri)
+                        write_group.remove(EXTERNAL_IDS_ARRAY_NAME)
+                except tiledb.TileDBError as err:
+                    message = str(err)
+                    if "does not exist" not in message:
+                        raise err
+                write_group.close()
+                modes = ["fragment_meta", "commits", "array_meta"]
+                for mode in modes:
+                    conf = tiledb.Config(config)
+                    conf["sm.consolidation.mode"] = mode
+                    conf["sm.vacuum.mode"] = mode
+                    ids_uri = group[IDS_ARRAY_NAME].uri
+                    parts_uri = group[PARTS_ARRAY_NAME].uri
+                    tiledb.consolidate(parts_uri, config=conf)
+                    tiledb.vacuum(parts_uri, config=conf)
+                    tiledb.consolidate(ids_uri, config=conf)
+                    tiledb.vacuum(ids_uri, config=conf)
+
             partial_write_array_exists = PARTIAL_WRITE_ARRAY_DIR in group
         if partial_write_array_exists:
             with tiledb.Group(index_group_uri, "w") as partial_write_array_group:
