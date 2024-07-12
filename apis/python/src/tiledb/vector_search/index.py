@@ -379,23 +379,22 @@ class Index:
         updates_array[external_id] = {"vector": vectors}
         updates_array.close()
 
-        print('[index@update] self.updates_array_uri', self.updates_array_uri)
+        print("[index@update] self.updates_array_uri", self.updates_array_uri)
         array = tiledb.open(self.updates_array_uri, mode="r", timestamp=timestamp)
-        print('[index@update] array.meta', array.meta)
-        print('[index@update] array', array[:])
+        print("[index@update] array.meta", array.meta)
+        print("[index@update] array", array[:])
         array.close()
-
 
         # OrderedDict(
         #     [
-        #         ('vector', array([array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)), 
+        #         ('vector', array([array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)),
         #         ('external_id', array([2], dtype=uint64))
         #     ]
         # )
 
         # OrderedDict(
         #     [
-        #         ('vector', array([array([2. , 2.1, 2.2, 2.3], dtype=float32), array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)), 
+        #         ('vector', array([array([2. , 2.1, 2.2, 2.3], dtype=float32), array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)),
         #         ('external_id', array([1, 2], dtype=uint64))
         #     ]
         # )
@@ -443,15 +442,15 @@ class Index:
         updates_array[external_id] = {"vector": deletes}
         updates_array.close()
 
-        print('[index@delete] self.updates_array_uri', self.updates_array_uri)
+        print("[index@delete] self.updates_array_uri", self.updates_array_uri)
         array = tiledb.open(self.updates_array_uri, mode="r", timestamp=timestamp)
-        print('[index@delete] array.meta', array.meta)
-        print('[index@delete] array', array[:])
+        print("[index@delete] array.meta", array.meta)
+        print("[index@delete] array", array[:])
         array.close()
 
         # OrderedDict(
         #     [
-        #         ('vector', array([array([], dtype=float32), array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)), 
+        #         ('vector', array([array([], dtype=float32), array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)),
         #         ('external_id', array([1, 2], dtype=uint64))
         #     ]
         # )
@@ -518,7 +517,9 @@ class Index:
             tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
-        should_pass_copy_centroids_uri = self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0
+        should_pass_copy_centroids_uri = (
+            self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0
+        )
         if should_pass_copy_centroids_uri:
             # Make sure the user didn't pass an incorrect number of partitions.
             if "partitions" in kwargs and self.partitions != kwargs["partitions"]:
@@ -527,15 +528,17 @@ class Index:
                 )
             # We pass partitions through kwargs so that we don't pass it twice.
             kwargs["partitions"] = self.partitions
-        
+
         # print('[index@consolidate_updates] self.centroids_uri', self.centroids_uri)
-        print('[index@consolidate_updates] self.uri', self.uri)
-        print('[index@consolidate_updates] self.size', self.size)
-        print('[index@consolidate_updates] self.db_uri', self.db_uri)
-        print('[index@consolidate_updates] self.ids_uri', self.ids_uri)
-        print('[index@consolidate_updates] self.updates_array_uri', self.updates_array_uri)
-        print('[index@consolidate_updates] self.max_timestamp', max_timestamp)
-        print('[index@consolidate_updates] self.storage_version', self.storage_version)
+        print("[index@consolidate_updates] self.uri", self.uri)
+        print("[index@consolidate_updates] self.size", self.size)
+        print("[index@consolidate_updates] self.db_uri", self.db_uri)
+        print("[index@consolidate_updates] self.ids_uri", self.ids_uri)
+        print(
+            "[index@consolidate_updates] self.updates_array_uri", self.updates_array_uri
+        )
+        print("[index@consolidate_updates] self.max_timestamp", max_timestamp)
+        print("[index@consolidate_updates] self.storage_version", self.storage_version)
 
         new_index = ingest(
             index_type=self.index_type,
@@ -547,7 +550,9 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
-            copy_centroids_uri=self.centroids_uri if should_pass_copy_centroids_uri else None,
+            copy_centroids_uri=self.centroids_uri
+            if should_pass_copy_centroids_uri
+            else None,
             config=self.config,
             **kwargs,
         )

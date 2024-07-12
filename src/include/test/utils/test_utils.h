@@ -34,10 +34,10 @@
 
 #include <catch2/catch_all.hpp>
 #include <ranges>
-#include "api/feature_vector_array.h"
-#include "index/index_defs.h"
 #include <tiledb/tiledb>
+#include "api/feature_vector_array.h"
 #include "detail/linalg/tdb_io.h"
+#include "index/index_defs.h"
 
 template <class id_type>
 std::string write_ids_to_uri(
@@ -181,11 +181,25 @@ void validate_metadata(
 }
 
 template <class Index>
-void query_and_check_equals(Index &index, const FeatureVectorArray &queries, size_t k, const ColMajorMatrix<uint32_t> &expected_ids, const ColMajorMatrix<float> &expected_scores, size_t n_list = 1, bool print_results = false) {
-  auto&& [scores_vector_array, ids_vector_array] = index.query(QueryType::InfiniteRAM, queries, k, n_list);
+void query_and_check_equals(
+    Index& index,
+    const FeatureVectorArray& queries,
+    size_t k,
+    const ColMajorMatrix<uint32_t>& expected_ids,
+    const ColMajorMatrix<float>& expected_scores,
+    size_t n_list = 1,
+    bool print_results = false) {
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(QueryType::InfiniteRAM, queries, k, n_list);
 
-  auto ids = MatrixView<uint32_t, stdx::layout_left>{(uint32_t*)ids_vector_array.data(), extents(ids_vector_array)[0], extents(ids_vector_array)[1]};
-  auto scores = MatrixView<float, stdx::layout_left>{(float*)scores_vector_array.data(), extents(scores_vector_array)[0], extents(scores_vector_array)[1]};
+  auto ids = MatrixView<uint32_t, stdx::layout_left>{
+      (uint32_t*)ids_vector_array.data(),
+      extents(ids_vector_array)[0],
+      extents(ids_vector_array)[1]};
+  auto scores = MatrixView<float, stdx::layout_left>{
+      (float*)scores_vector_array.data(),
+      extents(scores_vector_array)[0],
+      extents(scores_vector_array)[1]};
 
   CHECK(scores.num_rows() == k);
   CHECK(ids.num_rows() == k);
@@ -214,24 +228,26 @@ void query_and_check_equals(Index &index, const FeatureVectorArray &queries, siz
     debug_matrix(scores, "scores");
 
     if (ids_did_not_match) {
-      CHECK_THROWS_WITH(false, "[test_utils@query_and_check_equals] Ids did not match");
+      CHECK_THROWS_WITH(
+          false, "[test_utils@query_and_check_equals] Ids did not match");
     }
     if (scores_did_not_match) {
-      CHECK_THROWS_WITH(false, "[test_utils@query_and_check_equals] Scores did not match");
+      CHECK_THROWS_WITH(
+          false, "[test_utils@query_and_check_equals] Scores did not match");
     }
   }
 
-//   CHECK(std::equal(
-//     scores.begin(),
-//     scores.end(),
-//     std::vector<float>{
-//         default_score, default_score, default_score, default_score}
-//         .begin()));
-// CHECK(std::equal(
-//     ids.begin(),
-//     ids.end(),
-//     std::vector<uint32_t>{default_id, default_id, default_id, default_id}
-//         .begin()));
+  //   CHECK(std::equal(
+  //     scores.begin(),
+  //     scores.end(),
+  //     std::vector<float>{
+  //         default_score, default_score, default_score, default_score}
+  //         .begin()));
+  // CHECK(std::equal(
+  //     ids.begin(),
+  //     ids.end(),
+  //     std::vector<uint32_t>{default_id, default_id, default_id, default_id}
+  //         .begin()));
 }
 
 #endif  // TILEDB_TEST_UTILS_H

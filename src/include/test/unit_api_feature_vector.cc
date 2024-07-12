@@ -107,7 +107,8 @@ TEST_CASE("FeatureVector dimension", "[feature_vector]") {
   CHECK(dimensions(FeatureVector(Vector<int>{1, 2, 3})) == 3);
 }
 
-using TestTypes = std::tuple<float, int8_t, uint8_t, int32_t, uint32_t, uint64_t>;
+using TestTypes =
+    std::tuple<float, int8_t, uint8_t, int32_t, uint32_t, uint64_t>;
 
 int api_counter = 0;
 TEMPLATE_LIST_TEST_CASE("FeatureVector read", "[feature_vector]", TestTypes) {

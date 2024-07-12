@@ -525,14 +525,18 @@ def test_ingestion_external_ids_numpy(tmp_path):
         Index.delete_index(uri=index_uri, config={})
         assert vfs.dir_size(index_uri) == 0
 
+
 # TODO(paris): Fix consolidate_updates() if it's called immediately after an ingest().
 
+
 def test_ivf_pq_consolidation(tmp_path):
-    index_uri = os.path.join(tmp_path, f"array_IVF_PQ")
+    index_uri = os.path.join(tmp_path, "array_IVF_PQ")
     if shutil.os.path.exists(index_uri):
         shutil.rmtree(index_uri)
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
-    print('[test_ingestion] ingest() =====================================================================')
+    print(
+        "[test_ingestion] ingest() ====================================================================="
+    )
     ingest(
         # index_type="FLAT",
         index_type="IVF_PQ",
@@ -541,21 +545,29 @@ def test_ivf_pq_consolidation(tmp_path):
         index_timestamp=10,
         num_subspaces=2,
     )
-    
-    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3]], dtype=np.float32)
-    print('[test_ingestion] IVFPQIndex() =====================================================================')
+
+    data = np.array(
+        [[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3]],
+        dtype=np.float32,
+    )
+    print(
+        "[test_ingestion] IVFPQIndex() ====================================================================="
+    )
     # index = FlatIndex(uri=index_uri)
     index = IVFPQIndex(uri=index_uri)
 
-
-    print('[test_ingestion] index.update() =====================================================================')
+    print(
+        "[test_ingestion] index.update() ====================================================================="
+    )
     index.update(
         vector=data[1],
         external_id=11,
         timestamp=20,
     )
 
-    print('[test_ingestion] index.update() =====================================================================')
+    print(
+        "[test_ingestion] index.update() ====================================================================="
+    )
     index.update(
         vector=data[2],
         external_id=22,
@@ -565,13 +577,18 @@ def test_ivf_pq_consolidation(tmp_path):
     # print('[test_ingestion] index.delete() =====================================================================')
     # index.delete(external_id=1, timestamp=20)
 
-    print('[test_ingestion] index.consolidate_updates() =====================================================================')
+    print(
+        "[test_ingestion] index.consolidate_updates() ====================================================================="
+    )
     index = index.consolidate_updates()
 
-    print('[test_ingestion] index.query() =====================================================================')
+    print(
+        "[test_ingestion] index.query() ====================================================================="
+    )
     result_d, result_i = index.query(data, k=1)
-    print('[test_ingestion] scores', result_d)
-    print('[test_ingestion] ids', result_i)
+    print("[test_ingestion] scores", result_d)
+    print("[test_ingestion] ids", result_i)
+
 
 def test_ingestion_timetravel(tmp_path):
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
