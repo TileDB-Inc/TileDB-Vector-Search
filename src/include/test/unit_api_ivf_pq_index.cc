@@ -1123,7 +1123,7 @@ TEST_CASE("update index", "[api_ivf_pq_index]") {
             {4, 4, 4, 4, 4, 4},
             {5, 5, 5, 5, 5, 5}}),
         1,
-        ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {444}, {4}},
+        ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {444}, {444}},
         ColMajorMatrix<float>{{0}, {0}, {0}, {0}, {6}},
         n_list);
 

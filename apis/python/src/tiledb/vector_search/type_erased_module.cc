@@ -77,37 +77,28 @@ std::map<std::string, std::string> kwargs_to_map(py::kwargs kwargs) {
 auto datatype_to_format(tiledb_datatype_t datatype) {
   switch (datatype) {
     case TILEDB_FLOAT32:
-      std::cout << "TILEDB_FLOAT32" << std::endl;
       return py::format_descriptor<float>::format();
     case TILEDB_FLOAT64:
-      std::cout << "TILEDB_FLOAT64" << std::endl;
       return py::format_descriptor<double>::format();
     case TILEDB_INT8:
-      std::cout << "TILEDB_INT8" << std::endl;
       return py::format_descriptor<int8_t>::format();
     case TILEDB_UINT8:
-      std::cout << "TILEDB_UINT8" << std::endl;
       return py::format_descriptor<uint8_t>::format();
     case TILEDB_INT16:
-      std::cout << "TILEDB_INT16" << std::endl;
       return py::format_descriptor<int16_t>::format();
     case TILEDB_UINT16:
-      std::cout << "TILEDB_UINT16" << std::endl;
       return py::format_descriptor<uint16_t>::format();
     case TILEDB_INT32:
-      std::cout << "TILEDB_INT32" << std::endl;
       return py::format_descriptor<int32_t>::format();
     case TILEDB_UINT32:
-      std::cout << "TILEDB_UINT32" << std::endl;
       return py::format_descriptor<uint32_t>::format();
     case TILEDB_INT64:
-      std::cout << "TILEDB_INT64" << std::endl;
       return py::format_descriptor<int64_t>::format();
     case TILEDB_UINT64:
-      std::cout << "TILEDB_UINT64" << std::endl;
       return py::format_descriptor<uint64_t>::format();
     default:
-      throw std::runtime_error("Unsupported datatype");
+      throw std::runtime_error(
+          "[type_erased_module@datatype_to_format] Unsupported datatype");
   }
 }
 
@@ -117,15 +108,14 @@ bool check_datatype_format(
     return true;
   }
   // We need to handle uint64 specifically of a numpy quirk:
-  // - a. dtype_format (i.e.
+  // a. dtype_format (i.e.
   // `datatype_to_format(string_to_datatype(<py::array>.dtype().str()))`) will
-  // give us 'Q' (numpy.ulonglong)
-  //   -
-  //   https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.ulonglong
-  // - b. buffer_info_format (i.e. `<py::array>.request().format`) may give us
-  // 'L' (numpy.uint) b/c numpy.uint is an alias for numpy.uint64 on Darwin
-  // arm64.
-  //   - https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.uint
+  // give us 'Q' (numpy.ulonglong) See:
+  //  https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.ulonglong
+  // b. buffer_info_format (i.e. `<py::array>.request().format`) will
+  // give us 'L' (numpy.uint) because numpy.uint is an alias for numpy.uint64 on
+  // Darwin arm64. See:
+  //  https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.uint
   if (dtype_format == "Q" && buffer_info_format == "L") {
     return true;
   }
@@ -212,26 +202,26 @@ void init_type_erased_module(py::module_& m) {
             /* Strides (in bytes) for each index */
         );
       })
-      .def(py::init([](py::array b) {
+      .def(py::init([](py::array vector) {
         /* Request a buffer descriptor from Python */
-        py::buffer_info info = b.request();
-        if (info.ndim != 1)
+        py::buffer_info info = vector.request();
+        if (info.ndim != 1) {
           throw std::runtime_error(
-              "Incompatible buffer dimension! Should be 1.");
-
-        auto dtype_str = b.dtype().str();
-        tiledb_datatype_t datatype = string_to_datatype(dtype_str);
-
-        if (!check_datatype_format(datatype_to_format(datatype), info.format)) {
-          throw std::runtime_error(
-              "Incompatible format: expected array of " +
-              datatype_to_string(datatype) + " (" +
-              datatype_to_format(datatype) + "), but was " + info.format + ".");
+              "[type_erased_module@FeatureVector] Incompatible buffer "
+              "dimension. Should be 1, but was " +
+              std::to_string(info.ndim) + ".");
         }
-        // if (info.format != datatype_to_format(datatype))
-        //   throw std::runtime_error(
-        //       "Incompatible format: expected array of " +
-        //       datatype_to_string(datatype));
+
+        auto dtype_str = vector.dtype().str();
+        tiledb_datatype_t datatype = string_to_datatype(dtype_str);
+        auto datatype_format = datatype_to_format(datatype);
+        if (!check_datatype_format(datatype_format, info.format)) {
+          throw std::runtime_error(
+              "[type_erased_module@FeatureVector] Incompatible format: "
+              "expected array of " +
+              datatype_to_string(datatype) + " (" + datatype_format +
+              "), but was " + info.format + ".");
+        }
 
         size_t sz = datatype_to_size(datatype);
 
@@ -287,144 +277,57 @@ void init_type_erased_module(py::module_& m) {
              datatype_to_size(v.feature_type())});
       })
       .def(
-          py::init([](py::array b, py::array ids) {
+          py::init([](py::array vectors, py::array ids) {
             // The vector buffer info.
-            py::buffer_info info = b.request();
-            if (info.ndim != 2)
+            py::buffer_info info = vectors.request();
+            if (info.ndim != 2) {
               throw std::runtime_error(
-                  "Incompatible buffer dimension! Should be 2, but was " +
+                  "[type_erased_module@FeatureVectorArray] Incompatible buffer "
+                  "dimension. Should be 2, but was " +
                   std::to_string(info.ndim) + ".");
-            std::cout << "b.dtype(): " << b.dtype() << std::endl;
+            }
 
-            auto dtype_str = b.dtype().str();
+            auto dtype_str = vectors.dtype().str();
             tiledb_datatype_t datatype = string_to_datatype(dtype_str);
-            // We don't throw with uint64 b/c of a numpy quirk:
-            // - datatype_to_format(ids_datatype) will give us 'Q'
-            // (numpy.ulonglong)
-            //   -
-            //   https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.ulonglong
-            // - ids_info.format may give us 'L' (numpy.uint) b/c numpy.uint is
-            // an alias for numpy.uint64 on Darwin arm64.
-            //   -
-            //   https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.uint
-            // The thing happens with int64, but for it we have 'q'
-            // (numpy.longlong) whereas ids_info.format gives 'l' (numpy.int_).
-            // if (info.format != datatype_to_format(datatype) &&
-            // datatype_to_format(datatype) !=
-            // py::format_descriptor<uint64_t>::format() &&
-            // datatype_to_format(datatype) !=
-            // py::format_descriptor<int64_t>::format()) {
-            //   throw std::runtime_error("Incompatible format: expected array
-            //   of " + datatype_to_string(datatype) + " (" +
-            //   datatype_to_format(datatype) + "), but was " + info.format +
-            //   ".");
-            // }
-            if (!check_datatype_format(
-                    datatype_to_format(datatype), info.format)) {
+            auto datatype_format = datatype_to_format(datatype);
+            if (!check_datatype_format(datatype_format, info.format)) {
               throw std::runtime_error(
-                  "Incompatible format: expected array of " +
-                  datatype_to_string(datatype) + " (" +
-                  datatype_to_format(datatype) + "), but was " + info.format +
-                  ".");
+                  "[type_erased_module@FeatureVectorArray] Incompatible format "
+                  "- expected array of " +
+                  datatype_to_string(datatype) + " (" + datatype_format +
+                  "), but was " + info.format + ".");
             }
 
             // The ids vector buffer info.
             py::buffer_info ids_info = ids.request();
             if (ids_info.ndim != 1) {
               throw std::runtime_error(
-                  "Incompatible ids buffer dimension! Should be 1, but was " +
+                  "[type_erased_module@FeatureVectorArray] Incompatible ids "
+                  "buffer dimension. Should be 1, but was " +
                   std::to_string(ids_info.ndim) + ".");
             }
 
-            // class numpy.ulonglong[source]
-            // Signed integer type, compatible with C unsigned long long.
-            // 'Q'
-
-            // class numpy.uint[source]
-            // Unsigned signed integer type, 64bit on 64bit systems and 32bit on
-            // 32bit systems. 'L' Alias on this platform (Darwin arm64):
-            // numpy.uint64: 64-bit unsigned integer (0 to
-            // 18_446_744_073_709_551_615). Alias on this platform (Darwin
-            // arm64): numpy.uintp: Unsigned integer large enough to fit
-            // pointer, compatible with C uintptr_t.
-
             std::string ids_dtype_str;
             tiledb_datatype_t ids_datatype = TILEDB_ANY;
-            std::cout << "ids.size(): " << ids.size() << std::endl;
             if (ids.size() != 0) {
               ids_dtype_str = ids.dtype().str();
-              std::cout << "ids_dtype_str: " << ids_dtype_str << std::endl;
               ids_datatype = string_to_datatype(ids_dtype_str);
-              std::cout << "ids_datatype: " << ids_datatype << std::endl;
-              std::cout << "datatype_to_format(ids_datatype): "
-                        << datatype_to_format(ids_datatype) << std::endl;
-
-              std::cout << "info.item_type_is_equivalent_to<uint64>: "
-                        << info.item_type_is_equivalent_to<uint64_t>()
-                        << std::endl;
-              std::cout << "info.item_type_is_equivalent_to<uint64>: "
-                        << info.item_type_is_equivalent_to<uint32_t>()
-                        << std::endl;
-              std::cout << "info.item_type_is_equivalent_to<int>: "
-                        << info.item_type_is_equivalent_to<int>() << std::endl;
-              std::cout << "info.item_type_is_equivalent_to<long>: "
-                        << info.item_type_is_equivalent_to<long>() << std::endl;
-
-              std::cout << "py::format_descriptor<float>::format(): "
-                        << py::format_descriptor<float>::format() << std::endl;
-              std::cout << "py::format_descriptor<int>::format(): "
-                        << py::format_descriptor<int>::format() << std::endl;
-              std::cout << "py::format_descriptor<uint32_t>::format(): "
-                        << py::format_descriptor<uint32_t>::format()
-                        << std::endl;
-              std::cout << "py::format_descriptor<int32_t>::format(): "
-                        << py::format_descriptor<int32_t>::format()
-                        << std::endl;
-              std::cout << "py::format_descriptor<uint64_t>::format(): "
-                        << py::format_descriptor<uint64_t>::format()
-                        << std::endl;
-              std::cout << "py::format_descriptor<int64_t>::format(): "
-                        << py::format_descriptor<int64_t>::format()
-                        << std::endl;
-
-              std::cout << "ids.dtype(): " << ids.dtype() << std::endl;
-
-              std::cout << "ids_datatype: " << ids_datatype << std::endl;
-              // We don't throw with uint64 b/c of a numpy quirk:
-              // - datatype_to_format(ids_datatype) will give us 'Q'
-              // (numpy.ulonglong)
-              //   -
-              //   https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.ulonglong
-              // - ids_info.format may give us 'L' (numpy.uint) b/c numpy.uint
-              // is an alias for numpy.uint64 on Darwin arm64.
-              //   -
-              //   https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.uint
-              // The thing happens with int64, but for it we have 'q'
-              // (numpy.longlong) whereas ids_info.format gives 'l'
-              // (numpy.int_). if (ids_info.format !=
-              // datatype_to_format(ids_datatype) &&
-              // datatype_to_format(ids_datatype) !=
-              // py::format_descriptor<uint64_t>::format() &&
-              // datatype_to_format(datatype) !=
-              // py::format_descriptor<int64_t>::format()) {
-              //   throw std::runtime_error("Incompatible ids format: expected
-              //   array of " + datatype_to_string(ids_datatype) + " (" +
-              //   datatype_to_format(ids_datatype) + "), but was " +
-              //   ids_info.format + ".");
-              // }
+              auto ids_datatype_format = datatype_to_format(ids_datatype);
               if (!check_datatype_format(
-                      datatype_to_format(ids_datatype), ids_info.format)) {
+                      ids_datatype_format, ids_info.format)) {
                 throw std::runtime_error(
-                    "Incompatible ids format: expected array of " +
-                    datatype_to_string(datatype) + " (" +
-                    datatype_to_format(datatype) + "), but was " + info.format +
+                    "[type_erased_module@FeatureVectorArray] Incompatible ids "
+                    "format - expected array of " +
+                    datatype_to_string(ids_datatype) + " (" +
+                    ids_datatype_format + "), but was " + ids_info.format +
                     ".");
               }
             }
 
             auto feature_vector_array = [&]() {
-              auto order = b.flags() & py::array::f_style ? TILEDB_COL_MAJOR :
-                                                            TILEDB_ROW_MAJOR;
+              auto order = vectors.flags() & py::array::f_style ?
+                               TILEDB_COL_MAJOR :
+                               TILEDB_ROW_MAJOR;
               if (order == TILEDB_COL_MAJOR) {
                 return FeatureVectorArray(
                     info.shape[0], info.shape[1], dtype_str, ids_dtype_str);
@@ -449,7 +352,7 @@ void init_type_erased_module(py::module_& m) {
 
             return feature_vector_array;
           }),
-          py::arg("b"),
+          py::arg("vectors"),
           py::arg("ids") = py::array());
 
   py::class_<IndexFlatL2>(m, "IndexFlatL2")
@@ -477,7 +380,8 @@ void init_type_erased_module(py::module_& m) {
         } else if (s == "random") {
           return kmeans_init::random;
         } else {
-          throw std::runtime_error("Invalid kmeans_init value");
+          throw std::runtime_error(
+              "[type_erased_module@kmeans_init] Invalid kmeans_init value");
         }
       }));
 
@@ -663,7 +567,9 @@ void init_type_erased_module(py::module_& m) {
             } else if (std::string(init_str) == "random") {
               init = kmeans_init::random;
             } else {
-              throw std::runtime_error("Invalid kmeans_init value");
+              throw std::runtime_error(
+                  "[type_erased_module@IndexIVFFlat@train] Invalid kmeans_init "
+                  "value");
             }
             index.train(vectors, init);
           },
