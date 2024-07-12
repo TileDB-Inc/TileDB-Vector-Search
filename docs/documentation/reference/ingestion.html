@@ -257,49 +257,49 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="odd">
 <td><code>input_vectors</code></td>
-<td>np.ndarray</td>
+<td>Optional[np.ndarray]</td>
 <td>Input vectors, if this is provided it takes precedence over <code>source_uri</code> and <code>source_type</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>source_uri</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>Vectors source URI.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>source_type</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>Type of the source vectors. If left empty it is auto-detected.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>external_ids</code></td>
-<td>np.array</td>
+<td>Optional[np.array]</td>
 <td>Input vector <code>external_ids</code>, if this is provided it takes precedence over <code>external_ids_uri</code> and <code>external_ids_type</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>external_ids_uri</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>Source URI for <code>external_ids</code>.</td>
 <td><code>''</code></td>
 </tr>
 <tr class="even">
 <td><code>external_ids_type</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>File type of external_ids_uri. If left empty it is auto-detected.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>updates_uri</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>Updates array URI. Used for consolidation of updates.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>index_timestamp</code></td>
-<td>int</td>
+<td>Optional[int]</td>
 <td>Timestamp to use for writing and reading data. By default it uses the current unix ms timestamp.</td>
 <td><code>None</code></td>
 </tr>
@@ -347,7 +347,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>copy_centroids_uri</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>TileDB array URI to copy centroids from, if not provided, centroids are build running <code>k-means</code>.</td>
 <td><code>None</code></td>
 </tr>
@@ -359,19 +359,19 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>training_input_vectors</code></td>
-<td>np.ndarray</td>
+<td>Optional[np.ndarray]</td>
 <td>Training input vectors, if this is provided it takes precedence over <code>training_source_uri</code> and <code>training_source_type</code>. Should not be provided if <code>training_sample_size</code> or <code>training_source_uri</code> are provided.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td><code>training_source_uri</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>The source URI to use for training centroids when building a <code>IVF_FLAT</code> vector index. If not provided, the first <code>training_sample_size</code> vectors from <code>source_uri</code> are used. Should not be provided if training_sample_size or training_input_vectors is provided.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td><code>training_source_type</code></td>
-<td>str</td>
+<td>Optional[str]</td>
 <td>Type of the training source data in <code>training_source_uri</code>. If left empty, is auto-detected. Should only be provided when <code>training_source_uri</code> is provided.</td>
 <td><code>None</code></td>
 </tr>
