@@ -122,28 +122,10 @@ int ivf_index(
     indices[0] = 0;
     std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
 
-    // std::vector<size_t> check(indices.size());
-    // std::copy(begin(indices), end(indices), begin(check));
-
-    // @todo Add systematic mechanism for debugging algorithms / dat structures
-    // debug_matrix(degrees, "degrees");
-    // debug_matrix(indices, "indices");
-
-    // Some variables for debugging
-    // @todo remove these once we are confident in the code
-    // auto mis = std::max_element(begin(indices), end(indices));
-    // auto a = std::distance(begin(indices), mis);
-    // auto b = std::distance(mis, end(indices));
-    // auto misx = *mis;
-
     // Array for storing the shuffled data
     auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
         input_vectors.num_rows(), input_vectors.num_cols()};
     std::vector shuffled_ids = std::vector<IdsType>(input_vectors.num_cols());
-
-    // @todo Add systematic mechanism for debugging algorithms / dat structures
-    // debug_matrix(shuffled_input_vectors, "shuffled_input_vectors");
-    // debug_matrix(shuffled_ids, "shuffled_ids");
 
     // @todo parallelize
     // Unfortunately this variant of the algorithm is not parallelizable.
@@ -189,9 +171,6 @@ int ivf_index(
 
     std::shift_right(begin(indices), end(indices), 1);
     indices[0] = 0;
-
-    // A check for debugging
-    // auto x = std::equal(begin(indices), end(indices), begin(check));
 
     for (size_t i = 0; i < size(indices); ++i) {
       indices[i] = indices[i] + start_pos;
