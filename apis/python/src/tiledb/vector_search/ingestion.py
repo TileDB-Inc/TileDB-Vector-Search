@@ -2016,7 +2016,7 @@ def ingest(
                     prev_index = partial_indexes[0]
                     i = 0
                     for partial_index in partial_indexes[1:]:
-                        s = slice(int(prev_index), int(partial_index - 1))
+                        s = slice(int(prev_index), int(partial_index) - 1)
                         if (
                             s.start <= s.stop
                             and s.start != np.iinfo(np.dtype("uint64")).max
