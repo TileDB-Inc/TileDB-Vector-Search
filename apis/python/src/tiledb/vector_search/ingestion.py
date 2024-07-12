@@ -1618,12 +1618,25 @@ def ingest(
                 )
                 ctx = vspy.Ctx(config)
                 index = vspy.IndexIVFPQ(ctx, index_group_uri)
-                vectors_to_add = vspy.FeatureVectorArray(
-                    np.transpose(additions_vectors),
-                    np.transpose(additions_external_ids),
-                )
-                vector_ids_to_remove = vspy.FeatureVector(updated_ids)
-                index.update(vectors_to_add, vector_ids_to_remove)
+                if (
+                    additions_vectors is not None
+                    or additions_external_ids is not None
+                    or updated_ids is not None
+                ):
+                    vectors_to_add = vspy.FeatureVectorArray(
+                        np.transpose(additions_vectors)
+                        if additions_vectors is not None
+                        else np.array([[]], dtype=vector_type),
+                        np.transpose(additions_external_ids)
+                        if additions_external_ids is not None
+                        else np.array([], dtype=np.uint64),
+                    )
+                    vector_ids_to_remove = vspy.FeatureVector(
+                        updated_ids
+                        if updated_ids is not None
+                        else np.array([], np.uint64)
+                    )
+                    index.update(vectors_to_add, vector_ids_to_remove)
                 index.write_index(
                     ctx, index_group_uri, to_temporal_policy(index_timestamp)
                 )

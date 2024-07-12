@@ -44,12 +44,19 @@ def test_numpy_to_feature_vector_data_types():
         else:
             raise TypeError(f"Unsupported data type {dtype}")
 
+        # Test with a single element.
         vector = np.array([max_val], dtype=dtype)
         feature_vector = vspy.FeatureVector(vector)
+        assert feature_vector.dimensions() == 1
         assert feature_vector.feature_type_string() == np.dtype(dtype).name
         assert np.array_equal(
             vector, np.array(feature_vector)
         ), f"Arrays were not equal for dtype: {dtype}"
+
+        # Test empty.
+        vector = np.array([], dtype=dtype)
+        feature_vector = vspy.FeatureVector(vector)
+        assert feature_vector.dimensions() == 0
 
 
 def test_numpy_to_feature_vector_array_simple():
@@ -136,14 +143,25 @@ def test_numpy_to_feature_vector_array_data_types():
             else:
                 raise TypeError(f"Unsupported ids data type {dtype_ids}")
 
+            # Test with a single vector.
             vectors = np.array([[max_val]], dtype=dtype)
             ids = np.array([max_val_ids], dtype=dtype_ids)
             feature_vector_array = vspy.FeatureVectorArray(vectors, ids)
+            assert feature_vector_array.dimensions() == 1
+            assert feature_vector_array.num_vectors() == 1
+            assert feature_vector_array.num_ids() == 1
             assert feature_vector_array.feature_type_string() == np.dtype(dtype).name
             assert feature_vector_array.ids_type_string() == np.dtype(dtype_ids).name
             assert np.array_equal(
                 vectors, np.array(feature_vector_array)
             ), f"Arrays were not equal for dtype: {dtype}, dtype_ids: {dtype_ids}"
+
+            # Test empty.
+            vectors = np.array([[]], dtype=dtype)
+            ids = np.array([], dtype=dtype_ids)
+            feature_vector_array = vspy.FeatureVectorArray(vectors, ids)
+            assert feature_vector_array.num_vectors() == 0
+            assert feature_vector_array.num_ids() == 0
 
 
 def test_numpy_to_feature_vector_array():
