@@ -246,6 +246,8 @@ class ivf_pq_index {
   uint64_t num_threads_{std::thread::hardware_concurrency()};
   uint64_t seed_{std::random_device{}()};
 
+  DistanceMetric distance_metric_{DistanceMetric::L2};
+
  public:
   using value_type = feature_type;
   using index_type = partitioning_indices_type;  // @todo This isn't quite right
@@ -291,7 +293,8 @@ class ivf_pq_index {
       size_t max_iter = 2,
       float tol = 0.000025,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      uint64_t seed = std::random_device{}())
+      uint64_t seed = std::random_device{}(),
+      DistanceMetric distance_metric = DistanceMetric::L2)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
@@ -299,7 +302,8 @@ class ivf_pq_index {
       , num_subspaces_{num_subspaces}  // new for pq
       , max_iter_(max_iter)
       , tol_(tol)
-      , seed_{seed} {
+      ,seed_{seed},
+      distance_metric_{distance_metric} {
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
           "num_subspaces (" + std::to_string(num_subspaces_) +
@@ -345,7 +349,7 @@ class ivf_pq_index {
     num_partitions_ = group_->get_num_partitions();
     num_subspaces_ = group_->get_num_subspaces();
     sub_dimensions_ = dimensions_ / num_subspaces_;
-
+    distance_metric_ = group_->get_distance_metric();
     flat_ivf_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
             group_->cached_ctx(),
@@ -1002,6 +1006,7 @@ class ivf_pq_index {
     write_group.set_sub_dimensions(sub_dimensions_);
     write_group.set_bits_per_subspace(bits_per_subspace_);
     write_group.set_num_clusters(num_clusters_);
+    write_group.set_distance_metric(distance_metric_);
 
     if (num_subspaces_ * sub_dimensions_ != dimensions_) {
       throw std::runtime_error(
@@ -1339,6 +1344,10 @@ class ivf_pq_index {
     return num_partitions_;
   }
 
+  constexpr auto distance_metric() const {
+    return distance_metric_;
+  }
+
   /***************************************************************************
    * Methods to aid Testing and Debugging
    *
@@ -1535,6 +1544,13 @@ class ivf_pq_index {
       return false;
     }
     if (num_clusters_ != rhs.num_clusters_) {
+      return false;
+    }
+    if (distance_metric_ != rhs.distance_metric_) {
+      std::cout << "distance_metric_ != rhs.distance_metric_"
+                << static_cast<int>(distance_metric_)
+                << " != " << static_cast<int>(rhs.distance_metric_)
+                << std::endl;
       return false;
     }
 

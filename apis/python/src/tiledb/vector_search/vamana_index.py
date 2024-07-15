@@ -187,10 +187,6 @@ def create(
         r_max_degree=r_max_degree if l_build > 0 else R_MAX_DEGREE_DEFAULT,
         distance_metric=int(distance_metric),
     )
-    if distance_metric != vspy.DistanceMetric.L2:
-        raise ValueError(
-            f"Distance metric {distance_metric} is not supported in VAMANA"
-        )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(
         dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name

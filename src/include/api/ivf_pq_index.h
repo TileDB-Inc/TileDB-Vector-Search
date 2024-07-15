@@ -164,6 +164,7 @@ class IndexIVFPQ {
     num_subspaces_ = index_->num_subspaces();
     max_iterations_ = index_->max_iterations();
     convergence_tolerance_ = index_->convergence_tolerance();
+    distance_metric = index_->distance_metric();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -171,8 +172,6 @@ class IndexIVFPQ {
           " != " + std::to_string(index_->dimensions()));
     }
     dimensions_ = index_->dimensions();
-    base_index_metadata<IndexIVFPQ>::get_distance_metric_metadata(
-        ctx, group_uri, distance_metric);
   }
 
   /**
@@ -207,7 +206,9 @@ class IndexIVFPQ {
         max_iterations_,
         convergence_tolerance_,
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
-                 std::nullopt);
+                 std::nullopt,
+        std::random_device{}(),
+        distance_metric);
 
     index_->train(training_set);
 
@@ -258,8 +259,6 @@ class IndexIVFPQ {
           "Cannot write_index() because there is no index.");
     }
     index_->write_index(ctx, group_uri, temporal_policy, storage_version);
-    base_index_metadata<IndexIVFPQ>::set_distance_metric_metadata(
-        ctx, group_uri, distance_metric);
   }
 
   static void clear_history(
@@ -398,6 +397,7 @@ class IndexIVFPQ {
     [[nodiscard]] virtual uint64_t num_subspaces() const = 0;
     [[nodiscard]] virtual uint64_t max_iterations() const = 0;
     [[nodiscard]] virtual float convergence_tolerance() const = 0;
+    [[nodiscard]] virtual DistanceMetric distance_metric() const = 0;
   };
 
   /**
@@ -415,13 +415,17 @@ class IndexIVFPQ {
         size_t num_subspaces,
         size_t max_iterations,
         size_t convergence_tolerance,
-        std::optional<TemporalPolicy> temporal_policy)
+        std::optional<TemporalPolicy> temporal_policy,
+        uint64_t seed,
+        DistanceMetric distance_metric)
         : impl_index_(
               n_list,
               num_subspaces,
               max_iterations,
               convergence_tolerance,
-              temporal_policy) {
+              temporal_policy,
+              seed,
+              distance_metric) {
     }
 
     index_impl(
@@ -550,6 +554,10 @@ class IndexIVFPQ {
       return impl_index_.convergence_tolerance();
     }
 
+    DistanceMetric distance_metric() const override {
+      return impl_index_.distance_metric();
+    }
+
    private:
     /**
      * @brief Instance of the concrete class.
@@ -558,7 +566,7 @@ class IndexIVFPQ {
   };
 
   // clang-format off
-  using constructor_function = std::function<std::unique_ptr<index_base>(size_t, size_t, size_t, float, std::optional<TemporalPolicy>)>;
+  using constructor_function = std::function<std::unique_ptr<index_base>(size_t, size_t, size_t, float, std::optional<TemporalPolicy>,uint64_t ,DistanceMetric)>;
   using table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, constructor_function>;
   static const table_type dispatch_table;
 
@@ -585,18 +593,18 @@ class IndexIVFPQ {
 
 // clang-format off
 const IndexIVFPQ::table_type IndexIVFPQ::dispatch_table = {
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint32_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](size_t nlist, size_t num_subspaces, size_t max_iterations, float convergence_tolerance, std::optional<TemporalPolicy> temporal_policy, uint64_t seed, DistanceMetric distance_metric) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint64_t>>>(nlist, num_subspaces, max_iterations, convergence_tolerance, temporal_policy,seed ,distance_metric); }},
 };
 
 const IndexIVFPQ::uri_table_type IndexIVFPQ::uri_dispatch_table = {

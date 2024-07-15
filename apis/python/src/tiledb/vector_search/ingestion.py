@@ -25,6 +25,7 @@ from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 from tiledb.vector_search.utils import is_type_erased_index
+from tiledb.vector_search.utils import normalize_vectors
 from tiledb.vector_search.utils import to_temporal_policy
 
 
@@ -1221,6 +1222,7 @@ def ingest(
                         config=config,
                         verbose=verbose,
                         trace_id=trace_id,
+                        # normalized = True
                     ).astype(np.float32)
                 else:
                     sample_vectors = read_input_vectors(
@@ -1234,6 +1236,9 @@ def ingest(
                         verbose=verbose,
                         trace_id=trace_id,
                     ).astype(np.float32)
+
+                # if distance_metric == vspy.DistanceMetric.COSINE:
+                #     sample_vectors = normalize_vectors(sample_vectors)
 
                 logger.debug("Start kmeans training")
                 if use_sklearn:
@@ -1280,13 +1285,14 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     ) -> np.ndarray:
         logger = setup(config, verbose)
         logger.debug(
             "Initialising centroids by reading the first vectors in the source data."
         )
         with tiledb.scope_ctx(ctx_or_config=config):
-            return read_input_vectors(
+            vectors = read_input_vectors(
                 source_uri=source_uri,
                 source_type=source_type,
                 vector_type=vector_type,
@@ -1297,6 +1303,11 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
+
+            # if(distance_metric == vspy.DistanceMetric.COSINE):
+            #     vectors = normalize_vectors(vectors)
+
+            return vectors
 
     def assign_points_and_partial_new_centroids(
         centroids: np.ndarray,
@@ -1707,6 +1718,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     ):
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
@@ -1871,8 +1883,12 @@ def ingest(
             verbose=verbose,
             trace_id=trace_id,
         )
+
         if additions_vectors is None:
             return
+
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+            additions_vectors = normalize_vectors(additions_vectors)
 
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
         if index_timestamp is None:
@@ -2309,6 +2325,11 @@ def ingest(
             )
             return d
         elif index_type == "IVF_FLAT":
+            # write normalized vectors to uri
+            # source_uri = normal_uri
+            # submit (normalize_vectors_and_read_write)
+            #
+
             if copy_centroids_uri is not None:
                 centroids_node = submit(
                     copy_centroids,
@@ -2432,6 +2453,7 @@ def ingest(
                         config=config,
                         verbose=verbose,
                         trace_id=trace_id,
+                        # distance_metric=
                         name="init-centroids",
                         resources=copy_centroids_resources,
                         image_name=DEFAULT_IMG_NAME,
@@ -2870,6 +2892,12 @@ def ingest(
             storage_version=storage_version,
         )
 
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+            if input_vectors is not None:
+                input_vectors = normalize_vectors(input_vectors)
+            if training_input_vectors is not None:
+                training_input_vectors = normalize_vectors(training_input_vectors)
+
         if training_input_vectors is not None:
             training_source_uri = write_input_vectors(
                 group=temp_data_group,
@@ -2880,7 +2908,6 @@ def ingest(
                 array_name=TRAINING_INPUT_VECTORS_ARRAY_NAME,
             )
             training_source_type = "TILEDB_ARRAY"
-
         if input_vectors is not None:
             source_uri = write_input_vectors(
                 group=temp_data_group,
