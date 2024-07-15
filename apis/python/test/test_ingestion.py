@@ -717,7 +717,7 @@ def test_ingestion_timetravel(tmp_path):
                 second_num_edges = num_edges_history[1]
 
         # Clear all history at timestamp 19.
-        # With type-erased indexes, we cannot call clear_history() while the index is open because they 
+        # With type-erased indexes, we cannot call clear_history() while the index is open because they
         # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
         index = None
         Index.clear_history(uri=index_uri, timestamp=19)
@@ -1120,7 +1120,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         # Clear history before the latest ingestion
         latest_ingestion_timestamp = index.latest_ingestion_timestamp
         assert index.latest_ingestion_timestamp == 102
-        # With type-erased indexes, we cannot call clear_history() while the index is open because they 
+        # With type-erased indexes, we cannot call clear_history() while the index is open because they
         # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
         index = None
         Index.clear_history(uri=index_uri, timestamp=latest_ingestion_timestamp - 1)
@@ -1168,7 +1168,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         # Clear all history
         latest_ingestion_timestamp = index.latest_ingestion_timestamp
         assert index.latest_ingestion_timestamp == 102
-        # With type-erased indexes, we cannot call clear_history() while the index is open because they 
+        # With type-erased indexes, we cannot call clear_history() while the index is open because they
         # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
         index = None
         Index.clear_history(uri=index_uri, timestamp=latest_ingestion_timestamp)
@@ -1768,7 +1768,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     )
 
     # Clear the index history, load, update, and query.
-    # With type-erased indexes, we cannot call clear_history() while the index is open because they 
+    # With type-erased indexes, we cannot call clear_history() while the index is open because they
     # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
     latest_ingestion_timestamp = index.latest_ingestion_timestamp
     index = None
