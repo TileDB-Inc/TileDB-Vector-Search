@@ -205,6 +205,13 @@ class ivf_pq_index {
   constexpr static const uint64_t bits_per_subspace_{8};
   constexpr static const uint64_t num_clusters_{256};
 
+  // The feature vectors. These contain the original input vectors, modified
+  // with updates and deletions over time. Note that we only use this to
+  // re-ingest data, so if we open this index by URI we will not read this data
+  // from the URI. Instead, we'll fill it when we call `add()` and then write it
+  // during `write_index()`.
+  ColMajorMatrixWithIds<feature_type, id_type> feature_vectors_;
+
   /*
    * We are going to use train / compress / add pattern, so we need to store
    * flat ivf_centroids, pq_ivf_centroids, pq_vectors, partitioned_pq_vectors
@@ -715,6 +722,18 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
+    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
+        ::dimensions(training_set), ::num_vectors(training_set)));
+    std::copy(
+        training_set.data(),
+        training_set.data() +
+            ::dimensions(training_set) * ::num_vectors(training_set),
+        feature_vectors_.data());
+    std::copy(
+        training_set_ids.begin(),
+        training_set_ids.end(),
+        feature_vectors_.ids());
+
     auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
 
     train_pq(training_set);   // cluster_centroids_, distance_tables_
@@ -898,7 +917,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->pq_ivf_indices_uri(),
         group_->get_num_partitions() + 1,
-        group_->ids_uri(),
+        group_->pq_ivf_ids_uri(),
         infinite_parts,
         0,
         temporal_policy_);
@@ -1054,6 +1073,21 @@ class ivf_pq_index {
 
     write_matrix(
         ctx,
+        feature_vectors_,
+        write_group.feature_vectors_uri(),
+        0,
+        false,
+        temporal_policy_);
+    write_vector(
+        ctx,
+        feature_vectors_.raveled_ids(),
+        write_group.ids_uri(),
+        0,
+        false,
+        temporal_policy_);
+
+    write_matrix(
+        ctx,
         cluster_centroids_,
         write_group.cluster_centroids_uri(),
         0,
@@ -1083,15 +1117,13 @@ class ivf_pq_index {
         0,
         false,
         temporal_policy_);
-
     write_vector(
         ctx,
         partitioned_pq_vectors_->ids(),
-        write_group.ids_uri(),
+        write_group.pq_ivf_ids_uri(),
         0,
         false,
         temporal_policy_);
-
     write_matrix(
         ctx,
         *partitioned_pq_vectors_,
