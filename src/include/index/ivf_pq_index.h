@@ -969,7 +969,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->pq_ivf_indices_uri(),
         group_->get_num_partitions() + 1,
-        group_->ids_uri(),
+        group_->pq_ivf_ids_uri(),
         active_partitions,
         upper_bound,
         temporal_policy_);
