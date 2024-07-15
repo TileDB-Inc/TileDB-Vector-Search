@@ -294,12 +294,9 @@ namespace _cosine_distance {
 
 struct cosine_distance {
   template <feature_vector V, feature_vector U>
-  constexpr inline float operator()(const V& a, const U& b) const {
-    return 1 - (-inner_product(a, b)) /
-                   sqrt(
-                       l2_distance(a) *
-                       l2_distance(b));  // our inner product is negative so we
-                                         // have to flip it
+  inline float operator()(const V& a, const U& b) const {
+    float mag = sqrt(l2_distance(a) * l2_distance(b));
+    return 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag);
   }
 };
 
@@ -307,6 +304,27 @@ struct cosine_distance {
 using cosine_distance = _cosine_distance::cosine_distance;
 
 enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
+
+template <typename Func>
+Func get_distance_function(DistanceMetric metric) {
+  switch (metric) {
+    case DistanceMetric::L2:
+      return sum_of_squares_distance{};
+    case DistanceMetric::INNER_PRODUCT:
+      return inner_product_distance{};
+    case DistanceMetric::COSINE:
+      return cosine_distance{};
+    default:
+      throw std::runtime_error("Unsupported distance metric");
+  }
+}
+
+// Helper function to wrap the call to get_distance_function
+template <typename Func, typename... Args>
+auto call_distance_function(DistanceMetric metric, Args&&... args) {
+  return get_distance_function<Func>(metric)(std::forward<Args>(args)...);
+}
+
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
 // ----------------------------------------------------------------------------

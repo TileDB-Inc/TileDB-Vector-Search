@@ -318,6 +318,7 @@ class Index:
             int(os.cpu_count() / 2),
             self.update_array_timestamp,
             self.config,
+            self.distance_metric,
         )
         if self.query_base_array:
             internal_results_d, internal_results_i = self.query_internal(
@@ -695,7 +696,9 @@ class Index:
         nthreads=8,
         timestamp=None,
         config=None,
+        distance_metric=vspy.DistanceMetric.L2,
     ):
+        print("Distance Metric: ", distance_metric)
         additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
             updates_array_uri, timestamp, config
         )
@@ -709,6 +712,7 @@ class Index:
             StdVector_u64(additions_external_ids),
             k,
             nthreads,
+            distance_metric,
         )
         return np.transpose(np.array(d)), np.transpose(np.array(i)), updated_ids
 
