@@ -54,7 +54,7 @@ def ingest(
     num_subspaces: int = -1,
     l_build: int = -1,
     r_max_degree: int = -1,
-    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.FIRST_N,
+    training_sampling_policy: TrainingSamplingPolicy = TrainingSamplingPolicy.RANDOM,
     copy_centroids_uri: Optional[str] = None,
     training_sample_size: int = -1,
     training_input_vectors: Optional[np.ndarray] = None,
