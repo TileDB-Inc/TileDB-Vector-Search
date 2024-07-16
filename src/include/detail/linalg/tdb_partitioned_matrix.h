@@ -600,8 +600,6 @@ class tdbPartitionedMatrix
     this->num_vectors_ = num_resident_cols_;
     this->num_parts_ = num_resident_parts;
 
-    debug_tdb_partitioned_matrix("", 100);
-
     if (last_resident_part_ == total_num_parts_ &&
         last_resident_col_ == total_max_cols_) {
       // We have loaded all the data we can, let's close our Array's.
