@@ -520,7 +520,9 @@ class tdbPartitionedMatrix
     // it is, we'll have an error to investigate, rather than just returning
     // false incorrectly.
     if (closed_) {
-      throw std::runtime_error("[tdb_partioned_matrix@load] Array is closed");
+      throw std::runtime_error(
+          "[tdb_partioned_matrix@load] Arrays are closed - this should not "
+          "happen.");
     }
 
     // 2. Load the vectors and IDs.
