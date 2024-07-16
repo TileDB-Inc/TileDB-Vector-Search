@@ -626,6 +626,7 @@ class Index:
                     vspy.IndexIVFPQ.clear_history(ctx, uri, timestamp)
                 else:
                     raise ValueError(f"Unsupported index_type: {index_type}")
+                group.close()
                 return
 
             ingestion_timestamps = [

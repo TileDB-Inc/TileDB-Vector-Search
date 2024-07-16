@@ -54,16 +54,16 @@ namespace detail::ivf {
  * Partitions a set of vectors, given a set of centroids.
  * @return
  */
-template <typename T, class ids_type, class centroids_type>
+template <typename FeatureType, class IdsType, class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
-    const ColMajorMatrix<T>& db,                // IN
-    const std::vector<ids_type>& external_ids,  // IN
-    const std::vector<ids_type>& deleted_ids,   // IN
-    const std::string& centroids_uri,           // IN (from array centroids_uri)
-    const std::string& parts_uri,               // OUT (to array at parts_uri)
-    const std::string& index_uri,               // OUT (to array at index_uri)
-    const std::string& id_uri,                  // OUT (to array at id_uri)
+    const ColMajorMatrix<FeatureType>& input_vectors,  // IN
+    const std::vector<IdsType>& external_ids,          // IN
+    const std::vector<IdsType>& deleted_ids,           // IN
+    const std::string& centroids_uri,  // IN (from array centroids_uri)
+    const std::string& parts_uri,      // OUT (to array at parts_uri)
+    const std::string& index_uri,      // OUT (to array at index_uri)
+    const std::string& id_uri,         // OUT (to array at id_uri)
     size_t start_pos,
     size_t end_pos,
     size_t nthreads,
@@ -85,7 +85,7 @@ int ivf_index(
   auto partitions = non_empty[1].second.second + 1;
 
   // Read all rows from column 0 -> `partitions`. Set no upper_bound.
-  auto centroids = tdbColMajorMatrix<centroids_type>(
+  auto centroids = tdbColMajorMatrix<CentroidsType>(
       ctx,
       centroids_uri,
       0,
@@ -95,52 +95,37 @@ int ivf_index(
       0,
       centroid_read_temporal_policy);
   centroids.load();
-  auto parts = detail::flat::qv_partition(centroids, db, nthreads);
-  // debug_matrix(parts, "parts");
+  // Find the centroid that is closest to each input vector.
+  auto parts = detail::flat::qv_partition(centroids, input_vectors, nthreads);
   {
     scoped_timer _{"shuffling data"};
-    std::unordered_set<ids_type> deleted_ids_set(
+    std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
+    // The number of vectors assigned to each centroid.
     std::vector<size_t> degrees(centroids.num_cols());
-    std::vector<ids_type> indices(centroids.num_cols() + 1);
     if (deleted_ids.empty()) {
-      for (size_t i = 0; i < db.num_cols(); ++i) {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
         auto j = parts[i];
         ++degrees[j];
       }
     } else {
-      for (size_t i = 0; i < db.num_cols(); ++i) {
-        if (auto iter = deleted_ids_set.find(external_ids[i]);
-            iter == deleted_ids_set.end()) {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+        if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
           auto j = parts[i];
           ++degrees[j];
         }
       }
     }
+
+    // The starting index of each partition in the shuffled data.
+    std::vector<IdsType> indices(centroids.num_cols() + 1);
     indices[0] = 0;
     std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
 
-    std::vector<size_t> check(indices.size());
-    std::copy(begin(indices), end(indices), begin(check));
-
-    // @todo Add systematic mechanism for debugging algorithms / dat structures
-    // debug_matrix(degrees, "degrees");
-    // debug_matrix(indices, "indices");
-
-    // Some variables for debugging
-    // @todo remove these once we are confident in the code
-    auto mis = std::max_element(begin(indices), end(indices));
-    auto a = std::distance(begin(indices), mis);
-    auto b = std::distance(mis, end(indices));
-    auto misx = *mis;
-
     // Array for storing the shuffled data
-    auto shuffled_db = ColMajorMatrix<T>{db.num_rows(), db.num_cols()};
-    std::vector shuffled_ids = std::vector<ids_type>(db.num_cols());
-
-    // @todo Add systematic mechanism for debugging algorithms / dat structures
-    // debug_matrix(shuffled_db, "shuffled_db");
-    // debug_matrix(shuffled_ids, "shuffled_ids");
+    auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
+        input_vectors.num_rows(), input_vectors.num_cols()};
+    std::vector shuffled_ids = std::vector<IdsType>(input_vectors.num_cols());
 
     // @todo parallelize
     // Unfortunately this variant of the algorithm is not parallelizable.
@@ -149,36 +134,35 @@ int ivf_index(
     // be difficult to implement.  Even this algorithm is not trivial to
     // parallelize, because of the random access to the indices array.
     if (deleted_ids.empty()) {
-      for (size_t i = 0; i < db.num_cols(); ++i) {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
         size_t bin = parts[i];
         size_t ibin = indices[bin];
 
         shuffled_ids[ibin] = external_ids[i];
 
-        if (ibin >= shuffled_db.num_cols()) {
+        if (ibin >= shuffled_input_vectors.num_cols()) {
           throw std::runtime_error(
-              "[ivf_index] ibin >= shuffled_db.num_cols()");
+              "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
         }
-        for (size_t j = 0; j < db.num_rows(); ++j) {
-          shuffled_db(j, ibin) = db(j, i);
+        for (size_t j = 0; j < input_vectors.num_rows(); ++j) {
+          shuffled_input_vectors(j, ibin) = input_vectors(j, i);
         }
         ++indices[bin];
       }
     } else {
-      for (size_t i = 0; i < db.num_cols(); ++i) {
-        if (auto iter = deleted_ids_set.find(external_ids[i]);
-            iter == deleted_ids_set.end()) {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+        if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
           size_t bin = parts[i];
           size_t ibin = indices[bin];
 
           shuffled_ids[ibin] = external_ids[i];
 
-          if (ibin >= shuffled_db.num_cols()) {
+          if (ibin >= shuffled_input_vectors.num_cols()) {
             throw std::runtime_error(
-                "[ivf_index] ibin >= shuffled_db.num_cols()");
+                "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
           }
-          for (size_t j = 0; j < db.num_rows(); ++j) {
-            shuffled_db(j, ibin) = db(j, i);
+          for (size_t j = 0; j < input_vectors.num_rows(); ++j) {
+            shuffled_input_vectors(j, ibin) = input_vectors(j, i);
           }
           ++indices[bin];
         }
@@ -187,9 +171,6 @@ int ivf_index(
 
     std::shift_right(begin(indices), end(indices), 1);
     indices[0] = 0;
-
-    // A check for debugging
-    auto x = std::equal(begin(indices), end(indices), begin(check));
 
     for (size_t i = 0; i < size(indices); ++i) {
       indices[i] = indices[i] + start_pos;
@@ -200,8 +181,13 @@ int ivf_index(
                                          TemporalPolicy() :
                                          TemporalPolicy(TimeTravel, timestamp);
     if (parts_uri != "") {
-      write_matrix<T, stdx::layout_left, size_t>(
-          ctx, shuffled_db, parts_uri, start_pos, false, temporal_policy);
+      write_matrix<FeatureType, stdx::layout_left, size_t>(
+          ctx,
+          shuffled_input_vectors,
+          parts_uri,
+          start_pos,
+          false,
+          temporal_policy);
     }
     if (index_uri != "") {
       write_vector(ctx, indices, index_uri, 0, false, temporal_policy);
@@ -219,12 +205,12 @@ int ivf_index(
  * (i.e., the index of the vector in the db), or read from an external array.
  * Call the main ivf_index function above.
  */
-template <typename T, class ids_type, class centroids_type>
+template <typename FeatureType, class IdsType, class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
-    const std::string& db_uri,
+    const std::string& input_vectors_uri,
     const std::string& external_ids_uri,
-    const std::vector<ids_type>& deleted_ids,
+    const std::vector<IdsType>& deleted_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -237,20 +223,27 @@ int ivf_index(
                                        TemporalPolicy() :
                                        TemporalPolicy(TimeTravel, timestamp);
   // Read all rows from column `start_pos` -> `end_pos`. Set no upper_bound.
-  auto db = tdbColMajorMatrix<T>(
-      ctx, db_uri, 0, std::nullopt, start_pos, end_pos, 0, temporal_policy);
-  db.load();
-  std::vector<ids_type> external_ids;
+  auto input_vectors = tdbColMajorMatrix<FeatureType>(
+      ctx,
+      input_vectors_uri,
+      0,
+      std::nullopt,
+      start_pos,
+      end_pos,
+      0,
+      temporal_policy);
+  input_vectors.load();
+  std::vector<IdsType> external_ids;
   if (external_ids_uri.empty()) {
-    external_ids = std::vector<ids_type>(db.num_cols());
+    external_ids = std::vector<IdsType>(input_vectors.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    external_ids = read_vector<ids_type>(
+    external_ids = read_vector<IdsType>(
         ctx, external_ids_uri, start_pos, end_pos, temporal_policy);
   }
-  return ivf_index<T, ids_type, centroids_type>(
+  return ivf_index<FeatureType, IdsType, CentroidsType>(
       ctx,
-      db,
+      input_vectors,
       external_ids,
       deleted_ids,
       centroids_uri,
@@ -266,12 +259,12 @@ int ivf_index(
 /**
  * Open db and call main ivf_index function above.
  */
-template <typename T, class ids_type, class centroids_type>
+template <typename FeatureType, class IdsType, class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
-    const std::string& db_uri,
-    const std::vector<ids_type>& external_ids,
-    const std::vector<ids_type>& deleted_ids,
+    const std::string& input_vectors_uri,
+    const std::vector<IdsType>& external_ids,
+    const std::vector<IdsType>& deleted_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -281,12 +274,19 @@ int ivf_index(
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
   // Read all rows from column `start_pos` -> `end_pos`. Set no upper_bound.
-  auto db = tdbColMajorMatrix<T>(
-      ctx, db_uri, 0, std::nullopt, start_pos, end_pos, 0, timestamp);
-  db.load();
-  return ivf_index<T, ids_type, centroids_type>(
+  auto input_vectors = tdbColMajorMatrix<FeatureType>(
       ctx,
-      db,
+      input_vectors_uri,
+      0,
+      std::nullopt,
+      start_pos,
+      end_pos,
+      0,
+      timestamp);
+  input_vectors.load();
+  return ivf_index<FeatureType, IdsType, CentroidsType>(
+      ctx,
+      input_vectors,
       external_ids,
       deleted_ids,
       centroids_uri,
@@ -300,15 +300,16 @@ int ivf_index(
 }
 
 /*
- * Set up external ids to be either the indices of the vectors in the db,
- * or read from an external array.  Call the main ivf_index function above.
+ * Set up external ids to be either the indices of the vectors in the
+ * input_vectors, or read from an external array.  Call the main ivf_index
+ * function above.
  */
-template <typename T, class ids_type, class centroids_type>
+template <typename FeatureType, class IdsType, class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
-    const ColMajorMatrix<T>& db,
+    const ColMajorMatrix<FeatureType>& input_vectors,
     const std::string& external_ids_uri,
-    const std::vector<ids_type>& deleted_ids,
+    const std::vector<IdsType>& deleted_ids,
     const std::string& centroids_uri,
     const std::string& parts_uri,
     const std::string& index_uri,
@@ -317,17 +318,17 @@ int ivf_index(
     size_t end_pos = 0,
     size_t nthreads = 0,
     uint64_t timestamp = 0) {
-  std::vector<ids_type> external_ids;
+  std::vector<IdsType> external_ids;
   if (external_ids_uri.empty()) {
-    external_ids = std::vector<ids_type>(db.num_cols());
+    external_ids = std::vector<IdsType>(input_vectors.num_cols());
     std::iota(begin(external_ids), end(external_ids), start_pos);
   } else {
-    external_ids = read_vector<ids_type>(
+    external_ids = read_vector<IdsType>(
         ctx, external_ids_uri, start_pos, end_pos, timestamp);
   }
-  return ivf_index<T, ids_type, centroids_type>(
+  return ivf_index<FeatureType, IdsType, CentroidsType>(
       ctx,
-      db,
+      input_vectors,
       external_ids,
       deleted_ids,
       centroids_uri,
