@@ -437,10 +437,6 @@ class tdbPartitionedMatrix
   bool load() override {
     scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
 
-    if (closed_) {
-      throw std::runtime_error("[tdb_partioned_matrix@load] Array is closed");
-    }
-
     if (this->part_index_.size() != max_resident_parts_ + 1) {
       throw std::runtime_error(
           "[tdb_partioned_matrix@load] Invalid partitioning, part_index_ "
@@ -517,6 +513,16 @@ class tdbPartitionedMatrix
       }
     }
 
+    // If closed_ is true, it means we have already read all the data and closed
+    // our arrays. Note that we could add this at the top of `load()` and
+    // return false, but the `num_resident_cols_ == 0` check already handles
+    // this case. So instead we leave this here - it should never be hit, but if
+    // it is, we'll have an error to investigate, rather than just returning
+    // false incorrectly.
+    if (closed_) {
+      throw std::runtime_error("[tdb_partioned_matrix@load] Array is closed");
+    }
+
     // 2. Load the vectors and IDs.
     {
       // a. Set up the vectors subarray.
@@ -556,7 +562,8 @@ class tdbPartitionedMatrix
           .set_layout(partitioned_vectors_schema_.cell_order())
           .set_data_buffer(attr_name, ptr, col_count * dimensions_);
       tiledb_helpers::submit_query(tdb_func__, partitioned_vectors_uri_, query);
-      _memory_data.insert_entry(tdb_func__, col_count * dimensions_ * sizeof(T));
+      _memory_data.insert_entry(
+          tdb_func__, col_count * dimensions_ * sizeof(T));
 
       auto qs = query.query_status();
       // @todo Handle incomplete queries.
