@@ -549,11 +549,10 @@ TEST_CASE("storage_version", "[api_ivf_pq_index]") {
   }
 }
 
-TEST_CASE("clear history", "[api_ivf_pq_index]") {
+TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
-  using partitioning_index_type_type = uint32_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
@@ -586,7 +585,21 @@ TEST_CASE("clear history", "[api_ivf_pq_index]") {
   index.add(training_vector_array);
   index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
 
-  auto index2 = IndexIVFPQ(ctx, index_uri);
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(QueryType::InfiniteRAM, training_vector_array, 1, 1);
+  auto&& [scores_vector_array_finite, ids_vector_array_finite] =
+      index.query(QueryType::FiniteRAM, training_vector_array, 1, 1);
+
+  auto second_index = IndexIVFPQ(ctx, index_uri);
+  auto&& [scores_vector_array_2, ids_vector_array_2] =
+      second_index.query(QueryType::InfiniteRAM, training_vector_array, 1, 1);
+  auto&& [scores_vector_array_finite_2, ids_vector_array_finite_2] =
+      second_index.query(QueryType::FiniteRAM, training_vector_array, 1, 1);
+
+  // Here we check that we can clear_history() even with a index in memory. This
+  // makes sure that every Array which IndexIVFPQ opens has been closed,
+  // otherwise clear_history() will throw when it tries to call
+  // delete_fragments() on the index Array's.
   IndexIVFPQ::clear_history(ctx, index_uri, 99);
 }
 
