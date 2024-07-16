@@ -347,7 +347,10 @@ class base_index_group {
   }
 
   /**
-   * @brief Clears all history that is <= timestamp.
+   * @brief Clears all history that is <= timestamp. Note that if this is called
+   * while another index is open, it will throw an error. This is a TileDB Core
+   * feature to prevent read operations from accessing fragments that are being
+   * deleted.
    */
   void clear_history(uint64_t timestamp) {
     if (opened_for_ != TILEDB_WRITE) {
@@ -359,8 +362,19 @@ class base_index_group {
     }
 
     metadata_.clear_history(timestamp);
-    tiledb::Array::delete_fragments(cached_ctx_, ids_uri(), 0, timestamp);
-    static_cast<group_type*>(this)->clear_history_impl(timestamp);
+    try {
+      tiledb::Array::delete_fragments(cached_ctx_, ids_uri(), 0, timestamp);
+      static_cast<group_type*>(this)->clear_history_impl(timestamp);
+    } catch (const tiledb::TileDBError& e) {
+      if (std::string(e.what()).find("simultaneous open or close operations") !=
+          std::string::npos) {
+        throw std::runtime_error(
+            "[index_group@clear_history] Cannot clear history because the "
+            "index is open. Make sure to close the index before clearing "
+            "history.");
+      }
+      throw e;
+    }
   }
 
   /**
