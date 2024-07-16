@@ -479,7 +479,7 @@ class Index:
 
     def consolidate_updates(self, retrain_index: bool = False, **kwargs):
         """
-        Consolidates updates by merging updates form the updates table into the base index.
+        Consolidates updates by merging updates from the updates table into the base index.
 
         The consolidation process is used to avoid query latency degradation as more updates
         are added to the index. It triggers a base index re-indexing, merging the non-consolidated
@@ -489,10 +489,10 @@ class Index:
         ----------
         retrain_index: bool
             If true, retrain the index. If false, reuse data from the previous index.
-            For IVF_FLAT retraining means we will recompute the centroids - when doing so you can
-            pass any ingest() arguments used to configure computing centroids and we will use them
-            when recomputing the centroids. Otherwise, if false, we will reuse the centroids from
-            the previous index.
+            For IVF_FLAT and IVF_PQ retraining means we will recompute the centroids - when doing
+            so you can pass any ingest() arguments used to configure computing centroids and we will
+            use them when recomputing the centroids. Otherwise, if false, we will reuse the centroids
+            from the previous index.
         **kwargs
             Extra kwargs passed here are passed to `ingest` function.
         """
@@ -516,11 +516,9 @@ class Index:
             tiledb.consolidate(self.updates_array_uri, config=conf)
             tiledb.vacuum(self.updates_array_uri, config=conf)
 
+        copy_centroids_uri = None
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
-        should_pass_copy_centroids_uri = (
-            self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0
-        )
-        if should_pass_copy_centroids_uri:
+        if self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0:
             # Make sure the user didn't pass an incorrect number of partitions.
             if "partitions" in kwargs and self.partitions != kwargs["partitions"]:
                 raise ValueError(
@@ -528,6 +526,9 @@ class Index:
                 )
             # We pass partitions through kwargs so that we don't pass it twice.
             kwargs["partitions"] = self.partitions
+            copy_centroids_uri = self.centroids_uri
+        if self.index_type == "IVF_PQ" and not retrain_index:
+            copy_centroids_uri = True
 
         # print('[index@consolidate_updates] self.centroids_uri', self.centroids_uri)
         print("[index@consolidate_updates] self.uri", self.uri)
@@ -539,6 +540,7 @@ class Index:
         )
         print("[index@consolidate_updates] self.max_timestamp", max_timestamp)
         print("[index@consolidate_updates] self.storage_version", self.storage_version)
+        print("[index@consolidate_updates] copy_centroids_uri", copy_centroids_uri)
 
         new_index = ingest(
             index_type=self.index_type,
@@ -550,9 +552,7 @@ class Index:
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
             storage_version=self.storage_version,
-            copy_centroids_uri=self.centroids_uri
-            if should_pass_copy_centroids_uri
-            else None,
+            copy_centroids_uri=copy_centroids_uri,
             config=self.config,
             **kwargs,
         )

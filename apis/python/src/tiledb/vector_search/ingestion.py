@@ -224,6 +224,25 @@ def ingest(
         raise ValueError("source_uri should not be provided alongside input_vectors")
     if source_type and input_vectors:
         raise ValueError("source_type should not be provided alongside input_vectors")
+    
+    for variable in [
+        "training_input_vectors",
+        "training_source_uri",
+        "training_source_type",
+    ]:
+        if index_type != "IVF_FLAT" and locals().get(variable) is not None:
+            raise ValueError(
+                f"{variable} should only be provided with index_type IVF_FLAT"
+            )
+
+    if (
+        index_type != "IVF_FLAT"
+        and index_type != "IVF_PQ"
+        and locals().get("copy_centroids_uri") is not None
+    ):
+        raise ValueError(
+            "copy_centroids_uri should only be provided with index_type IVF_FLAT"
+        )
 
     if training_source_uri and training_sample_size != -1:
         raise ValueError(
@@ -257,7 +276,7 @@ def ingest(
         raise ValueError(
             "training_sample_size should not be provided alongside copy_centroids_uri"
         )
-    if copy_centroids_uri is not None and partitions == -1:
+    if index_type == "IVF_FLAT" and copy_centroids_uri is not None and partitions == -1:
         raise ValueError(
             "partitions should be provided if copy_centroids_uri is provided (set partitions to the number of centroids in copy_centroids_uri)"
         )
@@ -266,16 +285,6 @@ def ingest(
         raise ValueError(
             "training_sample_size should only be provided with index_type IVF_FLAT"
         )
-    for variable in [
-        "copy_centroids_uri",
-        "training_input_vectors",
-        "training_source_uri",
-        "training_source_type",
-    ]:
-        if index_type != "IVF_FLAT" and locals().get(variable) is not None:
-            raise ValueError(
-                f"{variable} should only be provided with index_type IVF_FLAT"
-            )
 
     for variable in [
         "copy_centroids_uri",
@@ -1573,7 +1582,7 @@ def ingest(
         dimensions: int,
         size: int,
         batch: int,
-        arrays_created: bool,
+        retrain_index: bool,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1605,7 +1614,7 @@ def ingest(
                 trace_id=trace_id,
             )
 
-            if arrays_created and index_type == "IVF_PQ":
+            if retrain_index and index_type == "IVF_PQ":
                 # For IVF_PQ, we cannot re-ingest the data, as we only store the PQ encoded
                 # vectors. Instead leave the centroids and just update the stored vectors.
                 print(
@@ -2330,7 +2339,7 @@ def ingest(
                 dimensions=dimensions,
                 size=size,
                 batch=input_vectors_batch_size,
-                arrays_created=arrays_created,
+                retrain_index=copy_centroids_uri is None,
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,

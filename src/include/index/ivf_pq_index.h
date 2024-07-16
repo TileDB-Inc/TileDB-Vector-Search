@@ -761,8 +761,6 @@ class ivf_pq_index {
         training_set_ids.end(),
         feature_vectors_.ids());
 
-    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
-
     train_pq(training_set);   // cluster_centroids_, distance_tables_
     train_ivf(training_set);  // flat_ivf_centroids_
     std::cout << "[ivf_pq_index@add] pq_ivf_centroids_ = "
