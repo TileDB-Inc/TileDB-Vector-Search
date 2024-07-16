@@ -587,13 +587,9 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
 
   auto&& [scores_vector_array, ids_vector_array] =
       index.query(QueryType::InfiniteRAM, training_vector_array, 1, 1);
-  auto&& [scores_vector_array_finite, ids_vector_array_finite] =
-      index.query(QueryType::FiniteRAM, training_vector_array, 1, 1);
 
   auto second_index = IndexIVFPQ(ctx, index_uri);
-  auto&& [scores_vector_array_2, ids_vector_array_2] =
-      second_index.query(QueryType::InfiniteRAM, training_vector_array, 1, 1);
-  auto&& [scores_vector_array_finite_2, ids_vector_array_finite_2] =
+  auto&& [scores_vector_array_finite, ids_vector_array_finite] =
       second_index.query(QueryType::FiniteRAM, training_vector_array, 1, 1);
 
   // Here we check that we can clear_history() even with a index in memory. This

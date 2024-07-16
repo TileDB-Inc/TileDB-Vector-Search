@@ -472,7 +472,7 @@ TEST_CASE("storage_version", "[api_vamana_index]") {
 }
 
 TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
-    auto ctx = tiledb::Context{};
+  auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
   using adjacency_row_index_type_type = uint64_t;
@@ -489,11 +489,11 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
     vfs.remove_dir(index_uri);
   }
 
-auto index = IndexVamana(std::make_optional<IndexOptions>(
-    {{"feature_type", feature_type},
-        {"id_type", id_type},
-        {"l_build", std::to_string(l_build)},
-        {"r_max_degree", std::to_string(r_max_degree)}}));
+  auto index = IndexVamana(std::make_optional<IndexOptions>(
+      {{"feature_type", feature_type},
+       {"id_type", id_type},
+       {"l_build", std::to_string(l_build)},
+       {"r_max_degree", std::to_string(r_max_degree)}}));
 
   auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
       {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
