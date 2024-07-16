@@ -912,6 +912,8 @@ class ivf_pq_index {
     auto infinite_parts =
         std::vector<indices_type>(::num_vectors(pq_ivf_centroids_));
     std::iota(begin(infinite_parts), end(infinite_parts), 0);
+    std::cout << "[ivf_pq_index@read_index_infinite] "
+              << "partitioned_pq_vectors_" << std::endl;
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
@@ -922,7 +924,11 @@ class ivf_pq_index {
         0,
         temporal_policy_);
 
+    std::cout << "[ivf_pq_index@read_index_infinite] "
+              << "partitioned_pq_vectors_->load()" << std::endl;
     partitioned_pq_vectors_->load();
+    std::cout << "[ivf_pq_index@read_index_infinite] "
+              << "partitioned_pq_vectors_->load() done" << std::endl;
 
     if (::num_vectors(*partitioned_pq_vectors_) !=
         size(partitioned_pq_vectors_->ids())) {
