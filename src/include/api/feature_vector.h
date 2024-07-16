@@ -119,7 +119,8 @@ class FeatureVector {
         vector_ = std::make_unique<vector_impl<Vector<uint64_t>>>(N);
         break;
       default:
-        throw std::runtime_error("Unsupported attribute type");
+        throw std::runtime_error(
+            "[feature_vector@vector_from_datatype] Unsupported attribute type");
     }
   }
   /*
@@ -147,7 +148,9 @@ class FeatureVector {
         vector_ = std::make_unique<vector_impl<tdbVector<uint64_t>>>(ctx, uri);
         break;
       default:
-        throw std::runtime_error("Unsupported attribute type");
+        throw std::runtime_error(
+            "[feature_vector@tdb_vector_from_datatype] Unsupported attribute "
+            "type");
     }
   }
 

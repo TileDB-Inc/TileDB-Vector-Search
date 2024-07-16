@@ -431,7 +431,8 @@ class IndexVamana {
           return {std::move(x), std::move(y)};
         }
         default:
-          throw std::runtime_error("Unsupported attribute type");
+          throw std::runtime_error(
+              "[vamana_index@query] Unsupported attribute type");
       }
     }
 

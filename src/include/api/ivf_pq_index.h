@@ -551,7 +551,8 @@ class IndexIVFPQ {
           return {std::move(x), std::move(y)};
         }
         default:
-          throw std::runtime_error("Unsupported attribute type");
+          throw std::runtime_error(
+              "[ivf_pq_index@query] Unsupported attribute type");
       }
     }
 
