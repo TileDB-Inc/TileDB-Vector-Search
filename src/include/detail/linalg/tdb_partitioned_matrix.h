@@ -339,7 +339,6 @@ class tdbPartitionedMatrix
     num_array_cols_ =
         (array_cols.template domain<col_domain_type>().second -
          array_cols.template domain<col_domain_type>().first + 1);
-      std::cout << "num_array_cols_: " << num_array_cols_ << std::endl;
 #endif
 
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
