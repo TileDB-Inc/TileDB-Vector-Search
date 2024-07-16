@@ -224,7 +224,7 @@ def ingest(
         raise ValueError("source_uri should not be provided alongside input_vectors")
     if source_type and input_vectors:
         raise ValueError("source_type should not be provided alongside input_vectors")
-    
+
     for variable in [
         "training_input_vectors",
         "training_source_uri",
@@ -1614,9 +1614,7 @@ def ingest(
                 trace_id=trace_id,
             )
 
-            if retrain_index and index_type == "IVF_PQ":
-                # For IVF_PQ, we cannot re-ingest the data, as we only store the PQ encoded
-                # vectors. Instead leave the centroids and just update the stored vectors.
+            if not retrain_index and index_type == "IVF_PQ":
                 print(
                     "[ingestion@ingest_type_erased] additions_vectors:",
                     additions_vectors,

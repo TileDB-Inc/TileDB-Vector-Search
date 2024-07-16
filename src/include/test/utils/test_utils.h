@@ -236,18 +236,6 @@ void query_and_check_equals(
           false, "[test_utils@query_and_check_equals] Scores did not match");
     }
   }
-
-  //   CHECK(std::equal(
-  //     scores.begin(),
-  //     scores.end(),
-  //     std::vector<float>{
-  //         default_score, default_score, default_score, default_score}
-  //         .begin()));
-  // CHECK(std::equal(
-  //     ids.begin(),
-  //     ids.end(),
-  //     std::vector<uint32_t>{default_id, default_id, default_id, default_id}
-  //         .begin()));
 }
 
 #endif  // TILEDB_TEST_UTILS_H

@@ -1032,17 +1032,14 @@ TEST_CASE("update index", "[api_ivf_pq_index]") {
 
   // Replace id 4 with id 44.
   {
-    std::cout << "IndexIVFPQ() ========================" << std::endl;
-    auto index = IndexIVFPQ(ctx, index_uri);
-
-    std::cout << "index.update() ========================" << std::endl;
     auto vectors_to_add = FeatureVectorArray(
         ColMajorMatrixWithIds<feature_type_type, id_type_type>{
             {{4, 4, 4, 4, 4, 4}}, {44}});
     auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{4});
+
+    auto index = IndexIVFPQ(ctx, index_uri);
     index.update(vectors_to_add, vector_ids_to_remove);
 
-    std::cout << "index.query() ========================" << std::endl;
     query_and_check_equals(
         index,
         FeatureVectorArray(ColMajorMatrix<feature_type_type>{
@@ -1074,18 +1071,16 @@ TEST_CASE("update index", "[api_ivf_pq_index]") {
   // Replace id 44 with id 444, but also delete ID's which do not exist at the
   // same time.
   {
-    std::cout << "IndexIVFPQ() ========================" << std::endl;
-    auto index = IndexIVFPQ(ctx, index_uri);
-
-    std::cout << "index.update() ========================" << std::endl;
     auto vectors_to_add = FeatureVectorArray(
         ColMajorMatrixWithIds<feature_type_type, id_type_type>{
             {{4, 4, 4, 4, 4, 4}}, {444}});
     auto vector_ids_to_remove = FeatureVector(
         std::vector<id_type_type>{4, 44, 99, 123, 456, 1000, 999});
-    index.update(vectors_to_add, vector_ids_to_remove);
 
-    std::cout << "index.query() ========================" << std::endl;
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
     query_and_check_equals(
         index,
         FeatureVectorArray(ColMajorMatrix<feature_type_type>{
@@ -1097,23 +1092,19 @@ TEST_CASE("update index", "[api_ivf_pq_index]") {
         ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {444}},
         ColMajorMatrix<float>{{0}, {0}, {0}, {0}},
         n_list);
-
-    index.write_index(ctx, index_uri);
   }
 
   // Add a new vector
   {
-    std::cout << "IndexIVFPQ() ========================" << std::endl;
-    auto index = IndexIVFPQ(ctx, index_uri);
-
-    std::cout << "index.update() ========================" << std::endl;
     auto vectors_to_add = FeatureVectorArray(
         ColMajorMatrixWithIds<feature_type_type, id_type_type>{
             {{5, 5, 5, 5, 5, 5}}, {5}});
     auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{5});
-    index.update(vectors_to_add, vector_ids_to_remove);
 
-    std::cout << "index.query() ========================" << std::endl;
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
     query_and_check_equals(
         index,
         FeatureVectorArray(ColMajorMatrix<feature_type_type>{
@@ -1126,26 +1117,18 @@ TEST_CASE("update index", "[api_ivf_pq_index]") {
         ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {444}, {444}},
         ColMajorMatrix<float>{{0}, {0}, {0}, {0}, {6}},
         n_list);
-
-    index.write_index(ctx, index_uri);
   }
 
   // Remove id 1.
-  std::cout << "Then test that we can remove data from the index. "
-               "==============================================================="
-               "==============="
-            << std::endl;
   {
-    std::cout << "IndexIVFPQ() ========================" << std::endl;
-    auto index = IndexIVFPQ(ctx, index_uri);
-
-    std::cout << "index.update() ========================" << std::endl;
     auto vectors_to_add = FeatureVectorArray(
         ColMajorMatrixWithIds<feature_type_type, id_type_type>{});
     auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{1});
-    index.update(vectors_to_add, vector_ids_to_remove);
 
-    std::cout << "index.query() ========================" << std::endl;
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
     query_and_check_equals(
         index,
         FeatureVectorArray(ColMajorMatrix<feature_type_type>{

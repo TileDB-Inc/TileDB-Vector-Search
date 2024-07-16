@@ -483,18 +483,18 @@ class ivf_pq_index {
     // through the training set. We need to move iteration over subspaces to
     // the inner loop -- and SIMDize it
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      std::cout << " ============ " << std::endl;
+      // std::cout << " ============ " << std::endl;
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
-      std::cout << "[ivf_pq_index@train_pq] sub_begin: " << sub_begin
-                << ", sub_end: " << sub_end << std::endl;
+      // std::cout << "[ivf_pq_index@train_pq] sub_begin: " << sub_begin
+      //           << ", sub_end: " << sub_end << std::endl;
 
       // auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       // @todo Make choice of kmeans init configurable
       sub_kmeans_random_init(
           training_set, cluster_centroids_, sub_begin, sub_end, 0xdeadbeef);
-      debug_matrix(cluster_centroids_, "cluster_centroids_ before");
+      // debug_matrix(cluster_centroids_, "cluster_centroids_ before");
 
       // sub_kmeans will invoke the sub_distance function with centroids
       // against new_centroids, and will call flat::qv_partition with centroids
@@ -515,25 +515,26 @@ class ivf_pq_index {
           tol_,
           max_iter_,
           num_threads_);
-      debug_matrix(cluster_centroids_, "cluster_centroids_ after");
+      // debug_matrix(cluster_centroids_, "cluster_centroids_ after");
 
       max_local_iters_taken = std::max(max_local_iters_taken, iters);
       min_local_conv = std::min(min_local_conv, conv);
     }
-    std::cout << "New we create table! ~~~~~~~~~~~~~~~~~~~~~~~ " << std::endl;
-    // Create tables of distances storing distance between encoding keys,
-    // one table for each subspace. That is, distance_tables_[i](j, k) is
+    debug_matrix(cluster_centroids_, "cluster_centroids_ after");
+    // std::cout << "Now create distance table ~~~~~~~~~~~~~~~~~~~~~~~ " <<
+    // std::endl; Create tables of distances storing distance between encoding
+    // keys, one table for each subspace. That is, distance_tables_[i](j, k) is
     // the distance between the jth and kth centroids in the ith subspace.
     // The distance between two encoded vectors is looked up using the
     // keys of the vectors in each subspace (summing up the results obtained
     // from each subspace).
     // @todo SIMDize with subspace iteration in inner loop
     for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      std::cout << " ~~~~~~~~~~~ " << std::endl;
+      // std::cout << " ~~~~~~~~~~~ " << std::endl;
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
-      std::cout << "[ivf_pq_index@train_pq] sub_begin: " << sub_begin
-                << ", sub_end: " << sub_end << std::endl;
+      // std::cout << "[ivf_pq_index@train_pq] sub_begin: " << sub_begin
+      //           << ", sub_end: " << sub_end << std::endl;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
       for (size_t i = 0; i < num_clusters_; ++i) {
@@ -881,16 +882,16 @@ class ivf_pq_index {
     auto part_indices = partitioned_pq_vectors_->indices();
     debug_vector(part_indices, "[ivf_pq_index@update] part_indices");
     for (int i = 0; i < ::num_vectors(*partitioned_pq_vectors_); ++i) {
-      std::cout << "i: " << i
-                << " (" + std::to_string((*partitioned_pq_vectors_).ids()[i]) +
-                       ")~~~"
-                << std::endl;
+      // std::cout << "i: " << i
+      //           << " (" + std::to_string((*partitioned_pq_vectors_).ids()[i]) +
+      //                  ")~~~"
+      //           << std::endl;
       if (std::find(
               vector_ids_to_remove.begin(),
               vector_ids_to_remove.end(),
               (*partitioned_pq_vectors_).ids()[i]) ==
           vector_ids_to_remove.end()) {
-        std::cout << "will copy over into idx: " << idx << std::endl;
+        // std::cout << "will copy over into idx: " << idx << std::endl;
         // This vector is not marked for deletion, copy it over.
         //        unpartitioned_pq_vectors[idx] = (*partitioned_pq_vectors_)[i];
         std::copy(
@@ -911,14 +912,14 @@ class ivf_pq_index {
         // So right now we know that we're looking at vector `i`. Determine
         // which partition it belongs to using part_indices.
         auto partition = find_partition(part_indices, i);
-        std::cout << "partition: " << partition << std::endl;
+        // std::cout << "partition: " << partition << std::endl;
         partition_labels.push_back(partition);
 
         idx++;
       }
-      debug_matrix_with_ids(
-          unpartitioned_pq_vectors,
-          "  [ivf_pq_index@update] unpartitioned_pq_vectors");
+      // debug_matrix_with_ids(
+      //     unpartitioned_pq_vectors,
+      //     "  [ivf_pq_index@update] unpartitioned_pq_vectors");
     }
     debug_matrix_with_ids(
         unpartitioned_pq_vectors,
