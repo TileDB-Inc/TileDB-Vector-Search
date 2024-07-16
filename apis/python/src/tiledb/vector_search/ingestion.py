@@ -1587,6 +1587,10 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
+        print("[ingestion@ingest_type_erased] retrain_index", retrain_index)
+        print("[ingestion@ingest_type_erased] size", size)
+        print("[ingestion@ingest_type_erased] batch", batch)
+        print("[ingestion@ingest_type_erased] dimensions", dimensions)
         import numpy as np
 
         import tiledb.cloud
@@ -1613,41 +1617,14 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-
-            if not retrain_index and index_type == "IVF_PQ":
-                print(
-                    "[ingestion@ingest_type_erased] additions_vectors:",
-                    additions_vectors,
-                )
-                print(
-                    "[ingestion@ingest_type_erased] additions_external_ids:",
-                    additions_external_ids,
-                )
-                ctx = vspy.Ctx(config)
-                index = vspy.IndexIVFPQ(ctx, index_group_uri)
-                if (
-                    additions_vectors is not None
-                    or additions_external_ids is not None
-                    or updated_ids is not None
-                ):
-                    vectors_to_add = vspy.FeatureVectorArray(
-                        np.transpose(additions_vectors)
-                        if additions_vectors is not None
-                        else np.array([[]], dtype=vector_type),
-                        np.transpose(additions_external_ids)
-                        if additions_external_ids is not None
-                        else np.array([], dtype=np.uint64),
-                    )
-                    vector_ids_to_remove = vspy.FeatureVector(
-                        updated_ids
-                        if updated_ids is not None
-                        else np.array([], np.uint64)
-                    )
-                    index.update(vectors_to_add, vector_ids_to_remove)
-                index.write_index(
-                    ctx, index_group_uri, to_temporal_policy(index_timestamp)
-                )
-                return
+            print(
+                "[ingestion@ingest_type_erased] additions_vectors:",
+                additions_vectors,
+            )
+            print(
+                "[ingestion@ingest_type_erased] additions_external_ids:",
+                additions_external_ids,
+            )
 
             temp_data_group_uri = f"{index_group_uri}/{PARTIAL_WRITE_ARRAY_DIR}"
             temp_data_group = tiledb.Group(temp_data_group_uri, "w")
@@ -1674,7 +1651,14 @@ def ingest(
                 part_end = part + batch
                 if part_end > size:
                     part_end = size
+
                 # First we get each vector and it's external id from the input data.
+                print("[ingestion@ingest_type_erased] source_uri:", source_uri)
+                print("[ingestion@ingest_type_erased] source_type:", source_type)
+                print("[ingestion@ingest_type_erased] vector_type:", vector_type)
+                print("[ingestion@ingest_type_erased] dimensions:", dimensions)
+                print("[ingestion@ingest_type_erased] part:", part)
+                print("[ingestion@ingest_type_erased] part_end:", part_end)
                 in_vectors = read_input_vectors(
                     source_uri=source_uri,
                     source_type=source_type,
@@ -1686,6 +1670,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                print("[ingestion@ingest_type_erased] in_vectors:", in_vectors)
                 external_ids = read_external_ids(
                     external_ids_uri=external_ids_uri,
                     external_ids_type=external_ids_type,
@@ -1695,6 +1680,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                print("[ingestion@ingest_type_erased] external_ids:", external_ids)
 
                 # Then check if the external id is in the updated ids.
                 updates_filter = np.in1d(
@@ -1703,6 +1689,14 @@ def ingest(
                 # We only keep the vectors and external ids that are not in the updated ids.
                 in_vectors = in_vectors[updates_filter]
                 external_ids = external_ids[updates_filter]
+                print(
+                    "[ingestion@ingest_type_erased] in_vectors after filter:",
+                    in_vectors,
+                )
+                print(
+                    "[ingestion@ingest_type_erased] external_ids after filter:",
+                    external_ids,
+                )
                 vector_len = len(in_vectors)
                 if vector_len > 0:
                     end_offset = write_offset + vector_len
@@ -1735,6 +1729,29 @@ def ingest(
 
             parts_array.close()
             ids_array.close()
+
+        if index_type == "IVF_PQ" and not retrain_index:
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexIVFPQ(ctx, index_group_uri)
+            if (
+                additions_vectors is not None
+                or additions_external_ids is not None
+                or updated_ids is not None
+            ):
+                vectors_to_add = vspy.FeatureVectorArray(
+                    np.transpose(additions_vectors)
+                    if additions_vectors is not None
+                    else np.array([[]], dtype=vector_type),
+                    np.transpose(additions_external_ids)
+                    if additions_external_ids is not None
+                    else np.array([], dtype=np.uint64),
+                )
+                vector_ids_to_remove = vspy.FeatureVector(
+                    updated_ids if updated_ids is not None else np.array([], np.uint64)
+                )
+                index.update(vectors_to_add, vector_ids_to_remove)
+            index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
+            return
 
         # Now that we've ingested the vectors and their IDs, train the index with the data.
         ctx = vspy.Ctx(config)

@@ -362,6 +362,8 @@ class ivf_pq_index {
             num_partitions_,
             0,
             temporal_policy_);
+    debug_matrix(
+        flat_ivf_centroids_, "[ivf_pq_index@uri ctor] flat_ivf_centroids_");
 
     pq_ivf_centroids_ =
         tdbPreLoadMatrix<pq_vector_feature_type, stdx::layout_left>(
@@ -831,6 +833,14 @@ class ivf_pq_index {
       const Vector& vectors_to_add_ids,
       const VectorToRemove& vector_ids_to_remove,
       Distance distance = Distance{}) {
+    if (vector_ids_to_remove.size() == 1 && vector_ids_to_remove[0] == 5) {
+      std::cout << "DEBUG TIME!" << std::endl;
+      debug = true;
+    }
+
+    debug_matrix(
+        flat_ivf_centroids_, "[ivf_pq_index@update] flat_ivf_centroids_");
+
     debug_matrix(vectors_to_add, "[ivf_pq_index@update] vectors_to_add");
     debug_vector(
         vectors_to_add_ids, "[ivf_pq_index@update] vectors_to_add_ids");
@@ -841,7 +851,6 @@ class ivf_pq_index {
     debug_partitioned_matrix(
         *partitioned_pq_vectors_,
         "[ivf_pq_index@update] partitioned_pq_vectors_");
-
     std::cout << "[ivf_pq_index@update] num_vectors(*partitioned_pq_vectors_): "
               << ::num_vectors(*partitioned_pq_vectors_) << std::endl;
     std::cout << "[ivf_pq_index@update] ::dimensions(vector_ids_to_remove): "
@@ -878,14 +887,11 @@ class ivf_pq_index {
         vector_ids_to_remove, "[ivf_pq_index@update] vector_ids_to_remove");
 
     // 1. Find the vectors in unpartitioned_pq_vectors_ to delete. where the id
-    // is in vector_ids_to_remove. Instead of deleting outright, we will
+    // is in vector_ids_to_remove. Instead of deleting outright, we will just
+    // not copy them.
     auto part_indices = partitioned_pq_vectors_->indices();
     debug_vector(part_indices, "[ivf_pq_index@update] part_indices");
     for (int i = 0; i < ::num_vectors(*partitioned_pq_vectors_); ++i) {
-      // std::cout << "i: " << i
-      //           << " (" + std::to_string((*partitioned_pq_vectors_).ids()[i]) +
-      //                  ")~~~"
-      //           << std::endl;
       if (std::find(
               vector_ids_to_remove.begin(),
               vector_ids_to_remove.end(),
@@ -929,6 +935,9 @@ class ivf_pq_index {
     // 2. Add vectors_to_add to unpartitioned_pq_vectors_.
     auto vectors_to_add_partition_labels = detail::flat::qv_partition(
         flat_ivf_centroids_, vectors_to_add, num_threads_, distance);
+    debug_vector(
+        vectors_to_add_partition_labels,
+        "[ivf_pq_index@update] vectors_to_add_partition_labels");
     //    auto& pqv = *unpartitioned_pq_vectors;
     for (int i = 0; i < ::num_vectors(vectors_to_add); ++i) {
       //      pq_encode_one(vectors_to_add[i], pqv[idx++]);
@@ -949,7 +958,75 @@ class ivf_pq_index {
     unpartitioned_pq_vectors_ =
         std::make_unique<ColMajorMatrixWithIds<pq_code_type, id_type>>(
             std::move(unpartitioned_pq_vectors));
-    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
+    debug_matrix_with_ids(
+        *unpartitioned_pq_vectors_,
+        "[ivf_pq_index@update] unpartitioned_pq_vectors_");
+    auto num_unique_labels =
+        std::max(static_cast<size_t>(1), ::num_vectors(flat_ivf_centroids_));
+    std::cout << "[ivf_pq_index@update] num_unique_labels: "
+              << num_unique_labels << std::endl;
+
+    // At this point we have updated partitioned_pq_vectors_. But we still need
+    // to update feature_vectors_ so that if we later want to re-ingest the
+    // data, we have the full set of input vectors and their IDs.
+    // 4. Load the current feature_vectors_.
+    feature_vectors_ =
+        std::move(tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
+            group_->cached_ctx(),
+            group_->feature_vectors_uri(),
+            group_->ids_uri(),
+            dimensions_,
+            ::num_vectors(*partitioned_pq_vectors_),
+            0));
+
+    auto feature_vectors = ColMajorMatrixWithIds<feature_type, id_type>(
+        ::dimensions(feature_vectors_), final_num_vectors);
+
+    // 5. Copy over the vectors that are not in vector_ids_to_remove
+    std::set<id_type> vector_ids_to_remove_set(
+        vector_ids_to_remove.begin(), vector_ids_to_remove.end());
+    debug_matrix(
+        flat_ivf_centroids_, "[ivf_pq_index@update] flat_ivf_centroids_");
+
+    idx = 0;
+    for (int i = 0; i < ::num_vectors(*partitioned_pq_vectors_); ++i) {
+      if (vector_ids_to_remove_set.find(feature_vectors_.ids()[i]) ==
+          vector_ids_to_remove_set.end()) {
+        std::copy(
+            feature_vectors_.data() + i * ::dimensions(feature_vectors_),
+            feature_vectors_.data() + (i + 1) * ::dimensions(feature_vectors_),
+            feature_vectors.data() + idx * ::dimensions(feature_vectors));
+        feature_vectors.ids()[idx] = feature_vectors_.ids()[i];
+        idx++;
+      }
+    }
+    debug_matrix(
+        flat_ivf_centroids_, "[ivf_pq_index@update] flat_ivf_centroids_");
+
+    // 6. Add vectors_to_add to feature_vectors
+    std::cout << "[ivf_pq_index@update] ::num_vectors(vectors_to_add): "
+              << ::num_vectors(vectors_to_add) << std::endl;
+    std::cout << "[ivf_pq_index@update] ::dimensions(vectors_to_add): "
+              << ::dimensions(vectors_to_add) << std::endl;
+    std::cout << "[ivf_pq_index@update] ::num_vectors(feature_vectors): "
+              << ::num_vectors(feature_vectors) << std::endl;
+    std::cout << "[ivf_pq_index@update] ::dimensions(feature_vectors): "
+              << ::dimensions(feature_vectors) << std::endl;
+    for (int i = 0; i < ::num_vectors(vectors_to_add); ++i) {
+      std::copy(
+          vectors_to_add.data() + i * ::dimensions(vectors_to_add),
+          vectors_to_add.data() + (i + 1) * ::dimensions(vectors_to_add),
+          feature_vectors.data() + idx * ::dimensions(feature_vectors));
+      feature_vectors.ids()[idx] = vectors_to_add_ids[i];
+      idx++;
+    }
+
+    debug_matrix_with_ids(
+        feature_vectors, "[ivf_pq_index@update] feature_vectors");
+
+    // 7. Assign to local member variables.
+    feature_vectors_ = std::move(feature_vectors);
+
     partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(
         *unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
     debug_matrix_with_ids(
@@ -1190,6 +1267,7 @@ class ivf_pq_index {
    * defult version.
    * @return Whether the write was successful
    */
+  bool debug = false;
   auto write_index(
       const tiledb::Context& ctx,
       const std::string& group_uri,
@@ -1198,6 +1276,19 @@ class ivf_pq_index {
     if (temporal_policy.has_value()) {
       temporal_policy_ = *temporal_policy;
     }
+    // if (!partitioned_pq_vectors_) {
+    //   throw std::runtime_error(
+    //       "[ivf_pq_index@write_index] partitioned_pq_vectors_ is not "
+    //       "initialized");
+    // }
+    // if (::num_vectors(feature_vectors_) !=
+    //     ::num_vectors(*partitioned_pq_vectors_)) {
+    //   throw std::runtime_error(
+    //       "[ivf_pq_index@write_index] num_vectors(feature_vectors_) (" +
+    //       std::to_string(::num_vectors(feature_vectors_)) +
+    //       ") != num_vectors(*partitioned_pq_vectors_) (" +
+    //       std::to_string(::num_vectors(*partitioned_pq_vectors_)) + ")");
+    // }
 
     auto write_group = ivf_pq_group<ivf_pq_index>(
         ctx,
@@ -1287,6 +1378,10 @@ class ivf_pq_index {
         false,
         temporal_policy_);
 
+    // debug_matrix(flat_ivf_centroids_, "flat_ivf_centroids_");
+    // if (debug) {
+    //   return true;
+    // }
     write_matrix(
         ctx,
         flat_ivf_centroids_,
@@ -1294,7 +1389,9 @@ class ivf_pq_index {
         0,
         false,
         temporal_policy_);
-
+    // if (debug) {
+    //   return true;
+    // }
     write_matrix(
         ctx,
         pq_ivf_centroids_,
@@ -1425,6 +1522,9 @@ class ivf_pq_index {
         ::num_vectors(*partitioned_pq_vectors_) == 0) {
       read_index_infinite();
     }
+    debug_matrix(
+        flat_ivf_centroids_,
+        "[ivf_pq_index@query_infinite_ram] flat_ivf_centroids_");
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
@@ -1960,19 +2060,6 @@ class ivf_pq_index {
   }
 
   auto& get_flat_ivf_centroids() {
-    return flat_ivf_centroids_;
-  }
-
-  auto set_pq_ivf_centroids(const ColMajorMatrix<feature_type>& centroids) {
-    flat_ivf_centroids_ = flat_ivf_centroid_storage_type(
-        ::dimensions(centroids), ::num_vectors(centroids));
-    std::copy(
-        centroids.data(),
-        centroids.data() + centroids.num_rows() * centroids.num_cols(),
-        flat_ivf_centroids_.data());
-  }
-
-  auto& get_pq_ivf_centroids() {
     return flat_ivf_centroids_;
   }
 

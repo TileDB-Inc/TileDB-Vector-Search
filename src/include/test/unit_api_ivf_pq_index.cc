@@ -1095,6 +1095,7 @@ TEST_CASE("update index", "[api_ivf_pq_index]") {
   }
 
   // Add a new vector
+  std::cout << "Add a new vector ------------------------" << std::endl;
   {
     auto vectors_to_add = FeatureVectorArray(
         ColMajorMatrixWithIds<feature_type_type, id_type_type>{
@@ -1141,5 +1142,65 @@ TEST_CASE("update index", "[api_ivf_pq_index]") {
         ColMajorMatrix<uint32_t>{{2}, {2}, {3}, {444}},
         ColMajorMatrix<float>{{6}, {0}, {0}, {0}},
         n_list);
+  }
+}
+
+TEST_CASE("create an empty index and then update", "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint64_t;
+  using partitioning_index_type_type = uint64_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint64";
+  auto partitioning_index_type = "uint64";
+  size_t dimensions = 3;
+  size_t n_list = 1;
+  size_t num_subspaces = 3;
+  float convergence_tolerance = 0.00003f;
+  size_t max_iterations = 3;
+
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index_foo")
+          .string();
+  std::cout << "index_uri: " << index_uri << std::endl;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  // First create an empty index.
+  {
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"partitioning_index_type", partitioning_index_type},
+         {"num_subspaces", "1"}}));
+
+    size_t num_vectors = 0;
+    auto empty_training_vector_array =
+        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    index.train(empty_training_vector_array);
+    index.add(empty_training_vector_array);
+    index.write_index(ctx, index_uri);
+
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+  }
+
+  // Then add two vectors to it, while also testing we can remove their IDs
+  // (even though they are not present so it will be a no-op).
+  {
+    auto vectors_to_add = FeatureVectorArray(
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+            {{0, 0, 0}, {1, 1, 1}}, {0, 1}});
+    auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{0, 1});
+
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
+    // Note the querying here will not work b/c we have not trained any
+    // centroids. We just test that we don't crash.
   }
 }

@@ -681,7 +681,7 @@ def test_ingestion_timetravel(tmp_path):
             timestamp=20,
         )
 
-        index = index.consolidate_updates()
+        index = index.consolidate_updates(retrain_index=True)
 
         # We still have no results before timestamp 10.
         query_and_check_equals(
