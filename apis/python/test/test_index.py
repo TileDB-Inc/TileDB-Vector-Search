@@ -350,7 +350,46 @@ def test_ivf_pq_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
 
-    # TODO(paris): Add tests for consolidation once we enable it.
+    index = index.consolidate_updates()
+
+    # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
+    ingestion_timestamps, base_sizes = load_metadata(uri)
+    assert base_sizes == [5]
+    timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+    timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+    assert (
+        ingestion_timestamps[0] > timestamp_5_minutes_ago
+        and ingestion_timestamps[0] < timestamp_5_minutes_from_now
+    )
+
+    # Test that we can query with multiple query vectors.
+    for i in range(5):
+        query_and_check_distances(
+            index,
+            np.array([[i, i, i], [i, i, i]], dtype=np.float32),
+            1,
+            [[0], [0]],
+            [[i], [i]],
+        )
+
+    # Test that we can query with k > 1.
+    query_and_check_distances(
+        index, np.array([[0, 0, 0]], dtype=np.float32), 2, [[0, 3]], [[0, 1]]
+    )
+
+    # Test that we can query with multiple query vectors and k > 1.
+    query_and_check_distances(
+        index,
+        np.array([[0, 0, 0], [4, 4, 4]], dtype=np.float32),
+        2,
+        [[0, 3], [0, 3]],
+        [[0, 1], [4, 3]],
+    )
+
+    vfs = tiledb.VFS()
+    assert vfs.dir_size(uri) > 0
+    Index.delete_index(uri=uri, config={})
+    assert vfs.dir_size(uri) == 0
 
 
 def test_delete_invalid_index(tmp_path):

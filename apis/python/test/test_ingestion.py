@@ -824,11 +824,6 @@ def test_ingestion_with_updates(tmp_path):
         ingestion_timestamp = ingestion_timestamps[0]
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        if index_type == "IVF_PQ":
-            # TODO(paris): We get 0.989 accuracy instead of 1.0. Investigate why - it should be 1.0
-            # when we have `nprobe = partitions` and `num_subspaces = dimensions`.
-            assert accuracy(result, gt_i) > 0.9
-            continue
         assert accuracy(result, gt_i) == 1.0
 
         update_ids_offset = MAX_UINT64 - size
