@@ -89,6 +89,8 @@ class ivf_pq_group : public base_index_group<index_type> {
       size_t num_subspaces = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
+      // num_clusters and num_subspaces must be set before we call
+      // create_default_impl().
       if (num_clusters == 0) {
         throw std::invalid_argument(
             "num_clusters must be specified when creating a new group.");
@@ -221,8 +223,7 @@ class ivf_pq_group : public base_index_group<index_type> {
   }
 
   /*****************************************************************************
-   * Getters and setters for PQ related metadata: num_subspaces, sub_dimension,
-   * bits_per_subspace, num_clusters
+   * Getters and setters for PQ related metadata
    ****************************************************************************/
   auto get_num_subspaces() const {
     return metadata_.num_subspaces_;
@@ -250,6 +251,27 @@ class ivf_pq_group : public base_index_group<index_type> {
   }
   auto set_num_clusters(size_t num_clusters) {
     metadata_.num_clusters_ = num_clusters;
+  }
+
+  auto get_max_iterations() const {
+    return metadata_.max_iterations_;
+  }
+  auto set_max_iterations(uint64_t max_iterations) {
+    metadata_.max_iterations_ = max_iterations;
+  }
+
+  auto get_convergence_tolerance() const {
+    return metadata_.convergence_tolerance_;
+  }
+  auto set_convergence_tolerance(float convergence_tolerance) {
+    metadata_.convergence_tolerance_ = convergence_tolerance;
+  }
+
+  auto get_reassign_ratio() const {
+    return metadata_.reassign_ratio_;
+  }
+  auto set_reassign_ratio(float reassign_ratio) {
+    metadata_.reassign_ratio_ = reassign_ratio;
   }
 
   /*****************************************************************************
