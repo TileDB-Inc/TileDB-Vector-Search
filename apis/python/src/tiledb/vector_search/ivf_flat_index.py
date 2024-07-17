@@ -308,7 +308,6 @@ class IVFFlatIndex(index.Index):
     def update(self, vector: np.array, external_id: np.uint64, timestamp: int = None):
         if self.distance_metric == vspy.DistanceMetric.COSINE:
             vector = normalize_vector(vector)
-            print("normalized", vector)
         super().update(vector, external_id, timestamp)
 
     def update_batch(
@@ -316,7 +315,6 @@ class IVFFlatIndex(index.Index):
     ):
         if self.distance_metric == vspy.DistanceMetric.COSINE:
             vectors = normalize_vectors(vectors)
-            print("normalized update vectors:", vectors)
         super().update_batch(vectors, external_ids, timestamp)
 
     def query(
@@ -330,7 +328,6 @@ class IVFFlatIndex(index.Index):
     ):
         if self.distance_metric == vspy.DistanceMetric.COSINE:
             queries = normalize_vectors(queries)
-            print("normalized queries", queries)
         return super().query(
             queries,
             k,

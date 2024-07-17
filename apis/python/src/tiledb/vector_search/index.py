@@ -698,7 +698,6 @@ class Index:
         config=None,
         distance_metric=vspy.DistanceMetric.L2,
     ):
-        print("Distance Metric: ", distance_metric)
         additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
             updates_array_uri, timestamp, config
         )
