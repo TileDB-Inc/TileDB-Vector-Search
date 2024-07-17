@@ -151,10 +151,13 @@ class flat_pq_index {
       if (datatype == TILEDB_UINT64) {
         *reinterpret_cast<uint64_t*>(value) =
             *reinterpret_cast<uint64_t*>(addr);
+      } else if (datatype == TILEDB_UINT32) {
+        *reinterpret_cast<uint32_t*>(value) =
+            *reinterpret_cast<uint32_t*>(addr);
       } else if (datatype == TILEDB_FLOAT32) {
         *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
       } else {
-        throw std::runtime_error("Unsupported datatype");
+        throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
 
