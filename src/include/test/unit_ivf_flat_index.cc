@@ -374,8 +374,12 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_index]") {
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [idx, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
 
@@ -416,8 +420,12 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
@@ -459,8 +467,12 @@ TEST_CASE("Build index, write, read and query, finite", "[ivf_index]") {
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
@@ -498,8 +510,12 @@ TEST_CASE(
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
