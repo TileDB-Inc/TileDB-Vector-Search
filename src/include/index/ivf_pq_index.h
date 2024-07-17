@@ -1026,8 +1026,6 @@ class ivf_pq_index {
     write_group.set_convergence_tolerance(convergence_tolerance_);
     write_group.set_reassign_ratio(reassign_ratio_);
 
-    write_group.dump();
-
     if (num_subspaces_ * sub_dimensions_ != dimensions_) {
       throw std::runtime_error(
           "[ivf_pq_index@write_index] num_subspaces_ * sub_dimensions_ != "
