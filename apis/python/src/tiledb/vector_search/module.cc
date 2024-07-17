@@ -702,7 +702,6 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
          size_t nthreads,
          DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        fprintf(stderr, "distance metric: %d\n", distance_metric);
         if (distance_metric == DistanceMetric::L2) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, sum_of_squares_distance{});
@@ -712,7 +711,6 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
               data, query_vectors, ids, k, nthreads, inner_product_distance{});
           return r;
         } else if (distance_metric == DistanceMetric::COSINE) {
-          printf("cosine\n");
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, cosine_distance{});
           return r;
@@ -732,7 +730,6 @@ static void declare_vq_query_heap_pyarray(
          size_t nthreads,
          DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        fprintf(stderr, "distance metric: %d\n", distance_metric);
         if (distance_metric == DistanceMetric::L2) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, sum_of_squares_distance{});

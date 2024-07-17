@@ -173,6 +173,14 @@ class vamana_index_group : public base_index_group<index_type> {
     metadata_.medoid_ = size;
   }
 
+  DistanceMetric get_distance_metric() const {
+    return metadata_.distance_metric_;
+  }
+
+  void set_distance_metric(DistanceMetric metric) {
+    metadata_.distance_metric_ = metric;
+  }
+
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
   }

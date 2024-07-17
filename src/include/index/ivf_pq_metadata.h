@@ -82,6 +82,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   uint32_t sub_dimensions_{0};
   uint32_t bits_per_subspace_{0};
   uint32_t num_clusters_{0};
+  DistanceMetric distance_metric_{DistanceMetric::L2};
 
  protected:
   IndexKind index_kind_{IndexKind::IVFPQ};
@@ -99,6 +100,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
       {"sub_dimensions", &sub_dimensions_, TILEDB_UINT32, true},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT32, true},
       {"num_clusters", &num_clusters_, TILEDB_UINT32, true},
+      {"distance_metric", &distance_metric_, TILEDB_UINT32, false},
   };
 
   void clear_history_impl(uint64_t timestamp) {

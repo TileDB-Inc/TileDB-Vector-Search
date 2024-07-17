@@ -163,6 +163,14 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.partition_history_.back() = size;
   }
 
+  DistanceMetric get_distance_metric() const {
+    return metadata_.distance_metric_;
+  }
+
+  void set_distance_metric(DistanceMetric metric) {
+    metadata_.distance_metric_ = metric;
+  }
+
   /*****************************************************************************
    * Inverted index information: centroids, index, pq_parts, ids
    ****************************************************************************/
