@@ -1672,6 +1672,9 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
+        import random
+        import tempfile
+
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
         from tiledb.vector_search.module import array_to_matrix
@@ -1686,6 +1689,11 @@ def ingest(
         partial_write_array_ids_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
         partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
         partial_write_array_index_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
+        # Temporary solution until `ivf_index` library change gets released.
+        # TODO(nikos) remove this when the `partition_start` parameter of `ivf_index` gets released.
+        partial_write_array_index_array = tiledb.open(
+            partial_write_array_index_uri, "w", timestamp=index_timestamp
+        )
 
         for part in range(start, end, batch):
             part_end = part + batch
@@ -1694,6 +1702,34 @@ def ingest(
 
             str(part) + "-" + str(part_end)
             part_id = int(part / batch)
+
+            # Temporary solution until `ivf_index` library change gets released. We create a local disk
+            # temporary array to hold the partial indices and write them to the respective range in the main array.
+            # TODO(nikos) remove this when the `partition_start` parameter of `ivf_index` gets released.
+            partial_write_array_index_tmp_uri = (
+                f"{tempfile.gettempdir()}_{random.randint(0,MAX_INT32)}_{part_id}"
+            )
+            index_array_rows_dim = tiledb.Dim(
+                name="rows",
+                domain=(0, partitions),
+                tile=partitions,
+                dtype=np.dtype(np.int32),
+            )
+            index_array_dom = tiledb.Domain(index_array_rows_dim)
+            index_attr = tiledb.Attr(
+                name="values",
+                dtype=np.dtype(np.uint64),
+                filters=DEFAULT_ATTR_FILTERS,
+            )
+            index_schema = tiledb.ArraySchema(
+                domain=index_array_dom,
+                sparse=False,
+                attrs=[index_attr],
+                capacity=partitions,
+            )
+            logger.debug(index_schema)
+            tiledb.Array.create(partial_write_array_index_tmp_uri, index_schema)
+            partition_start = part_id * (partitions + 1)
 
             logger.debug("Input vectors start_pos: %d, end_pos: %d", part, part_end)
             updated_ids = read_updated_ids(
@@ -1711,11 +1747,13 @@ def ingest(
                     deleted_ids=StdVector_u64(updated_ids),
                     centroids_uri=centroids_uri,
                     parts_uri=partial_write_array_parts_uri,
-                    index_array_uri=partial_write_array_index_uri,
+                    index_array_uri=partial_write_array_index_tmp_uri,
+                    # index_array_uri=partial_write_array_index_uri,
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=part_id * (partitions + 1),
+                    partition_start=0,
+                    # partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1753,11 +1791,13 @@ def ingest(
                     deleted_ids=StdVector_u64(updated_ids),
                     centroids_uri=centroids_uri,
                     parts_uri=partial_write_array_parts_uri,
-                    index_array_uri=partial_write_array_index_uri,
+                    index_array_uri=partial_write_array_index_tmp_uri,
+                    # index_array_uri=partial_write_array_index_uri,
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=part_id * (partitions + 1),
+                    partition_start=0,
+                    # partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1766,6 +1806,15 @@ def ingest(
                     ),
                     config=config,
                 )
+
+            # Temporary solution until `ivf_index` library change gets released.
+            # TODO(nikos) remove this when the `partition_start` parameter of `ivf_index` gets released.
+            with tiledb.open(partial_write_array_index_tmp_uri) as a:
+                partial_write_array_index_array[
+                    partition_start : partition_start + partitions + 1
+                ] = a[0 : partitions + 1]
+            tiledb.Array.delete_array(partial_write_array_index_tmp_uri)
+        partial_write_array_index_array.close()
 
     def ingest_additions_udf(
         index_group_uri: str,
