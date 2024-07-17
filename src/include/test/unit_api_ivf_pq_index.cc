@@ -610,8 +610,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   size_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
-  float convergence_tolerance = 0.00003f;
   size_t max_iterations = 3;
+  float convergence_tolerance = 0.00003f;
+  float reassign_ratio = 0.08f;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -623,14 +624,16 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   // Create an empty index.
   {
     // We write the empty index at timestamp 0.
-    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
-        {{"feature_type", feature_type},
-         {"id_type", id_type},
-         {"partitioning_index_type", partitioning_index_type},
-         {"n_list", std::to_string(n_list)},
-         {"num_subspaces", std::to_string(num_subspaces)},
-         {"convergence_tolerance", std::to_string(convergence_tolerance)},
-         {"max_iterations", std::to_string(max_iterations)}}));
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>({
+        {"feature_type", feature_type},
+        {"id_type", id_type},
+        {"partitioning_index_type", partitioning_index_type},
+        {"n_list", std::to_string(n_list)},
+        {"num_subspaces", std::to_string(num_subspaces)},
+        {"max_iterations", std::to_string(max_iterations)},
+        {"convergence_tolerance", std::to_string(convergence_tolerance)},
+        {"reassign_ratio", std::to_string(reassign_ratio)},
+    }));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -643,8 +646,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.dimensions() == dimensions);
     CHECK(index.n_list() == n_list);
     CHECK(index.num_subspaces() == num_subspaces);
-    CHECK(index.convergence_tolerance() == convergence_tolerance);
     CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.reassign_ratio() == reassign_ratio);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
@@ -682,10 +686,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.dimensions() == dimensions);
     CHECK(index.n_list() == n_list);
     CHECK(index.num_subspaces() == num_subspaces);
-    // TODO(paris): Have ivf_pq_index store these in metadata so we don't lose
-    // values on load by URI.
-    // CHECK(index.convergence_tolerance() == convergence_tolerance);
-    // CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.reassign_ratio() == reassign_ratio);
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
@@ -750,6 +753,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.reassign_ratio() == reassign_ratio);
 
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}},
@@ -822,6 +828,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.reassign_ratio() == reassign_ratio);
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
@@ -879,6 +888,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.reassign_ratio() == reassign_ratio);
 
     auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
     auto query_vector_array = FeatureVectorArray(queries);
@@ -951,6 +963,12 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         all_ingestion_timestamps.begin(),
         all_ingestion_timestamps.end(),
         std::vector<uint64_t>{99, 100}.begin()));
+
+    CHECK(typed_index.group().get_max_iterations() == max_iterations);
+    CHECK(
+        typed_index.group().get_convergence_tolerance() ==
+        convergence_tolerance);
+    CHECK(typed_index.group().get_reassign_ratio() == reassign_ratio);
   }
 
   // Clear history for <= 99 and then load at 99, then make sure we cannot
