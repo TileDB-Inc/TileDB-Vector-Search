@@ -60,7 +60,6 @@ class IVFPQIndex(index.Index):
         )
         # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))
-        # TODO(paris): This is incorrect - should be fixed when we fix consolidation.
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
