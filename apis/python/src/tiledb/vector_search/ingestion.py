@@ -733,7 +733,7 @@ def ingest(
                     config=config,
                     storage_version=storage_version,
                 )
-            partial_write_array_index_uri = create_partial_write_array_group(
+            create_partial_write_array_group(
                 temp_data_group=temp_data_group,
                 vector_type=vector_type,
                 dimensions=dimensions,
@@ -1715,7 +1715,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=part_id * (partitions+1),
+                    partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1757,7 +1757,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=part_id * (partitions+1),
+                    partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1835,13 +1835,11 @@ def ingest(
             partial_index_array_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
             partition_sizes = np.zeros(partitions)
 
-            total_partitions = work_items * (partitions+1)
+            total_partitions = work_items * (partitions + 1)
             with tiledb.open(
                 partial_index_array_uri, mode="r", timestamp=index_timestamp
             ) as partial_index_array:
-                partial_indexes = partial_index_array[ : total_partitions][
-                    "values"
-                ]
+                partial_indexes = partial_index_array[:total_partitions]["values"]
 
             indexes = np.zeros(partitions + 1).astype(np.uint64)
             i = 0
@@ -1903,13 +1901,11 @@ def ingest(
             for i in range(partitions):
                 partition_slices.append([])
 
-            total_partitions = work_items * (partitions+1)
+            total_partitions = work_items * (partitions + 1)
             with tiledb.open(
                 partial_index_array_uri, mode="r", timestamp=index_timestamp
             ) as partial_index_array:
-                partial_indexes = partial_index_array[: total_partitions][
-                    "values"
-                ]
+                partial_indexes = partial_index_array[:total_partitions]["values"]
             i = 0
             prev_index = 0
             for work_item_id in range(work_items):
@@ -2457,9 +2453,11 @@ def ingest(
                 ingest_node.depends_on(centroids_node)
                 ingest_nodes.append(ingest_node)
                 task_id += 1
-            
+
             if updates_uri is not None:
-                partition_start=task_id * input_vectors_work_items_per_worker * (partitions+1)
+                partition_start = (
+                    task_id * input_vectors_work_items_per_worker * (partitions + 1)
+                )
                 ingest_additions_node = submit(
                     ingest_additions_udf,
                     index_group_uri=index_group_uri,
@@ -2479,7 +2477,7 @@ def ingest(
                 ingest_additions_node.depends_on(centroids_node)
                 ingest_nodes.append(ingest_additions_node)
 
-            work_items=len(ingest_nodes)*input_vectors_work_items_per_worker
+            work_items = len(ingest_nodes) * input_vectors_work_items_per_worker
             compute_indexes_node = submit(
                 compute_partition_indexes_udf,
                 index_group_uri=index_group_uri,
