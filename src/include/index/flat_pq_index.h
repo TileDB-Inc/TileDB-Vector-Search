@@ -77,7 +77,7 @@ class flat_pq_index {
   // @todo Temporarily public to facilitate early testing
  public:
   // metadata
-  size_t dimensions_{0};
+  uint32_t dimensions_{0};
   size_t num_subspaces_{0};
   size_t sub_dimensions_{0};
   size_t bits_per_subspace_{8};
@@ -114,7 +114,7 @@ class flat_pq_index {
    * @todo We don't really need dimension as an argument for any of our indexes
    */
   flat_pq_index(
-      size_t dimensions,
+      uint32_t dimensions,
       size_t num_subspaces,
       size_t bits_per_subspace = 8,
       size_t num_clusters = 256)

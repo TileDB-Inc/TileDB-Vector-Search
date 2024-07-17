@@ -279,7 +279,7 @@ class IndexIVFPQ {
     return index_->temporal_policy();
   }
 
-  constexpr auto dimensions() const {
+  constexpr uint32_t dimensions() const {
     return dimensions_;
   }
 
@@ -382,7 +382,7 @@ class IndexIVFPQ {
         std::optional<TemporalPolicy> temporal_policy,
         const std::string& storage_version) = 0;
 
-    [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual uint32_t dimensions() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
     [[nodiscard]] virtual uint64_t nlist() const = 0;
     [[nodiscard]] virtual uint64_t num_subspaces() const = 0;
@@ -519,7 +519,7 @@ class IndexIVFPQ {
       impl_index_.write_index(ctx, group_uri, temporal_policy, storage_version);
     }
 
-    size_t dimensions() const override {
+    uint32_t dimensions() const override {
       return ::dimensions(impl_index_);
     }
 
@@ -568,7 +568,7 @@ class IndexIVFPQ {
   static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
 
-  size_t dimensions_{0};
+  uint32_t dimensions_{0};
   size_t n_list_{0};
   size_t num_subspaces_{16};
   size_t max_iterations_{2};

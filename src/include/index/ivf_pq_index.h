@@ -196,7 +196,7 @@ class ivf_pq_index {
    ****************************************************************************/
 
   // Cached information about the partitioned vectors in the index
-  uint64_t dimensions_{0};
+  uint32_t dimensions_{0};
   uint64_t num_partitions_{0};
 
   // Cached information about the pq encoding
@@ -1316,7 +1316,7 @@ class ivf_pq_index {
     return *group_;
   }
 
-  auto dimensions() const {
+  uint32_t dimensions() const {
     return dimensions_;
   }
 

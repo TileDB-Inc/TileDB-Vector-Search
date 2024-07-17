@@ -129,7 +129,7 @@ class PartitionedMatrixWrapper {
     }
   }
 
-  auto dimensions() const {
+  uint32_t dimensions() const {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return parts_.get().num_cols();
     } else {
@@ -137,7 +137,7 @@ class PartitionedMatrixWrapper {
     }
   }
 
-  auto dimensions() {
+  uint32_t dimensions() const {
     if constexpr (std::is_same_v<LayoutPolicy, stdx::layout_right>) {
       return parts_.get().num_cols();
     } else {

@@ -1189,7 +1189,7 @@ TEST_CASE("vamana by hand random index", "[vamana]") {
   auto g = ::detail::graph::init_random_adj_list<float, uint32_t>(
       training_set_, r_max_degree);
 
-  auto dimensions_ = ::dimensions(training_set_);
+  uint32_t dimensions_ = ::dimensions(training_set_);
   auto num_vectors_ = ::num_vectors(training_set_);
   auto graph_ = ::detail::graph::
       init_random_nn_graph<siftsmall_feature_type, siftsmall_ids_type>(
@@ -1437,7 +1437,7 @@ TEST_CASE("query empty index", "[vamana]") {
   size_t l_build = 100;
   size_t r_max_degree = 100;
   size_t num_vectors = 0;
-  size_t dimensions = 5;
+  uint32_t dimensions = 5;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors, l_build, r_max_degree);
   auto data =

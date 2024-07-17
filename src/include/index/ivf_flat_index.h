@@ -120,7 +120,7 @@ class ivf_flat_index {
    ****************************************************************************/
 
   // Cached information about the partitioned vectors in the index
-  uint64_t dimensions_{0};
+  uint32_t dimensions_{0};
   uint64_t num_partitions_{0};
 
   // The PartitionedMatrix has indices and ids internally and is also
@@ -821,7 +821,7 @@ class ivf_flat_index {
    * Note that we don't have a `num_vectors` because it isn't clear what
    * that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
-  auto dimensions() const {
+  uint32_t dimensions() const {
     return dimensions_;
   }
 
