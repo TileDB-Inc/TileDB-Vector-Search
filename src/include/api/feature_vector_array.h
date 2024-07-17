@@ -210,7 +210,7 @@ class FeatureVectorArray {
    */
   struct vector_array_base {
     virtual ~vector_array_base() = default;
-    [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual uint32_t dimensions() const = 0;
     [[nodiscard]] virtual size_t num_vectors() const = 0;
     [[nodiscard]] virtual void* data() const = 0;
     [[nodiscard]] virtual size_t num_ids() const = 0;
@@ -254,7 +254,7 @@ class FeatureVectorArray {
     [[nodiscard]] void* ids() const override {
       return _cpo::ids(impl_vector_array);
     }
-    [[nodiscard]] size_t dimensions() const override {
+    [[nodiscard]] uint32_t dimensions() const override {
       return _cpo::dimensions(impl_vector_array);
     }
     [[nodiscard]] size_t num_vectors() const override {

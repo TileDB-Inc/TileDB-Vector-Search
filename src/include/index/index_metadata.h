@@ -72,9 +72,6 @@
 template <class IndexMetadata>
 class base_index_metadata {
  protected:
-  using base_sizes_type = uint64_t;
-  using ingestion_timestamps_type = uint64_t;
-
   /**************************************************************************
    * Members set / updated by users of the group
    ******************************************************************************/
@@ -82,10 +79,10 @@ class base_index_metadata {
   // Make public for now in interest of expedience
  public:
   /** Record timestamps of writes to the group */
-  std::vector<ingestion_timestamps_type> ingestion_timestamps_;
+  std::vector<uint64_t> ingestion_timestamps_;
 
   /** Record size of vector array at each write at a given timestamp */
-  std::vector<base_sizes_type> base_sizes_;
+  std::vector<uint64_t> base_sizes_;
 
   /** Record size of temp data */
   int64_t temp_size_{0};
@@ -298,9 +295,8 @@ class base_index_metadata {
           tiledb::impl::type_to_str(v_type));
     }
 
-    base_sizes_ = json_to_vector<base_sizes_type>(base_sizes_str_);
-    ingestion_timestamps_ =
-        json_to_vector<ingestion_timestamps_type>(ingestion_timestamps_str_);
+    base_sizes_ = json_to_vector<uint64_t>(base_sizes_str_);
+    ingestion_timestamps_ = json_to_vector<uint64_t>(ingestion_timestamps_str_);
 
     static_cast<IndexMetadata*>(this)->json_to_vector_impl();
   }
@@ -342,8 +338,8 @@ class base_index_metadata {
   void clear_history(uint64_t timestamp) {
     static_cast<IndexMetadata*>(this)->clear_history_impl(timestamp);
 
-    std::vector<ingestion_timestamps_type> new_ingestion_timestamps;
-    std::vector<base_sizes_type> new_base_sizes;
+    std::vector<uint64_t> new_ingestion_timestamps;
+    std::vector<uint64_t> new_base_sizes;
     for (int i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {

@@ -95,7 +95,7 @@ class vamana_index_group : public base_index_group<index_type> {
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
-      uint64_t dimensions = 0)
+      uint32_t dimensions = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     Base::load();
   }
@@ -124,53 +124,53 @@ class vamana_index_group : public base_index_group<index_type> {
   /*
    * Graph size information
    */
-  auto get_previous_num_edges() const {
+  uint64_t get_previous_num_edges() const {
     return metadata_.num_edges_history_.back();
   }
-  auto get_num_edges() const {
+  uint64_t get_num_edges() const {
     return metadata_.num_edges_history_[this->history_index_];
   }
-  auto append_num_edges(size_t size) {
-    metadata_.num_edges_history_.push_back(size);
+  auto append_num_edges(uint64_t num_edges) {
+    metadata_.num_edges_history_.push_back(num_edges);
   }
   auto get_all_num_edges() const {
     return metadata_.num_edges_history_;
   }
-  auto set_num_edges(size_t size) {
-    metadata_.num_edges_history_[this->history_index_] = size;
+  void set_num_edges(uint64_t num_edges) {
+    metadata_.num_edges_history_[this->history_index_] = num_edges;
   }
-  auto set_last_num_edges(size_t size) {
-    metadata_.num_edges_history_.back() = size;
+  void set_last_num_edges(uint64_t num_edges) {
+    metadata_.num_edges_history_.back() = num_edges;
   }
-  auto get_l_build() const {
+  uint64_t get_l_build() const {
     return metadata_.l_build_;
   }
-  auto set_l_build(size_t size) {
-    metadata_.l_build_ = size;
+  void set_l_build(uint64_t l_build) {
+    metadata_.l_build_ = l_build;
   }
-  auto get_r_max_degree() const {
+  uint64_t get_r_max_degree() const {
     return metadata_.r_max_degree_;
   }
-  auto set_r_max_degree(size_t size) {
-    metadata_.r_max_degree_ = size;
+  void set_r_max_degree(uint64_t r_max_degree) {
+    metadata_.r_max_degree_ = r_max_degree;
   }
-  auto get_alpha_min() const {
+  float get_alpha_min() const {
     return metadata_.alpha_min_;
   }
-  auto set_alpha_min(float size) {
-    metadata_.alpha_min_ = size;
+  void set_alpha_min(float alpha_min) {
+    metadata_.alpha_min_ = alpha_min;
   }
-  auto get_alpha_max() const {
+  float get_alpha_max() const {
     return metadata_.alpha_max_;
   }
-  auto set_alpha_max(float size) {
-    metadata_.alpha_max_ = size;
+  void set_alpha_max(float alpha_max) {
+    metadata_.alpha_max_ = alpha_max;
   }
-  auto get_medoid() const {
+  uint64_t get_medoid() const {
     return metadata_.medoid_;
   }
-  auto set_medoid(size_t size) {
-    metadata_.medoid_ = size;
+  void set_medoid(uint64_t medoid) {
+    metadata_.medoid_ = medoid;
   }
 
   [[nodiscard]] auto adjacency_scores_uri() const {

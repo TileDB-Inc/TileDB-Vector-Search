@@ -291,31 +291,31 @@ class IndexIVFPQ {
     return max_iterations_;
   }
 
-  constexpr auto convergence_tolerance() const {
+  constexpr float convergence_tolerance() const {
     return convergence_tolerance_;
   }
 
-  constexpr auto feature_type() const {
+  constexpr tiledb_datatype_t feature_type() const {
     return feature_datatype_;
   }
 
-  inline auto feature_type_string() const {
+  inline std::string feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }
 
-  constexpr auto id_type() const {
+  constexpr tiledb_datatype_t id_type() const {
     return id_datatype_;
   }
 
-  inline auto id_type_string() const {
+  inline std::string id_type_string() const {
     return datatype_to_string(id_datatype_);
   }
 
-  constexpr auto partitioning_index_type() const {
+  constexpr tiledb_datatype_t partitioning_index_type() const {
     return partitioning_index_datatype_;
   }
 
-  inline auto partitioning_index_type_string() const {
+  inline std::string partitioning_index_type_string() const {
     return datatype_to_string(partitioning_index_datatype_);
   }
 
@@ -374,7 +374,7 @@ class IndexIVFPQ {
         std::optional<TemporalPolicy> temporal_policy,
         const std::string& storage_version) = 0;
 
-    [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual uint32_t dimensions() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
     [[nodiscard]] virtual uint64_t nlist() const = 0;
     [[nodiscard]] virtual uint64_t num_subspaces() const = 0;
@@ -508,7 +508,7 @@ class IndexIVFPQ {
       impl_index_.write_index(ctx, group_uri, temporal_policy, storage_version);
     }
 
-    size_t dimensions() const override {
+    uint32_t dimensions() const override {
       return ::dimensions(impl_index_);
     }
 
@@ -553,7 +553,7 @@ class IndexIVFPQ {
   static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
 
-  size_t dimensions_{0};
+  uint32_t dimensions_{0};
   size_t n_list_{0};
   size_t num_subspaces_{16};
   size_t max_iterations_{2};

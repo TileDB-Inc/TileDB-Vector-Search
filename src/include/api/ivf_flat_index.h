@@ -435,35 +435,35 @@ class IndexIVFFlat {
     index_->write_index(ctx, group_uri, storage_version);
   }
 
-  constexpr auto dimensions() const {
-    return dimensions_;  //::dimensions(*index_);
+  constexpr uint32_t dimensions() const {
+    return dimensions_;
   }
 
   constexpr auto num_partitions() const {
-    return nlist_;  // ::num_partitions(*index_);
+    return nlist_;
   }
 
-  constexpr auto feature_type() const {
+  constexpr tiledb_datatype_t feature_type() const {
     return feature_datatype_;
   }
 
-  inline auto feature_type_string() const {
+  inline std::string feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }
 
-  constexpr auto id_type() const {
+  constexpr tiledb_datatype_t id_type() const {
     return id_datatype_;
   }
 
-  inline auto id_type_string() const {
+  inline std::string id_type_string() const {
     return datatype_to_string(id_datatype_);
   }
 
-  constexpr auto px_type() const {
+  constexpr tiledb_datatype_t px_type() const {
     return px_datatype_;
   }
 
-  inline auto px_type_string() const {
+  inline std::string px_type_string() const {
     return datatype_to_string(px_datatype_);
   }
 
@@ -507,7 +507,7 @@ class IndexIVFFlat {
         const std::string& group_uri,
         const std::string& storage_version) const = 0;
 
-    [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual uint32_t dimensions() const = 0;
 
     [[nodiscard]] virtual size_t num_partitions() const = 0;
   };
@@ -701,7 +701,7 @@ class IndexIVFFlat {
       //      index_.remove(ids);
     }
 
-    size_t dimensions() const override {
+    uint32_t dimensions() const override {
       return ::dimensions(impl_index_);
     }
 
@@ -716,7 +716,7 @@ class IndexIVFFlat {
     T impl_index_;
   };
 
-  size_t dimensions_ = 0;
+  uint32_t dimensions_ = 0;
   size_t nlist_ = 0;
   size_t max_iter_ = 2;
   float tolerance_ = 1e-4;

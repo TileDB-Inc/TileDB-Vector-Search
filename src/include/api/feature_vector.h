@@ -185,7 +185,7 @@ class FeatureVector {
    */
   struct vector_base {
     virtual ~vector_base() = default;
-    [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual uint32_t dimensions() const = 0;
     //[[nodiscard]] virtual void* data() = 0;
     [[nodiscard]] virtual void* data() const = 0;
   };
@@ -213,7 +213,7 @@ class FeatureVector {
       return (void*)::data(vector_);
       // return vector_.data();
     }
-    [[nodiscard]] size_t dimensions() const override {
+    [[nodiscard]] uint32_t dimensions() const override {
       return _cpo::dimensions(vector_);
     }
 

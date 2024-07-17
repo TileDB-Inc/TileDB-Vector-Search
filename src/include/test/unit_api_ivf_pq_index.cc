@@ -175,7 +175,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  size_t dimensions = 3;
+  uint32_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -247,7 +247,7 @@ TEST_CASE(
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  size_t dimensions = 3;
+  uint32_t dimensions = 3;
   size_t num_subspaces = 1;
 
   std::string index_uri =
@@ -498,7 +498,7 @@ TEST_CASE("storage_version", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  size_t dimensions = 3;
+  uint32_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -556,7 +556,7 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  size_t dimensions = 3;
+  uint32_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
   float convergence_tolerance = 0.00003f;
@@ -607,7 +607,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  size_t dimensions = 3;
+  uint32_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
   float convergence_tolerance = 0.00003f;
