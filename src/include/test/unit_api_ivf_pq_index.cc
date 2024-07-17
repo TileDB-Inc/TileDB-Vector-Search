@@ -549,6 +549,56 @@ TEST_CASE("storage_version", "[api_ivf_pq_index]") {
   }
 }
 
+TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto partitioning_index_type = "uint32";
+  size_t dimensions = 3;
+  size_t n_list = 1;
+  size_t num_subspaces = 1;
+  float convergence_tolerance = 0.00003f;
+  size_t max_iterations = 3;
+
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
+      {{"feature_type", feature_type},
+       {"id_type", id_type},
+       {"partitioning_index_type", partitioning_index_type},
+       {"n_list", std::to_string(n_list)},
+       {"num_subspaces", std::to_string(num_subspaces)},
+       {"convergence_tolerance", std::to_string(convergence_tolerance)},
+       {"max_iterations", std::to_string(max_iterations)}}));
+
+  auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+      {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+  auto training_vector_array = FeatureVectorArray(training);
+  index.train(training_vector_array);
+  index.add(training_vector_array);
+  index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
+
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(QueryType::InfiniteRAM, training_vector_array, 1, 1);
+
+  auto second_index = IndexIVFPQ(ctx, index_uri);
+  auto&& [scores_vector_array_finite, ids_vector_array_finite] =
+      second_index.query(QueryType::FiniteRAM, training_vector_array, 1, 1);
+
+  // Here we check that we can clear_history() even with a index in memory. This
+  // makes sure that every Array which IndexIVFPQ opens has been closed,
+  // otherwise clear_history() will throw when it tries to call
+  // delete_fragments() on the index Array's.
+  IndexIVFPQ::clear_history(ctx, index_uri, 99);
+}
+
 TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
