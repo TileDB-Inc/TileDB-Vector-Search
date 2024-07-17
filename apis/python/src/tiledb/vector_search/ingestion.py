@@ -635,7 +635,7 @@ def ingest(
             tiledb.Array.create(partial_write_array_index_uri, index_schema)
             add_to_group(
                 temp_data_group,
-                partial_write_array_ids_uri,
+                partial_write_array_index_uri,
                 INDEX_ARRAY_NAME,
             )
 
