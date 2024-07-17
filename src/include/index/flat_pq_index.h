@@ -78,10 +78,10 @@ class flat_pq_index {
  public:
   // metadata
   uint32_t dimensions_{0};
-  size_t num_subspaces_{0};
+  uint32_t num_subspaces_{0};
   size_t sub_dimensions_{0};
   size_t bits_per_subspace_{8};
-  size_t num_clusters_{256};
+  uint32_t num_clusters_{256};
   float tol_ = 0.001;
   size_t max_iter_ = 16;
   size_t num_threads_ = std::thread::hardware_concurrency();
@@ -115,9 +115,9 @@ class flat_pq_index {
    */
   flat_pq_index(
       uint32_t dimensions,
-      size_t num_subspaces,
+      uint32_t num_subspaces,
       size_t bits_per_subspace = 8,
-      size_t num_clusters = 256)
+      uint32_t num_clusters = 256)
       : dimensions_(dimensions)
       , num_subspaces_(num_subspaces)
       , bits_per_subspace_(bits_per_subspace)

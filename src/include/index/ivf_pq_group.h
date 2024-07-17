@@ -85,8 +85,8 @@ class ivf_pq_group : public base_index_group<index_type> {
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
       uint32_t dimensions = 0,
-      size_t num_clusters = 0,
-      size_t num_subspaces = 0)
+      uint32_t num_clusters = 0,
+      uint32_t num_subspaces = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
       // num_clusters and num_subspaces must be set before we call
@@ -156,22 +156,22 @@ class ivf_pq_group : public base_index_group<index_type> {
   /*****************************************************************************
    * Partitioning / repartitioning history information
    ****************************************************************************/
-  auto get_previous_num_partitions() const {
+  uint64_t get_previous_num_partitions() const {
     return metadata_.partition_history_.back();
   }
-  auto get_num_partitions() const {
+  uint64_t get_num_partitions() const {
     return metadata_.partition_history_[this->history_index_];
   }
-  auto append_num_partitions(size_t size) {
+  void append_num_partitions(uint64_t size) {
     metadata_.partition_history_.push_back(size);
   }
-  auto get_all_num_partitions() const {
+  const std::vector<uint64_t>& get_all_num_partitions() const {
     return metadata_.partition_history_;
   }
-  auto set_num_partitions(size_t size) {
+  void set_num_partitions(uint64_t size) {
     metadata_.partition_history_[this->history_index_] = size;
   }
-  auto set_last_num_partitions(size_t size) {
+  void set_last_num_partitions(uint64_t size) {
     metadata_.partition_history_.back() = size;
   }
 
@@ -225,52 +225,52 @@ class ivf_pq_group : public base_index_group<index_type> {
   /*****************************************************************************
    * Getters and setters for PQ related metadata
    ****************************************************************************/
-  auto get_num_subspaces() const {
+  uint32_t get_num_subspaces() const {
     return metadata_.num_subspaces_;
   }
-  auto set_num_subspaces(size_t num_subspaces) {
+  void set_num_subspaces(uint32_t num_subspaces) {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
   auto get_sub_dimensions() const {
     return metadata_.sub_dimensions_;
   }
-  auto set_sub_dimensions(size_t sub_dimensions) {
+  void set_sub_dimensions(size_t sub_dimensions) {
     metadata_.sub_dimensions_ = sub_dimensions;
   }
 
-  auto get_bits_per_subspace() const {
+  uint64_t get_bits_per_subspace() const {
     return metadata_.bits_per_subspace_;
   }
-  auto set_bits_per_subspace(size_t bits_per_subspace) {
+  void set_bits_per_subspace(uint64_t bits_per_subspace) {
     metadata_.bits_per_subspace_ = bits_per_subspace;
   }
 
-  auto get_num_clusters() const {
+  uint32_t get_num_clusters() const {
     return metadata_.num_clusters_;
   }
-  auto set_num_clusters(size_t num_clusters) {
+  void set_num_clusters(uint32_t num_clusters) {
     metadata_.num_clusters_ = num_clusters;
   }
 
-  auto get_max_iterations() const {
+  uint64_t get_max_iterations() const {
     return metadata_.max_iterations_;
   }
-  auto set_max_iterations(uint64_t max_iterations) {
+  void set_max_iterations(uint64_t max_iterations) {
     metadata_.max_iterations_ = max_iterations;
   }
 
-  auto get_convergence_tolerance() const {
+  float get_convergence_tolerance() const {
     return metadata_.convergence_tolerance_;
   }
-  auto set_convergence_tolerance(float convergence_tolerance) {
+  void set_convergence_tolerance(float convergence_tolerance) {
     metadata_.convergence_tolerance_ = convergence_tolerance;
   }
 
-  auto get_reassign_ratio() const {
+  float get_reassign_ratio() const {
     return metadata_.reassign_ratio_;
   }
-  auto set_reassign_ratio(float reassign_ratio) {
+  void set_reassign_ratio(float reassign_ratio) {
     metadata_.reassign_ratio_ = reassign_ratio;
   }
 

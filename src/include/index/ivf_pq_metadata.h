@@ -67,12 +67,10 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   using Base::metadata_arithmetic_check_type;
   using Base::metadata_string_check_type;
 
-  using partition_history_type = uint64_t;
-
   // public for now in interest of time
  public:
   /** Record number of partitions at each write at a given timestamp */
-  std::vector<partition_history_type> partition_history_;
+  std::vector<uint64_t> partition_history_;
 
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::string index_type_{"IVF_PQ"};
@@ -109,7 +107,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   };
 
   void clear_history_impl(uint64_t timestamp) {
-    std::vector<partition_history_type> new_partition_history;
+    std::vector<uint64_t> new_partition_history;
     for (int i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
@@ -125,8 +123,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   }
 
   auto json_to_vector_impl() {
-    partition_history_ =
-        json_to_vector<partition_history_type>(partition_history_str_);
+    partition_history_ = json_to_vector<uint64_t>(partition_history_str_);
   }
 
   auto vector_to_json_impl() {

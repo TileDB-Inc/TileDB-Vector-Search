@@ -290,7 +290,7 @@ class ivf_pq_index {
    */
   ivf_pq_index(
       size_t nlist = 0,
-      size_t num_subspaces = 16,
+      uint32_t num_subspaces = 16,
       size_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
@@ -1335,7 +1335,7 @@ class ivf_pq_index {
     return num_partitions_;
   }
 
-  auto num_subspaces() const {
+  uint32_t num_subspaces() const {
     return num_subspaces_;
   }
 
