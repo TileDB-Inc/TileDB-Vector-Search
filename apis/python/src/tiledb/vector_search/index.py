@@ -378,27 +378,6 @@ class Index:
         vectors[0] = vector
         updates_array[external_id] = {"vector": vectors}
         updates_array.close()
-
-        print("[index@update] self.updates_array_uri", self.updates_array_uri)
-        array = tiledb.open(self.updates_array_uri, mode="r", timestamp=timestamp)
-        print("[index@update] array.meta", array.meta)
-        print("[index@update] array", array[:])
-        array.close()
-
-        # OrderedDict(
-        #     [
-        #         ('vector', array([array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)),
-        #         ('external_id', array([2], dtype=uint64))
-        #     ]
-        # )
-
-        # OrderedDict(
-        #     [
-        #         ('vector', array([array([2. , 2.1, 2.2, 2.3], dtype=float32), array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)),
-        #         ('external_id', array([1, 2], dtype=uint64))
-        #     ]
-        # )
-
         self._consolidate_update_fragments()
 
     def update_batch(
@@ -441,20 +420,6 @@ class Index:
         deletes[0] = np.array([], dtype=self.dtype)
         updates_array[external_id] = {"vector": deletes}
         updates_array.close()
-
-        print("[index@delete] self.updates_array_uri", self.updates_array_uri)
-        array = tiledb.open(self.updates_array_uri, mode="r", timestamp=timestamp)
-        print("[index@delete] array.meta", array.meta)
-        print("[index@delete] array", array[:])
-        array.close()
-
-        # OrderedDict(
-        #     [
-        #         ('vector', array([array([], dtype=float32), array([3. , 3.1, 3.2, 3.3], dtype=float32)], dtype=object)),
-        #         ('external_id', array([1, 2], dtype=uint64))
-        #     ]
-        # )
-
         self._consolidate_update_fragments()
 
     def delete_batch(self, external_ids: np.array, timestamp: int = None):

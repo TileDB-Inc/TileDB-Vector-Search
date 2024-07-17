@@ -892,11 +892,8 @@ def ingest(
         ) as updates_array:
             q = updates_array.query(attrs=("vector",), coords=True)
             data = q[:]
-            print("[ingestion@read_additions] data:", data)
             additions_filter = [len(item) > 0 for item in data["vector"]]
-            print("[ingestion@read_additions] additions_filter:", additions_filter)
             filtered_vectors = data["vector"][additions_filter]
-            print("[ingestion@read_additions] filtered_vectors:", filtered_vectors)
             if len(filtered_vectors) == 0:
                 return None, None
             else:
@@ -1485,7 +1482,6 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-            print("[ingestion@ingest_flat] updated_ids:", updated_ids)
             group = tiledb.Group(index_group_uri)
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
@@ -1510,7 +1506,6 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
-                print("[ingestion@ingest_flat] in_vectors:", in_vectors)
                 external_ids = read_external_ids(
                     external_ids_uri=external_ids_uri,
                     external_ids_type=external_ids_type,
@@ -1520,17 +1515,11 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
-                print("[ingestion@ingest_flat] external_ids:", external_ids)
                 updates_filter = np.in1d(
                     external_ids, updated_ids, assume_unique=True, invert=True
                 )
-                print("[ingestion@ingest_flat] updates_filter:", updates_filter)
                 in_vectors = in_vectors[updates_filter]
-                print("[ingestion@ingest_flat] after filter in_vectors:", in_vectors)
                 external_ids = external_ids[updates_filter]
-                print(
-                    "[ingestion@ingest_flat] after filter external_ids:", external_ids
-                )
                 vector_len = len(in_vectors)
                 if vector_len > 0:
                     end_offset = write_offset + vector_len
@@ -1549,11 +1538,6 @@ def ingest(
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
-            )
-            print("[ingestion@ingest_flat] additions_vectors:", additions_vectors)
-            print(
-                "[ingestion@ingest_flat] additions_external_ids:",
-                additions_external_ids,
             )
             end = write_offset
             if additions_vectors is not None:
