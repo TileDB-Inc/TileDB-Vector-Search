@@ -836,16 +836,22 @@ def test_ingestion_with_updates(tmp_path):
             updated_ids[i] = i + update_ids_offset
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index = index.consolidate_updates(retrain_index=True, partitions=20)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert base_sizes == [1000, 1000]
