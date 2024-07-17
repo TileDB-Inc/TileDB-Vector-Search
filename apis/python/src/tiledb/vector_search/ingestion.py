@@ -1828,6 +1828,7 @@ def ingest(
     ):
         import random
         import tempfile
+
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
         from tiledb.vector_search.module import array_to_matrix
