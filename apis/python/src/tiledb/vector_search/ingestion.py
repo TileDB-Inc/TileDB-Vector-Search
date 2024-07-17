@@ -1826,6 +1826,8 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
+        import random
+        import tempfile
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
         from tiledb.vector_search.module import array_to_matrix
@@ -1883,7 +1885,7 @@ def ingest(
             deleted_ids=StdVector_u64(np.array([], np.uint64)),
             centroids_uri=centroids_uri,
             parts_uri=partial_write_array_parts_uri,
-            index_array_uri=partial_write_array_index_uri,
+            index_array_uri=partial_write_array_index_tmp_uri,
             id_uri=partial_write_array_ids_uri,
             start=write_offset,
             end=0,
