@@ -1727,7 +1727,6 @@ def ingest(
                 attrs=[index_attr],
                 capacity=partitions,
             )
-            logger.debug(index_schema)
             tiledb.Array.create(partial_write_array_index_tmp_uri, index_schema)
             partition_start = part_id * (partitions + 1)
 
