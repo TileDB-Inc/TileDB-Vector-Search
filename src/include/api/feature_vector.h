@@ -164,7 +164,7 @@ class FeatureVector {
    * @brief Returns the dimension (number of elements) of the vector
    * @return
    */
-  [[nodiscard]] uint32_t dimensions() const {
+  [[nodiscard]] auto dimensions() const {
     return _cpo::dimensions(*vector_);
   }
 
@@ -185,7 +185,7 @@ class FeatureVector {
    */
   struct vector_base {
     virtual ~vector_base() = default;
-    [[nodiscard]] virtual uint32_t dimensions() const = 0;
+    [[nodiscard]] virtual size_t dimensions() const = 0;
     //[[nodiscard]] virtual void* data() = 0;
     [[nodiscard]] virtual void* data() const = 0;
   };
@@ -213,7 +213,7 @@ class FeatureVector {
       return (void*)::data(vector_);
       // return vector_.data();
     }
-    [[nodiscard]] uint32_t dimensions() const override {
+    [[nodiscard]] size_t dimensions() const override {
       return _cpo::dimensions(vector_);
     }
 
