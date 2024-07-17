@@ -1672,6 +1672,7 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
+        import os
         import random
         import tempfile
 
@@ -1706,8 +1707,9 @@ def ingest(
             # Temporary solution until `ivf_index` library change gets released. We create a local disk
             # temporary array to hold the partial indices and write them to the respective range in the main array.
             # TODO(nikos) remove this when the `partition_start` parameter of `ivf_index` gets released.
-            partial_write_array_index_tmp_uri = (
-                f"{tempfile.gettempdir()}_{random.randint(0,MAX_INT32)}_{part_id}"
+            partial_write_array_index_tmp_uri = os.path.join(
+                tempfile.gettempdir(),
+                f"{random.randint(0,MAX_INT32)}_{part_id}",
             )
             index_array_rows_dim = tiledb.Dim(
                 name="rows",
@@ -1826,6 +1828,7 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
+        import os
         import random
         import tempfile
 
@@ -1846,8 +1849,8 @@ def ingest(
         # Temporary solution until `ivf_index` library change gets released. We create a local disk
         # temporary array to hold the partial indices and write them to the respective range in the main array.
         # TODO(nikos) remove this when the `partition_start` parameter of `ivf_index` gets released.
-        partial_write_array_index_tmp_uri = (
-            f"{tempfile.gettempdir()}_{random.randint(0,MAX_INT32)}_{partition_start}"
+        partial_write_array_index_tmp_uri = os.path.join(
+            tempfile.gettempdir(), f"{random.randint(0,MAX_INT32)}_{partition_start}"
         )
         index_array_rows_dim = tiledb.Dim(
             name="rows",
