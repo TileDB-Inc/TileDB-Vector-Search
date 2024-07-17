@@ -1839,6 +1839,33 @@ def ingest(
         partial_write_array_ids_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
         partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
         partial_write_array_index_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
+
+        # Temporary solution until `ivf_index` library change gets released. We create a local disk
+        # temporary array to hold the partial indices and write them to the respective range in the main array.
+        # TODO(nikos) remove this when the `partition_start` parameter of `ivf_index` gets released.
+        partial_write_array_index_tmp_uri = (
+            f"{tempfile.gettempdir()}_{random.randint(0,MAX_INT32)}_{partition_start}"
+        )
+        index_array_rows_dim = tiledb.Dim(
+            name="rows",
+            domain=(0, partitions),
+            tile=partitions,
+            dtype=np.dtype(np.int32),
+        )
+        index_array_dom = tiledb.Domain(index_array_rows_dim)
+        index_attr = tiledb.Attr(
+            name="values",
+            dtype=np.dtype(np.uint64),
+            filters=DEFAULT_ATTR_FILTERS,
+        )
+        index_schema = tiledb.ArraySchema(
+            domain=index_array_dom,
+            sparse=False,
+            attrs=[index_attr],
+            capacity=partitions,
+        )
+        tiledb.Array.create(partial_write_array_index_tmp_uri, index_schema)
+
         additions_vectors, additions_external_ids = read_additions(
             updates_uri=updates_uri,
             config=config,
@@ -1860,11 +1887,24 @@ def ingest(
             id_uri=partial_write_array_ids_uri,
             start=write_offset,
             end=0,
-            partition_start=partition_start,
+            # partition_start=partition_start,
+            partition_start=0,
             nthreads=threads,
             **({"timestamp": index_timestamp} if index_timestamp is not None else {}),
             config=config,
         )
+
+        # Temporary solution until `ivf_index` library change gets released.
+        # TODO(nikos) remove this when the `partition_start` parameter of `ivf_index` gets released.
+        partial_write_array_index_array = tiledb.open(
+            partial_write_array_index_uri, "w", timestamp=index_timestamp
+        )
+        with tiledb.open(partial_write_array_index_tmp_uri) as a:
+            partial_write_array_index_array[
+                partition_start : partition_start + partitions + 1
+            ] = a[0 : partitions + 1]
+        tiledb.Array.delete_array(partial_write_array_index_tmp_uri)
+        partial_write_array_index_array.close()
 
     def compute_partition_indexes_udf(
         index_group_uri: str,
