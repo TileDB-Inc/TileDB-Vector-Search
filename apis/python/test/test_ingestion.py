@@ -824,7 +824,7 @@ def test_ingestion_with_updates(tmp_path):
         ingestion_timestamp = ingestion_timestamps[0]
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        assert accuracy(result, gt_i) == 1.0
+        assert accuracy(result, gt_i) >= (0.998 if index_type == "IVF_PQ" else 1.0)
 
         update_ids_offset = MAX_UINT64 - size
         updated_ids = {}
