@@ -610,19 +610,32 @@ def ingest(
         partial_write_array_index_uri = f"{temp_data_group.uri}/{INDEX_ARRAY_NAME}"
         partial_write_array_ids_uri = f"{temp_data_group.uri}/{IDS_ARRAY_NAME}"
         partial_write_array_parts_uri = f"{temp_data_group.uri}/{PARTS_ARRAY_NAME}"
-        if create_index_array:
-            try:
-                tiledb.group_create(partial_write_array_index_uri)
-            except tiledb.TileDBError as err:
-                message = str(err)
-                if "already exists" in message:
-                    logger.debug(
-                        f"Group '{partial_write_array_index_uri}' already exists"
-                    )
-                raise err
+
+        if not tiledb.array_exists(partial_write_array_index_uri):
+            logger.debug("Creating temp index array")
+            index_array_rows_dim = tiledb.Dim(
+                name="rows",
+                domain=(0, MAX_INT32),
+                tile=100000,
+                dtype=np.dtype(np.int32),
+            )
+            index_array_dom = tiledb.Domain(index_array_rows_dim)
+            index_attr = tiledb.Attr(
+                name="values",
+                dtype=np.dtype(np.uint64),
+                filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
+            )
+            index_schema = tiledb.ArraySchema(
+                domain=index_array_dom,
+                sparse=False,
+                attrs=[index_attr],
+                cell_order="col-major",
+                tile_order="col-major",
+            )
+            tiledb.Array.create(partial_write_array_index_uri, index_schema)
             add_to_group(
                 temp_data_group,
-                partial_write_array_index_uri,
+                partial_write_array_ids_uri,
                 INDEX_ARRAY_NAME,
             )
 
@@ -727,69 +740,6 @@ def ingest(
                 filters=DEFAULT_ATTR_FILTERS,
                 create_index_array=True,
             )
-            partial_write_array_index_group = tiledb.Group(
-                partial_write_array_index_uri, "w"
-            )
-
-            for part in range(input_vectors_work_items):
-                part_index_uri = partial_write_array_index_uri + "/" + str(part)
-                if not tiledb.array_exists(part_index_uri):
-                    logger.debug(f"Creating part array {part_index_uri}")
-                    index_array_rows_dim = tiledb.Dim(
-                        name="rows",
-                        domain=(0, partitions),
-                        tile=partitions,
-                        dtype=np.dtype(np.int32),
-                    )
-                    index_array_dom = tiledb.Domain(index_array_rows_dim)
-                    index_attr = tiledb.Attr(
-                        name="values",
-                        dtype=np.dtype(np.uint64),
-                        filters=DEFAULT_ATTR_FILTERS,
-                    )
-                    index_schema = tiledb.ArraySchema(
-                        domain=index_array_dom,
-                        sparse=False,
-                        attrs=[index_attr],
-                        capacity=partitions,
-                        cell_order="col-major",
-                        tile_order="col-major",
-                    )
-                    logger.debug(index_schema)
-                    tiledb.Array.create(part_index_uri, index_schema)
-                    add_to_group(
-                        partial_write_array_index_group, part_index_uri, str(part)
-                    )
-            if updates_uri is not None:
-                part_index_uri = partial_write_array_index_uri + "/additions"
-                if not tiledb.array_exists(part_index_uri):
-                    logger.debug(f"Creating part array {part_index_uri}")
-                    index_array_rows_dim = tiledb.Dim(
-                        name="rows",
-                        domain=(0, partitions),
-                        tile=partitions,
-                        dtype=np.dtype(np.int32),
-                    )
-                    index_array_dom = tiledb.Domain(index_array_rows_dim)
-                    index_attr = tiledb.Attr(
-                        name="values",
-                        dtype=np.dtype(np.uint64),
-                        filters=DEFAULT_ATTR_FILTERS,
-                    )
-                    index_schema = tiledb.ArraySchema(
-                        domain=index_array_dom,
-                        sparse=False,
-                        attrs=[index_attr],
-                        capacity=partitions,
-                        cell_order="col-major",
-                        tile_order="col-major",
-                    )
-                    logger.debug(index_schema)
-                    tiledb.Array.create(part_index_uri, index_schema)
-                    add_to_group(
-                        partial_write_array_index_group, part_index_uri, "additions"
-                    )
-            partial_write_array_index_group.close()
 
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
@@ -1735,12 +1685,7 @@ def ingest(
         partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
         partial_write_array_ids_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
         partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
-        partial_write_array_index_dir_uri = partial_write_array_group[
-            INDEX_ARRAY_NAME
-        ].uri
-        partial_write_array_index_group = tiledb.Group(
-            partial_write_array_index_dir_uri
-        )
+        partial_write_array_index_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
 
         for part in range(start, end, batch):
             part_end = part + batch
@@ -1748,10 +1693,8 @@ def ingest(
                 part_end = end
 
             str(part) + "-" + str(part_end)
+            part_id = int(part / batch)
 
-            partial_write_array_index_uri = partial_write_array_index_group[
-                str(int(part / batch))
-            ].uri
             logger.debug("Input vectors start_pos: %d, end_pos: %d", part, part_end)
             updated_ids = read_updated_ids(
                 updates_uri=updates_uri,
@@ -1772,6 +1715,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
+                    partition_start=part_id * (partitions+1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1813,6 +1757,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
+                    partition_start=part_id * (partitions+1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1827,6 +1772,7 @@ def ingest(
         updates_uri: str,
         vector_type: np.dtype,
         write_offset: int,
+        partition_start: int,
         threads: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
@@ -1844,13 +1790,7 @@ def ingest(
         partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
         partial_write_array_ids_uri = partial_write_array_group[IDS_ARRAY_NAME].uri
         partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
-        partial_write_array_index_dir_uri = partial_write_array_group[
-            INDEX_ARRAY_NAME
-        ].uri
-        partial_write_array_index_group = tiledb.Group(
-            partial_write_array_index_dir_uri
-        )
-        partial_write_array_index_uri = partial_write_array_index_group["additions"].uri
+        partial_write_array_index_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
         additions_vectors, additions_external_ids = read_additions(
             updates_uri=updates_uri,
             config=config,
@@ -1872,6 +1812,7 @@ def ingest(
             id_uri=partial_write_array_ids_uri,
             start=write_offset,
             end=0,
+            partition_start=partition_start,
             nthreads=threads,
             **({"timestamp": index_timestamp} if index_timestamp is not None else {}),
             config=config,
@@ -1880,6 +1821,7 @@ def ingest(
     def compute_partition_indexes_udf(
         index_group_uri: str,
         partitions: int,
+        work_items: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1890,27 +1832,28 @@ def ingest(
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
-            partial_write_array_index_dir_uri = partial_write_array_group[
-                INDEX_ARRAY_NAME
-            ].uri
-            partial_write_array_index_group = tiledb.Group(
-                partial_write_array_index_dir_uri
-            )
+            partial_index_array_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
             partition_sizes = np.zeros(partitions)
+
+            total_partitions = work_items * (partitions+1)
+            with tiledb.open(
+                partial_index_array_uri, mode="r", timestamp=index_timestamp
+            ) as partial_index_array:
+                partial_indexes = partial_index_array[ : total_partitions][
+                    "values"
+                ]
+
             indexes = np.zeros(partitions + 1).astype(np.uint64)
-            for part in partial_write_array_index_group:
-                partial_index_array_uri = part.uri
-                if tiledb.array_exists(partial_index_array_uri):
-                    partial_index_array = tiledb.open(
-                        partial_index_array_uri, mode="r", timestamp=index_timestamp
+            i = 0
+            for work_item_id in range(work_items):
+                prev_index = partial_indexes[i]
+                i += 1
+                for partition_id in range(partitions):
+                    partition_sizes[partition_id] += int(partial_indexes[i]) - int(
+                        prev_index
                     )
-                    partial_indexes = partial_index_array[:]["values"]
-                    i = 0
-                    prev_index = partial_indexes[0]
-                    for partial_index in partial_indexes[1:]:
-                        partition_sizes[i] += int(partial_index) - int(prev_index)
-                        prev_index = partial_index
-                        i += 1
+                    prev_index = partial_indexes[i]
+                    i += 1
             logger.debug("Partition sizes: %s", partition_sizes)
             i = 0
             _sum = 0
@@ -1930,6 +1873,8 @@ def ingest(
 
     def consolidate_partition_udf(
         index_group_uri: str,
+        partitions: int,
+        work_items: int,
         partition_id_start: int,
         partition_id_end: int,
         batch: int,
@@ -1950,36 +1895,35 @@ def ingest(
             partial_write_array_parts_uri = partial_write_array_group[
                 PARTS_ARRAY_NAME
             ].uri
-            partial_write_array_index_dir_uri = partial_write_array_group[
-                INDEX_ARRAY_NAME
-            ].uri
-            partial_write_array_index_group = tiledb.Group(
-                partial_write_array_index_dir_uri
-            )
+            partial_index_array_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
             index_array_uri = group[INDEX_ARRAY_NAME].uri
             ids_array_uri = group[IDS_ARRAY_NAME].uri
             parts_array_uri = group[PARTS_ARRAY_NAME].uri
             partition_slices = []
             for i in range(partitions):
                 partition_slices.append([])
-            for part in partial_write_array_index_group:
-                partial_index_array_uri = part.uri
-                if tiledb.array_exists(partial_index_array_uri):
-                    partial_index_array = tiledb.open(
-                        partial_index_array_uri, mode="r", timestamp=index_timestamp
-                    )
-                    partial_indexes = partial_index_array[:]["values"]
-                    prev_index = partial_indexes[0]
-                    i = 0
-                    for partial_index in partial_indexes[1:]:
-                        s = slice(int(prev_index), int(partial_index - 1))
-                        if (
-                            s.start <= s.stop
-                            and s.start != np.iinfo(np.dtype("uint64")).max
-                        ):
-                            partition_slices[i].append(s)
-                        prev_index = partial_index
-                        i += 1
+
+            total_partitions = work_items * (partitions+1)
+            with tiledb.open(
+                partial_index_array_uri, mode="r", timestamp=index_timestamp
+            ) as partial_index_array:
+                partial_indexes = partial_index_array[: total_partitions][
+                    "values"
+                ]
+            i = 0
+            prev_index = 0
+            for work_item_id in range(work_items):
+                prev_index = partial_indexes[i]
+                i += 1
+                for partition_id in range(partitions):
+                    s = slice(int(prev_index), int(partial_indexes[i] - 1))
+                    if (
+                        s.start <= s.stop
+                        and s.start != np.iinfo(np.dtype("uint64")).max
+                    ):
+                        partition_slices[partition_id].append(s)
+                    prev_index = partial_indexes[i]
+                    i += 1
 
             partial_write_array_ids_array = tiledb.open(
                 partial_write_array_ids_uri, mode="r", timestamp=index_timestamp
@@ -2480,19 +2424,7 @@ def ingest(
                         **kwargs,
                     )
 
-            compute_indexes_node = submit(
-                compute_partition_indexes_udf,
-                index_group_uri=index_group_uri,
-                partitions=partitions,
-                config=config,
-                verbose=verbose,
-                trace_id=trace_id,
-                name="compute-indexes",
-                resources=partial_index_resources,
-                image_name=DEFAULT_IMG_NAME,
-                **kwargs,
-            )
-
+            ingest_nodes = []
             task_id = 0
             for i in range(0, size, input_vectors_batch_size):
                 start = i
@@ -2523,16 +2455,18 @@ def ingest(
                     **kwargs,
                 )
                 ingest_node.depends_on(centroids_node)
-                compute_indexes_node.depends_on(ingest_node)
+                ingest_nodes.append(ingest_node)
                 task_id += 1
-
+            
             if updates_uri is not None:
+                partition_start=task_id * input_vectors_work_items_per_worker * (partitions+1)
                 ingest_additions_node = submit(
                     ingest_additions_udf,
                     index_group_uri=index_group_uri,
                     updates_uri=updates_uri,
                     vector_type=vector_type,
                     write_offset=size,
+                    partition_start=partition_start,
                     threads=threads,
                     config=config,
                     verbose=verbose,
@@ -2543,7 +2477,24 @@ def ingest(
                     **kwargs,
                 )
                 ingest_additions_node.depends_on(centroids_node)
-                compute_indexes_node.depends_on(ingest_additions_node)
+                ingest_nodes.append(ingest_additions_node)
+
+            work_items=len(ingest_nodes)*input_vectors_work_items_per_worker
+            compute_indexes_node = submit(
+                compute_partition_indexes_udf,
+                index_group_uri=index_group_uri,
+                partitions=partitions,
+                work_items=work_items,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+                name="compute-indexes",
+                resources=partial_index_resources,
+                image_name=DEFAULT_IMG_NAME,
+                **kwargs,
+            )
+            for ingest_node in ingest_nodes:
+                compute_indexes_node.depends_on(ingest_node)
 
             partitions_batch = (
                 table_partitions_work_items_per_worker * table_partitions_per_work_item
@@ -2557,6 +2508,8 @@ def ingest(
                 consolidate_partition_node = submit(
                     consolidate_partition_udf,
                     index_group_uri=index_group_uri,
+                    partitions=partitions,
+                    work_items=work_items,
                     partition_id_start=start,
                     partition_id_end=end,
                     batch=table_partitions_per_work_item,
