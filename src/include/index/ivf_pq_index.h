@@ -200,8 +200,8 @@ class ivf_pq_index {
   uint64_t num_partitions_{0};
 
   // Cached information about the pq encoding
-  uint64_t num_subspaces_{0};
-  uint64_t sub_dimensions_{0};
+  uint32_t num_subspaces_{0};
+  uint32_t sub_dimensions_{0};
   constexpr static const uint64_t bits_per_subspace_{8};
   constexpr static const uint64_t num_clusters_{256};
 
@@ -290,7 +290,7 @@ class ivf_pq_index {
    */
   ivf_pq_index(
       size_t nlist = 0,
-      size_t num_subspaces = 16,
+      uint32_t num_subspaces = 16,
       size_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
@@ -1335,11 +1335,11 @@ class ivf_pq_index {
     return num_partitions_;
   }
 
-  auto num_subspaces() const {
+  uint32_t num_subspaces() const {
     return num_subspaces_;
   }
 
-  auto sub_dimensions() const {
+  uint32_t sub_dimensions() const {
     return sub_dimensions_;
   }
 
