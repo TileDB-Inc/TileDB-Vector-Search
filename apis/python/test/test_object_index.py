@@ -168,7 +168,6 @@ def assert_equal(
     assert len(ids) == len(expected_ids)
     if index_type == "IVF_PQ":
         matches = np.intersect1d(ids, expected_ids)
-        print("accuracy:", len(matches) / len(ids))
         assert len(matches) / len(ids) >= ivf_pq_accuracy_threshold
         return
 
@@ -201,7 +200,6 @@ def evaluate_query(
     assert_equal(
         index_type,
         np.unique(object_ids),
-        # np.array([v_id - 3, v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2, v_id + 3]),
         np.array([v_id + i for i in range(-7, 8)]),
         ivf_pq_accuracy_threshold=0.8,
     )
@@ -219,7 +217,6 @@ def evaluate_query(
         index_type,
         np.unique(objects["external_id"]),
         np.array([v_id + i for i in range(0, 15)]),
-        # np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4, v_id + 5, v_id + 6]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
@@ -295,7 +292,6 @@ def evaluate_query(
 
 
 def test_object_index(tmp_path):
-    print()
     from common import INDEXES
 
     for index_type in INDEXES:
