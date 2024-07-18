@@ -165,44 +165,15 @@ static void declare_qv_query_heap_infinite_ram(
          std::vector<Id_Type>& ids,
          size_t nprobe,
          size_t k_nn,
-         size_t nthreads,
-         DistanceMetric distance_metric = DistanceMetric::L2) -> py::tuple {
+         size_t nthreads) -> py::tuple {
         auto mat = ColMajorPartitionedMatrixWrapper<T, Id_Type, Id_Type>(
             parts, ids, indices);
 
         auto top_centroids = detail::ivf::ivf_top_centroids(
             centroids, query_vectors, nprobe, nthreads);
-        if (distance_metric == DistanceMetric::L2) {
-          auto r = detail::ivf::qv_query_heap_infinite_ram(
-              top_centroids,
-              mat,
-              query_vectors,
-              nprobe,
-              k_nn,
-              nthreads,
-              sum_of_squares_distance{});
-          return make_python_pair(std::move(r));
-        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
-          auto r = detail::ivf::qv_query_heap_infinite_ram(
-              top_centroids,
-              mat,
-              query_vectors,
-              nprobe,
-              k_nn,
-              nthreads,
-              inner_product_distance{});
-          return make_python_pair(std::move(r));
-        } else if (distance_metric == DistanceMetric::COSINE) {
-          auto r = detail::ivf::qv_query_heap_infinite_ram(
-              top_centroids,
-              mat,
-              query_vectors,
-              nprobe,
-              k_nn,
-              nthreads,
-              cosine_distance{});
-          return make_python_pair(std::move(r));
-        }
+        auto r = detail::ivf::qv_query_heap_infinite_ram(
+            top_centroids, mat, query_vectors, nprobe, k_nn, nthreads);
+        return make_python_pair(std::move(r));
       },
       py::keep_alive<1, 2>());
 }
@@ -223,8 +194,7 @@ static void declare_qv_query_heap_finite_ram(
          size_t k_nn,
          size_t upper_bound,
          size_t nthreads,
-         uint64_t timestamp,
-         DistanceMetric distance_metric = DistanceMetric::L2)
+         uint64_t timestamp)
           -> py::tuple {  // std::tuple<ColMajorMatrix<float>,
                           // ColMajorMatrix<size_t>> { //
                           // TODO change return type
@@ -241,52 +211,19 @@ static void declare_qv_query_heap_finite_ram(
         //     nthreads,
         //     timestamp);
 
-        if (distance_metric == DistanceMetric::L2) {
-          auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
-              ctx,
-              parts_uri,
-              centroids,
-              query_vectors,
-              indices,
-              ids_uri,
-              nprobe,
-              k_nn,
-              upper_bound,
-              nthreads,
-              timestamp,
-              sum_of_squares_distance{});
-          return make_python_pair(std::move(r));
-        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
-          auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
-              ctx,
-              parts_uri,
-              centroids,
-              query_vectors,
-              indices,
-              ids_uri,
-              nprobe,
-              k_nn,
-              upper_bound,
-              nthreads,
-              timestamp,
-              inner_product_distance{});
-          return make_python_pair(std::move(r));
-        } else if (distance_metric == DistanceMetric::COSINE) {
-          auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
-              ctx,
-              parts_uri,
-              centroids,
-              query_vectors,
-              indices,
-              ids_uri,
-              nprobe,
-              k_nn,
-              upper_bound,
-              nthreads,
-              timestamp,
-              cosine_distance{});
-          return make_python_pair(std::move(r));
-        }
+        auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
+            ctx,
+            parts_uri,
+            centroids,
+            query_vectors,
+            indices,
+            ids_uri,
+            nprobe,
+            k_nn,
+            upper_bound,
+            nthreads,
+            timestamp);
+        return make_python_pair(std::move(r));
       },
       py::keep_alive<1, 2>());
 }
@@ -303,8 +240,7 @@ static void declare_nuv_query_heap_infinite_ram(
          std::vector<Id_Type>& ids,
          size_t nprobe,
          size_t k_nn,
-         size_t nthreads,
-         DistanceMetric distance_metric = DistanceMetric::L2)
+         size_t nthreads)
           -> std::tuple<
               ColMajorMatrix<float>,
               ColMajorMatrix<uint64_t>> {  // TODO change return type
@@ -315,37 +251,14 @@ static void declare_nuv_query_heap_infinite_ram(
             detail::ivf::partition_ivf_flat_index<Id_Type>(
                 centroids, query_vectors, nprobe, nthreads);
 
-        if (distance_metric == DistanceMetric::L2) {
-          auto r = detail::ivf::nuv_query_heap_infinite_ram(
-              mat,
-              active_partitions,
-              query_vectors,
-              active_queries,
-              k_nn,
-              nthreads,
-              sum_of_squares_distance{});
-          return r;
-        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
-          auto r = detail::ivf::nuv_query_heap_infinite_ram(
-              mat,
-              active_partitions,
-              query_vectors,
-              active_queries,
-              k_nn,
-              nthreads,
-              inner_product_distance{});
-          return r;
-        } else if (distance_metric == DistanceMetric::COSINE) {
-          auto r = detail::ivf::nuv_query_heap_infinite_ram(
-              mat,
-              active_partitions,
-              query_vectors,
-              active_queries,
-              k_nn,
-              nthreads,
-              cosine_distance{});
-          return r;
-        }
+        auto r = detail::ivf::nuv_query_heap_infinite_ram(
+            mat,
+            active_partitions,
+            query_vectors,
+            active_queries,
+            k_nn,
+            nthreads);
+        return r;
       },
       py::keep_alive<1, 2>());
 }
@@ -365,8 +278,7 @@ static void declare_nuv_query_heap_finite_ram(
          size_t k_nn,
          size_t upper_bound,
          size_t nthreads,
-         uint64_t timestamp,
-         DistanceMetric distance_metric = DistanceMetric::L2)
+         uint64_t timestamp)
           -> std::tuple<
               ColMajorMatrix<float>,
               ColMajorMatrix<uint64_t>> {  // TODO change return type
@@ -387,37 +299,9 @@ static void declare_nuv_query_heap_finite_ram(
             upper_bound,
             temporal_policy);
 
-        if (distance_metric == DistanceMetric::L2) {
-          auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
-              mat,
-              query_vectors,
-              active_queries,
-              k_nn,
-              upper_bound,
-              nthreads,
-              sum_of_squares_distance{});
-          return r;
-        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
-          auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
-              mat,
-              query_vectors,
-              active_queries,
-              k_nn,
-              upper_bound,
-              nthreads,
-              inner_product_distance{});
-          return r;
-        } else if (distance_metric == DistanceMetric::COSINE) {
-          auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
-              mat,
-              query_vectors,
-              active_queries,
-              k_nn,
-              upper_bound,
-              nthreads,
-              cosine_distance{});
-          return r;
-        }
+        auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
+            mat, query_vectors, active_queries, k_nn, upper_bound, nthreads);
+        return r;
       },
       py::keep_alive<1, 2>());
 }
