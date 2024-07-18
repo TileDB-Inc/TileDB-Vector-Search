@@ -2083,7 +2083,7 @@ def ingest(
                 ids_array[start_pos:end_pos] = ids
             parts_array.close()
             ids_array.close()
-    
+
     def normalize_vectors_and_read_write(
         source_uri: str,
         normalized_uri: str,
@@ -2107,7 +2107,7 @@ def ingest(
         with tiledb.scope_ctx(ctx_or_config=config):
             for start in range(source_start_pos, source_end_pos, batch):
                 end = min(start + batch, source_end_pos)
-                
+
                 # Read from the source data
                 vectors = read_input_vectors(
                     source_uri=source_uri,
@@ -2125,10 +2125,14 @@ def ingest(
                 normalized_vectors = normalize_vectors(vectors)
 
                 # Write to the normalized array
-                with tiledb.open(normalized_uri, mode="w", timestamp=index_timestamp) as A:
+                with tiledb.open(
+                    normalized_uri, mode="w", timestamp=index_timestamp
+                ) as A:
                     A[0:dimensions, start:end] = np.transpose(normalized_vectors)
 
-        logger.debug(f"Finished normalizing vectors for range {source_start_pos} to {source_end_pos}")
+        logger.debug(
+            f"Finished normalizing vectors for range {source_start_pos} to {source_end_pos}"
+        )
 
     # --------------------------------------------------------------------
     # DAG
@@ -2403,14 +2407,18 @@ def ingest(
                         size=size,
                         dimensions=dimensions,
                         vector_type=vector_type,
-                        array_name="normalized_vectors"
+                        array_name="normalized_vectors",
                     )
                     group.close()
 
                     # Create normalization nodes
-                    for start in range(0, size, input_vectors_batch_size_during_sampling):
-                        end = min(start + input_vectors_batch_size_during_sampling, size)
-                        
+                    for start in range(
+                        0, size, input_vectors_batch_size_during_sampling
+                    ):
+                        end = min(
+                            start + input_vectors_batch_size_during_sampling, size
+                        )
+
                         normalization_nodes.append(
                             submit(
                                 normalize_vectors_and_read_write,

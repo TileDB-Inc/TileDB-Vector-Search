@@ -134,7 +134,7 @@ def create_manual_dataset_f32_only_data(data, path, dataset_name="data.f32bin"):
         data.astype("float32").tofile(f)
 
 
-def create_random_dataset_f32(nb, d, nq, k, path):
+def create_random_dataset_f32(nb, d, nq, k, path, distance_metric="euclidean"):
     """
     Creates a random float32 dataset containing both a dataset and queries against it, and then writes those to disk.
 
@@ -173,9 +173,9 @@ def create_random_dataset_f32(nb, d, nq, k, path):
 
     # print("Computing groundtruth")
 
-    nbrs = NearestNeighbors(n_neighbors=k, metric="euclidean", algorithm="brute").fit(
-        data
-    )
+    nbrs = NearestNeighbors(
+        n_neighbors=k, metric=distance_metric, algorithm="brute"
+    ).fit(data)
     D, I = nbrs.kneighbors(queries)
     with open(os.path.join(path, "gt"), "wb") as f:
         np.array([nq, k], dtype="uint32").tofile(f)

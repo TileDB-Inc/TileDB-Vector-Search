@@ -569,7 +569,6 @@ def create(
         If not provided, use the latest stable storage version.
     """
     validate_storage_version(storage_version)
-
     if (
         distance_metric != vspy.DistanceMetric.L2
         and distance_metric != vspy.DistanceMetric.COSINE
