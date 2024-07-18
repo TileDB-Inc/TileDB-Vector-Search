@@ -143,9 +143,15 @@ class TestReader(ObjectReader):
             i += 1
         return {"object": objects, "external_id": external_ids}
 
-def assert_equal(index_type: str, ids: np.array, expected_ids: np.array, ivf_pq_accuracy_threshold: float):
+
+def assert_equal(
+    index_type: str,
+    ids: np.array,
+    expected_ids: np.array,
+    ivf_pq_accuracy_threshold: float,
+):
     """
-    IVF_PQ index has a lower recall rate than other indexes b/c of PQ-encoding, so we need to lower 
+    IVF_PQ index has a lower recall rate than other indexes b/c of PQ-encoding, so we need to lower
     the threshold.
 
     Parameters
@@ -159,38 +165,31 @@ def assert_equal(index_type: str, ids: np.array, expected_ids: np.array, ivf_pq_
     ivf_pq_accuracy_threshold: float
         The minimum fraction of expected_ids that must be in ids.
     """
-    print('[test_object_index@assert_equal] ids', len(ids), ids)
-    print('[test_object_index@assert_equal] expected_ids', len(expected_ids), expected_ids)
     assert len(ids) == len(expected_ids)
     if index_type == "IVF_PQ":
         matches = np.intersect1d(ids, expected_ids)
-        print('accuracy:', len(matches) / len(ids))
+        print("accuracy:", len(matches) / len(ids))
         assert len(matches) / len(ids) >= ivf_pq_accuracy_threshold
         return
-    
+
     assert np.array_equiv(ids, expected_ids)
 
-def evaluate_query(index_type: str, index_uri, query_kwargs, dim_id, vector_dim_offset, config=None):
+
+def evaluate_query(
+    index_type: str, index_uri, query_kwargs, dim_id, vector_dim_offset, config=None
+):
     v_id = dim_id - vector_dim_offset
 
     index = object_index.ObjectIndex(uri=index_uri, config=config)
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=15, **query_kwargs
     )
-
-    print('[test_object_index@evaluate_query] distances', distances)
-    print('[test_object_index@evaluate_query] object_ids', objects["external_id"])
-    # print('[test_object_index@evaluate_query] expected_ids', np.array([v_id - 3, v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2, v_id + 3]))
-    # return
-
     assert_equal(
         index_type,
         np.unique(objects["external_id"]),
         np.array([v_id + i for i in range(-7, 8)]),
-        # np.array([v_id - 5, v_id - 4, v_id - 3, v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4, v_id + 5]),
         ivf_pq_accuracy_threshold=0.8,
     )
-
 
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
@@ -199,9 +198,6 @@ def evaluate_query(index_type: str, index_uri, query_kwargs, dim_id, vector_dim_
         return_metadata=False,
         **query_kwargs,
     )
-    # print('[test_object_index@assert_equal] distances', distances)
-    # print('[test_object_index@assert_equal] object_ids', object_ids)
-    # print('[test_object_index@assert_equal] expected_ids', np.array([v_id - 3, v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2, v_id + 3]))
     assert_equal(
         index_type,
         np.unique(object_ids),
@@ -224,8 +220,9 @@ def evaluate_query(index_type: str, index_uri, query_kwargs, dim_id, vector_dim_
         np.unique(objects["external_id"]),
         np.array([v_id + i for i in range(0, 15)]),
         # np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4, v_id + 5, v_id + 6]),
-        ivf_pq_accuracy_threshold=0.8
+        ivf_pq_accuracy_threshold=0.8,
     )
+
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_df_filter_fn=df_filter,
@@ -238,15 +235,12 @@ def evaluate_query(index_type: str, index_uri, query_kwargs, dim_id, vector_dim_
         index_type,
         np.unique(object_ids),
         np.array([v_id + i for i in range(0, 15)]),
-        # np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4, v_id + 5, v_id + 6]),
-        ivf_pq_accuracy_threshold=0.8
+        ivf_pq_accuracy_threshold=0.8,
     )
-    
-    print("object_index.ObjectIndex() ~~~~~~")
+
     index = object_index.ObjectIndex(
         uri=index_uri, load_metadata_in_memory=False, config=config
     )
-
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=15, **query_kwargs
     )
@@ -254,8 +248,7 @@ def evaluate_query(index_type: str, index_uri, query_kwargs, dim_id, vector_dim_
         index_type,
         np.unique(objects["external_id"]),
         np.array([v_id + i for i in range(-7, 8)]),
-        # np.array([v_id - 3, v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2, v_id + 3]),
-        ivf_pq_accuracy_threshold=0.8
+        ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
@@ -269,26 +262,20 @@ def evaluate_query(index_type: str, index_uri, query_kwargs, dim_id, vector_dim_
         index_type,
         np.unique(object_ids),
         np.array([v_id + i for i in range(-7, 8)]),
-        # np.array([v_id - 3, v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2, v_id + 3]),
-        ivf_pq_accuracy_threshold=0.8
+        ivf_pq_accuracy_threshold=0.8,
     )
-    
-    print("index.query() ~~~~~~")
+
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_array_cond=f"test_attr >= {dim_id}",
         k=15,
         **query_kwargs,
     )
-    print('[test_object_index.py] distances', distances)
-    print('[test_object_index.py] objects', objects)
-    print('[test_object_index.py] metadata', metadata)
     assert_equal(
         index_type,
         np.unique(objects["external_id"]),
         np.array([v_id + i for i in range(0, 15)]),
-        # np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4, v_id + 5, v_id + 6]),
-        ivf_pq_accuracy_threshold=0.8
+        ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
@@ -302,9 +289,8 @@ def evaluate_query(index_type: str, index_uri, query_kwargs, dim_id, vector_dim_
     assert_equal(
         index_type,
         np.unique(object_ids),
-        # np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4, v_id + 5, v_id + 6]),
         np.array([v_id + i for i in range(0, 15)]),
-        ivf_pq_accuracy_threshold=0.8
+        ivf_pq_accuracy_threshold=0.8,
     )
 
 
@@ -313,18 +299,14 @@ def test_object_index(tmp_path):
     from common import INDEXES
 
     for index_type in INDEXES:
-        print('~~~', index_type, '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
         index_uri = os.path.join(tmp_path, f"object_index_{index_type}")
-        print("TestReader() ~~~~~~")
         reader = TestReader(
             object_id_start=0,
             object_id_end=1000,
             vector_dim_offset=0,
         )
-        print("TestEmbedding() ~~~~~~")
         embedding = TestEmbedding()
 
-        print("object_index.create() ~~~~~~")
         index = object_index.create(
             uri=index_uri,
             index_type=index_type,
@@ -334,8 +316,6 @@ def test_object_index(tmp_path):
         )
 
         # Check initial ingestion
-        print("Checking initial ingestion -----------------------------")
-        print("index.update_index() ~~~~~~")
         index.update_index(partitions=10)
         evaluate_query(
             index_type=index_type,
@@ -346,7 +326,6 @@ def test_object_index(tmp_path):
         )
 
         # Check that updating the same data doesn't create duplicates
-        print("Checking that updating the same data doesn't create duplicates -----------------------------")
         index = object_index.ObjectIndex(uri=index_uri)
         index.update_index(partitions=10)
         evaluate_query(
@@ -358,20 +337,14 @@ def test_object_index(tmp_path):
         )
 
         # Add new data with a new reader
-        print("Adding new data with a new reader -----------------------------")
-        print("TestReader() ~~~~~~")
         reader = TestReader(
             object_id_start=1000,
             object_id_end=2000,
             vector_dim_offset=0,
         )
-        print("object_index.ObjectIndex() ~~~~~~")
         index = object_index.ObjectIndex(uri=index_uri)
-        print("index.update_object_reader() ~~~~~~")
         index.update_object_reader(reader)
-        print("index.index.update_index() ~~~~~~")
         index.update_index(partitions=10)
-        print("evaluate_query() ~~~~~~")
         evaluate_query(
             index_type=index_type,
             index_uri=index_uri,
@@ -381,7 +354,6 @@ def test_object_index(tmp_path):
         )
 
         # Check overwritting existing data
-        print("Check overwritting existing data -----------------------------")
         reader = TestReader(
             object_id_start=1000,
             object_id_end=2000,
@@ -399,148 +371,148 @@ def test_object_index(tmp_path):
         )
 
 
-# def test_object_index_ivf_flat_cloud(tmp_path):
-#     from common import create_cloud_uri
-#     from common import delete_uri
-#     from common import setUpCloudToken
+def test_object_index_ivf_flat_cloud(tmp_path):
+    from common import create_cloud_uri
+    from common import delete_uri
+    from common import setUpCloudToken
 
-#     setUpCloudToken()
-#     config = tiledb.cloud.Config().dict()
-#     index_uri = create_cloud_uri("object_index_ivf_flat")
-#     worker_resources = {"cpu": "1", "memory": "2Gi"}
-#     reader = TestReader(
-#         object_id_start=0,
-#         object_id_end=1000,
-#         vector_dim_offset=0,
-#     )
-#     embedding = TestEmbedding()
+    setUpCloudToken()
+    config = tiledb.cloud.Config().dict()
+    index_uri = create_cloud_uri("object_index_ivf_flat")
+    worker_resources = {"cpu": "1", "memory": "2Gi"}
+    reader = TestReader(
+        object_id_start=0,
+        object_id_end=1000,
+        vector_dim_offset=0,
+    )
+    embedding = TestEmbedding()
 
-#     index = object_index.create(
-#         uri=index_uri,
-#         index_type="IVF_FLAT",
-#         object_reader=reader,
-#         embedding=embedding,
-#         config=config,
-#     )
+    index = object_index.create(
+        uri=index_uri,
+        index_type="IVF_FLAT",
+        object_reader=reader,
+        embedding=embedding,
+        config=config,
+    )
 
-#     # Check initial ingestion
-#     index.update_index(
-#         embeddings_generation_driver_mode=Mode.BATCH,
-#         embeddings_generation_mode=Mode.BATCH,
-#         vector_indexing_mode=Mode.BATCH,
-#         workers=2,
-#         worker_resources=worker_resources,
-#         driver_resources=worker_resources,
-#         kmeans_resources=worker_resources,
-#         ingest_resources=worker_resources,
-#         consolidate_partition_resources=worker_resources,
-#         objects_per_partition=500,
-#         partitions=10,
-#         config=config,
-#     )
-#     evaluate_query(
-#         index_uri=index_uri,
-#         query_kwargs={"nprobe": 10},
-#         dim_id=42,
-#         vector_dim_offset=0,
-#         config=config,
-#     )
+    # Check initial ingestion
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        config=config,
+    )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=42,
+        vector_dim_offset=0,
+        config=config,
+    )
 
-#     # Add new data with a new reader
-#     reader = TestReader(
-#         object_id_start=1000,
-#         object_id_end=2000,
-#         vector_dim_offset=0,
-#     )
-#     index = object_index.ObjectIndex(uri=index_uri, config=config)
-#     index.update_object_reader(reader, config=config)
-#     index.update_index(
-#         embeddings_generation_driver_mode=Mode.BATCH,
-#         embeddings_generation_mode=Mode.BATCH,
-#         vector_indexing_mode=Mode.BATCH,
-#         workers=2,
-#         worker_resources=worker_resources,
-#         driver_resources=worker_resources,
-#         kmeans_resources=worker_resources,
-#         ingest_resources=worker_resources,
-#         consolidate_partition_resources=worker_resources,
-#         objects_per_partition=500,
-#         partitions=10,
-#         config=config,
-#     )
-#     evaluate_query(
-#         index_uri=index_uri,
-#         query_kwargs={"nprobe": 10},
-#         dim_id=1042,
-#         vector_dim_offset=0,
-#         config=config,
-#     )
-#     delete_uri(index_uri, config)
+    # Add new data with a new reader
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=0,
+    )
+    index = object_index.ObjectIndex(uri=index_uri, config=config)
+    index.update_object_reader(reader, config=config)
+    index.update_index(
+        embeddings_generation_driver_mode=Mode.BATCH,
+        embeddings_generation_mode=Mode.BATCH,
+        vector_indexing_mode=Mode.BATCH,
+        workers=2,
+        worker_resources=worker_resources,
+        driver_resources=worker_resources,
+        kmeans_resources=worker_resources,
+        ingest_resources=worker_resources,
+        consolidate_partition_resources=worker_resources,
+        objects_per_partition=500,
+        partitions=10,
+        config=config,
+    )
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={"nprobe": 10},
+        dim_id=1042,
+        vector_dim_offset=0,
+        config=config,
+    )
+    delete_uri(index_uri, config)
 
 
-# def test_object_index_flat(tmp_path):
-#     reader = TestReader(
-#         object_id_start=0,
-#         object_id_end=1000,
-#         vector_dim_offset=0,
-#     )
-#     embedding = TestEmbedding()
+def test_object_index_flat(tmp_path):
+    reader = TestReader(
+        object_id_start=0,
+        object_id_end=1000,
+        vector_dim_offset=0,
+    )
+    embedding = TestEmbedding()
 
-#     index_uri = f"{tmp_path}/index"
+    index_uri = f"{tmp_path}/index"
 
-#     index = object_index.create(
-#         uri=index_uri,
-#         index_type="FLAT",
-#         object_reader=reader,
-#         embedding=embedding,
-#     )
-#     # Check initial ingestion
-#     index.update_index()
-#     evaluate_query(
-#         index_uri=index_uri,
-#         query_kwargs={},
-#         dim_id=42,
-#         vector_dim_offset=0,
-#     )
+    index = object_index.create(
+        uri=index_uri,
+        index_type="FLAT",
+        object_reader=reader,
+        embedding=embedding,
+    )
+    # Check initial ingestion
+    index.update_index()
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=42,
+        vector_dim_offset=0,
+    )
 
-#     # Check that updating the same data doesn't create duplicates
-#     index = object_index.ObjectIndex(uri=index_uri)
-#     index.update_index()
-#     evaluate_query(
-#         index_uri=index_uri,
-#         query_kwargs={},
-#         dim_id=42,
-#         vector_dim_offset=0,
-#     )
+    # Check that updating the same data doesn't create duplicates
+    index = object_index.ObjectIndex(uri=index_uri)
+    index.update_index()
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=42,
+        vector_dim_offset=0,
+    )
 
-#     # Add new data with a new reader
-#     reader = TestReader(
-#         object_id_start=1000,
-#         object_id_end=2000,
-#         vector_dim_offset=0,
-#     )
-#     index = object_index.ObjectIndex(uri=index_uri)
-#     index.update_object_reader(reader)
-#     index.update_index()
-#     evaluate_query(
-#         index_uri=index_uri,
-#         query_kwargs={},
-#         dim_id=1042,
-#         vector_dim_offset=0,
-#     )
+    # Add new data with a new reader
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=0,
+    )
+    index = object_index.ObjectIndex(uri=index_uri)
+    index.update_object_reader(reader)
+    index.update_index()
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=1042,
+        vector_dim_offset=0,
+    )
 
-#     # Check overwritting existing data
-#     reader = TestReader(
-#         object_id_start=1000,
-#         object_id_end=2000,
-#         vector_dim_offset=1000,
-#     )
-#     index = object_index.ObjectIndex(uri=index_uri)
-#     index.update_object_reader(reader)
-#     index.update_index()
-#     evaluate_query(
-#         index_uri=index_uri,
-#         query_kwargs={},
-#         dim_id=2042,
-#         vector_dim_offset=1000,
-#     )
+    # Check overwritting existing data
+    reader = TestReader(
+        object_id_start=1000,
+        object_id_end=2000,
+        vector_dim_offset=1000,
+    )
+    index = object_index.ObjectIndex(uri=index_uri)
+    index.update_object_reader(reader)
+    index.update_index()
+    evaluate_query(
+        index_uri=index_uri,
+        query_kwargs={},
+        dim_id=2042,
+        vector_dim_offset=1000,
+    )

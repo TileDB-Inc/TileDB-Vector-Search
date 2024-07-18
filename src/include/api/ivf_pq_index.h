@@ -162,10 +162,13 @@ class IndexIVFPQ {
   /**
    * @brief Train the index based on the given training set.
    * @param training_set The training input vectors.
-   * @param n_list The number of clusters to use in the index. Can be passed to override the value we used when we first created the index.
+   * @param n_list The number of clusters to use in the index. Can be passed to
+   * override the value we used when we first created the index.
    */
   // @todo -- infer feature type from input
-  void train(const FeatureVectorArray& training_set, std::optional<size_t> n_list = std::nullopt) {
+  void train(
+      const FeatureVectorArray& training_set,
+      std::optional<size_t> n_list = std::nullopt) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {

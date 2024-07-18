@@ -29,7 +29,6 @@ class CloudTests(unittest.TestCase):
         cls.flat_index_uri = f"{test_path}/test_cloud_flat_index"
         cls.vamana_index_uri = f"{test_path}/test_cloud_vamana_index"
         cls.ivf_flat_index_uri = f"{test_path}/test_cloud_ivf_flat_index"
-        cls.ivf_pq_index_uri = f"{test_path}/test_cloud_ivf_pq_index"
         cls.ivf_flat_random_sampling_index_uri = (
             f"{test_path}/test_cloud_ivf_flat_random_sampling_index"
         )
@@ -39,7 +38,6 @@ class CloudTests(unittest.TestCase):
         vs.Index.delete_index(uri=cls.flat_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.vamana_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(uri=cls.ivf_flat_index_uri, config=tiledb.cloud.Config())
-        vs.Index.delete_index(uri=cls.ivf_pq_index_uri, config=tiledb.cloud.Config())
         vs.Index.delete_index(
             uri=cls.ivf_flat_random_sampling_index_uri, config=tiledb.cloud.Config()
         )
@@ -65,7 +63,6 @@ class CloudTests(unittest.TestCase):
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
-            num_subspaces=siftsmall_dimensions / 2,
         )
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
 
@@ -159,58 +156,53 @@ class CloudTests(unittest.TestCase):
         _, result_i = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
 
-    # def test_cloud_flat(self):
-    #     self.run_cloud_test(CloudTests.flat_index_uri, "FLAT", vs.flat_index.FlatIndex)
+    def test_cloud_flat(self):
+        self.run_cloud_test(CloudTests.flat_index_uri, "FLAT", vs.flat_index.FlatIndex)
 
-    # def test_cloud_vamana(self):
-    #     self.run_cloud_test(
-    #         CloudTests.vamana_index_uri, "VAMANA", vs.vamana_index.VamanaIndex
-    #     )
-
-    # def test_cloud_ivf_flat(self):
-    #     self.run_cloud_test(
-    #         CloudTests.ivf_flat_index_uri, "IVF_FLAT", vs.ivf_flat_index.IVFFlatIndex
-    #     )
-
-    def test_cloud_ivf_pq(self):
+    def test_cloud_vamana(self):
         self.run_cloud_test(
-            CloudTests.ivf_flat_index_uri, "IVF_PQ", vs.ivf_pq_index.IVFPQIndex
+            CloudTests.vamana_index_uri, "VAMANA", vs.vamana_index.VamanaIndex
         )
 
-    # def test_cloud_ivf_flat_random_sampling(self):
-    #     # NOTE(paris): This was also tested with the following (and also with mode=Mode.BATCH):
-    #     # source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
-    #     # training_sample_size = 1000000
-    #     source_uri = "tiledb://TileDB-Inc/sift_10k"
-    #     queries_uri = siftsmall_query_file
-    #     gt_uri = siftsmall_groundtruth_file
-    #     index_uri = CloudTests.ivf_flat_random_sampling_index_uri
-    #     k = 100
-    #     nqueries = 100
-    #     nprobe = 20
-    #     max_sampling_tasks = 13
-    #     training_sample_size = 1234
+    def test_cloud_ivf_flat(self):
+        self.run_cloud_test(
+            CloudTests.ivf_flat_index_uri, "IVF_FLAT", vs.ivf_flat_index.IVFFlatIndex
+        )
 
-    #     queries = load_fvecs(queries_uri)
-    #     gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
+    def test_cloud_ivf_flat_random_sampling(self):
+        # NOTE(paris): This was also tested with the following (and also with mode=Mode.BATCH):
+        # source_uri = "tiledb://TileDB-Inc/ann_sift1b_raw_vectors_col_major"
+        # training_sample_size = 1000000
+        source_uri = "tiledb://TileDB-Inc/sift_10k"
+        queries_uri = siftsmall_query_file
+        gt_uri = siftsmall_groundtruth_file
+        index_uri = CloudTests.ivf_flat_random_sampling_index_uri
+        k = 100
+        nqueries = 100
+        nprobe = 20
+        max_sampling_tasks = 13
+        training_sample_size = 1234
 
-    #     index = vs.ingest(
-    #         index_type="IVF_FLAT",
-    #         index_uri=index_uri,
-    #         source_uri=source_uri,
-    #         training_sampling_policy=vs.ingestion.TrainingSamplingPolicy.RANDOM,
-    #         training_sample_size=training_sample_size,
-    #         max_sampling_tasks=max_sampling_tasks,
-    #         config=tiledb.cloud.Config().dict(),
-    #         mode=Mode.BATCH,
-    #     )
+        queries = load_fvecs(queries_uri)
+        gt_i, gt_d = get_groundtruth_ivec(gt_uri, k=k, nqueries=nqueries)
 
-    #     check_training_input_vectors(
-    #         index_uri=index_uri,
-    #         expected_training_sample_size=training_sample_size,
-    #         expected_dimensions=queries.shape[1],
-    #         config=tiledb.cloud.Config().dict(),
-    #     )
+        index = vs.ingest(
+            index_type="IVF_FLAT",
+            index_uri=index_uri,
+            source_uri=source_uri,
+            training_sampling_policy=vs.ingestion.TrainingSamplingPolicy.RANDOM,
+            training_sample_size=training_sample_size,
+            max_sampling_tasks=max_sampling_tasks,
+            config=tiledb.cloud.Config().dict(),
+            mode=Mode.BATCH,
+        )
 
-    #     _, result_i = index.query(queries, k=k, nprobe=nprobe)
-    #     assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
+        check_training_input_vectors(
+            index_uri=index_uri,
+            expected_training_sample_size=training_sample_size,
+            expected_dimensions=queries.shape[1],
+            config=tiledb.cloud.Config().dict(),
+        )
+
+        _, result_i = index.query(queries, k=k, nprobe=nprobe)
+        assert accuracy(result_i, gt_i) > MINIMUM_ACCURACY
