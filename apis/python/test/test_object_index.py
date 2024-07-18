@@ -181,18 +181,18 @@ def evaluate_query(
 
     index = object_index.ObjectIndex(uri=index_uri, config=config)
     distances, objects, metadata = index.query(
-        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=15, **query_kwargs
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=21, **query_kwargs
     )
     assert_equal(
         index_type,
         np.unique(objects["external_id"]),
-        np.array([v_id + i for i in range(-7, 8)]),
+        np.array([v_id + i for i in range(-10, 11)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
-        k=15,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
@@ -200,7 +200,7 @@ def evaluate_query(
     assert_equal(
         index_type,
         np.unique(object_ids),
-        np.array([v_id + i for i in range(-7, 8)]),
+        np.array([v_id + i for i in range(-10, 11)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
@@ -210,20 +210,20 @@ def evaluate_query(
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_df_filter_fn=df_filter,
-        k=15,
+        k=21,
         **query_kwargs,
     )
     assert_equal(
         index_type,
         np.unique(objects["external_id"]),
-        np.array([v_id + i for i in range(0, 15)]),
+        np.array([v_id + i for i in range(0, 21)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_df_filter_fn=df_filter,
-        k=15,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
@@ -231,7 +231,7 @@ def evaluate_query(
     assert_equal(
         index_type,
         np.unique(object_ids),
-        np.array([v_id + i for i in range(0, 15)]),
+        np.array([v_id + i for i in range(0, 21)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
@@ -239,18 +239,18 @@ def evaluate_query(
         uri=index_uri, load_metadata_in_memory=False, config=config
     )
     distances, objects, metadata = index.query(
-        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=15, **query_kwargs
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=21, **query_kwargs
     )
     assert_equal(
         index_type,
         np.unique(objects["external_id"]),
-        np.array([v_id + i for i in range(-7, 8)]),
+        np.array([v_id + i for i in range(-10, 11)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
-        k=15,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
@@ -258,27 +258,27 @@ def evaluate_query(
     assert_equal(
         index_type,
         np.unique(object_ids),
-        np.array([v_id + i for i in range(-7, 8)]),
+        np.array([v_id + i for i in range(-10, 11)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_array_cond=f"test_attr >= {dim_id}",
-        k=15,
+        k=21,
         **query_kwargs,
     )
     assert_equal(
         index_type,
         np.unique(objects["external_id"]),
-        np.array([v_id + i for i in range(0, 15)]),
+        np.array([v_id + i for i in range(0, 21)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_array_cond=f"test_attr >= {dim_id}",
-        k=15,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
@@ -286,7 +286,7 @@ def evaluate_query(
     assert_equal(
         index_type,
         np.unique(object_ids),
-        np.array([v_id + i for i in range(0, 15)]),
+        np.array([v_id + i for i in range(0, 21)]),
         ivf_pq_accuracy_threshold=0.8,
     )
 
