@@ -821,6 +821,7 @@ def create_metadata(
     storage_version: str,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
 ):
     """
     Creates the index group adding index metadata.
@@ -839,4 +840,5 @@ def create_metadata(
         group.meta["base_sizes"] = json.dumps([0])
         group.meta["ingestion_timestamps"] = json.dumps([0])
         group.meta["has_updates"] = False
+        group.meta["distance_metric"] = int(distance_metric)
         group.close()

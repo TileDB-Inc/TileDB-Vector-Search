@@ -585,10 +585,10 @@ def create(
         storage_version=storage_version,
         group_exists=group_exists,
         config=config,
+        distance_metric=distance_metric,
     )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
-        group.meta["distance_metric"] = int(distance_metric)
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
         group.meta["partition_history"] = json.dumps([0])
         centroids_array_name = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]

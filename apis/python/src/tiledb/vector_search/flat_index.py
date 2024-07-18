@@ -185,10 +185,10 @@ def create(
         storage_version=storage_version,
         group_exists=group_exists,
         config=config,
+        distance_metric=distance_metric,
     )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
-        group.meta["distance_metric"] = int(distance_metric)
         tile_size = TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
         parts_array_name = storage_formats[storage_version]["PARTS_ARRAY_NAME"]
