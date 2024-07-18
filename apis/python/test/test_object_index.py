@@ -407,6 +407,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         config=config,
     )
     evaluate_query(
+        index_type="IVF_FLAT",
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
         dim_id=42,
@@ -437,6 +438,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         config=config,
     )
     evaluate_query(
+        index_type="IVF_FLAT",
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
         dim_id=1042,
@@ -465,6 +467,7 @@ def test_object_index_flat(tmp_path):
     # Check initial ingestion
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=42,
@@ -475,6 +478,7 @@ def test_object_index_flat(tmp_path):
     index = object_index.ObjectIndex(uri=index_uri)
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=42,
@@ -491,6 +495,7 @@ def test_object_index_flat(tmp_path):
     index.update_object_reader(reader)
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=1042,
@@ -507,6 +512,7 @@ def test_object_index_flat(tmp_path):
     index.update_object_reader(reader)
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=2042,
