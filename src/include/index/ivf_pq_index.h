@@ -712,7 +712,6 @@ class ivf_pq_index {
    * @param training_set_ids IDs for each vector.
    *
    * @todo Create and write index that is larger than RAM
-   * @todo Use training_set_ids as the external IDs.
    */
   template <
       feature_vector_array Array,

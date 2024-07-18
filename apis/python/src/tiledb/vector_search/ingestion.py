@@ -1557,6 +1557,7 @@ def ingest(
         dimensions: int,
         size: int,
         batch: int,
+        partitions: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1671,16 +1672,17 @@ def ingest(
         from tiledb.vector_search import _tiledbvspy as vspy
 
         ctx = vspy.Ctx(config)
-        if index_type == "VAMANA":
-            index = vspy.IndexVamana(ctx, index_group_uri)
-        elif index_type == "IVF_PQ":
-            index = vspy.IndexIVFPQ(ctx, index_group_uri)
-        else:
-            raise ValueError(f"Unsupported index type: {index_type}")
         data = vspy.FeatureVectorArray(
             ctx, parts_array_uri, ids_array_uri, 0, to_temporal_policy(index_timestamp)
         )
-        index.train(data)
+        if index_type == "VAMANA":
+            index = vspy.IndexVamana(ctx, index_group_uri)
+            index.train(data)
+        elif index_type == "IVF_PQ":
+            index = vspy.IndexIVFPQ(ctx, index_group_uri)
+            index.train(data, partitions)
+        else:
+            raise ValueError(f"Unsupported index type: {index_type}")
         index.add(data)
         index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
 
@@ -2270,6 +2272,7 @@ def ingest(
                 dimensions=dimensions,
                 size=size,
                 batch=input_vectors_batch_size,
+                partitions=partitions,
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
