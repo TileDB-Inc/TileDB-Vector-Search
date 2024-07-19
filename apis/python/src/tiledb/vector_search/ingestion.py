@@ -1713,21 +1713,19 @@ def ingest(
             )
             index_array_rows_dim = tiledb.Dim(
                 name="rows",
-                domain=(0, partitions),
-                tile=partitions,
+                domain=(0, MAX_INT32),
+                tile=100000,
                 dtype=np.dtype(np.int32),
             )
             index_array_dom = tiledb.Domain(index_array_rows_dim)
             index_attr = tiledb.Attr(
                 name="values",
                 dtype=np.dtype(np.uint64),
-                filters=tiledb.FilterList([tiledb.ZstdFilter()]),
             )
             index_schema = tiledb.ArraySchema(
                 domain=index_array_dom,
                 sparse=False,
                 attrs=[index_attr],
-                capacity=partitions,
             )
             tiledb.Array.create(partial_write_array_index_tmp_uri, index_schema)
             partition_start = part_id * (partitions + 1)
@@ -1753,7 +1751,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=part_id * (partitions + 1),
+                    # partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1796,7 +1794,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=part_id * (partitions + 1),
+                    # partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1853,21 +1851,19 @@ def ingest(
         )
         index_array_rows_dim = tiledb.Dim(
             name="rows",
-            domain=(0, partitions),
-            tile=partitions,
+            domain=(0, MAX_INT32),
+            tile=100000,
             dtype=np.dtype(np.int32),
         )
         index_array_dom = tiledb.Domain(index_array_rows_dim)
         index_attr = tiledb.Attr(
             name="values",
             dtype=np.dtype(np.uint64),
-            filters=tiledb.FilterList([tiledb.ZstdFilter()]),
         )
         index_schema = tiledb.ArraySchema(
             domain=index_array_dom,
             sparse=False,
             attrs=[index_attr],
-            capacity=partitions,
         )
         tiledb.Array.create(partial_write_array_index_tmp_uri, index_schema)
 
@@ -1889,10 +1885,11 @@ def ingest(
             centroids_uri=centroids_uri,
             parts_uri=partial_write_array_parts_uri,
             index_array_uri=partial_write_array_index_tmp_uri,
+            # index_array_uri=partial_write_array_index_uri,
             id_uri=partial_write_array_ids_uri,
             start=write_offset,
             end=0,
-            partition_start=partition_start,
+            # partition_start=partition_start,
             nthreads=threads,
             **({"timestamp": index_timestamp} if index_timestamp is not None else {}),
             config=config,
