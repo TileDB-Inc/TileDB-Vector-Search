@@ -1753,8 +1753,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=0,
-                    # partition_start=part_id * (partitions + 1),
+                    partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1797,8 +1796,7 @@ def ingest(
                     id_uri=partial_write_array_ids_uri,
                     start=part,
                     end=part_end,
-                    partition_start=0,
-                    # partition_start=part_id * (partitions + 1),
+                    partition_start=part_id * (partitions + 1),
                     nthreads=threads,
                     **(
                         {"timestamp": index_timestamp}
@@ -1821,6 +1819,7 @@ def ingest(
         index_group_uri: str,
         updates_uri: str,
         vector_type: np.dtype,
+        partitions: int,
         write_offset: int,
         partition_start: int,
         threads: int,
@@ -1893,8 +1892,7 @@ def ingest(
             id_uri=partial_write_array_ids_uri,
             start=write_offset,
             end=0,
-            # partition_start=partition_start,
-            partition_start=0,
+            partition_start=partition_start,
             nthreads=threads,
             **({"timestamp": index_timestamp} if index_timestamp is not None else {}),
             config=config,
@@ -2557,6 +2555,7 @@ def ingest(
                     index_group_uri=index_group_uri,
                     updates_uri=updates_uri,
                     vector_type=vector_type,
+                    partitions=partitions,
                     write_offset=size,
                     partition_start=partition_start,
                     threads=threads,

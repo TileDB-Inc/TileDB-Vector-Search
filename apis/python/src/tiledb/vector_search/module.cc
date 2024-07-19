@@ -327,8 +327,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp,
-            partition_start);
+            timestamp);
       },
       py::keep_alive<1, 2>());
 }
@@ -364,8 +363,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp,
-            partition_start);
+            timestamp);
       },
       py::keep_alive<1, 2>());
 }
