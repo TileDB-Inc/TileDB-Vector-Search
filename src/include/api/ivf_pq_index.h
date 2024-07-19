@@ -164,11 +164,14 @@ class IndexIVFPQ {
 
   /**
    * @brief Train the index based on the given training set.
-   * @param training_set
-   * @param init
+   * @param training_set The training input vectors.
+   * @param n_list The number of clusters to use in the index. Can be passed to
+   * override the value we used when we first created the index.
    */
   // @todo -- infer feature type from input
-  void train(const FeatureVectorArray& training_set) {
+  void train(
+      const FeatureVectorArray& training_set,
+      std::optional<size_t> n_list = std::nullopt) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {
@@ -182,6 +185,10 @@ class IndexIVFPQ {
         feature_datatype_, id_datatype_, partitioning_index_datatype_};
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
+    }
+
+    if (n_list.has_value()) {
+      n_list_ = *n_list;
     }
 
     // Create a new index. Note that we may have already loaded an existing

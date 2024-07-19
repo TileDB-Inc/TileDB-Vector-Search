@@ -450,6 +450,9 @@ class Index:
         are added to the index. It triggers a base index re-indexing, merging the non-consolidated
         updates and the rest of the base vectors.
 
+        TODO(sc-51202): This throws with a unintuitive error message if update()/delete()/etc. has
+        not been called.
+
         Parameters
         ----------
         retrain_index: bool
