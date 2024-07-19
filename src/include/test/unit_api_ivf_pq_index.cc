@@ -175,7 +175,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -247,7 +247,7 @@ TEST_CASE(
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t num_subspaces = 1;
 
   std::string index_uri =
@@ -498,7 +498,7 @@ TEST_CASE("storage_version", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -556,7 +556,7 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
   float convergence_tolerance = 0.00003f;
@@ -607,7 +607,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
   size_t max_iterations = 3;
@@ -1039,3 +1039,79 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         std::vector<uint64_t>{100}.begin()));
   }
 }
+
+// TEST_CASE("metadata size check", "[api_ivf_pq_index]") {
+//   auto ctx = tiledb::Context{};
+//   using feature_type_type = uint8_t;
+//   using id_type_type = uint32_t;
+//   using partitioning_index_type_type = uint32_t;
+//   auto feature_type = "uint8";
+//   auto id_type = "uint32";
+//   auto partitioning_index_type = "uint32";
+//   uint64_t dimensions = std::numeric_limits<uint64_t>::max() - 99;
+//   size_t n_list = 1;
+//   size_t num_subspaces = 1;
+//   size_t max_iterations = 3;
+//   float convergence_tolerance = 0.00003f;
+//   float reassign_ratio = 0.08f;
+
+//   std::string index_uri =
+//       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+//   tiledb::VFS vfs(ctx);
+//   if (vfs.is_dir(index_uri)) {
+//     vfs.remove_dir(index_uri);
+//   }
+
+//   // Create an empty index.
+//   {
+//     // We write the empty index at timestamp 0.
+//     auto index = IndexIVFPQ(std::make_optional<IndexOptions>({
+//         {"feature_type", feature_type},
+//         {"id_type", id_type},
+//         {"partitioning_index_type", partitioning_index_type},
+//         {"n_list", std::to_string(n_list)},
+//         {"num_subspaces", std::to_string(num_subspaces)},
+//         {"max_iterations", std::to_string(max_iterations)},
+//         {"convergence_tolerance", std::to_string(convergence_tolerance)},
+//         {"reassign_ratio", std::to_string(reassign_ratio)},
+//     }));
+
+//     size_t num_vectors = 0;
+//     auto empty_training_vector_array =
+//         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+//     return;
+//     index.train(empty_training_vector_array);
+//     index.add(empty_training_vector_array);
+//     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
+
+//     CHECK(index.temporal_policy().timestamp_end() == 0);
+//     CHECK(index.dimensions() == dimensions);
+//     CHECK(index.n_list() == n_list);
+//     CHECK(index.num_subspaces() == num_subspaces);
+//     CHECK(index.max_iterations() == max_iterations);
+//     CHECK(index.convergence_tolerance() == convergence_tolerance);
+//     CHECK(index.reassign_ratio() == reassign_ratio);
+//     CHECK(index.feature_type_string() == feature_type);
+//     CHECK(index.id_type_string() == id_type);
+//     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+
+//     auto typed_index = ivf_pq_index<
+//         feature_type_type,
+//         id_type_type,
+//         partitioning_index_type_type>(ctx, index_uri);
+//     CHECK(typed_index.group().get_dimensions() == dimensions);
+//     CHECK(typed_index.group().get_temp_size() == 0);
+//     CHECK(typed_index.group().get_history_index() == 0);
+
+//     CHECK(typed_index.group().get_base_size() == 0);
+//     CHECK(typed_index.group().get_ingestion_timestamp() == 0);
+
+//     CHECK(typed_index.group().get_all_num_partitions().size() == 1);
+//     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
+//     CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
+
+//     CHECK(typed_index.group().get_all_num_partitions()[0] == n_list);
+//     CHECK(typed_index.group().get_all_base_sizes()[0] == 0);
+//     CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 0);
+//   }
+// }

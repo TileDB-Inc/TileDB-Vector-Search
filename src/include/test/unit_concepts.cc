@@ -327,7 +327,7 @@ class dummy_feature_vector : public std::vector<T> {
   using base::size;
 
  public:
-  uint32_t dimensions() const {
+  uint64_t dimensions() const {
     return this->size();
   }
 };

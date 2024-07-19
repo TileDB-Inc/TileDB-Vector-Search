@@ -73,7 +73,7 @@ TEST_CASE("write constructor - create and open", "[ivf_pq_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  uint32_t dimensions = 92134;
+  uint64_t dimensions = 92134;
   size_t num_clusters = 34239;
   size_t num_subspaces = 3343;
 
@@ -112,7 +112,7 @@ TEST_CASE("write constructor - create and read", "[ivf_pq_group]") {
   }
 
   {
-    uint32_t dimensions = 10;
+    uint64_t dimensions = 10;
     auto num_clusters = 11;
     auto num_subspaces = 12;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
@@ -153,7 +153,7 @@ TEST_CASE("write constructor - invalid create and read", "[ivf_pq_group]") {
   }
 
   {
-    uint32_t dimensions = 100;
+    uint64_t dimensions = 100;
     auto num_clusters = 110;
     auto num_subspaces = 120;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
@@ -191,7 +191,7 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
   size_t expected_base = 5309;
   size_t expected_partitions = 42;
   size_t expected_temp_size = 314159;
-  uint32_t dimensions = 128;
+  uint64_t dimensions = 128;
   size_t num_clusters = 110;
   size_t num_subspaces = 120;
 
@@ -498,7 +498,7 @@ TEST_CASE("storage version", "[ivf_pq_group]") {
   size_t expected_base = 9234;
   size_t expected_partitions = 200;
   size_t expected_temp_size = 11;
-  uint32_t dimensions = 19238;
+  uint64_t dimensions = 19238;
   size_t num_clusters = 110;
   size_t num_subspaces = 120;
   size_t offset = 2345;
@@ -578,7 +578,7 @@ TEST_CASE("mismatched storage version", "[ivf_pq_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  uint32_t dimensions = 4;
+  uint64_t dimensions = 4;
   size_t num_clusters = 4;
   size_t num_subspaces = 1;
 
@@ -613,7 +613,7 @@ TEST_CASE("clear history", "[ivf_pq_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  uint32_t dimensions = 19238;
+  uint64_t dimensions = 19238;
   size_t num_clusters = 110;
   size_t num_subspaces = 120;
 

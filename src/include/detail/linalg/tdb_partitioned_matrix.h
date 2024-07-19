@@ -128,7 +128,7 @@ class tdbPartitionedMatrix
 
   // For now, we assume this is always valid so we don't need to add constructor
   // arguments to limit it
-  uint32_t dimensions_{0};
+  uint64_t dimensions_{0};
 
   // We don't actually use this
   // size_t num_array_cols_{0};

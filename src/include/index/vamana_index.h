@@ -135,7 +135,7 @@ class vamana_index {
    ****************************************************************************/
 
   // Cached information about the index
-  uint32_t dimensions_{0};
+  uint64_t dimensions_{0};
   uint64_t num_vectors_{0};
   uint64_t num_edges_{0};
 
@@ -663,7 +663,7 @@ class vamana_index {
   auto update() {
   }
 
-  constexpr uint32_t dimensions() const {
+  constexpr uint64_t dimensions() const {
     return dimensions_;
   }
 
