@@ -1721,7 +1721,7 @@ def ingest(
             index_attr = tiledb.Attr(
                 name="values",
                 dtype=np.dtype(np.uint64),
-                filters=DEFAULT_ATTR_FILTERS,
+                filters=tiledb.FilterList([tiledb.ZstdFilter()]),
             )
             index_schema = tiledb.ArraySchema(
                 domain=index_array_dom,
@@ -1862,7 +1862,7 @@ def ingest(
         index_attr = tiledb.Attr(
             name="values",
             dtype=np.dtype(np.uint64),
-            filters=DEFAULT_ATTR_FILTERS,
+            filters=tiledb.FilterList([tiledb.ZstdFilter()]),
         )
         index_schema = tiledb.ArraySchema(
             domain=index_array_dom,
