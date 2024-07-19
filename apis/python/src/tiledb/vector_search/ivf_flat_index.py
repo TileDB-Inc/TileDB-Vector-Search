@@ -540,9 +540,9 @@ def create(
         vector_type=vector_type,
         index_type=INDEX_TYPE,
         storage_version=storage_version,
+        distance_metric=distance_metric,
         group_exists=group_exists,
         config=config,
-        distance_metric=distance_metric,
     )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")

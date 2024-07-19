@@ -115,16 +115,9 @@ class IndexIVFPQ {
           partitioning_index_datatype_ = string_to_datatype(value);
         } else if (key == "distance_metric") {
           try {
-            int metric_value = std::stoi(value);
-            if (metric_value < 0 ||
-                metric_value > static_cast<int>(DistanceMetric::COSINE)) {
-              throw std::runtime_error(
-                  "Invalid distance metric value: " + value);
-            }
-            distance_metric = static_cast<DistanceMetric>(metric_value);
-          } catch (const std::exception& e) {
-            throw std::runtime_error(
-                "Error setting distance metric: " + std::string(e.what()));
+            distance_metric_ = parseAndValidateDistanceMetric(value);
+          } catch (const std::runtime_error& e) {
+            std::cerr << e.what() << std::endl;
           }
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
@@ -164,7 +157,7 @@ class IndexIVFPQ {
     num_subspaces_ = index_->num_subspaces();
     max_iterations_ = index_->max_iterations();
     convergence_tolerance_ = index_->convergence_tolerance();
-    distance_metric = index_->distance_metric();
+    distance_metric_ = index_->distance_metric();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -208,7 +201,7 @@ class IndexIVFPQ {
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
                  std::nullopt,
         std::random_device{}(),
-        distance_metric);
+        distance_metric_);
 
     index_->train(training_set);
 
@@ -588,7 +581,7 @@ class IndexIVFPQ {
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t partitioning_index_datatype_{TILEDB_ANY};
   std::unique_ptr<index_base> index_;
-  DistanceMetric distance_metric;
+  DistanceMetric distance_metric_;
 };
 
 // clang-format off

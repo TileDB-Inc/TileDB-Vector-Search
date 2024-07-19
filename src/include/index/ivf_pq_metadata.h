@@ -100,7 +100,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
       {"sub_dimensions", &sub_dimensions_, TILEDB_UINT32, true},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT32, true},
       {"num_clusters", &num_clusters_, TILEDB_UINT32, true},
-      {"distance_metric", &distance_metric_, TILEDB_UINT32, false},
+      {"distance_metric", &distance_metric_, TILEDB_UINT32, true},
   };
 
   void clear_history_impl(uint64_t timestamp) {

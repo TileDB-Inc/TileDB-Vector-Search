@@ -106,20 +106,12 @@ class IndexVamana {
           id_datatype_ = string_to_datatype(value);
         } else if (key == "distance_metric") {
           try {
-            int metric_value = std::stoi(value);
-            if (metric_value < 0 ||
-                metric_value > static_cast<int>(DistanceMetric::COSINE)) {
-              throw std::runtime_error(
-                  "Invalid distance metric value: " + value);
-            }
-            distance_metric = static_cast<DistanceMetric>(metric_value);
-            if (distance_metric != DistanceMetric::L2) {
-              throw std::runtime_error(
-                  "Invalid distance metric for Vamana: " + value);
-            }
-          } catch (const std::exception& e) {
-            throw std::runtime_error(
-                "Error setting distance metric: " + std::string(e.what()));
+            DistanceMetric distance_metric = parseAndValidateDistanceMetric(
+                value,
+                [](DistanceMetric dm) { return dm == DistanceMetric::L2; },
+                "Invalid distance metric for Vamana");
+          } catch (const std::runtime_error& e) {
+            std::cerr << e.what() << std::endl;
           }
         } else {
           throw std::runtime_error("Invalid index config key: " + key);

@@ -1547,10 +1547,6 @@ class ivf_pq_index {
       return false;
     }
     if (distance_metric_ != rhs.distance_metric_) {
-      std::cout << "distance_metric_ != rhs.distance_metric_"
-                << static_cast<int>(distance_metric_)
-                << " != " << static_cast<int>(rhs.distance_metric_)
-                << std::endl;
       return false;
     }
 

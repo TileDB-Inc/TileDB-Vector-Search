@@ -198,19 +198,6 @@ static void declare_qv_query_heap_finite_ram(
           -> py::tuple {  // std::tuple<ColMajorMatrix<float>,
                           // ColMajorMatrix<size_t>> { //
                           // TODO change return type
-        // auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
-        //     ctx,
-        //     parts_uri,
-        //     centroids,
-        //     query_vectors,
-        //     indices,
-        //     ids_uri,
-        //     nprobe,
-        //     k_nn,
-        //     upper_bound,
-        //     nthreads,
-        //     timestamp);
-
         auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
             ctx,
             parts_uri,

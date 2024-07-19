@@ -9,27 +9,24 @@ from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs
 
-siftsmall_uri = siftsmall_inputs_file
-queries_uri = siftsmall_query_file
-
 
 def normalize_vectors(vectors):
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     return vectors / norms
 
 
-def test_cosine_DISTANCE(tmp_path):
+def test_cosine_distance(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_FLAT")
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.COSINE,
     )
 
-    dataset_vectors = load_fvecs(siftsmall_uri)
-    query_vectors = load_fvecs(queries_uri)
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
 
     nn_cosine_sklearn = NearestNeighbors(n_neighbors=5, metric="cosine")
     nn_cosine_sklearn.fit(dataset_vectors)
@@ -48,13 +45,13 @@ def test_inner_product_distances(tmp_path):
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
     )
 
-    dataset_vectors = load_fvecs(siftsmall_uri)
-    query_vectors = load_fvecs(queries_uri)
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
 
     inner_products_sklearn = np.dot(query_vectors, dataset_vectors.T)
 
@@ -77,12 +74,12 @@ def test_l2_distance(tmp_path):
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
     )
 
-    dataset_vectors = load_fvecs(siftsmall_uri)
-    query_vectors = load_fvecs(queries_uri)
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
 
     nn_l2 = NearestNeighbors(n_neighbors=5, metric="euclidean")
     nn_l2.fit(dataset_vectors)
@@ -100,7 +97,7 @@ def test_wrong_distance_metric(tmp_path):
         ingest(
             index_type="FLAT",
             index_uri=index_uri,
-            source_uri=siftsmall_uri,
+            source_uri=siftsmall_inputs_file,
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.IDK,
         )
@@ -112,7 +109,7 @@ def test_wrong_type_with_distance_metric(tmp_path):
         ingest(
             index_type="IVF_FLAT",
             index_uri=index_uri,
-            source_uri=siftsmall_uri,
+            source_uri=siftsmall_inputs_file,
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.COSINE,
         )
@@ -123,7 +120,7 @@ def test_vamana_create_l2(tmp_path):
     ingest(
         index_type="VAMANA",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.L2,
     )
@@ -131,33 +128,36 @@ def test_vamana_create_l2(tmp_path):
 
 def test_vamana_create_cosine(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         ingest(
             index_type="VAMANA",
             index_uri=index_uri,
-            source_uri=siftsmall_uri,
+            source_uri=siftsmall_inputs_file,
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.COSINE,
         )
 
 
-# def test_ivfpq_create_l2(tmp_path):
-#     index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
-#     index = ingest(
-#         index_type="IVFPQ",
-#         index_uri=index_uri,
-#         source_uri=siftsmall_uri,
-#         source_type="FVEC",
-#         distance_metric=vspy.DistanceMetric.L2,
-#     )
+def test_ivfpq_create_l2(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+    ingest(
+        index_type="IVF_PQ",
+        index_uri=index_uri,
+        source_uri=siftsmall_inputs_file,
+        source_type="FVEC",
+        distance_metric=vspy.DistanceMetric.L2,
+        num_subspaces=2,
+    )
 
-# def test_ivfpq_create_cosine(tmp_path):
-#     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
-#     with pytest.raises(RuntimeError):
-#         ingest(
-#             index_type="IVFPQ",
-#             index_uri=index_uri,
-#             source_uri=siftsmall_uri,
-#             source_type="FVEC",
-#             distance_metric=vspy.DistanceMetric.COSINE,
-#         )
+
+def test_ivfpq_create_cosine(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
+    with pytest.raises(ValueError):
+        ingest(
+            index_type="IVF_PQ",
+            index_uri=index_uri,
+            source_uri=siftsmall_inputs_file,
+            source_type="FVEC",
+            distance_metric=vspy.DistanceMetric.COSINE,
+            num_subspaces=2,
+        )

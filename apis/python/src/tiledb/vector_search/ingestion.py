@@ -193,7 +193,7 @@ def ingest(
         Resources to request when performing the write of centroids, only applies to BATCH mode
     partial_index_resources: Optional[Mapping[str, Any]]
         Resources to request when performing the computation of partial indexing, only applies to BATCH mode
-    distance_metric: Optional[vspy.DistanceMetric]
+    distance_metric: vspy.DistanceMetric
         Distance metric to use for the index, defaults to 'vspy.DistanceMetric.L2'. Options are 'vspy.DistanceMetric.L2', 'vspy.DistanceMetric.INNER_PRODUCT', 'vspy.DistanceMetric.COSINE'.
     """
     import enum
