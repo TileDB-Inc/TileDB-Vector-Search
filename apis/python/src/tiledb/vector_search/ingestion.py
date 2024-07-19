@@ -623,7 +623,7 @@ def ingest(
             index_attr = tiledb.Attr(
                 name="values",
                 dtype=np.dtype(np.uint64),
-                filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
+                filters=filters,
             )
             index_schema = tiledb.ArraySchema(
                 domain=index_array_dom,
