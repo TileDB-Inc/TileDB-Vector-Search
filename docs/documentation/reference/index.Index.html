@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.5.54">
+<meta name="generator" content="quarto-1.5.55">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -348,6 +348,7 @@ ul.task-list li input[type="checkbox"] {
 <p><code>vector_search.index.Index.consolidate_updates(retrain_index=False, **kwargs)</code></p>
 <p>Consolidates updates by merging updates form the updates table into the base index.</p>
 <p>The consolidation process is used to avoid query latency degradation as more updates are added to the index. It triggers a base index re-indexing, merging the non-consolidated updates and the rest of the base vectors.</p>
+<p>TODO(sc-51202): This throws with a unintuitive error message if update()/delete()/etc. has not been called.</p>
 <section id="parameters-2" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="caption-top table">
