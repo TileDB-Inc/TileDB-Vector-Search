@@ -200,7 +200,7 @@ static void declare_qv_query_heap_infinite_ram(
               nprobe,
               k_nn,
               nthreads,
-              cosine_distance{});
+              cosine_distance_normalized{});
           return make_python_pair(std::move(r));
         }
       },
@@ -228,18 +228,6 @@ static void declare_qv_query_heap_finite_ram(
           -> py::tuple {  // std::tuple<ColMajorMatrix<float>,
                           // ColMajorMatrix<size_t>> { //
                           // TODO change return type
-        // auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
-        //     ctx,
-        //     parts_uri,
-        //     centroids,
-        //     query_vectors,
-        //     indices,
-        //     ids_uri,
-        //     nprobe,
-        //     k_nn,
-        //     upper_bound,
-        //     nthreads,
-        //     timestamp);
 
         if (distance_metric == DistanceMetric::L2) {
           auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
@@ -284,7 +272,7 @@ static void declare_qv_query_heap_finite_ram(
               upper_bound,
               nthreads,
               timestamp,
-              cosine_distance{});
+              cosine_distance_normalized{});
           return make_python_pair(std::move(r));
         }
       },
@@ -343,7 +331,7 @@ static void declare_nuv_query_heap_infinite_ram(
               active_queries,
               k_nn,
               nthreads,
-              cosine_distance{});
+              cosine_distance_normalized{});
           return r;
         }
       },
@@ -415,7 +403,7 @@ static void declare_nuv_query_heap_finite_ram(
               k_nn,
               upper_bound,
               nthreads,
-              cosine_distance{});
+              cosine_distance_normalized{});
           return r;
         }
       },

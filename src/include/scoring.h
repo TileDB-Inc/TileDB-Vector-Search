@@ -300,8 +300,16 @@ struct cosine_distance {
   }
 };
 
+struct cosine_distance_normalized {
+  template <feature_vector V, feature_vector U>
+  inline float operator()(const V& a, const U& b) const {
+    return 1 - (-inner_product(a, b));
+  }
+};
+
 }  // namespace _cosine_distance
 using cosine_distance = _cosine_distance::cosine_distance;
+using cosine_distance_normalized = _cosine_distance::cosine_distance_normalized;
 
 enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
 
