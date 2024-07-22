@@ -7,7 +7,7 @@ The underlying storage model used for indexing vectors in TileDB-Vector-Search i
 
 ## Cross algorithm storage format
 
-All data and metadata required for a TileDB-Vector-Search index are stored inside a TileDB group (`index_uri`).
+All data and metadata required for a TileDB-Vector-Search index are stored inside a TileDB group (`index_uri`). All the listed, named arrays below are stored under this URI.
 
 ### Index metadata
 
