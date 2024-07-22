@@ -1222,7 +1222,6 @@ def ingest(
                         config=config,
                         verbose=verbose,
                         trace_id=trace_id,
-                        # normalized = True
                     ).astype(np.float32)
                 else:
                     sample_vectors = read_input_vectors(
@@ -1237,8 +1236,6 @@ def ingest(
                         trace_id=trace_id,
                     ).astype(np.float32)
 
-                # if distance_metric == vspy.DistanceMetric.COSINE:
-                #     sample_vectors = normalize_vectors(sample_vectors)
 
                 logger.debug("Start kmeans training")
                 if use_sklearn:
@@ -1304,8 +1301,6 @@ def ingest(
                 trace_id=trace_id,
             )
 
-            # if(distance_metric == vspy.DistanceMetric.COSINE):
-            #     vectors = normalize_vectors(vectors)
 
             return vectors
 
@@ -2084,7 +2079,7 @@ def ingest(
             parts_array.close()
             ids_array.close()
 
-    def normalize_vectors_and_read_write(
+    def normalize_source_vectors(
         source_uri: str,
         normalized_uri: str,
         source_type: str,
@@ -2375,10 +2370,6 @@ def ingest(
             )
             return d
         elif index_type == "IVF_FLAT":
-            # write normalized vectors to uri
-            # source_uri = normal_uri
-            # submit (normalize_vectors_and_read_write)
-            #
 
             if copy_centroids_uri is not None:
                 centroids_node = submit(
@@ -2421,7 +2412,7 @@ def ingest(
 
                         normalization_nodes.append(
                             submit(
-                                normalize_vectors_and_read_write,
+                                normalize_source_vectors,
                                 source_uri=source_uri,
                                 normalized_uri=normalized_uri,
                                 source_type=source_type,
