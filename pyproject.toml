@@ -17,12 +17,14 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
 ]
 
+# These are the runtime depdendencies.
 dependencies = [
-    "tiledb-cloud>=0.11",
+    "tiledb-cloud>=0.12.15",
     "tiledb>=0.30.2",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
+    # scikit-learn>=1.4.2 may be needed?
     "scikit-learn",
-    "numpy<2.0.0",
+    "numpy>=1.25.0",
 ]
 
 [project.optional-dependencies]
@@ -34,8 +36,10 @@ benchmarks = ["boto3", "paramiko"]
 homepage = "https://tiledb.com"
 repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 
+# These are the build-time depdendencies.
 [build-system]
-requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm"]
+# pybind11>=2.12 may be needed?
+requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm", "numpy>=2.0.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
@@ -65,10 +69,15 @@ TILEDB_PATH = {env="TILEDB_PATH"}
 [tool.setuptools_scm]
 version_file = "apis/python/src/tiledb/vector_search/version.py"
 
+[tool.ruff.lint]
+select = ["NPY201"]
+
 [tool.ruff]
 extend-select = ["I"]
 ignore = ["F403", "F405", "E501", "E741"]
 exclude = [".ipynb"]
+# Numpy 2 rule: https://numpy.org/devdocs/numpy_2_0_migration_guide.html#ruff-plugin
+# select = ["NPY201"]
 
 [tool.ruff.isort]
 known-first-party = ["tiledb"]
