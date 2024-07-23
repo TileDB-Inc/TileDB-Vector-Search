@@ -1437,7 +1437,7 @@ TEST_CASE("query empty index", "[vamana]") {
   uint64_t l_build = 100;
   uint64_t r_max_degree = 100;
   size_t num_vectors = 0;
-  uint32_t dimensions = 5;
+  uint64_t dimensions = 5;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors, l_build, r_max_degree);
   auto data =

@@ -77,10 +77,10 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   std::string partition_history_str_{""};
   std::string indices_type_str_{""};
 
-  uint32_t num_subspaces_{0};
+  uint64_t num_subspaces_{0};
   uint32_t sub_dimensions_{0};
   uint32_t bits_per_subspace_{0};
-  uint32_t num_clusters_{0};
+  uint64_t num_clusters_{0};
   uint64_t max_iterations_{0};
   float convergence_tolerance_{0.f};
   float reassign_ratio_{0.f};

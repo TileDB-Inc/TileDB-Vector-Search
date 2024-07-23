@@ -40,7 +40,7 @@ TEST_CASE("partitioned_matrix: sizes constructor", "[partitioned_matrix]") {
   using feature_type = int;
   using id_type = int;
   using part_index_type = int;
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t max_num_vectors = 5;
   size_t max_num_partitions = 2;
 

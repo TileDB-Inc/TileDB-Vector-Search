@@ -84,9 +84,9 @@ class ivf_pq_group : public base_index_group<index_type> {
       tiledb_query_type_t rw = TILEDB_READ,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
-      uint32_t dimensions = 0,
-      uint32_t num_clusters = 0,
-      uint32_t num_subspaces = 0)
+      uint64_t dimensions = 0,
+      uint64_t num_clusters = 0,
+      uint64_t num_subspaces = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
       // num_clusters and num_subspaces must be set before we call
@@ -228,7 +228,7 @@ class ivf_pq_group : public base_index_group<index_type> {
   uint32_t get_num_subspaces() const {
     return metadata_.num_subspaces_;
   }
-  void set_num_subspaces(uint32_t num_subspaces) {
+  void set_num_subspaces(uint64_t num_subspaces) {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
@@ -249,7 +249,7 @@ class ivf_pq_group : public base_index_group<index_type> {
   uint32_t get_num_clusters() const {
     return metadata_.num_clusters_;
   }
-  void set_num_clusters(uint32_t num_clusters) {
+  void set_num_clusters(uint64_t num_clusters) {
     metadata_.num_clusters_ = num_clusters;
   }
 

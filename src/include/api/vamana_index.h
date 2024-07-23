@@ -252,7 +252,7 @@ class IndexVamana {
     return index_->temporal_policy();
   }
 
-  constexpr uint32_t dimensions() const {
+  constexpr uint64_t dimensions() const {
     return dimensions_;
   }
 
@@ -332,7 +332,7 @@ class IndexVamana {
         std::optional<TemporalPolicy> temporal_policy,
         const std::string& storage_version) = 0;
 
-    [[nodiscard]] virtual uint32_t dimensions() const = 0;
+    [[nodiscard]] virtual uint64_t dimensions() const = 0;
     [[nodiscard]] virtual uint64_t l_build() const = 0;
     [[nodiscard]] virtual uint64_t r_max_degree() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
@@ -443,7 +443,7 @@ class IndexVamana {
       impl_index_.write_index(ctx, group_uri, temporal_policy, storage_version);
     }
 
-    uint32_t dimensions() const override {
+    uint64_t dimensions() const override {
       return ::dimensions(impl_index_);
     }
 
@@ -480,7 +480,7 @@ class IndexVamana {
   static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
 
-  uint32_t dimensions_ = 0;
+  uint64_t dimensions_ = 0;
   uint64_t l_build_ = 100;
   uint64_t r_max_degree_ = 64;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};

@@ -399,7 +399,7 @@ void sub_kmeans_random_init(
     size_t seed = 0) {
   scoped_timer _{__FUNCTION__};
 
-  uint32_t num_clusters =
+  uint64_t num_clusters =
       std::min(num_vectors(training_set), num_vectors(centroids));
   if (num_clusters == 0) {
     return;
@@ -456,7 +456,7 @@ auto sub_kmeans(
     C& centroids,
     size_t sub_begin,
     size_t sub_end,
-    uint32_t num_clusters,
+    uint64_t num_clusters,
     double tol,
     size_t max_iter,
     size_t num_threads,

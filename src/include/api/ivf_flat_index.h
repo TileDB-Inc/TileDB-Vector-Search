@@ -435,7 +435,7 @@ class IndexIVFFlat {
     index_->write_index(ctx, group_uri, storage_version);
   }
 
-  constexpr uint32_t dimensions() const {
+  constexpr uint64_t dimensions() const {
     return dimensions_;
   }
 
@@ -507,7 +507,7 @@ class IndexIVFFlat {
         const std::string& group_uri,
         const std::string& storage_version) const = 0;
 
-    [[nodiscard]] virtual uint32_t dimensions() const = 0;
+    [[nodiscard]] virtual uint64_t dimensions() const = 0;
 
     [[nodiscard]] virtual size_t num_partitions() const = 0;
   };
@@ -701,7 +701,7 @@ class IndexIVFFlat {
       //      index_.remove(ids);
     }
 
-    uint32_t dimensions() const override {
+    uint64_t dimensions() const override {
       return ::dimensions(impl_index_);
     }
 
@@ -716,7 +716,7 @@ class IndexIVFFlat {
     T impl_index_;
   };
 
-  uint32_t dimensions_ = 0;
+  uint64_t dimensions_ = 0;
   size_t nlist_ = 0;
   size_t max_iter_ = 2;
   float tolerance_ = 1e-4;

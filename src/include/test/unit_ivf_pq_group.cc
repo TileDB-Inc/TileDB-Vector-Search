@@ -73,9 +73,9 @@ TEST_CASE("write constructor - create and open", "[ivf_pq_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  uint32_t dimensions = 92134;
-  uint32_t num_clusters = 34239;
-  uint32_t num_subspaces = 3343;
+  uint64_t dimensions = 92134;
+  uint64_t num_clusters = 34239;
+  uint64_t num_subspaces = 3343;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,
@@ -114,7 +114,7 @@ TEST_CASE("write constructor - create and read", "[ivf_pq_group]") {
   {
     auto dimensions = 10;
     auto num_clusters = 11;
-    uint32_t num_subspaces = 12;
+    uint64_t num_subspaces = 12;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
         ctx,
         tmp_uri,
@@ -155,7 +155,7 @@ TEST_CASE("write constructor - invalid create and read", "[ivf_pq_group]") {
   {
     auto dimensions = 100;
     auto num_clusters = 110;
-    uint32_t num_subspaces = 120;
+    uint64_t num_subspaces = 120;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
         ctx,
         tmp_uri,
@@ -191,9 +191,9 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
   size_t expected_base = 5309;
   size_t expected_partitions = 42;
   size_t expected_temp_size = 314159;
-  uint32_t dimensions = 128;
-  uint32_t num_clusters = 110;
-  uint32_t num_subspaces = 120;
+  uint64_t dimensions = 128;
+  uint64_t num_clusters = 110;
+  uint64_t num_subspaces = 120;
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -498,9 +498,9 @@ TEST_CASE("storage version", "[ivf_pq_group]") {
   size_t expected_base = 9234;
   size_t expected_partitions = 200;
   size_t expected_temp_size = 11;
-  uint32_t dimensions = 19238;
-  uint32_t num_clusters = 110;
-  uint32_t num_subspaces = 120;
+  uint64_t dimensions = 19238;
+  uint64_t num_clusters = 110;
+  uint64_t num_subspaces = 120;
   size_t offset = 2345;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
@@ -578,9 +578,9 @@ TEST_CASE("mismatched storage version", "[ivf_pq_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  uint32_t dimensions = 4;
-  uint32_t num_clusters = 4;
-  uint32_t num_subspaces = 1;
+  uint64_t dimensions = 4;
+  uint64_t num_clusters = 4;
+  uint64_t num_subspaces = 1;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,
@@ -613,9 +613,9 @@ TEST_CASE("clear history", "[ivf_pq_group]") {
     vfs.remove_dir(tmp_uri);
   }
 
-  uint32_t dimensions = 19238;
-  uint32_t num_clusters = 110;
-  uint32_t num_subspaces = 120;
+  uint64_t dimensions = 19238;
+  uint64_t num_clusters = 110;
+  uint64_t num_subspaces = 120;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,

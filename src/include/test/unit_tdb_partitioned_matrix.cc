@@ -337,7 +337,7 @@ TEST_CASE(
       (std::filesystem::temp_directory_path() / "ids").string();
 
   size_t num_vectors = 10000;
-  uint32_t dimensions = 128;
+  uint64_t dimensions = 128;
 
   // Setup data.
   {

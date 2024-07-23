@@ -134,7 +134,7 @@ TEST_CASE("create empty index and then train and query", "[api_vamana_index]") {
   using feature_type_type = uint8_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -200,7 +200,7 @@ TEST_CASE(
   using id_type_type = uint32_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -424,7 +424,7 @@ TEST_CASE("storage_version", "[api_vamana_index]") {
   using id_type_type = uint32_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -478,7 +478,7 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   using adjacency_row_index_type_type = uint64_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
   uint64_t l_build = 100;
   uint64_t r_max_degree = 64;
 
@@ -523,7 +523,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   using adjacency_row_index_type_type = uint64_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  uint32_t dimensions = 3;
+  uint64_t dimensions = 3;
   uint64_t l_build = 100;
   uint64_t r_max_degree = 64;
 

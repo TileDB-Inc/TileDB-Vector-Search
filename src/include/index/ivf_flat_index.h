@@ -120,7 +120,7 @@ class ivf_flat_index {
    ****************************************************************************/
 
   // Cached information about the partitioned vectors in the index
-  uint32_t dimensions_{0};
+  uint64_t dimensions_{0};
   uint64_t num_partitions_{0};
 
   // The PartitionedMatrix has indices and ids internally and is also

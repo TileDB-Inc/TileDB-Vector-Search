@@ -87,7 +87,7 @@ class base_index_metadata {
   /** Record size of temp data */
   int64_t temp_size_{0};
 
-  uint32_t dimensions_{0};
+  uint64_t dimensions_{0};
 
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
