@@ -2,7 +2,7 @@
 # benchmarks ingestion and querying.
 #
 # To run:
-# - ~/repo/TileDB-Vector-Search pip install .
+# - ~/repo/TileDB-Vector-Search pip install ".[benchmarks]"
 # - ~/repo/TileDB-Vector-Search python apis/python/test/local-benchmarks.py
 
 import os
@@ -12,12 +12,16 @@ import time
 import urllib.request
 from enum import Enum
 
+import matplotlib
+import matplotlib.pyplot as plt
 from common import accuracy
 from common import get_groundtruth_ivec
 
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs
+
+matplotlib.use("Agg")
 
 USE_SIFT_SMALL = True
 
@@ -58,60 +62,68 @@ class TimerMode(Enum):
 
 class Timer:
     def __init__(self):
-        self.times = {}
-        self.accuracies = {}
+        self.current_timers = {}
+
+        self.keyToTimes = {}
+        self.tagToAccuracies = {}
 
     def start(self, tag, mode):
         key = f"{tag}_{mode.value}"
-        if key not in self.times:
-            self.times[key] = []
-        self.times[key].append({"start": time.time(), "end": None})
+        if key in self.current_timers:
+            raise ValueError(f"Timer {tag} already started.")
+        self.current_timers[key] = time.time()
 
     def stop(self, tag, mode):
         key = f"{tag}_{mode.value}"
-        if key in self.times and self.times[key][-1]["end"] is None:
-            self.times[key][-1]["end"] = time.time()
-            return self.times[key][-1]["end"] - self.times[key][-1]["start"]
-        else:
-            print(
-                f"Warning: Timer for tag '{tag}' and mode '{mode}' was not started or already stopped."
-            )
-            return -1
+        if key not in self.current_timers:
+            raise ValueError(f"Timer {tag} not started.")
+        elapsed = time.time() - self.current_timers[key]
+        self.current_timers.pop(key)
+
+        if key not in self.keyToTimes:
+            self.keyToTimes[key] = []
+        self.keyToTimes[key].append(elapsed)
+        return elapsed
 
     def accuracy(self, tag, acc):
-        if tag not in self.accuracies:
-            self.accuracies[tag] = []
-        self.accuracies[tag].append(acc)
+        if tag not in self.tagToAccuracies:
+            self.tagToAccuracies[tag] = []
+        self.tagToAccuracies[tag].append(acc)
         return acc
 
-    def summarize(self):
+    def summarize_data(self):
         summary = {}
-        for key, intervals in self.times.items():
+        for key, intervals in self.keyToTimes.items():
             tag, mode = key.rsplit("_", 1)
             if tag not in summary:
                 summary[tag] = {
-                    "ingestion": {"total_time": 0, "count": 0},
-                    "query": {"total_time": 0, "count": 0, "accuracies": []},
+                    "ingestion": {"total_time": 0, "count": 0, "times": []},
+                    "query": {
+                        "total_time": 0,
+                        "count": 0,
+                        "accuracies": [],
+                        "times": [],
+                    },
                 }
-            total_time = sum(
-                interval["end"] - interval["start"]
-                for interval in intervals
-                if interval["end"] is not None
-            )
-            count = len(
-                [interval for interval in intervals if interval["end"] is not None]
-            )
+            total_time = sum(intervals)
+            count = len(intervals)
             if mode == "ingestion":
                 summary[tag]["ingestion"]["total_time"] += total_time
                 summary[tag]["ingestion"]["count"] += count
+                summary[tag]["ingestion"]["times"] = intervals
             elif mode == "query":
                 summary[tag]["query"]["total_time"] += total_time
                 summary[tag]["query"]["count"] += count
+                summary[tag]["query"]["times"] = intervals
 
-        for tag, accuracies in self.accuracies.items():
+        for tag, accuracies in self.tagToAccuracies.items():
             if tag in summary:
                 summary[tag]["query"]["accuracies"] = accuracies
 
+        return summary
+
+    def summarize(self):
+        summary = self.summarize_data()
         summary_str = ""
         for tag, data in summary.items():
             summary_str += f"{tag}\n"
@@ -125,6 +137,48 @@ class Timer:
                     summary_str += f"    Average Accuracy: {sum(data['query']['accuracies']) / len(data['query']['accuracies']):.4f}\n"
             summary_str += "\n"
         return summary_str
+
+    def create_charts(self):
+        summary = self.summarize_data()
+
+        # Plot ingestion.
+        plt.figure(figsize=(10, 6))
+        plt.xlabel("Average Query Accuracy")
+        plt.ylabel("Time (seconds)")
+        plt.title("Ingestion Time vs Average Query Accuracy")
+        for tag, data in summary.items():
+            ingestion_times = []
+            average_accuracy = sum(data["query"]["accuracies"]) / len(
+                data["query"]["accuracies"]
+            )
+            for i in range(data["ingestion"]["count"]):
+                ingestion_times.append(
+                    (data["ingestion"]["times"][i], average_accuracy)
+                )
+            x, y = zip(*ingestion_times)
+            plt.scatter(y, x, marker="o", label=tag)
+
+        plt.legend()
+        plt.savefig(os.path.join(TEMP_DIR, "ingestion_time_vs_accuracy.png"))
+        plt.close()
+
+        # Plot query.
+        plt.figure(figsize=(10, 6))
+        plt.xlabel("Accuracy")
+        plt.ylabel("Time (seconds)")
+        plt.title("Query Time vs Accuracy")
+        for tag, data in summary.items():
+            query_times = []
+            for i in range(data["query"]["count"]):
+                query_times.append(
+                    (data["query"]["times"][i], data["query"]["accuracies"][i])
+                )
+            x, y = zip(*query_times)
+            plt.plot(y, x, marker="o", label=tag)
+
+        plt.legend()
+        plt.savefig(os.path.join(TEMP_DIR, "query_time_vs_accuracy.png"))
+        plt.close()
 
 
 def download_and_extract(url, download_path, extract_path):
@@ -151,7 +205,7 @@ def benchmark_ivf_flat():
     queries = load_fvecs(SIFT_QUERIES_PATH)
     gt_i, gt_d = get_groundtruth_ivec(SIFT_GROUNDTRUTH_PATH, k=k, nqueries=len(queries))
 
-    for partitions in [20, 50]:
+    for partitions in [20, 50, 100, 200]:
         tag = f"{index_type}_partitions={partitions}"
         print(f"Running {tag}")
 
@@ -169,7 +223,7 @@ def benchmark_ivf_flat():
         )
         ingest_time = timer.stop(tag, TimerMode.INGESTION)
 
-        for nprobe in [5, 10]:
+        for nprobe in [1, 2, 3, 4, 5, 10, 20]:
             timer.start(tag, TimerMode.QUERY)
             _, result = index.query(queries, k=k, nprobe=nprobe)
             query_time = timer.stop(tag, TimerMode.QUERY)
@@ -179,6 +233,7 @@ def benchmark_ivf_flat():
             )
 
     print(timer.summarize())
+    timer.create_charts()
 
 
 def benchmark_vamana():
@@ -219,6 +274,7 @@ def benchmark_vamana():
                 )
 
     print(timer.summarize())
+    timer.create_charts()
 
 
 def benchmark_ivf_pq():
@@ -230,8 +286,8 @@ def benchmark_ivf_pq():
     dimensions = queries.shape[1]
     gt_i, gt_d = get_groundtruth_ivec(SIFT_GROUNDTRUTH_PATH, k=k, nqueries=len(queries))
 
-    for partitions in [20, 50]:
-        for num_subspaces in [dimensions / 2, dimensions / 4]:
+    for partitions in [50]:
+        for num_subspaces in [dimensions / 2, dimensions / 4, dimensions / 8]:
             tag = f"{index_type}_partitions={partitions}_num_subspaces={num_subspaces}"
             print(f"Running {tag}")
 
@@ -250,7 +306,7 @@ def benchmark_ivf_pq():
             )
             ingest_time = timer.stop(tag, TimerMode.INGESTION)
 
-            for nprobe in [5, 10]:
+            for nprobe in [5, 10, 20, 40, 60]:
                 timer.start(tag, TimerMode.QUERY)
                 _, result = index.query(queries, k=k, nprobe=nprobe)
                 query_time = timer.stop(tag, TimerMode.QUERY)
@@ -260,13 +316,14 @@ def benchmark_ivf_pq():
                 )
 
     print(timer.summarize())
+    timer.create_charts()
 
 
 def main():
     download_and_extract(SIFT_URI, SIFT_DOWNLOAD_PATH, TEMP_DIR)
 
-    benchmark_ivf_flat()
-    benchmark_vamana()
+    # benchmark_ivf_flat()
+    # benchmark_vamana()
     benchmark_ivf_pq()
 
 
