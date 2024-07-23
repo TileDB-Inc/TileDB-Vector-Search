@@ -77,19 +77,9 @@ class VamanaIndex(index.Index):
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
 
-        schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimensions()
-
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
-        if self.dtype is None:
-            self.dtype = np.dtype(schema.attr("values").dtype)
-        else:
-            self.dtype = np.dtype(self.dtype)
-
-        if self.base_size == -1:
-            self.size = schema.domain.dim(1).domain[1] + 1
-        else:
-            self.size = self.base_size
+        self.size = self.base_size
 
     def get_dimensions(self):
         """

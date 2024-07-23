@@ -300,7 +300,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
   m.def(
       ("ivf_index_" + suffix).c_str(),
       [](tiledb::Context& ctx,
-         const ColMajorMatrix<T>& db,
+         const ColMajorMatrix<T>& input_vectors,
          const std::vector<uint64_t>& external_ids,
          const std::vector<uint64_t>& deleted_ids,
          const std::string& centroids_uri,
@@ -310,10 +310,11 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
          size_t start_pos,
          size_t end_pos,
          size_t nthreads,
-         uint64_t timestamp) -> int {
+         uint64_t timestamp,
+         size_t partition_start) -> int {
         return detail::ivf::ivf_index<T, uint64_t, float>(
             ctx,
-            db,
+            input_vectors,
             external_ids,
             deleted_ids,
             centroids_uri,
@@ -323,7 +324,8 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp);
+            timestamp,
+            partition_start);
       },
       py::keep_alive<1, 2>());
 }
@@ -335,7 +337,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
   m.def(
       ("ivf_index_tdb_" + suffix).c_str(),
       [](tiledb::Context& ctx,
-         const std::string& db_uri,
+         const std::string& input_vectors_uri,
          const std::string& external_ids_uri,
          const std::vector<uint64_t>& deleted_ids,
          const std::string& centroids_uri,
@@ -345,10 +347,11 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
          size_t start_pos,
          size_t end_pos,
          size_t nthreads,
-         uint64_t timestamp) -> int {
+         uint64_t timestamp,
+         size_t partition_start) -> int {
         return detail::ivf::ivf_index<T, uint64_t, float>(
             ctx,
-            db_uri,
+            input_vectors_uri,
             external_ids_uri,
             deleted_ids,
             centroids_uri,
@@ -358,7 +361,8 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp);
+            timestamp,
+            partition_start);
       },
       py::keep_alive<1, 2>());
 }

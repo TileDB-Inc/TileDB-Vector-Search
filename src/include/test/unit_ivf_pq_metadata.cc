@@ -75,7 +75,13 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
       {"sub_dimensions", 8},
       {"bits_per_subspace", 8},
       {"num_clusters", 256},
-        {"distance_metric", static_cast<size_t>(DistanceMetric::COSINE)}
+      {"max_iterations", 2},
+      {"distance_metric", static_cast<size_t>(DistanceMetric::COSINE)},
+  };
+
+  std::vector<std::tuple<std::string, float>> expected_arithmetic_float{
+      {"convergence_tolerance", 0.000025f},
+      {"reassign_ratio", 0.075f},
   };
 
   {
@@ -99,7 +105,11 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         {"base_sizes", "[0]"},
         {"partition_history", "[0]"},
     };
-    validate_metadata(read_group, expected_str, expected_arithmetic);
+    validate_metadata(
+        read_group,
+        expected_str,
+        expected_arithmetic,
+        expected_arithmetic_float);
 
     auto x = ivf_pq_metadata();
     x.load_metadata(read_group);

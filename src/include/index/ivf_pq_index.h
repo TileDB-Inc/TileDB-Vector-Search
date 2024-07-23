@@ -205,6 +205,13 @@ class ivf_pq_index {
   constexpr static const uint64_t bits_per_subspace_{8};
   constexpr static const uint64_t num_clusters_{256};
 
+  // The feature vectors. These contain the original input vectors, modified
+  // with updates and deletions over time. Note that we only use this to
+  // re-ingest data, so if we open this index by URI we will not read this data
+  // from the URI. Instead, we'll fill it when we call `add()` and then write it
+  // during `write_index()`.
+  ColMajorMatrixWithIds<feature_type, id_type> feature_vectors_;
+
   /*
    * We are going to use train / compress / add pattern, so we need to store
    * flat ivf_centroids, pq_ivf_centroids, pq_vectors, partitioned_pq_vectors
@@ -231,16 +238,11 @@ class ivf_pq_index {
   // pq_storage_type partitioned_pq_vectors_;
   // flat_storage_type unpartitioned_pq_vectors_;
 
-  // Some parameters for performing kmeans clustering for ivf index
-  uint64_t max_iter_{1};
-  float tol_{1.e-4};
-  float reassign_ratio_{0.075};
-
-  // Some parameters for performing kmeans clustering for pq compression. Only
-  // used in IVF PQ, not in IVF Flat.
-  uint64_t pq_max_iter_{1};
-  float pq_tol_{1.e-4};
-  float pq_reassign_ratio_{0.075};
+  // Parameters for performing kmeans clustering for the ivf index and pq
+  // compression.
+  uint64_t max_iterations_{0};
+  float convergence_tolerance_{0.f};
+  float reassign_ratio_{0.f};
 
   // Some parameters for execution
   uint64_t num_threads_{std::thread::hardware_concurrency()};
@@ -270,8 +272,9 @@ class ivf_pq_index {
    * @param nlist Number of centroids / partitions to compute.
    * @param num_subspaces Number of subspaces to use for pq compression. This is
    * the number of sections to divide the vector into.
-   * @param max_iter Maximum number of iterations for kmeans algorithm.
-   * @param tol Convergence tolerance for kmeans algorithm.
+   * @param max_iterations Maximum number of iterations for kmeans algorithm.
+   * @param convergence_tolerance Convergence convergence_toleranceerance for
+   * kmeans algorithm.
    * @param temporal_policy Temporal policy for the index.
    * @param seed Random seed for kmeans algorithm.
    *
@@ -289,9 +292,10 @@ class ivf_pq_index {
    */
   ivf_pq_index(
       size_t nlist = 0,
-      size_t num_subspaces = 16,  // new for pq
-      size_t max_iter = 2,
-      float tol = 0.000025,
+      size_t num_subspaces = 16,
+      size_t max_iterations = 2,
+      float convergence_tolerance = 0.000025f,
+      float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       uint64_t seed = std::random_device{}(),
       DistanceMetric distance_metric = DistanceMetric::L2)
@@ -300,8 +304,9 @@ class ivf_pq_index {
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_partitions_(nlist)
       , num_subspaces_{num_subspaces}  // new for pq
-      , max_iter_(max_iter)
-      , tol_(tol)
+      , max_iterations_(max_iterations)
+      , convergence_tolerance_(convergence_tolerance)
+      , reassign_ratio_(reassign_ratio)
       ,seed_{seed},
       distance_metric_{distance_metric} {
     if (num_subspaces_ <= 0) {
@@ -349,6 +354,9 @@ class ivf_pq_index {
     num_partitions_ = group_->get_num_partitions();
     num_subspaces_ = group_->get_num_subspaces();
     sub_dimensions_ = dimensions_ / num_subspaces_;
+    max_iterations_ = group_->get_max_iterations();
+    convergence_tolerance_ = group_->get_convergence_tolerance();
+    reassign_ratio_ = group_->get_reassign_ratio();
     distance_metric_ = group_->get_distance_metric();
     flat_ivf_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
@@ -414,8 +422,8 @@ class ivf_pq_index {
    * create `distance_tables_`. We measure the maximum number of iterations and
    * minimum convergence over all of the subspaces and return a tuple of those
    * values. We compute all of the distance_tables_ regarless of the values of
-   * max_local_iters_taken or min_local_conv relative to max_iter_ and
-   * tol_.
+   * max_local_iters_taken or min_local_conv relative to max_iterations_ and
+   * convergence_tolerance_.
    *
    * @tparam V type of the training vectors
    * @tparam SubDistance type of the distance function to use for encoding.
@@ -498,8 +506,8 @@ class ivf_pq_index {
           sub_begin,
           sub_end,
           num_clusters_,
-          tol_,
-          max_iter_,
+          convergence_tolerance_,
+          max_iterations_,
           num_threads_);
 
       max_local_iters_taken = std::max(max_local_iters_taken, iters);
@@ -674,8 +682,8 @@ class ivf_pq_index {
         flat_ivf_centroids_,
         dimensions_,
         num_partitions_,
-        max_iter_,
-        tol_,
+        max_iterations_,
+        convergence_tolerance_,
         num_threads_,
         reassign_ratio_);
   }
@@ -709,7 +717,6 @@ class ivf_pq_index {
    * @param training_set_ids IDs for each vector.
    *
    * @todo Create and write index that is larger than RAM
-   * @todo Use training_set_ids as the external IDs.
    */
   template <
       feature_vector_array Array,
@@ -719,6 +726,18 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
+    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
+        ::dimensions(training_set), ::num_vectors(training_set)));
+    std::copy(
+        training_set.data(),
+        training_set.data() +
+            ::dimensions(training_set) * ::num_vectors(training_set),
+        feature_vectors_.data());
+    std::copy(
+        training_set_ids.begin(),
+        training_set_ids.end(),
+        feature_vectors_.ids());
+
     auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
 
     train_pq(training_set);   // cluster_centroids_, distance_tables_
@@ -902,7 +921,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->pq_ivf_indices_uri(),
         group_->get_num_partitions() + 1,
-        group_->ids_uri(),
+        group_->pq_ivf_ids_uri(),
         infinite_parts,
         0,
         temporal_policy_);
@@ -954,7 +973,7 @@ class ivf_pq_index {
         group_->pq_ivf_vectors_uri(),
         group_->pq_ivf_indices_uri(),
         group_->get_num_partitions() + 1,
-        group_->ids_uri(),
+        group_->pq_ivf_ids_uri(),
         active_partitions,
         upper_bound,
         temporal_policy_);
@@ -1006,6 +1025,9 @@ class ivf_pq_index {
     write_group.set_sub_dimensions(sub_dimensions_);
     write_group.set_bits_per_subspace(bits_per_subspace_);
     write_group.set_num_clusters(num_clusters_);
+    write_group.set_max_iterations(max_iterations_);
+    write_group.set_convergence_tolerance(convergence_tolerance_);
+    write_group.set_reassign_ratio(reassign_ratio_);
     write_group.set_distance_metric(distance_metric_);
 
     if (num_subspaces_ * sub_dimensions_ != dimensions_) {
@@ -1059,6 +1081,21 @@ class ivf_pq_index {
 
     write_matrix(
         ctx,
+        feature_vectors_,
+        write_group.feature_vectors_uri(),
+        0,
+        false,
+        temporal_policy_);
+    write_vector(
+        ctx,
+        feature_vectors_.raveled_ids(),
+        write_group.ids_uri(),
+        0,
+        false,
+        temporal_policy_);
+
+    write_matrix(
+        ctx,
         cluster_centroids_,
         write_group.cluster_centroids_uri(),
         0,
@@ -1088,15 +1125,13 @@ class ivf_pq_index {
         0,
         false,
         temporal_policy_);
-
     write_vector(
         ctx,
         partitioned_pq_vectors_->ids(),
-        write_group.ids_uri(),
+        write_group.pq_ivf_ids_uri(),
         0,
         false,
         temporal_policy_);
-
     write_matrix(
         ctx,
         *partitioned_pq_vectors_,
@@ -1325,11 +1360,11 @@ class ivf_pq_index {
   }
 
   auto max_iterations() const {
-    return max_iter_;
+    return max_iterations_;
   }
 
   auto convergence_tolerance() const {
-    return tol_;
+    return convergence_tolerance_;
   }
 
   auto num_threads() const {
@@ -1361,7 +1396,8 @@ class ivf_pq_index {
    * @param feature_vectors
    * @return
    */
-  auto verify_pq_encoding(const ColMajorMatrix<feature_type>& feature_vectors) {
+  auto verify_pq_encoding(
+      const ColMajorMatrix<feature_type>& feature_vectors) const {
     double total_distance = 0.0;
     double total_normalizer = 0.0;
 
@@ -1408,7 +1444,7 @@ class ivf_pq_index {
    * @return
    */
   auto verify_pq_distances(
-      const ColMajorMatrix<feature_type>& feature_vectors) {
+      const ColMajorMatrix<feature_type>& feature_vectors) const {
     double total_diff = 0.0;
     double total_normalizer = 0.0;
 
@@ -1521,9 +1557,6 @@ class ivf_pq_index {
    * group. Rather, it is the metadata associated with the index itself and is
    * only a small number of cached quantities.
    *
-   * Note that `max_iter` et al are only relevant for partitioning an index
-   * and are not stored (and would not be meaningful to compare at any rate).
-   *
    * @param rhs the index against which to compare
    * @return bool indicating equality of the index metadata
    */
@@ -1544,6 +1577,15 @@ class ivf_pq_index {
       return false;
     }
     if (num_clusters_ != rhs.num_clusters_) {
+      return false;
+    }
+    if (max_iterations_ != rhs.max_iterations_) {
+      return false;
+    }
+    if (convergence_tolerance_ != rhs.convergence_tolerance_) {
+      return false;
+    }
+    if (reassign_ratio_ != rhs.reassign_ratio_) {
       return false;
     }
     if (distance_metric_ != rhs.distance_metric_) {
@@ -1746,7 +1788,7 @@ class ivf_pq_index {
         flat_ivf_centroids_.data());
   }
 
-  auto& get_flat_ivf_centroids() {
+  const auto& get_flat_ivf_centroids() const {
     return flat_ivf_centroids_;
   }
 

@@ -110,25 +110,10 @@ void fill_and_write_matrix(
   write_vector(ctx, X.raveled_ids(), ids_uri, 0, true, temporal_policy);
 }
 
-void validate_metadata(
+template <typename T>
+void check_expected_arithmetic(
     tiledb::Group& read_group,
-    const std::vector<std::tuple<std::string, std::string>>& expected_str,
-    const std::vector<std::tuple<std::string, size_t>>& expected_arithmetic) {
-  for (auto& [name, value] : expected_str) {
-    tiledb_datatype_t v_type;
-    uint32_t v_num;
-    const void* v;
-    CHECK(read_group.has_metadata(name, &v_type));
-    if (!read_group.has_metadata(name, &v_type)) {
-      continue;
-    }
-
-    read_group.get_metadata(name, &v_type, &v_num, &v);
-    CHECK((v_type == TILEDB_STRING_ASCII || v_type == TILEDB_STRING_UTF8));
-    std::string tmp = std::string(static_cast<const char*>(v), v_num);
-    CHECK(!empty(value));
-    CHECK(tmp == value);
-  }
+    const std::vector<std::tuple<std::string, T>>& expected_arithmetic) {
   for (auto& [name, value] : expected_arithmetic) {
     tiledb_datatype_t v_type;
     uint32_t v_num;
@@ -177,6 +162,32 @@ void validate_metadata(
         break;
     }
   }
+}
+
+void validate_metadata(
+    tiledb::Group& read_group,
+    const std::vector<std::tuple<std::string, std::string>>& expected_str,
+    const std::vector<std::tuple<std::string, size_t>>& expected_arithmetic,
+    std::vector<std::tuple<std::string, float>> expected_arithmetic_float =
+        {}) {
+  for (auto& [name, value] : expected_str) {
+    tiledb_datatype_t v_type;
+    uint32_t v_num;
+    const void* v;
+    CHECK(read_group.has_metadata(name, &v_type));
+    if (!read_group.has_metadata(name, &v_type)) {
+      continue;
+    }
+
+    read_group.get_metadata(name, &v_type, &v_num, &v);
+    CHECK((v_type == TILEDB_STRING_ASCII || v_type == TILEDB_STRING_UTF8));
+    std::string tmp = std::string(static_cast<const char*>(v), v_num);
+    CHECK(!empty(value));
+    CHECK(tmp == value);
+  }
+
+  check_expected_arithmetic<size_t>(read_group, expected_arithmetic);
+  check_expected_arithmetic<float>(read_group, expected_arithmetic_float);
 }
 
 #endif  // TILEDB_TEST_UTILS_H

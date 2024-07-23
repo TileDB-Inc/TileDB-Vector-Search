@@ -175,6 +175,7 @@ def ivf_index_tdb(
     id_uri: str,
     start: int = 0,
     end: int = 0,
+    partition_start: int = 0,
     nthreads: int = 0,
     timestamp: int = 0,
     config: Dict = None,
@@ -198,6 +199,7 @@ def ivf_index_tdb(
             end,
             nthreads,
             timestamp,
+            partition_start,
         ]
     )
 
@@ -222,6 +224,7 @@ def ivf_index(
     id_uri: str,
     start: int = 0,
     end: int = 0,
+    partition_start: int = 0,
     nthreads: int = 0,
     timestamp: int = 0,
     config: Dict = None,
@@ -245,6 +248,7 @@ def ivf_index(
             end,
             nthreads,
             timestamp,
+            partition_start,
         ]
     )
 
