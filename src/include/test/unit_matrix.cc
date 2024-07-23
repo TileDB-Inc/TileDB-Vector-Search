@@ -149,7 +149,7 @@ TEMPLATE_TEST_CASE("view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(mda(0, 1) == 1);
 
   auto a =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
+      Kokkos::mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_right>(
           t, major, minor);
   CHECK(a.extent(0) == major);
   CHECK(a.extent(1) == minor);
@@ -158,7 +158,7 @@ TEMPLATE_TEST_CASE("view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(a(1, 0) == 13);
 
   auto b =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(
+      Kokkos::mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_left>(
           t, major, minor);
   CHECK(b.extent(0) == major);
   CHECK(b.extent(1) == minor);
@@ -195,7 +195,7 @@ TEMPLATE_TEST_CASE("view", "[matrix]", char, float, int32_t, int64_t) {
   CHECK(dimensions(c) == minor);
 
   auto mc =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
+      Kokkos::mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_right>(
           t, major, minor);
   CHECK(mc.extent(0) == major);
   CHECK(mc.extent(1) == minor);
@@ -243,7 +243,7 @@ TEMPLATE_TEST_CASE("view", "[matrix]", char, float, int32_t, int64_t) {
 
   // Column major
   auto md =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(
+      Kokkos::mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_left>(
           t, major, minor);
   CHECK(md.extent(0) == major);
   CHECK(md.extent(1) == minor);
@@ -271,4 +271,12 @@ TEMPLATE_TEST_CASE("view", "[matrix]", char, float, int32_t, int64_t) {
   auto ez = ev[1];
   CHECK(ez[0] == 7);
   CHECK(ez[1] == 8);
+}
+
+TEST_CASE("large matrix", "[matrix]") {
+  auto large = ColMajorMatrix<float>(
+      std::numeric_limits<uint64_t>::max() - 1,
+      std::numeric_limits<uint64_t>::max() - 2);
+  CHECK(large.num_rows() == std::numeric_limits<uint64_t>::max() - 1);
+  CHECK(large.num_cols() == std::numeric_limits<uint64_t>::max() - 2);
 }

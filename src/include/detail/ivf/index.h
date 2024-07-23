@@ -181,7 +181,7 @@ int ivf_index(
                                          TemporalPolicy() :
                                          TemporalPolicy(TimeTravel, timestamp);
     if (parts_uri != "") {
-      write_matrix<FeatureType, stdx::layout_left, size_t>(
+      write_matrix<FeatureType, stdx::layout_left, uint64_t>(
           ctx,
           shuffled_input_vectors,
           parts_uri,

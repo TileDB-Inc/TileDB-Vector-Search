@@ -96,7 +96,7 @@ template <
     class IdType,
     class IndicesType,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t>
+    class I = uint64_t>
 class tdbPartitionedMatrix
     : public PartitionedMatrix<T, IdType, IndicesType, LayoutPolicy, I> {
   /****************************************************************************
@@ -123,12 +123,12 @@ class tdbPartitionedMatrix
   /*****************************************************************************
    * Information for reading from TileDB arrays
    ****************************************************************************/
-  using row_domain_type = int32_t;
-  using col_domain_type = int32_t;
+  using row_domain_type = uint64_t;
+  using col_domain_type = uint64_t;
 
   // For now, we assume this is always valid so we don't need to add constructor
   // arguments to limit it
-  uint64_t dimensions_{0};
+  size_type dimensions_{0};
 
   // We don't actually use this
   // size_t num_array_cols_{0};
@@ -176,10 +176,10 @@ class tdbPartitionedMatrix
   unsigned long total_max_cols_{0UL};
 
   // The max number of columns that can fit in allocated memory
-  size_t column_capacity_{0};
+  size_type column_capacity_{0};
 
   // The number of columns that are currently loaded into memory
-  size_t num_resident_cols_{0};
+  size_type num_resident_cols_{0};
 
   // The final index numbers of the resident columns
   index_type last_resident_col_{0};
@@ -531,7 +531,7 @@ class tdbPartitionedMatrix
       std::string attr_name = attr.name();
       tiledb::Subarray subarray(ctx_, *(this->partitioned_vectors_array_));
       // For a 128 dimension vector, Dimension 0 will go from 0 to 127.
-      subarray.add_range(0, 0, static_cast<int>(dimensions_) - 1);
+      subarray.add_range<size_type>(0, 0, dimensions_ - 1);
 
       // b. Set up the IDs subarray.
       auto ids_attr = ids_schema_.attribute(0);
@@ -548,8 +548,8 @@ class tdbPartitionedMatrix
           continue;
         }
         col_count += len;
-        subarray.add_range(1, (int)start, (int)stop - 1);
-        ids_subarray.add_range(0, (int)start, (int)stop - 1);
+        subarray.add_range<size_type>(1, start, stop - 1);
+        ids_subarray.add_range<size_type>(0, start, stop - 1);
       }
       if (col_count != last_resident_col_ - first_resident_col) {
         throw std::runtime_error(
@@ -643,7 +643,7 @@ template <
     class T,
     class partitioned_ids_type,
     class indices_type,
-    class I = size_t>
+    class I = uint64_t>
 using tdbRowMajorPartitionedMatrix = tdbPartitionedMatrix<
     T,
     partitioned_ids_type,
@@ -658,7 +658,7 @@ template <
     class T,
     class partitioned_ids_type,
     class indices_type,
-    class I = size_t>
+    class I = uint64_t>
 using tdbColMajorPartitionedMatrix = tdbPartitionedMatrix<
     T,
     partitioned_ids_type,

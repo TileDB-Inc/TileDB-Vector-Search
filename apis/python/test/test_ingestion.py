@@ -1459,13 +1459,13 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
                     name="rows",
                     domain=(0, dimensions - 1),
                     tile=dimensions,
-                    dtype=np.dtype(np.int32),
+                    dtype=np.dtype(np.uint64),
                 ),
                 tiledb.Dim(
                     name="cols",
-                    domain=(0, np.iinfo(np.dtype("int32")).max),
+                    domain=(0, np.iinfo(np.dtype("uint64")).max),
                     tile=100000,
-                    dtype=np.dtype(np.int32),
+                    dtype=np.dtype(np.uint64),
                 ),
             ]
         ),

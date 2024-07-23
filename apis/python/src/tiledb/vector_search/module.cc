@@ -105,8 +105,8 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
         py::format_descriptor<T>::format(), /* Python struct-style format
                                                descriptor */
         2,                                  /* Number of dimensions */
-        {m.num_rows(), m.num_cols()},       /* Buffer dimensions */
-        {sizeof(T), sizeof(T) * m.num_rows()});
+        { static_cast<size_t>(m.num_rows()),  static_cast<size_t>(m.num_cols())},       /* Buffer dimensions */
+        {sizeof(T), sizeof(T) *  static_cast<size_t>(m.num_rows())});
   });
 }
 
@@ -640,8 +640,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       "read_vector_u32",
       [](const tiledb::Context& ctx,
          const std::string& uri,
-         size_t start_pos,
-         size_t end_pos,
+         uint64_t start_pos,
+         uint64_t end_pos,
          uint64_t timestamp) -> std::vector<uint32_t> {
         TemporalPolicy temporal_policy =
             (timestamp == 0) ? TemporalPolicy() :
@@ -654,8 +654,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       "read_vector_u64",
       [](const tiledb::Context& ctx,
          const std::string& uri,
-         size_t start_pos,
-         size_t end_pos,
+         uint64_t start_pos,
+         uint64_t end_pos,
          uint64_t timestamp) -> std::vector<uint64_t> {
         TemporalPolicy temporal_policy =
             (timestamp == 0) ? TemporalPolicy() :

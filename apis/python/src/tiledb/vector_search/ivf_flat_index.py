@@ -530,7 +530,6 @@ def create(
 
     index.create_metadata(
         uri=uri,
-        dimensions=dimensions,
         vector_type=vector_type,
         index_type=INDEX_TYPE,
         storage_version=storage_version,
@@ -556,13 +555,13 @@ def create(
             name="rows",
             domain=(0, dimensions - 1),
             tile=dimensions,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         centroids_array_cols_dim = tiledb.Dim(
             name="cols",
-            domain=(0, MAX_INT32),
+            domain=(0, MAX_UINT64),
             tile=100000,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         centroids_array_dom = tiledb.Domain(
             centroids_array_rows_dim, centroids_array_cols_dim
@@ -584,9 +583,9 @@ def create(
 
         index_array_rows_dim = tiledb.Dim(
             name="rows",
-            domain=(0, MAX_INT32),
+            domain=(0, MAX_UINT64),
             tile=100000,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         index_array_dom = tiledb.Domain(index_array_rows_dim)
         index_attr = tiledb.Attr(
@@ -606,9 +605,9 @@ def create(
 
         ids_array_rows_dim = tiledb.Dim(
             name="rows",
-            domain=(0, MAX_INT32),
+            domain=(0, MAX_UINT64),
             tile=tile_size,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         ids_array_dom = tiledb.Domain(ids_array_rows_dim)
         ids_attr = tiledb.Attr(
@@ -630,13 +629,13 @@ def create(
             name="rows",
             domain=(0, dimensions - 1),
             tile=dimensions,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         parts_array_cols_dim = tiledb.Dim(
             name="cols",
-            domain=(0, MAX_INT32),
+            domain=(0, MAX_UINT64),
             tile=tile_size,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
         parts_attr = tiledb.Attr(

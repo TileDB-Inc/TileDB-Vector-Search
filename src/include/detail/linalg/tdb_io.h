@@ -49,8 +49,8 @@ template <class T>
 std::vector<T> read_vector_helper(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t start_pos,
-    size_t end_pos,
+    uint64_t start_pos,
+    uint64_t end_pos,
     TemporalPolicy temporal_policy,
     bool read_full_vector) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
@@ -59,8 +59,7 @@ std::vector<T> read_vector_helper(
       tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
   auto schema_ = array_->schema();
 
-  using domain_type = int32_t;
-  const size_t idx = 0;
+  using domain_type = uint64_t;
 
   auto domain_{schema_.domain()};
 
@@ -83,14 +82,13 @@ std::vector<T> read_vector_helper(
   }
 
   auto attr_num{schema_.attribute_num()};
-  auto attr = schema_.attribute(idx);
+  auto attr = schema_.attribute(0);
 
   std::string attr_name = attr.name();
   tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
-  std::vector<int32_t> subarray_vals = {
-      (int32_t)start_pos, std::max(0, (int32_t)end_pos - 1)};
+  std::vector<uint64_t> subarray_vals = {start_pos, end_pos == 0 ? 0 : end_pos - 1};
   tiledb::Subarray subarray(ctx, *array_);
   subarray.set_subarray(subarray_vals);
 
@@ -120,24 +118,26 @@ std::vector<T> read_vector_helper(
  * Create an empty TileDB array to eventually contain a matrix (a
  * feature_vector_array).
  */
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right>
 void create_empty_for_matrix(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t rows,
-    size_t cols,
-    size_t row_extent,
-    size_t col_extent,
+    uint64_t rows,
+    uint64_t cols,
+    uint64_t row_extent,
+    uint64_t col_extent,
     tiledb_filter_type_t filter) {
   tiledb::FilterList filter_list(ctx);
   filter_list.add_filter({ctx, filter});
 
   tiledb::Domain domain(ctx);
+  uint64_t max_rows = rows == 0 ? 0 : rows - 1;
+  uint64_t max_cols = cols == 0 ? 0 : cols - 1;
   domain
-      .add_dimensions(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
-      .add_dimensions(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
+      .add_dimensions(tiledb::Dimension::create<uint64_t>(
+          ctx, "rows", {{0, max_rows}}, row_extent))
+      .add_dimensions(tiledb::Dimension::create<uint64_t>(
+          ctx, "cols", {{0, max_cols}}, col_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
@@ -160,14 +160,14 @@ void create_matrix(
     const std::string& uri,
     tiledb_filter_type_t filter) {
   // @todo: make this a parameter
-  size_t num_parts = 10;
+  uint64_t num_parts = 10;
 
-  size_t row_extent = std::max<size_t>(
+  uint64_t row_extent = std::max<uint64_t>(
       (A.num_rows() + num_parts - 1) / num_parts, A.num_rows() >= 2 ? 2 : 1);
-  size_t col_extent = std::max<size_t>(
+  uint64_t col_extent = std::max<uint64_t>(
       (A.num_cols() + num_parts - 1) / num_parts, A.num_cols() >= 2 ? 2 : 1);
 
-  create_empty_for_matrix<T, LayoutPolicy, I>(
+  create_empty_for_matrix<T, LayoutPolicy>(
       ctx, uri, A.num_rows(), A.num_cols(), row_extent, col_extent, filter);
 }
 
@@ -187,12 +187,12 @@ void create_matrix(
  * @note If we create the matrix here, it will not have any compression
  * @todo Add compressor argument
  */
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = uint64_t>
 void write_matrix(
     const tiledb::Context& ctx,
     const Matrix<T, LayoutPolicy, I>& A,
     const std::string& uri,
-    size_t start_pos = 0,
+    uint64_t start_pos = 0,
     bool create = true,
     TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
@@ -205,15 +205,14 @@ void write_matrix(
     return;
   }
 
-  std::vector<int32_t> subarray_vals{
+  std::vector<uint64_t> subarray_vals{
       0,
-      std::max(0, (int)A.num_rows() - 1),
-      std::max(0, (int)start_pos),
-      std::max(0, (int)start_pos + (int)A.num_cols() - 1)};
+      A.num_rows() == 0 ? 0 : A.num_rows() - 1,
+      start_pos,
+      (A.num_cols() == 0 && start_pos == 0) ? 0 : start_pos + A.num_cols() - 1};
   // Open array for writing
   auto array = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_WRITE, temporal_policy);
-
   tiledb::Subarray subarray(ctx, *array);
   subarray.set_subarray(subarray_vals);
 
@@ -223,7 +222,7 @@ void write_matrix(
                    TILEDB_COL_MAJOR;
   query.set_layout(order)
       .set_data_buffer(
-          "values", &A(0, 0), (uint64_t)A.num_rows() * (uint64_t)A.num_cols())
+          "values", &A(0, 0), static_cast<uint64_t>(A.num_rows()) * static_cast<uint64_t>(A.num_cols()))
       .set_subarray(subarray);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
 
@@ -248,15 +247,16 @@ template <class feature_type>
 void create_empty_for_vector(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t rows,
-    int32_t row_extent,
+    uint64_t rows,
+    uint64_t row_extent,
     tiledb_filter_type_t filter) {
   tiledb::FilterList filter_list(ctx);
   filter_list.add_filter({ctx, filter});
 
   tiledb::Domain domain(ctx);
-  domain.add_dimensions(tiledb::Dimension::create<int32_t>(
-      ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent));
+  uint64_t max_rows = rows == 0 ? 0 : rows - 1;
+  domain.add_dimensions(tiledb::Dimension::create<uint64_t>(
+      ctx, "rows", {{0, max_rows}}, row_extent));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   schema.set_domain(domain).set_order({{TILEDB_COL_MAJOR, TILEDB_COL_MAJOR}});
@@ -281,8 +281,8 @@ void create_vector(
     tiledb_filter_type_t filter) {
   using value_type = std::ranges::range_value_t<V>;
 
-  size_t num_parts = 10;
-  size_t tile_extent = (size(v) + num_parts - 1) / num_parts;
+  uint64_t num_parts = 10;
+  uint64_t tile_extent = (size(v) + num_parts - 1) / num_parts;
 
   create_empty_for_vector<value_type>(ctx, uri, size(v), tile_extent, filter);
 }
@@ -304,13 +304,12 @@ void write_vector(
     const tiledb::Context& ctx,
     const V& v,
     const std::string& uri,
-    size_t start_pos = 0,
+    uint64_t start_pos = 0,
     bool create = true,
     TemporalPolicy temporal_policy = {}) {
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
-
   if (create) {
     create_vector(ctx, v, uri, TILEDB_FILTER_NONE);
   }
@@ -320,8 +319,8 @@ void write_vector(
   }
 
   // Set the subarray to write into
-  std::vector<int32_t> subarray_vals{
-      (int)start_pos, (int)start_pos + (int)size(v) - 1};
+  std::vector<uint64_t> subarray_vals{
+      start_pos, start_pos + size(v) - 1};
 
   // Open array for writing
   auto array = tiledb_helpers::open_array(
@@ -353,8 +352,8 @@ template <class T>
 std::vector<T> read_vector(
     const tiledb::Context& ctx,
     const std::string& uri,
-    size_t start_pos,
-    size_t end_pos,
+    uint64_t start_pos,
+    uint64_t end_pos,
     TemporalPolicy temporal_policy = {}) {
   return read_vector_helper<T>(
       ctx, uri, start_pos, end_pos, temporal_policy, false);
@@ -409,9 +408,11 @@ auto read_bin_local(
   if (!file.read(reinterpret_cast<char*>(&dimension), sizeof(dimension))) {
     throw std::runtime_error("failed to read dimension for the first vector");
   }
+  std::cout << "dimension: " << dimension << std::endl;
   file.seekg(0);
 
   const auto max_vectors = file_size / (4u + dimension * sizeof(T));
+  std::cout << "max_vectors: " << max_vectors << std::endl;
   if (subset > max_vectors) {
     throw std::runtime_error(
         "specified subset is too large " + std::to_string(subset) + " > " +
@@ -433,7 +434,7 @@ auto read_bin_local(
 
     if (d != dimension) {
       throw std::runtime_error(
-          "dimension mismatch: " + std::to_string(d) +
+          "[tdb_io@read_bin_local] dimension mismatch: " + std::to_string(d) +
           " != " + std::to_string(dimension));
     }
     if (!file.read(reinterpret_cast<char*>(result_ptr), d * sizeof(T))) {

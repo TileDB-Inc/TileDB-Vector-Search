@@ -800,7 +800,6 @@ class Index:
 
 def create_metadata(
     uri: str,
-    dimensions: int,
     vector_type: np.dtype,
     index_type: str,
     storage_version: str,

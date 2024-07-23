@@ -43,14 +43,20 @@ template <class T>
 constexpr auto type_to_tiledb_v = tiledb::impl::type_to_tiledb<T>::tiledb_type;
 
 [[maybe_unused]] static auto get_array_datatype(const tiledb::Array& array) {
+  std::cout << "[tdb_defs@get_array_datatype]" << std::endl;
   auto schema = array.schema();
+  // schema.dump();
+  std::cout << "[tdb_defs@get_array_datatype] done dump" << std::endl;
   auto num_attributes = schema.attribute_num();
+  std::cout << "[tdb_defs@get_array_datatype] num_attributes: " << num_attributes << std::endl;
   if (num_attributes == 1) {
     return schema.attribute(0).type();
   }
+  std::cout << "[tdb_defs@get_array_datatype] schema.has_attribute(values: " << schema.has_attribute("values") << std::endl;
   if (schema.has_attribute("values")) {
     return schema.attribute("values").type();
   }
+  std::cout << "[tdb_defs@get_array_datatype] schema.has_attribute(a: " << schema.has_attribute("a") << std::endl;
   if (schema.has_attribute("a")) {
     return schema.attribute("a").type();
   }

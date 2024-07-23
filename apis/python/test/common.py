@@ -243,13 +243,13 @@ def create_schema(dimension_0_domain_max, dimension_1_domain_max):
                     name="__dim_0",
                     domain=(0, dimension_0_domain_max),
                     tile=max(1, min(3, dimension_0_domain_max)),
-                    dtype="int32",
+                    dtype="uint64",
                 ),
                 tiledb.Dim(
                     name="__dim_1",
                     domain=(0, dimension_1_domain_max),
                     tile=max(1, min(3, dimension_1_domain_max)),
-                    dtype="int32",
+                    dtype="uint64",
                 ),
             ]
         ),

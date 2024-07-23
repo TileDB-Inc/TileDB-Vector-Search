@@ -37,6 +37,7 @@
 #include "cpos.h"
 #include "detail/linalg/matrix_with_ids.h"
 #include "mdspan/mdspan.hpp"
+#include "utils/print_types.h"
 
 TEMPLATE_TEST_CASE(
     "template arguments", "[matrix_with_ids]", char, float, int32_t, int64_t) {
@@ -279,8 +280,8 @@ TEMPLATE_TEST_CASE("view", "[matrix_with_ids]", char, float, int32_t, int64_t) {
   CHECK(mda(0, 0) == 0);
   CHECK(mda(0, 1) == 1);
 
-  auto a =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
+  auto a = Kokkos::
+      mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_right>(
           t, major, minor);
   CHECK(a.extent(0) == major);
   CHECK(a.extent(1) == minor);
@@ -288,8 +289,8 @@ TEMPLATE_TEST_CASE("view", "[matrix_with_ids]", char, float, int32_t, int64_t) {
   CHECK(a(0, 1) == 1);
   CHECK(a(1, 0) == 13);
 
-  auto b =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(
+  auto b = Kokkos::
+      mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_left>(
           t, major, minor);
   CHECK(b.extent(0) == major);
   CHECK(b.extent(1) == minor);
@@ -318,8 +319,8 @@ TEMPLATE_TEST_CASE("view", "[matrix_with_ids]", char, float, int32_t, int64_t) {
 
   CHECK(std::equal(c.ids(), c.ids() + c.num_ids(), ids.begin()));
 
-  auto mc =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_right>(
+  auto mc = Kokkos::
+      mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_right>(
           t, major, minor);
   CHECK(c.extent(0) == major);
   CHECK(c.extent(1) == minor);
@@ -375,8 +376,8 @@ TEMPLATE_TEST_CASE("view", "[matrix_with_ids]", char, float, int32_t, int64_t) {
   CHECK(std::equal(d.ids(), d.ids() + d.num_ids(), ids.begin()));
 
   // Column major
-  auto md =
-      Kokkos::mdspan<TestType, stdx::dextents<size_t, 2>, Kokkos::layout_left>(
+  auto md = Kokkos::
+      mdspan<TestType, stdx::dextents<uint64_t, 2>, Kokkos::layout_left>(
           t, major, minor);
   CHECK(md.extent(0) == major);
   CHECK(md.extent(1) == minor);
@@ -405,4 +406,12 @@ TEMPLATE_TEST_CASE("view", "[matrix_with_ids]", char, float, int32_t, int64_t) {
   auto ez = ev[1];
   CHECK(ez[0] == 7);
   CHECK(ez[1] == 8);
+}
+
+TEST_CASE("large matrix", "[matrix_with_ids]") {
+  auto large = ColMajorMatrixWithIds<float, uint64_t, uint64_t>(
+      std::numeric_limits<int>::max() - 1,
+      std::numeric_limits<int>::max() - 2);
+  CHECK(large.num_rows() == std::numeric_limits<uint32_t>::max() - 1);
+  CHECK(large.num_cols() == std::numeric_limits<uint32_t>::max() - 2);
 }

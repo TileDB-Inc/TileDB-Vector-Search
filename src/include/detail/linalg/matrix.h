@@ -47,10 +47,10 @@
 #include <version>
 #include "detail/linalg/linalg_defs.h"
 
-template <class I = size_t>
+template <class I = uint64_t>
 using matrix_extents = stdx::dextents<I, 2>;
 
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = uint64_t>
 class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, stdx::dextents<I, 2>, LayoutPolicy>;
   using Base::Base;
@@ -119,13 +119,13 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class I = size_t>
+template <class T, class I = uint64_t>
 using RowMajorMatrixView = MatrixView<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class I = size_t>
+template <class T, class I = uint64_t>
 using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
 
 /**
@@ -139,7 +139,7 @@ using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
  * @todo Make Matrix into a range (?)
  */
 
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = uint64_t>
 class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using Base = stdx::mdspan<T, matrix_extents<I>, LayoutPolicy>;
 
@@ -278,7 +278,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   auto extents() const noexcept {
-    return std::vector<size_t>{
+    return std::vector<uint64_t>{
         Base::extents().extent(0), Base::extents().extent(1)};
   }
 
@@ -302,7 +302,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   template <
       class T_,
       class LayoutPolicy_ = stdx::layout_right,
-      class I_ = size_t>
+      class I_ = uint64_t>
   bool operator==(const Matrix<T_, LayoutPolicy_, I_>& rhs) const noexcept {
     return (void*)this->data() == (void*)rhs.data() ||
            (num_rows_ == rhs.num_rows() && num_cols_ == rhs.num_cols() &&
@@ -314,19 +314,19 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class I = size_t>
+template <class T, class I = uint64_t>
 using RowMajorMatrix = Matrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class I = size_t>
+template <class T, class I = uint64_t>
 using ColMajorMatrix = Matrix<T, stdx::layout_left, I>;
 
 /**
  * Convenience class for turning 2D matrices into 1D vectors.
  */
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = uint64_t>
 auto raveled(Matrix<T, LayoutPolicy, I>& m) {
   return m.raveled();
 }
@@ -389,8 +389,8 @@ class SubMatrixView
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  size_t num_rows_{0};
-  size_t num_cols_{0};
+  size_type num_rows_{0};
+  size_type num_cols_{0};
 
  public:
   SubMatrixView() noexcept = delete;
@@ -463,8 +463,8 @@ constexpr auto SubMatrix(
 template <class Matrix>
 void debug_matrix(
     const Matrix& matrix, const std::string& msg = "", size_t max_size = 10) {
-  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(dimensions(matrix), static_cast<Matrix::size_type>(max_size));
+  auto colsEnd = std::min(num_vectors(matrix), static_cast<Matrix::size_type>(max_size));
 
   std::cout << "# " << msg << " (" << dimensions(matrix) << " rows x "
             << num_vectors(matrix) << " cols) ("

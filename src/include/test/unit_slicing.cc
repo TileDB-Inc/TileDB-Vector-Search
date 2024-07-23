@@ -42,17 +42,16 @@ TEST_CASE("slice", "[linalg]") {
 
   tiledb::Context ctx_;
 
-  std::vector<int> data_(288);
-  std::vector<int> data2_(288);
+  std::vector<uint64_t> data_(288);
+  std::vector<uint64_t> data2_(288);
   std::vector<float> value_(288);
 
   auto array_ = tiledb_helpers::open_array(
       tdb_func__, ctx_, sift_inputs_uri, TILEDB_READ);
   tiledb::ArraySchema schema_{array_->schema()};
   tiledb::Query query(ctx_, *array_);
-
   tiledb::Subarray subarray(ctx_, *array_);
-  subarray.add_range(0, 0, 5).add_range(1, 88, 100).add_range(0, 10, 13);
+  subarray.add_range<uint64_t>(0, 0, 5).add_range<uint64_t>(1, 88, 100).add_range<uint64_t>(0, 10, 13);
 
   //      .add_range(1, col_0_start, col_0_end);
   query.set_subarray(subarray);
