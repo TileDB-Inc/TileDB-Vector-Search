@@ -225,7 +225,7 @@ class ivf_pq_group : public base_index_group<index_type> {
   /*****************************************************************************
    * Getters and setters for PQ related metadata
    ****************************************************************************/
-  uint32_t get_num_subspaces() const {
+  uint64_t get_num_subspaces() const {
     return metadata_.num_subspaces_;
   }
   void set_num_subspaces(uint64_t num_subspaces) {

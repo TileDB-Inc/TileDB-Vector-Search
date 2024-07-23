@@ -250,7 +250,7 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
       (std::filesystem::temp_directory_path() / "ids").string();
 
   std::vector<int> num_vectors_options = {9, 199, 2143};
-  std::vector<uint32_t> dimensions_options = {3, 77};
+  std::vector<uint64_t> dimensions_options = {3, 77};
   std::vector<int> num_parts_options = {1, 3, 99, 989, 2143};
   for (auto num_vectors : num_vectors_options) {
     for (uint64_t dimensions : dimensions_options) {
