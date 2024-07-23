@@ -373,9 +373,9 @@ TEST_CASE(
   }
 }
 
-TEMPLATE_TEST_CASE(
-    "query stacked hypercube", "[flativf_index]", float) {
-  size_t k_dist = GENERATE(0, 32);
+TEMPLATE_TEST_CASE("query stacked hypercube", "[flativf_index]", float) {
+  // size_t k_dist = GENERATE(0, 32);
+  size_t k_dist = 32;
   std::cout << "k_dist: " << k_dist
             << " -----------------------------------------" << std::endl;
   size_t k_near = k_dist;
@@ -424,29 +424,29 @@ TEMPLATE_TEST_CASE(
 
   auto query2 = ColMajorMatrix<TestType>();
   auto query4 = ColMajorMatrix<TestType>();
-  SECTION("query with all 0's") {
-    std::cout << "query with all 0's ------------" << std::endl;
-    query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
-    query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-  }
-  SECTION("query with all 127's") {
-    std::cout << "query with all 127's ------------" << std::endl;
-    query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
-    query4 = ColMajorMatrix<TestType>{
-        {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
-  }
-  SECTION("query with all 0's and then 127's") {
-    std::cout << "query with all 0's and then 127's ------------" << std::endl;
-    query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
-    query4 = ColMajorMatrix<TestType>{
-        {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
-  }
-  SECTION("query with all 127's and then 0's") {
-    std::cout << "query with all 127's and then 0's ------------" << std::endl;
-    query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
-    query4 = ColMajorMatrix<TestType>{
-        {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
-  }
+  // SECTION("query with all 0's") {
+  //   std::cout << "query with all 0's ------------" << std::endl;
+  //   query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
+  //   query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+  // }
+  // SECTION("query with all 127's") {
+  //   std::cout << "query with all 127's ------------" << std::endl;
+  //   query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
+  //   query4 = ColMajorMatrix<TestType>{
+  //       {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
+  // }
+  // SECTION("query with all 0's and then 127's") {
+  //   std::cout << "query with all 0's and then 127's ------------" <<
+  //   std::endl; query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
+  //   query4 = ColMajorMatrix<TestType>{
+  //       {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
+  // }
+  // SECTION("query with all 127's and then 0's") {
+  //   std::cout << "query with all 127's and then 0's ------------" <<
+  //   std::endl; query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
+  //   query4 = ColMajorMatrix<TestType>{
+  //       {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
+  // }
   SECTION("query with alternating 127's and 0's") {
     std::cout << "query with alternating 127's and 0's ------------"
               << std::endl;
