@@ -1,4 +1,4 @@
-# Used to benchmark ingestion and querying running locally. First downloads SIFT and then 
+# Used to benchmark ingestion and querying running locally. First downloads SIFT and then
 # benchmarks ingestion and querying.
 #
 # To run:
@@ -19,14 +19,36 @@ from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs
 
-SIFT_URI = "ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz"
+USE_SIFT_SMALL = True
+
+SIFT_URI = (
+    "ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz"
+    if USE_SIFT_SMALL
+    else "ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz"
+)
+SIFT_FOLDER_NAME = "siftsmall" if USE_SIFT_SMALL else "sift"
 
 TEMP_DIR = os.path.join(os.path.dirname(__file__), "tmp")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-SIFT_BASE_PATH = os.path.join(TEMP_DIR, "sift", "sift_base.fvecs")
-SIFT_QUERIES_PATH = os.path.join(TEMP_DIR, "sift", "sift_query.fvecs")
-SIFT_GROUNDTRUTH_PATH = os.path.join(TEMP_DIR, "sift", "sift_groundtruth.ivecs")
+SIFT_DOWNLOAD_PATH = os.path.join(
+    TEMP_DIR, "siftsmall.tar.gz" if USE_SIFT_SMALL else "sift.tar.gz"
+)
+SIFT_BASE_PATH = os.path.join(
+    TEMP_DIR,
+    SIFT_FOLDER_NAME,
+    "siftsmall_base.fvecs" if USE_SIFT_SMALL else "sift_base.fvecs",
+)
+SIFT_QUERIES_PATH = os.path.join(
+    TEMP_DIR,
+    SIFT_FOLDER_NAME,
+    "siftsmall_query.fvecs" if USE_SIFT_SMALL else "sift_query.fvecs",
+)
+SIFT_GROUNDTRUTH_PATH = os.path.join(
+    TEMP_DIR,
+    SIFT_FOLDER_NAME,
+    "siftsmall_groundtruth.ivecs" if USE_SIFT_SMALL else "sift_groundtruth.ivecs",
+)
 
 
 class TimerMode(Enum):
@@ -49,15 +71,18 @@ class Timer:
         key = f"{tag}_{mode.value}"
         if key in self.times and self.times[key][-1]["end"] is None:
             self.times[key][-1]["end"] = time.time()
+            return self.times[key][-1]["end"] - self.times[key][-1]["start"]
         else:
             print(
                 f"Warning: Timer for tag '{tag}' and mode '{mode}' was not started or already stopped."
             )
+            return -1
 
     def accuracy(self, tag, acc):
         if tag not in self.accuracies:
             self.accuracies[tag] = []
         self.accuracies[tag].append(acc)
+        return acc
 
     def summarize(self):
         summary = {}
@@ -142,13 +167,16 @@ def benchmark_ivf_flat():
             partitions=partitions,
             training_sampling_policy=TrainingSamplingPolicy.RANDOM,
         )
-        timer.stop(tag, TimerMode.INGESTION)
+        ingest_time = timer.stop(tag, TimerMode.INGESTION)
 
         for nprobe in [5, 10]:
             timer.start(tag, TimerMode.QUERY)
             _, result = index.query(queries, k=k, nprobe=nprobe)
-            timer.stop(tag, TimerMode.QUERY)
-            timer.accuracy(tag, accuracy(result, gt_i))
+            query_time = timer.stop(tag, TimerMode.QUERY)
+            acc = timer.accuracy(tag, accuracy(result, gt_i))
+            print(
+                f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
+            )
 
     print(timer.summarize())
 
@@ -161,8 +189,8 @@ def benchmark_vamana():
     queries = load_fvecs(SIFT_QUERIES_PATH)
     gt_i, gt_d = get_groundtruth_ivec(SIFT_GROUNDTRUTH_PATH, k=k, nqueries=len(queries))
 
-    for l_build in [5, 10]:
-        for r_max_degree in [10]:
+    for l_build in [5, 10, 20, 40, 60]:
+        for r_max_degree in [5, 10, 20, 40, 60]:
             tag = f"{index_type}_l_build={l_build}_r_max_degree={r_max_degree}"
             print(f"Running {tag}")
 
@@ -179,13 +207,16 @@ def benchmark_vamana():
                 r_max_degree=r_max_degree,
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
             )
-            timer.stop(tag, TimerMode.INGESTION)
+            ingest_time = timer.stop(tag, TimerMode.INGESTION)
 
-            for l_search in [k, k + 50, k + 100]:
+            for l_search in [k, k + 50, k + 100, k + 200, k + 400]:
                 timer.start(tag, TimerMode.QUERY)
                 _, result = index.query(queries, k=k, l_search=l_search)
-                timer.stop(tag, TimerMode.QUERY)
-                timer.accuracy(tag, accuracy(result, gt_i))
+                query_time = timer.stop(tag, TimerMode.QUERY)
+                acc = timer.accuracy(tag, accuracy(result, gt_i))
+                print(
+                    f"Finished {tag} with l_search={l_search}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
+                )
 
     print(timer.summarize())
 
@@ -217,22 +248,25 @@ def benchmark_ivf_pq():
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
                 num_subspaces=num_subspaces,
             )
-            timer.stop(tag, TimerMode.INGESTION)
+            ingest_time = timer.stop(tag, TimerMode.INGESTION)
 
             for nprobe in [5, 10]:
                 timer.start(tag, TimerMode.QUERY)
                 _, result = index.query(queries, k=k, nprobe=nprobe)
-                timer.stop(tag, TimerMode.QUERY)
-                timer.accuracy(tag, accuracy(result, gt_i))
+                query_time = timer.stop(tag, TimerMode.QUERY)
+                acc = timer.accuracy(tag, accuracy(result, gt_i))
+                print(
+                    f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
+                )
 
     print(timer.summarize())
 
 
 def main():
-    download_and_extract(SIFT_URI, os.path.join(TEMP_DIR, "sift.tar.gz"), TEMP_DIR)
+    download_and_extract(SIFT_URI, SIFT_DOWNLOAD_PATH, TEMP_DIR)
 
-    # benchmark_ivf_flat()
-    # benchmark_vamana()
+    benchmark_ivf_flat()
+    benchmark_vamana()
     benchmark_ivf_pq()
 
 
