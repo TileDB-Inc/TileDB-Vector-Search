@@ -36,9 +36,9 @@
 #include "detail/linalg/tdb_matrix.h"
 #include "index/ivf_pq_index.h"
 #include "index/ivf_pq_metadata.h"
+#include "scoring.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
-#include "scoring.h"
 
 TEST_CASE("default constructor", "[ivf_pq_metadata]") {
   auto x = ivf_pq_metadata();
@@ -63,7 +63,15 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(0, 16, 2, 2.5E-05, 0.075F, std::nullopt, std::random_device{}(), DistanceMetric::COSINE);
+  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+      0,
+      16,
+      2,
+      2.5E-05,
+      0.075F,
+      std::nullopt,
+      std::random_device{}(),
+      DistanceMetric::COSINE);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
