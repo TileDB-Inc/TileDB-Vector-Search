@@ -142,7 +142,7 @@ class Timer:
         summary = self.summarize_data()
 
         # Plot ingestion.
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(20, 12))
         plt.xlabel("Average Query Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title("Ingestion Time vs Average Query Accuracy")
@@ -163,7 +163,7 @@ class Timer:
         plt.close()
 
         # Plot query.
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(20, 12))
         plt.xlabel("Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title("Query Time vs Accuracy")
@@ -244,8 +244,8 @@ def benchmark_vamana():
     queries = load_fvecs(SIFT_QUERIES_PATH)
     gt_i, gt_d = get_groundtruth_ivec(SIFT_GROUNDTRUTH_PATH, k=k, nqueries=len(queries))
 
-    for l_build in [5, 10, 20, 40, 60]:
-        for r_max_degree in [5, 10, 20, 40, 60]:
+    for l_build in [10, 25, 40]:
+        for r_max_degree in [10, 25]:
             tag = f"{index_type}_l_build={l_build}_r_max_degree={r_max_degree}"
             print(f"Running {tag}")
 
@@ -323,8 +323,8 @@ def main():
     download_and_extract(SIFT_URI, SIFT_DOWNLOAD_PATH, TEMP_DIR)
 
     # benchmark_ivf_flat()
-    # benchmark_vamana()
-    benchmark_ivf_pq()
+    benchmark_vamana()
+    # benchmark_ivf_pq()
 
 
 main()
