@@ -341,7 +341,7 @@ class vamana_index {
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
-    medoid_ = medoid(feature_vectors_);
+    medoid_ = medoid(feature_vectors_, distance);
 
     // debug_index();
 
@@ -464,9 +464,12 @@ class vamana_index {
     }
   }
 
-  template <query_vector_array Q>
+  template <query_vector_array Q, class Distance = sum_of_squares_distance>
   auto best_first_O2(
-      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+      const Q& queries,
+      size_t k_nn,
+      std::optional<size_t> l_search,
+      Distance distance = Distance{}) {
     size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
@@ -481,7 +484,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
@@ -491,9 +494,12 @@ class vamana_index {
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
-  template <query_vector_array Q>
+  template <query_vector_array Q, class Distance = sum_of_squares_distance>
   auto best_first_O3(
-      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+      const Q& queries,
+      size_t k_nn,
+      std::optional<size_t> l_search,
+      Distance distance = Distance{}) {
     size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
@@ -508,7 +514,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
@@ -518,9 +524,12 @@ class vamana_index {
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
-  template <query_vector_array Q>
+  template <query_vector_array Q, class Distance = sum_of_squares_distance>
   auto best_first_O4(
-      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+      const Q& queries,
+      size_t k_nn,
+      std::optional<size_t> l_search,
+      Distance distance = Distance{}) {
     size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
@@ -535,7 +544,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
@@ -545,9 +554,12 @@ class vamana_index {
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
-  template <query_vector_array Q>
+  template <query_vector_array Q, class Distance = sum_of_squares_distance>
   auto best_first_O5(
-      const Q& queries, size_t k_nn, std::optional<size_t> l_search) {
+      const Q& queries,
+      size_t k_nn,
+      std::optional<size_t> l_search,
+      Distance distance = Distance{}) {
     size_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
@@ -562,7 +574,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());

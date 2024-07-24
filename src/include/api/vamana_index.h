@@ -43,6 +43,7 @@
 #include "api_defs.h"
 #include "index/index_metadata.h"
 #include "index/vamana_index.h"
+#include "scoring.h"
 
 /*******************************************************************************
  * IndexVamana
@@ -396,14 +397,20 @@ class IndexVamana {
           extents(training_set)[1]};
 
       using id_type = typename T::id_type;
+      auto distance_function =
+          get_distance_struct(impl_index_.distance_metric());
+      // get type of distance_function
+      fprintf(stderr, "distance_function: %s\n", typeid(distance_function).name());
+      
+
       if (num_ids(training_set) > 0) {
         auto ids = std::span<id_type>(
             (id_type*)training_set.ids(), training_set.num_vectors());
-        impl_index_.train(fspan, ids);
+        impl_index_.train(fspan, ids, distance_function);
       } else {
         auto ids = std::vector<id_type>(::num_vectors(training_set));
         std::iota(ids.begin(), ids.end(), 0);
-        impl_index_.train(fspan, ids);
+        impl_index_.train(fspan, ids, distance_function);
       }
     }
 

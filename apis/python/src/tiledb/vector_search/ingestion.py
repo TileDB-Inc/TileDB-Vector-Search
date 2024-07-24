@@ -1236,7 +1236,6 @@ def ingest(
                         trace_id=trace_id,
                     ).astype(np.float32)
 
-
                 logger.debug("Start kmeans training")
                 if use_sklearn:
                     km = KMeans(
@@ -1300,7 +1299,6 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
-
 
             return vectors
 
@@ -1672,6 +1670,7 @@ def ingest(
         data = vspy.FeatureVectorArray(
             ctx, parts_array_uri, ids_array_uri, 0, to_temporal_policy(index_timestamp)
         )
+
         index.train(data)
         index.add(data)
         index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
@@ -2370,7 +2369,6 @@ def ingest(
             )
             return d
         elif index_type == "IVF_FLAT":
-
             if copy_centroids_uri is not None:
                 centroids_node = submit(
                     copy_centroids,
