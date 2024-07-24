@@ -47,7 +47,7 @@ struct dummy_pq_index {
   using pq_vector_feature_type = pq_code_type;
   using score_type = float;
 
-  auto dimensions() const {
+  uint64_t dimensions() const {
     return 128;
   }
   auto num_subspaces() const {
@@ -586,7 +586,7 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
   size_t num_vectors = 0;
-  size_t dimensions = 10;
+  uint64_t dimensions = 10;
   size_t nlist = 1;
   auto index = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
       nlist, dimensions / 2);
@@ -644,7 +644,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   tiledb::VFS vfs(ctx);
 
   size_t num_vectors = 4;
-  size_t dimensions = 4;
+  uint64_t dimensions = 4;
   size_t nlist = 1;
   size_t num_subspaces = 2;
   size_t max_iterations = 1;
@@ -726,7 +726,7 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  size_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
   float convergence_convergence_toleranceerance = 0.00003f;
