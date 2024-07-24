@@ -232,10 +232,10 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
-  auto get_sub_dimensions() const {
+  uint32_t get_sub_dimensions() const {
     return metadata_.sub_dimensions_;
   }
-  void set_sub_dimensions(size_t sub_dimensions) {
+  void set_sub_dimensions(uint64_t sub_dimensions) {
     metadata_.sub_dimensions_ = sub_dimensions;
   }
 

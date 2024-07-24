@@ -713,7 +713,6 @@ class ivf_pq_index {
    * @param training_set_ids IDs for each vector.
    *
    * @todo Create and write index that is larger than RAM
-   * @todo Use training_set_ids as the external IDs.
    */
   template <
       feature_vector_array Array,
@@ -1316,7 +1315,7 @@ class ivf_pq_index {
     return *group_;
   }
 
-  auto dimensions() const {
+  uint64_t dimensions() const {
     return dimensions_;
   }
 
@@ -1339,7 +1338,7 @@ class ivf_pq_index {
     return num_subspaces_;
   }
 
-  auto sub_dimensions() const {
+  uint64_t sub_dimensions() const {
     return sub_dimensions_;
   }
 

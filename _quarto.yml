@@ -71,6 +71,7 @@ website:
         - href: "documentation/index.md"
         - href: "documentation/Building.md"
         - href: "documentation/Benchmarks.md"
+        - href: "documentation/storage-format-spec.md"
 
         # - section: "Examples"
         #   contents:

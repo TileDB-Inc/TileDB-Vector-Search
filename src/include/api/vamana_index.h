@@ -59,7 +59,7 @@
  *
  * We support all combinations of the following types for feature, id, and px
  * datatypes:
- *   - feature_type: uint8 or float
+ *   - feature_type: uint8, int8, or float
  *   - id_type: uint32 or uint64
  *   - adjacency_row_index_type: uint32 or uint64
  */

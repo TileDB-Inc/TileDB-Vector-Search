@@ -527,378 +527,374 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   uint64_t l_build = 100;
   uint64_t r_max_degree = 64;
 
-  std::string index_uri =
-      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
-  tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(index_uri)) {
-    vfs.remove_dir(index_uri);
-  }
+  vfs.remove_dir(index_uri);
+}
 
-  // Create an empty index.
-  {
-    // We write the empty index at timestamp 0.
-    auto index = IndexVamana(std::make_optional<IndexOptions>(
-        {{"feature_type", feature_type},
-         {"id_type", id_type},
-         {"l_build", std::to_string(l_build)},
-         {"r_max_degree", std::to_string(r_max_degree)}}));
+// Create an empty index.
+{
+  // We write the empty index at timestamp 0.
+  auto index = IndexVamana(std::make_optional<IndexOptions>(
+      {{"feature_type", feature_type},
+       {"id_type", id_type},
+       {"l_build", std::to_string(l_build)},
+       {"r_max_degree", std::to_string(r_max_degree)}}));
 
-    size_t num_vectors = 0;
-    auto empty_training_vector_array =
-        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-    index.train(empty_training_vector_array);
-    index.add(empty_training_vector_array);
-    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
+  size_t num_vectors = 0;
+  auto empty_training_vector_array =
+      FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+  index.train(empty_training_vector_array);
+  index.add(empty_training_vector_array);
+  index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
 
-    CHECK(index.temporal_policy().timestamp_end() == 0);
-    CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  CHECK(index.temporal_policy().timestamp_end() == 0);
+  CHECK(index.l_build() == l_build);
+  CHECK(index.r_max_degree() == r_max_degree);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto typed_index = vamana_index<
-        feature_type_type,
-        id_type_type,
-        adjacency_row_index_type_type>(ctx, index_uri);
-    CHECK(typed_index.group().get_dimensions() == dimensions);
-    CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_history_index() == 0);
+  auto typed_index = vamana_index<
+      feature_type_type,
+      id_type_type,
+      adjacency_row_index_type_type>(ctx, index_uri);
+  CHECK(typed_index.group().get_dimensions() == dimensions);
+  CHECK(typed_index.group().get_temp_size() == 0);
+  CHECK(typed_index.group().get_history_index() == 0);
 
-    CHECK(typed_index.group().get_base_size() == 0);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 0);
+  CHECK(typed_index.group().get_base_size() == 0);
+  CHECK(typed_index.group().get_ingestion_timestamp() == 0);
 
-    CHECK(typed_index.group().get_all_num_edges().size() == 1);
-    CHECK(typed_index.group().get_all_base_sizes().size() == 1);
-    CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
+  CHECK(typed_index.group().get_all_num_edges().size() == 1);
+  CHECK(typed_index.group().get_all_base_sizes().size() == 1);
+  CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
 
-    CHECK(typed_index.group().get_all_num_edges()[0] == 0);
-    CHECK(typed_index.group().get_all_base_sizes()[0] == 0);
-    CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 0);
-  }
+  CHECK(typed_index.group().get_all_num_edges()[0] == 0);
+  CHECK(typed_index.group().get_all_base_sizes()[0] == 0);
+  CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 0);
+}
 
-  // Train it at timestamp 99.
-  {
-    // We then load this empty index and don't set a timestamp (which means
-    // we'll read from 0 -> max uint64).
-    auto index = IndexVamana(ctx, index_uri);
+// Train it at timestamp 99.
+{
+  // We then load this empty index and don't set a timestamp (which means
+  // we'll read from 0 -> max uint64).
+  auto index = IndexVamana(ctx, index_uri);
 
-    CHECK(index.temporal_policy().timestamp_start() == 0);
-    CHECK(
-        index.temporal_policy().timestamp_end() ==
-        std::numeric_limits<uint64_t>::max());
-    CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  CHECK(index.temporal_policy().timestamp_start() == 0);
+  CHECK(
+      index.temporal_policy().timestamp_end() ==
+      std::numeric_limits<uint64_t>::max());
+  CHECK(index.l_build() == l_build);
+  CHECK(index.r_max_degree() == r_max_degree);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
-        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+  auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+      {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
 
-    auto training_vector_array = FeatureVectorArray(training);
-    index.train(training_vector_array);
-    index.add(training_vector_array);
-    // We then write the index at timestamp 99.
-    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
+  auto training_vector_array = FeatureVectorArray(training);
+  index.train(training_vector_array);
+  index.add(training_vector_array);
+  // We then write the index at timestamp 99.
+  index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
 
-    // This also updates the timestamp of the index - we're now at timestamp 99.
-    CHECK(index.temporal_policy().timestamp_end() == 99);
-    CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  // This also updates the timestamp of the index - we're now at timestamp 99.
+  CHECK(index.temporal_policy().timestamp_end() == 99);
+  CHECK(index.l_build() == l_build);
+  CHECK(index.r_max_degree() == r_max_degree);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
-    auto query_vector_array = FeatureVectorArray(queries);
-    auto&& [scores_vector_array, ids_vector_array] =
-        index.query(query_vector_array, 1);
+  auto queries = ColMajorMatrix<feature_type_type>{
+      {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+  auto query_vector_array = FeatureVectorArray(queries);
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(query_vector_array, 1);
 
-    auto scores = std::span<float>(
-        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-    auto ids = std::span<uint32_t>(
-        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-    CHECK(std::equal(
-        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
-    CHECK(std::equal(
-        ids.begin(), ids.end(), std::vector<int>{1, 2, 3, 4}.begin()));
+  auto scores = std::span<float>(
+      (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  auto ids = std::span<uint32_t>(
+      (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+  CHECK(std::equal(
+      scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+  CHECK(
+      std::equal(ids.begin(), ids.end(), std::vector<int>{1, 2, 3, 4}.begin()));
 
-    auto typed_index = vamana_index<
-        feature_type_type,
-        id_type_type,
-        adjacency_row_index_type_type>(ctx, index_uri);
-    CHECK(typed_index.group().get_dimensions() == dimensions);
-    CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_history_index() == 0);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 99);
-    CHECK(typed_index.group().get_all_num_edges().size() == 1);
-    CHECK(typed_index.group().get_all_base_sizes().size() == 1);
-    CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
+  auto typed_index = vamana_index<
+      feature_type_type,
+      id_type_type,
+      adjacency_row_index_type_type>(ctx, index_uri);
+  CHECK(typed_index.group().get_dimensions() == dimensions);
+  CHECK(typed_index.group().get_temp_size() == 0);
+  CHECK(typed_index.group().get_history_index() == 0);
+  CHECK(typed_index.group().get_ingestion_timestamp() == 99);
+  CHECK(typed_index.group().get_all_num_edges().size() == 1);
+  CHECK(typed_index.group().get_all_base_sizes().size() == 1);
+  CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
 
-    CHECK(typed_index.group().get_all_num_edges()[0] > 0);
-    CHECK(typed_index.group().get_all_base_sizes()[0] == 4);
-    CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 99);
-  }
+  CHECK(typed_index.group().get_all_num_edges()[0] > 0);
+  CHECK(typed_index.group().get_all_base_sizes()[0] == 4);
+  CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 99);
+}
 
-  // Train it at timestamp 100.
-  {
-    // We then load the trained index and don't set a timestamp (which means
-    // we'll load it at timestamp 99).
-    auto index = IndexVamana(ctx, index_uri);
+// Train it at timestamp 100.
+{
+  // We then load the trained index and don't set a timestamp (which means
+  // we'll load it at timestamp 99).
+  auto index = IndexVamana(ctx, index_uri);
 
-    CHECK(index.temporal_policy().timestamp_start() == 0);
-    CHECK(
-        index.temporal_policy().timestamp_end() ==
-        std::numeric_limits<uint64_t>::max());
-    CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  CHECK(index.temporal_policy().timestamp_start() == 0);
+  CHECK(
+      index.temporal_policy().timestamp_end() ==
+      std::numeric_limits<uint64_t>::max());
+  CHECK(index.l_build() == l_build);
+  CHECK(index.r_max_degree() == r_max_degree);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
-        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}},
-        {11, 22, 33, 44, 55}};
+  auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+      {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}},
+      {11, 22, 33, 44, 55}};
 
-    auto training_vector_array = FeatureVectorArray(training);
-    index.train(training_vector_array);
-    index.add(training_vector_array);
-    // We then write the index at timestamp 100.
-    index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 100));
+  auto training_vector_array = FeatureVectorArray(training);
+  index.train(training_vector_array);
+  index.add(training_vector_array);
+  // We then write the index at timestamp 100.
+  index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 100));
 
-    // This also updates the timestamp of the index - we're now at timestamp
-    // 100.
-    CHECK(index.temporal_policy().timestamp_end() == 100);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  // This also updates the timestamp of the index - we're now at timestamp
+  // 100.
+  CHECK(index.temporal_policy().timestamp_end() == 100);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{
-        {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}};
-    auto query_vector_array = FeatureVectorArray(queries);
-    auto&& [scores_vector_array, ids_vector_array] =
-        index.query(query_vector_array, 1);
+  auto queries = ColMajorMatrix<feature_type_type>{
+      {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}};
+  auto query_vector_array = FeatureVectorArray(queries);
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(query_vector_array, 1);
 
-    auto scores = std::span<float>(
-        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-    auto ids = std::span<uint32_t>(
-        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-    CHECK(std::equal(
-        scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0, 0}.begin()));
-    CHECK(std::equal(
-        ids.begin(), ids.end(), std::vector<int>{11, 22, 33, 44, 55}.begin()));
+  auto scores = std::span<float>(
+      (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  auto ids = std::span<uint32_t>(
+      (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+  CHECK(std::equal(
+      scores.begin(), scores.end(), std::vector<int>{0, 0, 0, 0, 0}.begin()));
+  CHECK(std::equal(
+      ids.begin(), ids.end(), std::vector<int>{11, 22, 33, 44, 55}.begin()));
 
-    auto typed_index = vamana_index<
-        feature_type_type,
-        id_type_type,
-        adjacency_row_index_type_type>(ctx, index_uri);
-    CHECK(typed_index.group().get_dimensions() == dimensions);
-    CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_history_index() == 1);
+  auto typed_index = vamana_index<
+      feature_type_type,
+      id_type_type,
+      adjacency_row_index_type_type>(ctx, index_uri);
+  CHECK(typed_index.group().get_dimensions() == dimensions);
+  CHECK(typed_index.group().get_temp_size() == 0);
+  CHECK(typed_index.group().get_history_index() == 1);
 
-    CHECK(typed_index.group().get_base_size() == 5);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 100);
+  CHECK(typed_index.group().get_base_size() == 5);
+  CHECK(typed_index.group().get_ingestion_timestamp() == 100);
 
-    CHECK(typed_index.group().get_all_num_edges().size() == 2);
-    CHECK(typed_index.group().get_all_base_sizes().size() == 2);
-    CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 2);
+  CHECK(typed_index.group().get_all_num_edges().size() == 2);
+  CHECK(typed_index.group().get_all_base_sizes().size() == 2);
+  CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 2);
 
-    CHECK(typed_index.group().get_all_num_edges()[0] > 0);
-    CHECK(typed_index.group().get_all_num_edges()[1] > 0);
-    auto all_base_sizes = typed_index.group().get_all_base_sizes();
-    CHECK(std::equal(
-        all_base_sizes.begin(),
-        all_base_sizes.end(),
-        std::vector<uint64_t>{4, 5}.begin()));
-    auto all_ingestion_timestamps =
-        typed_index.group().get_all_ingestion_timestamps();
-    CHECK(std::equal(
-        all_ingestion_timestamps.begin(),
-        all_ingestion_timestamps.end(),
-        std::vector<uint64_t>{99, 100}.begin()));
-  }
+  CHECK(typed_index.group().get_all_num_edges()[0] > 0);
+  CHECK(typed_index.group().get_all_num_edges()[1] > 0);
+  auto all_base_sizes = typed_index.group().get_all_base_sizes();
+  CHECK(std::equal(
+      all_base_sizes.begin(),
+      all_base_sizes.end(),
+      std::vector<uint64_t>{4, 5}.begin()));
+  auto all_ingestion_timestamps =
+      typed_index.group().get_all_ingestion_timestamps();
+  CHECK(std::equal(
+      all_ingestion_timestamps.begin(),
+      all_ingestion_timestamps.end(),
+      std::vector<uint64_t>{99, 100}.begin()));
+}
 
-  // Load it at timestamp 99 and make sure we can query it correctly.
-  {
-    auto temporal_policy = TemporalPolicy{TimeTravel, 99};
-    auto index = IndexVamana(ctx, index_uri, temporal_policy);
+// Load it at timestamp 99 and make sure we can query it correctly.
+{
+  auto temporal_policy = TemporalPolicy{TimeTravel, 99};
+  auto index = IndexVamana(ctx, index_uri, temporal_policy);
 
-    CHECK(index.temporal_policy().timestamp_end() == 99);
-    CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  CHECK(index.temporal_policy().timestamp_end() == 99);
+  CHECK(index.l_build() == l_build);
+  CHECK(index.r_max_degree() == r_max_degree);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
-    auto query_vector_array = FeatureVectorArray(queries);
-    auto&& [scores_vector_array, ids_vector_array] =
-        index.query(query_vector_array, 1);
+  auto queries = ColMajorMatrix<feature_type_type>{
+      {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+  auto query_vector_array = FeatureVectorArray(queries);
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(query_vector_array, 1);
 
-    auto scores = std::span<float>(
-        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-    auto ids = std::span<uint32_t>(
-        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-    CHECK(std::equal(
-        scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
-    CHECK(std::equal(
-        ids.begin(), ids.end(), std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+  auto scores = std::span<float>(
+      (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  auto ids = std::span<uint32_t>(
+      (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+  CHECK(std::equal(
+      scores.begin(), scores.end(), std::vector<float>{0, 0, 0, 0}.begin()));
+  CHECK(std::equal(
+      ids.begin(), ids.end(), std::vector<uint32_t>{1, 2, 3, 4}.begin()));
 
-    auto typed_index = vamana_index<
-        feature_type_type,
-        id_type_type,
-        adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
-    CHECK(typed_index.group().get_dimensions() == dimensions);
-    CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_history_index() == 0);
+  auto typed_index = vamana_index<
+      feature_type_type,
+      id_type_type,
+      adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
+  CHECK(typed_index.group().get_dimensions() == dimensions);
+  CHECK(typed_index.group().get_temp_size() == 0);
+  CHECK(typed_index.group().get_history_index() == 0);
 
-    CHECK(typed_index.group().get_base_size() == 4);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 99);
+  CHECK(typed_index.group().get_base_size() == 4);
+  CHECK(typed_index.group().get_ingestion_timestamp() == 99);
 
-    CHECK(typed_index.group().get_all_num_edges().size() == 2);
-    CHECK(typed_index.group().get_all_base_sizes().size() == 2);
-    CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 2);
+  CHECK(typed_index.group().get_all_num_edges().size() == 2);
+  CHECK(typed_index.group().get_all_base_sizes().size() == 2);
+  CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 2);
 
-    CHECK(typed_index.group().get_all_num_edges()[0] > 0);
-    CHECK(typed_index.group().get_all_num_edges()[1] > 0);
-    auto all_base_sizes = typed_index.group().get_all_base_sizes();
-    CHECK(std::equal(
-        all_base_sizes.begin(),
-        all_base_sizes.end(),
-        std::vector<uint64_t>{4, 5}.begin()));
-    auto all_ingestion_timestamps =
-        typed_index.group().get_all_ingestion_timestamps();
-    CHECK(std::equal(
-        all_ingestion_timestamps.begin(),
-        all_ingestion_timestamps.end(),
-        std::vector<uint64_t>{99, 100}.begin()));
-  }
+  CHECK(typed_index.group().get_all_num_edges()[0] > 0);
+  CHECK(typed_index.group().get_all_num_edges()[1] > 0);
+  auto all_base_sizes = typed_index.group().get_all_base_sizes();
+  CHECK(std::equal(
+      all_base_sizes.begin(),
+      all_base_sizes.end(),
+      std::vector<uint64_t>{4, 5}.begin()));
+  auto all_ingestion_timestamps =
+      typed_index.group().get_all_ingestion_timestamps();
+  CHECK(std::equal(
+      all_ingestion_timestamps.begin(),
+      all_ingestion_timestamps.end(),
+      std::vector<uint64_t>{99, 100}.begin()));
+}
 
-  // Load it at timestamp 5 (before ingestion) and make sure we can query and be
-  // returned fill values.
-  {
-    auto temporal_policy = TemporalPolicy{TimeTravel, 0};
-    auto index = IndexVamana(ctx, index_uri, temporal_policy);
+// Load it at timestamp 5 (before ingestion) and make sure we can query and be
+// returned fill values.
+{
+  auto temporal_policy = TemporalPolicy{TimeTravel, 0};
+  auto index = IndexVamana(ctx, index_uri, temporal_policy);
 
-    CHECK(index.temporal_policy().timestamp_start() == 0);
-    CHECK(index.temporal_policy().timestamp_end() == 0);
-    CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  CHECK(index.temporal_policy().timestamp_start() == 0);
+  CHECK(index.temporal_policy().timestamp_end() == 0);
+  CHECK(index.l_build() == l_build);
+  CHECK(index.r_max_degree() == r_max_degree);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
-    auto query_vector_array = FeatureVectorArray(queries);
-    auto&& [scores_vector_array, ids_vector_array] =
-        index.query(query_vector_array, 1);
+  auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
+  auto query_vector_array = FeatureVectorArray(queries);
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(query_vector_array, 1);
 
-    auto scores = std::span<float>(
-        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-    auto ids = std::span<uint32_t>(
-        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+  auto scores = std::span<float>(
+      (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  auto ids = std::span<uint32_t>(
+      (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
 
-    CHECK(std::equal(
-        scores.begin(),
-        scores.end(),
-        std::vector<float>{std::numeric_limits<float>::max()}.begin()));
-    CHECK(std::equal(
-        ids.begin(),
-        ids.end(),
-        std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
+  CHECK(std::equal(
+      scores.begin(),
+      scores.end(),
+      std::vector<float>{std::numeric_limits<float>::max()}.begin()));
+  CHECK(std::equal(
+      ids.begin(),
+      ids.end(),
+      std::vector<uint32_t>{std::numeric_limits<uint32_t>::max()}.begin()));
 
-    auto typed_index = vamana_index<
-        feature_type_type,
-        id_type_type,
-        adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
-    CHECK(typed_index.group().get_dimensions() == dimensions);
-    CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_history_index() == 0);
+  auto typed_index = vamana_index<
+      feature_type_type,
+      id_type_type,
+      adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
+  CHECK(typed_index.group().get_dimensions() == dimensions);
+  CHECK(typed_index.group().get_temp_size() == 0);
+  CHECK(typed_index.group().get_history_index() == 0);
 
-    CHECK(typed_index.group().get_base_size() == 4);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 99);
+  CHECK(typed_index.group().get_base_size() == 4);
+  CHECK(typed_index.group().get_ingestion_timestamp() == 99);
 
-    CHECK(typed_index.group().get_all_num_edges().size() == 2);
-    CHECK(typed_index.group().get_all_base_sizes().size() == 2);
-    CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 2);
+  CHECK(typed_index.group().get_all_num_edges().size() == 2);
+  CHECK(typed_index.group().get_all_base_sizes().size() == 2);
+  CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 2);
 
-    CHECK(typed_index.group().get_all_num_edges()[0] > 0);
-    CHECK(typed_index.group().get_all_num_edges()[1] > 0);
-    auto all_base_sizes = typed_index.group().get_all_base_sizes();
-    CHECK(std::equal(
-        all_base_sizes.begin(),
-        all_base_sizes.end(),
-        std::vector<uint64_t>{4, 5}.begin()));
-    auto all_ingestion_timestamps =
-        typed_index.group().get_all_ingestion_timestamps();
-    CHECK(std::equal(
-        all_ingestion_timestamps.begin(),
-        all_ingestion_timestamps.end(),
-        std::vector<uint64_t>{99, 100}.begin()));
-  }
+  CHECK(typed_index.group().get_all_num_edges()[0] > 0);
+  CHECK(typed_index.group().get_all_num_edges()[1] > 0);
+  auto all_base_sizes = typed_index.group().get_all_base_sizes();
+  CHECK(std::equal(
+      all_base_sizes.begin(),
+      all_base_sizes.end(),
+      std::vector<uint64_t>{4, 5}.begin()));
+  auto all_ingestion_timestamps =
+      typed_index.group().get_all_ingestion_timestamps();
+  CHECK(std::equal(
+      all_ingestion_timestamps.begin(),
+      all_ingestion_timestamps.end(),
+      std::vector<uint64_t>{99, 100}.begin()));
+}
 
-  // Clear history for <= 99 and then load at 99, then make sure we cannot
-  // query.
-  {
-    IndexVamana::clear_history(ctx, index_uri, 99);
+// Clear history for <= 99 and then load at 99, then make sure we cannot
+// query.
+{
+  IndexVamana::clear_history(ctx, index_uri, 99);
 
-    auto temporal_policy = TemporalPolicy{TimeTravel, 99};
-    auto index = IndexVamana(ctx, index_uri, temporal_policy);
+  auto temporal_policy = TemporalPolicy{TimeTravel, 99};
+  auto index = IndexVamana(ctx, index_uri, temporal_policy);
 
-    CHECK(index.temporal_policy().timestamp_end() == 99);
-    CHECK(index.l_build() == l_build);
-    CHECK(index.r_max_degree() == r_max_degree);
-    CHECK(index.feature_type_string() == feature_type);
-    CHECK(index.id_type_string() == id_type);
+  CHECK(index.temporal_policy().timestamp_end() == 99);
+  CHECK(index.l_build() == l_build);
+  CHECK(index.r_max_degree() == r_max_degree);
+  CHECK(index.feature_type_string() == feature_type);
+  CHECK(index.id_type_string() == id_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
-    auto query_vector_array = FeatureVectorArray(queries);
-    auto&& [scores_vector_array, ids_vector_array] =
-        index.query(query_vector_array, 1);
+  auto queries = ColMajorMatrix<feature_type_type>{
+      {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+  auto query_vector_array = FeatureVectorArray(queries);
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(query_vector_array, 1);
 
-    auto scores = std::span<float>(
-        (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-    auto ids = std::span<uint32_t>(
-        (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
-    CHECK(scores.size() == 4);
-    CHECK(ids.size() == 4);
-    auto default_score = std::numeric_limits<float>::max();
-    auto default_id = std::numeric_limits<uint32_t>::max();
-    CHECK(std::equal(
-        scores.begin(),
-        scores.end(),
-        std::vector<float>{
-            default_score, default_score, default_score, default_score}
-            .begin()));
-    CHECK(std::equal(
-        ids.begin(),
-        ids.end(),
-        std::vector<uint32_t>{default_id, default_id, default_id, default_id}
-            .begin()));
+  auto scores = std::span<float>(
+      (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  auto ids = std::span<uint32_t>(
+      (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+  CHECK(scores.size() == 4);
+  CHECK(ids.size() == 4);
+  auto default_score = std::numeric_limits<float>::max();
+  auto default_id = std::numeric_limits<uint32_t>::max();
+  CHECK(std::equal(
+      scores.begin(),
+      scores.end(),
+      std::vector<float>{
+          default_score, default_score, default_score, default_score}
+          .begin()));
+  CHECK(std::equal(
+      ids.begin(),
+      ids.end(),
+      std::vector<uint32_t>{default_id, default_id, default_id, default_id}
+          .begin()));
 
-    auto typed_index = vamana_index<
-        feature_type_type,
-        id_type_type,
-        adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
-    CHECK(typed_index.group().get_dimensions() == dimensions);
-    CHECK(typed_index.group().get_temp_size() == 0);
-    CHECK(typed_index.group().get_history_index() == 0);
+  auto typed_index = vamana_index<
+      feature_type_type,
+      id_type_type,
+      adjacency_row_index_type_type>(ctx, index_uri, temporal_policy);
+  CHECK(typed_index.group().get_dimensions() == dimensions);
+  CHECK(typed_index.group().get_temp_size() == 0);
+  CHECK(typed_index.group().get_history_index() == 0);
 
-    CHECK(typed_index.group().get_base_size() == 5);
-    CHECK(typed_index.group().get_ingestion_timestamp() == 100);
+  CHECK(typed_index.group().get_base_size() == 5);
+  CHECK(typed_index.group().get_ingestion_timestamp() == 100);
 
-    CHECK(typed_index.group().get_all_num_edges().size() == 1);
-    CHECK(typed_index.group().get_all_base_sizes().size() == 1);
-    CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
+  CHECK(typed_index.group().get_all_num_edges().size() == 1);
+  CHECK(typed_index.group().get_all_base_sizes().size() == 1);
+  CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
 
-    CHECK(typed_index.group().get_all_num_edges()[0] > 0);
-    auto all_base_sizes = typed_index.group().get_all_base_sizes();
-    CHECK(std::equal(
-        all_base_sizes.begin(),
-        all_base_sizes.end(),
-        std::vector<uint64_t>{5}.begin()));
-    auto all_ingestion_timestamps =
-        typed_index.group().get_all_ingestion_timestamps();
-    CHECK(std::equal(
-        all_ingestion_timestamps.begin(),
-        all_ingestion_timestamps.end(),
-        std::vector<uint64_t>{100}.begin()));
-  }
+  CHECK(typed_index.group().get_all_num_edges()[0] > 0);
+  auto all_base_sizes = typed_index.group().get_all_base_sizes();
+  CHECK(std::equal(
+      all_base_sizes.begin(),
+      all_base_sizes.end(),
+      std::vector<uint64_t>{5}.begin()));
+  auto all_ingestion_timestamps =
+      typed_index.group().get_all_ingestion_timestamps();
+  CHECK(std::equal(
+      all_ingestion_timestamps.begin(),
+      all_ingestion_timestamps.end(),
+      std::vector<uint64_t>{100}.begin()));
+}
 }

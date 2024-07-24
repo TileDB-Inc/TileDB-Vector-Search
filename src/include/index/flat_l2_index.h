@@ -105,7 +105,7 @@ class flat_l2_index {
     // @todo
   }
 
-  auto dimensions() const {
+  uint64_t dimensions() const {
     return _cpo::dimensions(*feature_vectors_);
   }
 

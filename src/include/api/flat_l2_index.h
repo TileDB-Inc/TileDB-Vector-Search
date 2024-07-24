@@ -124,7 +124,7 @@ class IndexFlatL2 {
     index_->remove(ids);
   }
 
-  auto dimensions() {
+  uint64_t dimensions() {
     return _cpo::dimensions(*index_);
   }
 

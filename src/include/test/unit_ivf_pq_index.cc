@@ -47,7 +47,7 @@ struct dummy_pq_index {
   using pq_vector_feature_type = pq_code_type;
   using score_type = float;
 
-  auto dimensions() const {
+  uint64_t dimensions() const {
     return 128;
   }
   uint64_t num_subspaces() const {

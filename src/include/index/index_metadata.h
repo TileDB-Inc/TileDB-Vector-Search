@@ -125,7 +125,7 @@ class base_index_metadata {
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
       // name, member_variable, type, required
       {"temp_size", &temp_size_, TILEDB_INT64, true},
-      {"dimensions", &dimensions_, TILEDB_UINT32, false},
+      {"dimensions", &dimensions_, TILEDB_UINT64, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
   };
