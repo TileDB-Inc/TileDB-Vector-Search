@@ -202,8 +202,8 @@ class ivf_pq_index {
   // Cached information about the pq encoding
   uint64_t num_subspaces_{0};
   uint64_t sub_dimensions_{0};
-  constexpr static const uint64_t bits_per_subspace_{8};
-  constexpr static const uint64_t num_clusters_{256};
+  constexpr static const uint32_t bits_per_subspace_{8};
+  constexpr static const uint32_t num_clusters_{256};
 
   // The feature vectors. These contain the original input vectors, modified
   // with updates and deletions over time. Note that we only use this to
@@ -240,7 +240,7 @@ class ivf_pq_index {
 
   // Parameters for performing kmeans clustering for the ivf index and pq
   // compression.
-  uint64_t max_iterations_{0};
+  uint32_t max_iterations_{0};
   float convergence_tolerance_{0.f};
   float reassign_ratio_{0.f};
 
@@ -291,7 +291,7 @@ class ivf_pq_index {
   ivf_pq_index(
       size_t nlist = 0,
       uint64_t num_subspaces = 16,
-      size_t max_iterations = 2,
+      uint32_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,

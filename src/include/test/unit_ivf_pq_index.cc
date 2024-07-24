@@ -297,7 +297,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
   uint64_t num_subspaces = 16;
-  size_t max_iterationss = 4;
+  uint32_t max_iterationss = 4;
   size_t nprobe = 10;
   size_t k_nn = 10;
   size_t nthreads = 1;
@@ -647,11 +647,11 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   uint64_t dimensions = 4;
   size_t nlist = 1;
   uint64_t num_subspaces = 2;
-  size_t max_iterations = 1;
+  uint32_t max_iterations = 1;
   float convergence_tolerance = 0.000025f;
   float reassign_ratio = 0.09f;
   std::optional<TemporalPolicy> temporal_policy = std::nullopt;
-  uint64_t num_clusters = 4;
+  uint32_t num_clusters = 4;
   using feature_type = float;
   using id_type = uint32_t;
   auto index = ivf_pq_index<feature_type, id_type>(
@@ -730,7 +730,7 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   size_t n_list = 1;
   uint64_t num_subspaces = 1;
   float convergence_convergence_toleranceerance = 0.00003f;
-  size_t max_iterationsations = 3;
+  uint32_t max_iterationsations = 3;
 
   // Write the empty index.
   {

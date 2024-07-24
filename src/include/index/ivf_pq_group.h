@@ -85,7 +85,7 @@ class ivf_pq_group : public base_index_group<index_type> {
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
       uint64_t dimensions = 0,
-      uint64_t num_clusters = 0,
+      uint32_t num_clusters = 0,
       uint64_t num_subspaces = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
@@ -242,21 +242,21 @@ class ivf_pq_group : public base_index_group<index_type> {
   uint64_t get_bits_per_subspace() const {
     return metadata_.bits_per_subspace_;
   }
-  void set_bits_per_subspace(uint64_t bits_per_subspace) {
+  void set_bits_per_subspace(uint32_t bits_per_subspace) {
     metadata_.bits_per_subspace_ = bits_per_subspace;
   }
 
   uint32_t get_num_clusters() const {
     return metadata_.num_clusters_;
   }
-  void set_num_clusters(uint64_t num_clusters) {
+  void set_num_clusters(uint32_t num_clusters) {
     metadata_.num_clusters_ = num_clusters;
   }
 
   uint64_t get_max_iterations() const {
     return metadata_.max_iterations_;
   }
-  void set_max_iterations(uint64_t max_iterations) {
+  void set_max_iterations(uint32_t max_iterations) {
     metadata_.max_iterations_ = max_iterations;
   }
 
