@@ -1342,11 +1342,11 @@ class ivf_pq_index {
     return sub_dimensions_;
   }
 
-  auto bits_per_subspace() const {
+  uint32_t bits_per_subspace() const {
     return bits_per_subspace_;
   }
 
-  auto num_clusters() const {
+  uint32_t num_clusters() const {
     return num_clusters_;
   }
 
@@ -1354,23 +1354,23 @@ class ivf_pq_index {
     return temporal_policy_;
   }
 
-  auto max_iterations() const {
+  uint32_t max_iterations() const {
     return max_iterations_;
   }
 
-  auto convergence_tolerance() const {
+  float convergence_tolerance() const {
     return convergence_tolerance_;
   }
 
-  auto num_threads() const {
+  uint64_t num_threads() const {
     return num_threads_;
   }
 
-  auto reassign_ratio() const {
+  float reassign_ratio() const {
     return reassign_ratio_;
   }
 
-  auto nlist() const {
+  uint64_t nlist() const {
     return num_partitions_;
   }
 
@@ -1387,7 +1387,7 @@ class ivf_pq_index {
    * @param feature_vectors
    * @return
    */
-  auto verify_pq_encoding(
+  double verify_pq_encoding(
       const ColMajorMatrix<feature_type>& feature_vectors) const {
     double total_distance = 0.0;
     double total_normalizer = 0.0;

@@ -82,8 +82,8 @@ class flat_pq_index {
   uint64_t sub_dimensions_{0};
   uint32_t bits_per_subspace_{8};
   uint32_t num_clusters_{256};
-  float tol_ = 0.001;
-  size_t max_iter_ = 16;
+  float convergence_tolerance_ = 0.001;
+  uint32_t max_iterations_ = 16;
   size_t num_threads_ = std::thread::hardware_concurrency();
 
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
@@ -93,8 +93,8 @@ class flat_pq_index {
       {"sub_dimension", &sub_dimensions_, TILEDB_UINT64},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT64},
       {"num_clusters", &num_clusters_, TILEDB_UINT64},
-      {"tol", &tol_, TILEDB_FLOAT32},
-      {"max_iter", &max_iter_, TILEDB_UINT64},
+      {"convergence_tolerance", &convergence_tolerance_, TILEDB_FLOAT32},
+      {"max_iterations", &max_iterations_, TILEDB_UINT64},
       {"num_threads", &num_threads_, TILEDB_UINT64},
   };
 
@@ -215,8 +215,8 @@ class flat_pq_index {
           sub_begin,
           sub_end,
           num_clusters_,
-          tol_,
-          max_iter_,
+          convergence_tolerance_,
+          max_iterations_,
           num_threads_);
 
       auto x = 0;
@@ -664,13 +664,14 @@ class flat_pq_index {
                 << " != " << rhs.num_clusters_ << std::endl;
       return false;
     }
-    if (tol_ != rhs.tol_) {
-      std::cout << "tol_ " << tol_ << " != " << rhs.tol_ << std::endl;
+    if (convergence_tolerance_ != rhs.convergence_tolerance_) {
+      std::cout << "convergence_tolerance_ " << convergence_tolerance_
+                << " != " << rhs.convergence_tolerance_ << std::endl;
       return false;
     }
-    if (max_iter_ != rhs.max_iter_) {
-      std::cout << "max_iter_ " << max_iter_ << " != " << rhs.max_iter_
-                << std::endl;
+    if (max_iterations_ != rhs.max_iterations_) {
+      std::cout << "max_iterations_ " << max_iterations_
+                << " != " << rhs.max_iterations_ << std::endl;
       return false;
     }
     if (num_threads_ != rhs.num_threads_) {
