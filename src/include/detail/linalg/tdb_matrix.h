@@ -70,12 +70,9 @@ class tdbBlockedMatrix : public MatrixBase {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  //  using view_type = Base;
-
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  protected:
-  //  using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
   log_timer constructor_timer{"tdbBlockedMatrix constructor"};

@@ -205,7 +205,7 @@ TEST_CASE("flat qv simple case", "[flat qv]") {
 TEST_CASE(
     "flat qv all or nothing, tdbMatrix with siftsmall arrays", "[flat qv]") {
   tiledb::Context ctx;
-  size_t k_nn = 10;
+  int k_nn = 10;
 
   auto array_inputs = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
       ctx, siftsmall_inputs_uri);

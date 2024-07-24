@@ -74,13 +74,13 @@ TEMPLATE_LIST_TEST_CASE(
   }
   SECTION("values, copy") {
     auto b = std::move(a);
-    for (size_t i = 0; i < a.num_rows(); ++i) {
+    for (size_t i = 0; i < b.num_rows(); ++i) {
       CHECK((size_t)b(i) == i + 1);
     }
-    for (size_t i = 0; i < a.num_rows(); ++i) {
+    for (size_t i = 0; i < b.num_rows(); ++i) {
       b(i) *= b[i];
     }
-    for (size_t i = 0; i < a.num_rows(); ++i) {
+    for (size_t i = 0; i < b.num_rows(); ++i) {
       CHECK((size_t)b(i) == (i + 1) * (i + 1));
     }
   }

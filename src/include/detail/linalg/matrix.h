@@ -61,8 +61,6 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  //  using span_type = std::span<T>;
-
  public:
   MatrixView(const Base& rhs)
       : Base(rhs) {
@@ -137,7 +135,6 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  //  using view_type = Matrix;
   using span_type = std::span<T>;
 
  protected:
