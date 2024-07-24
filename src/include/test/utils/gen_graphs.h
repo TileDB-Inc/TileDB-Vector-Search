@@ -214,7 +214,6 @@ auto normalize_matrix(
     for (size_t j = 0; j < from.num_cols(); ++j) {
       auto foo = from(i, j) - min;
       auto bar = max - min;
-      auto baz = foo / bar;
       to(i, j) =
           (T)(((max_val - min_val) * ((from(i, j) - min) / (max - min))) +
               min_val);
