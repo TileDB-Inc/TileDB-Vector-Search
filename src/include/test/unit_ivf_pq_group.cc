@@ -74,8 +74,8 @@ TEST_CASE("write constructor - create and open", "[ivf_pq_group]") {
   }
 
   uint64_t dimensions = 92134;
-  uint32_t num_clusters = 34239;
-  uint64_t num_subspaces = 3343;
+  size_t num_clusters = 34239;
+  size_t num_subspaces = 3343;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,
@@ -114,7 +114,7 @@ TEST_CASE("write constructor - create and read", "[ivf_pq_group]") {
   {
     uint64_t dimensions = 10;
     auto num_clusters = 11;
-    uint64_t num_subspaces = 12;
+    auto num_subspaces = 12;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
         ctx,
         tmp_uri,
@@ -155,7 +155,7 @@ TEST_CASE("write constructor - invalid create and read", "[ivf_pq_group]") {
   {
     uint64_t dimensions = 100;
     auto num_clusters = 110;
-    uint64_t num_subspaces = 120;
+    auto num_subspaces = 120;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
         ctx,
         tmp_uri,
@@ -192,13 +192,32 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
   size_t expected_partitions = 42;
   size_t expected_temp_size = 314159;
   uint64_t dimensions = 128;
-  uint32_t num_clusters = 110;
-  uint64_t num_subspaces = 120;
-}
+  size_t num_clusters = 110;
+  size_t num_subspaces = 120;
 
-size_t offset = 0;
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(tmp_uri)) {
+    vfs.remove_dir(tmp_uri);
+  }
 
-{
+  size_t offset = 0;
+
+  {
+    ivf_pq_group x = ivf_pq_group<dummy_index>(
+        ctx,
+        tmp_uri,
+        TILEDB_WRITE,
+        {},
+        "",
+        dimensions,
+        num_clusters,
+        num_subspaces);
+    x.append_num_partitions(0);
+    x.append_base_size(0);
+    x.append_ingestion_timestamp(0);
+  }
+
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,
       tmp_uri,
@@ -208,275 +227,261 @@ size_t offset = 0;
       dimensions,
       num_clusters,
       num_subspaces);
-  x.append_num_partitions(0);
-  x.append_base_size(0);
-  x.append_ingestion_timestamp(0);
-}
+  CHECK(x.get_dimensions() == dimensions);
 
-ivf_pq_group x = ivf_pq_group<dummy_index>(
-    ctx,
-    tmp_uri,
-    TILEDB_WRITE,
-    {},
-    "",
-    dimensions,
-    num_clusters,
-    num_subspaces);
-CHECK(x.get_dimensions() == dimensions);
+  SECTION("Just set") {
+    SECTION("After create") {
+    }
 
-SECTION("Just set") {
-  SECTION("After create") {
+    SECTION("After create and read") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    x.set_ingestion_timestamp(expected_ingestion);
+    x.set_base_size(expected_base);
+    x.set_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimensions(dimensions);
   }
 
-  SECTION("After create and read") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+  SECTION("Just append") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    x.append_ingestion_timestamp(expected_ingestion);
+    x.append_base_size(expected_base);
+    x.append_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimensions(dimensions);
   }
 
-  SECTION("After create and write") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
+  SECTION("Set then append") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    x.set_ingestion_timestamp(expected_ingestion);
+    x.set_base_size(expected_base);
+    x.set_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimensions(dimensions);
+
+    offset = 13;
+
+    x.append_ingestion_timestamp(expected_ingestion + offset);
+    x.append_base_size(expected_base + offset);
+    x.append_num_partitions(expected_partitions + offset);
+    x.set_temp_size(expected_temp_size + offset);
+    x.set_dimensions(dimensions + offset);
+
+    CHECK(size(x.get_all_ingestion_timestamps()) == 2);
+    CHECK(size(x.get_all_base_sizes()) == 2);
+    CHECK(size(x.get_all_num_partitions()) == 2);
   }
 
-  SECTION("After create and write and read") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+  SECTION("Set then set") {
+    SECTION("After create") {
+    }
+
+    SECTION("After create and read") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and write") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    SECTION("After create and write and read") {
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+    }
+
+    SECTION("After create and read and write") {
+      x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
+      x = ivf_pq_group<dummy_index>(
+          ctx,
+          tmp_uri,
+          TILEDB_WRITE,
+          {},
+          "",
+          dimensions,
+          num_clusters,
+          num_subspaces);
+      CHECK(x.get_dimensions() == dimensions);
+    }
+
+    x.set_ingestion_timestamp(expected_ingestion);
+    x.set_base_size(expected_base);
+    x.set_num_partitions(expected_partitions);
+    x.set_temp_size(expected_temp_size);
+    x.set_dimensions(dimensions);
+
+    offset = 13;
+
+    x.set_ingestion_timestamp(expected_ingestion + offset);
+    x.set_base_size(expected_base + offset);
+    x.set_num_partitions(expected_partitions + offset);
+    x.set_temp_size(expected_temp_size + offset);
+    x.set_dimensions(dimensions + offset);
+
+    CHECK(size(x.get_all_ingestion_timestamps()) == 1);
+    CHECK(size(x.get_all_base_sizes()) == 1);
+    CHECK(size(x.get_all_num_partitions()) == 1);
   }
 
-  SECTION("After create and read and write") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-  }
-
-  x.set_ingestion_timestamp(expected_ingestion);
-  x.set_base_size(expected_base);
-  x.set_num_partitions(expected_partitions);
-  x.set_temp_size(expected_temp_size);
-  x.set_dimensions(dimensions);
-}
-
-SECTION("Just append") {
-  SECTION("After create") {
-  }
-
-  SECTION("After create and read") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-  }
-
-  SECTION("After create and write") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-  }
-
-  SECTION("After create and write and read") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-  }
-
-  SECTION("After create and read and write") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-  }
-
-  x.append_ingestion_timestamp(expected_ingestion);
-  x.append_base_size(expected_base);
-  x.append_num_partitions(expected_partitions);
-  x.set_temp_size(expected_temp_size);
-  x.set_dimensions(dimensions);
-}
-
-SECTION("Set then append") {
-  SECTION("After create") {
-  }
-
-  SECTION("After create and read") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-  }
-
-  SECTION("After create and write") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-  }
-
-  SECTION("After create and write and read") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-  }
-
-  SECTION("After create and read and write") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-  }
-
-  x.set_ingestion_timestamp(expected_ingestion);
-  x.set_base_size(expected_base);
-  x.set_num_partitions(expected_partitions);
-  x.set_temp_size(expected_temp_size);
-  x.set_dimensions(dimensions);
-
-  offset = 13;
-
-  x.append_ingestion_timestamp(expected_ingestion + offset);
-  x.append_base_size(expected_base + offset);
-  x.append_num_partitions(expected_partitions + offset);
-  x.set_temp_size(expected_temp_size + offset);
-  x.set_dimensions(dimensions + offset);
-
-  CHECK(size(x.get_all_ingestion_timestamps()) == 2);
-  CHECK(size(x.get_all_base_sizes()) == 2);
-  CHECK(size(x.get_all_num_partitions()) == 2);
-}
-
-SECTION("Set then set") {
-  SECTION("After create") {
-  }
-
-  SECTION("After create and read") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-  }
-
-  SECTION("After create and write") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-  }
-
-  SECTION("After create and write and read") {
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-  }
-
-  SECTION("After create and read and write") {
-    x = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
-    x = ivf_pq_group<dummy_index>(
-        ctx,
-        tmp_uri,
-        TILEDB_WRITE,
-        {},
-        "",
-        dimensions,
-        num_clusters,
-        num_subspaces);
-    CHECK(x.get_dimensions() == dimensions);
-  }
-
-  x.set_ingestion_timestamp(expected_ingestion);
-  x.set_base_size(expected_base);
-  x.set_num_partitions(expected_partitions);
-  x.set_temp_size(expected_temp_size);
-  x.set_dimensions(dimensions);
-
-  offset = 13;
-
-  x.set_ingestion_timestamp(expected_ingestion + offset);
-  x.set_base_size(expected_base + offset);
-  x.set_num_partitions(expected_partitions + offset);
-  x.set_temp_size(expected_temp_size + offset);
-  x.set_dimensions(dimensions + offset);
-
-  CHECK(size(x.get_all_ingestion_timestamps()) == 1);
-  CHECK(size(x.get_all_base_sizes()) == 1);
-  CHECK(size(x.get_all_num_partitions()) == 1);
-}
-
-CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
-CHECK(x.get_previous_base_size() == expected_base + offset);
-CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
-CHECK(x.get_temp_size() == expected_temp_size + offset);
-CHECK(x.get_dimensions() == dimensions + offset);
+  CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
+  CHECK(x.get_previous_base_size() == expected_base + offset);
+  CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
+  CHECK(x.get_temp_size() == expected_temp_size + offset);
+  CHECK(x.get_dimensions() == dimensions + offset);
 }
 
 TEST_CASE("storage version", "[ivf_pq_group]") {
@@ -494,8 +499,8 @@ TEST_CASE("storage version", "[ivf_pq_group]") {
   size_t expected_partitions = 200;
   size_t expected_temp_size = 11;
   uint64_t dimensions = 19238;
-  uint32_t num_clusters = 110;
-  uint64_t num_subspaces = 120;
+  size_t num_clusters = 110;
+  size_t num_subspaces = 120;
   size_t offset = 2345;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
@@ -574,8 +579,8 @@ TEST_CASE("mismatched storage version", "[ivf_pq_group]") {
   }
 
   uint64_t dimensions = 4;
-  uint32_t num_clusters = 4;
-  uint64_t num_subspaces = 1;
+  size_t num_clusters = 4;
+  size_t num_subspaces = 1;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,
@@ -609,8 +614,8 @@ TEST_CASE("clear history", "[ivf_pq_group]") {
   }
 
   uint64_t dimensions = 19238;
-  uint32_t num_clusters = 110;
-  uint64_t num_subspaces = 120;
+  size_t num_clusters = 110;
+  size_t num_subspaces = 120;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,

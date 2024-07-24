@@ -253,7 +253,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.num_clusters_ = num_clusters;
   }
 
-  uint64_t get_max_iterations() const {
+  uint32_t get_max_iterations() const {
     return metadata_.max_iterations_;
   }
   void set_max_iterations(uint32_t max_iterations) {
