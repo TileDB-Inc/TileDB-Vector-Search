@@ -730,7 +730,7 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   size_t n_list = 1;
   uint64_t num_subspaces = 1;
   float convergence_convergence_toleranceerance = 0.00003f;
-  uint32_t max_iterationsations = 3;
+  uint32_t max_iterations = 3;
 
   // Write the empty index.
   {

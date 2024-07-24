@@ -564,6 +564,9 @@ class IndexIVFPQ {
   // clang-format off
   using constructor_function = std::function<std::unique_ptr<index_base>(size_t, uint32_t, uint64_t, float, float, std::optional<TemporalPolicy>)>;
   using table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, constructor_function>;
+  static const table_type dispatch_table;
+
+  using uri_constructor_function = std::function<std::unique_ptr<index_base>(const tiledb::Context&, const std::string&, std::optional<TemporalPolicy>)>;
   using uri_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, uri_constructor_function>;
   static const uri_table_type uri_dispatch_table;
 
