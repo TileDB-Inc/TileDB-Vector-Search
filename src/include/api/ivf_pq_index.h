@@ -116,11 +116,11 @@ class IndexIVFPQ {
         } else if (key == "partitioning_index_type") {
           partitioning_index_datatype_ = string_to_datatype(value);
         } else if (key == "distance_metric") {
-          try {
-            distance_metric_ = parseAndValidateDistanceMetric(value);
-          } catch (const std::runtime_error& e) {
-            std::cerr << e.what() << std::endl;
-          }
+          distance_metric_ = parseAndValidateDistanceMetric(
+              value,
+              [](DistanceMetric dm) { return dm == DistanceMetric::L2; },
+              "Invalid distance metric for IVF_PQ");
+
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }

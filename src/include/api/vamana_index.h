@@ -105,14 +105,10 @@ class IndexVamana {
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
         } else if (key == "distance_metric") {
-          try {
-            DistanceMetric distance_metric = parseAndValidateDistanceMetric(
-                value,
-                [](DistanceMetric dm) { return dm == DistanceMetric::L2; },
-                "Invalid distance metric for Vamana");
-          } catch (const std::runtime_error& e) {
-            std::cerr << e.what() << std::endl;
-          }
+          distance_metric_ = parseAndValidateDistanceMetric(
+              value,
+              [](DistanceMetric dm) { return dm == DistanceMetric::L2; },
+              "Invalid distance metric for Vamana");
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -144,7 +140,7 @@ class IndexVamana {
     index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
     l_build_ = index_->l_build();
     r_max_degree_ = index_->r_max_degree();
-    distance_metric = index_->distance_metric();
+    distance_metric_ = index_->distance_metric();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -186,7 +182,7 @@ class IndexVamana {
         r_max_degree_,
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
                  std::nullopt,
-        distance_metric);
+        distance_metric_);
     index_->train(training_set);
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
@@ -509,7 +505,7 @@ class IndexVamana {
   static constexpr tiledb_datatype_t adjacency_row_index_datatype_{
       TILEDB_UINT64};
   std::unique_ptr<index_base> index_;
-  DistanceMetric distance_metric;
+  DistanceMetric distance_metric_;
 };
 
 // clang-format off
