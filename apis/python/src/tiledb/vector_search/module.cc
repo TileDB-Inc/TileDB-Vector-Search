@@ -105,8 +105,9 @@ static void declareColMajorMatrix(py::module& mod, std::string const& suffix) {
         py::format_descriptor<T>::format(), /* Python struct-style format
                                                descriptor */
         2,                                  /* Number of dimensions */
-        { static_cast<size_t>(m.num_rows()),  static_cast<size_t>(m.num_cols())},       /* Buffer dimensions */
-        {sizeof(T), sizeof(T) *  static_cast<size_t>(m.num_rows())});
+        {static_cast<size_t>(m.num_rows()),
+         static_cast<size_t>(m.num_cols())}, /* Buffer dimensions */
+        {sizeof(T), sizeof(T) * static_cast<size_t>(m.num_rows())});
   });
 }
 
@@ -313,7 +314,8 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
          size_t start_pos,
          size_t end_pos,
          size_t nthreads,
-         uint64_t timestamp) -> int {
+         uint64_t timestamp,
+         size_t partition_start) -> int {
         return detail::ivf::ivf_index<T, uint64_t, float>(
             ctx,
             input_vectors,
@@ -326,7 +328,8 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp);
+            timestamp,
+            partition_start);
       },
       py::keep_alive<1, 2>());
 }
@@ -348,7 +351,8 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
          size_t start_pos,
          size_t end_pos,
          size_t nthreads,
-         uint64_t timestamp) -> int {
+         uint64_t timestamp,
+         size_t partition_start) -> int {
         return detail::ivf::ivf_index<T, uint64_t, float>(
             ctx,
             input_vectors_uri,
@@ -361,7 +365,8 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp);
+            timestamp,
+            partition_start);
       },
       py::keep_alive<1, 2>());
 }

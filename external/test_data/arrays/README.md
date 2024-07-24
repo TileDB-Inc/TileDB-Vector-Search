@@ -1,5 +1,7 @@
 ### Arrays
+
 This directory holds TileDB Array's created from various data sources. To create the siftsmall array, run the following command:
+
 ```cpp
 auto siftsmall_inputs = read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
 if (vfs.is_dir(sift_inputs_uri)) {

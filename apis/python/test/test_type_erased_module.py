@@ -1,19 +1,16 @@
-import logging
-
-import numpy as np
-from tiledb.vector_search.utils import load_ivecs
 from array_paths import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
-from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.utils import to_temporal_policy
+from tiledb.vector_search.utils import load_ivecs
 
 ctx = vspy.Ctx({})
 
+
 def test_foo():
     a = load_ivecs(siftsmall_groundtruth_file)
-    print('a.shape:', a.shape)
-    print('a:', a)
+    print("a.shape:", a.shape)
+    print("a:", a)
+
 
 # def test_construct_FeatureVector():
 #     logging.info(f"siftsmall_ids_uri = {siftsmall_ids_uri}")

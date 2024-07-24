@@ -30,15 +30,15 @@ def load_as_matrix(
     # If the user passes a tiledb python Config object convert to a dictionary
     if isinstance(config, tiledb.Config):
         config = dict(config)
-    
-    print('[module@load_as_matrix] size', size, type(size))
+
+    print("[module@load_as_matrix] size", size, type(size))
 
     if ctx is None:
         ctx = vspy.Ctx(config)
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
-    print('[module@load_as_matrix] dtype', dtype)
+    print("[module@load_as_matrix] dtype", dtype)
     # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then
     # we'll read to the column domain length.
     if dtype == np.float32:
@@ -178,6 +178,7 @@ def ivf_index_tdb(
     id_uri: str,
     start: int = 0,
     end: int = 0,
+    partition_start: int = 0,
     nthreads: int = 0,
     timestamp: int = 0,
     config: Dict = None,
@@ -201,6 +202,7 @@ def ivf_index_tdb(
             end,
             nthreads,
             timestamp,
+            partition_start,
         ]
     )
 
@@ -225,6 +227,7 @@ def ivf_index(
     id_uri: str,
     start: int = 0,
     end: int = 0,
+    partition_start: int = 0,
     nthreads: int = 0,
     timestamp: int = 0,
     config: Dict = None,
@@ -248,6 +251,7 @@ def ivf_index(
             end,
             nthreads,
             timestamp,
+            partition_start,
         ]
     )
 

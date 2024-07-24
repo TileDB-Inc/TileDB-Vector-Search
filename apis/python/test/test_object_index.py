@@ -144,25 +144,64 @@ class TestReader(ObjectReader):
         return {"object": objects, "external_id": external_ids}
 
 
-def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset, config=None):
+def assert_equal(
+    index_type: str,
+    ids: np.array,
+    expected_ids: np.array,
+    ivf_pq_accuracy_threshold: float,
+):
+    """
+    IVF_PQ index has a lower recall rate than other indexes b/c of PQ-encoding, so we need to lower
+    the threshold.
+
+    Parameters
+    ----------
+    index_type: str
+        The index type.
+    ids: np.array
+        The ids returned by the query.
+    expected_ids: np.array
+        The expected ids.
+    ivf_pq_accuracy_threshold: float
+        The minimum fraction of expected_ids that must be in ids.
+    """
+    assert len(ids) == len(expected_ids)
+    if index_type == "IVF_PQ":
+        matches = np.intersect1d(ids, expected_ids)
+        assert len(matches) / len(ids) >= ivf_pq_accuracy_threshold
+        return
+
+    assert np.array_equiv(ids, expected_ids)
+
+
+def evaluate_query(
+    index_type: str, index_uri, query_kwargs, dim_id, vector_dim_offset, config=None
+):
     v_id = dim_id - vector_dim_offset
+
     index = object_index.ObjectIndex(uri=index_uri, config=config)
     distances, objects, metadata = index.query(
-        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=21, **query_kwargs
     )
-    assert np.array_equiv(
+    assert_equal(
+        index_type,
         np.unique(objects["external_id"]),
-        np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2]),
+        np.array([v_id + i for i in range(-10, 11)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
+
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
-        k=5,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
     )
-    assert np.array_equiv(
-        np.unique(object_ids), np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2])
+    assert_equal(
+        index_type,
+        np.unique(object_ids),
+        np.array([v_id + i for i in range(-10, 11)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
 
     def df_filter(row):
@@ -171,66 +210,84 @@ def evaluate_query(index_uri, query_kwargs, dim_id, vector_dim_offset, config=No
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_df_filter_fn=df_filter,
-        k=5,
+        k=21,
         **query_kwargs,
     )
-    assert np.array_equiv(
-        objects["external_id"], np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    assert_equal(
+        index_type,
+        np.unique(objects["external_id"]),
+        np.array([v_id + i for i in range(0, 21)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_df_filter_fn=df_filter,
-        k=5,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
     )
-    assert np.array_equiv(
-        object_ids, np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    assert_equal(
+        index_type,
+        np.unique(object_ids),
+        np.array([v_id + i for i in range(0, 21)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
 
     index = object_index.ObjectIndex(
         uri=index_uri, load_metadata_in_memory=False, config=config
     )
     distances, objects, metadata = index.query(
-        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=5, **query_kwargs
+        {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=21, **query_kwargs
     )
-    assert np.array_equiv(
+    assert_equal(
+        index_type,
         np.unique(objects["external_id"]),
-        np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2]),
+        np.array([v_id + i for i in range(-10, 11)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
+
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
-        k=5,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
     )
-    assert np.array_equiv(
-        np.unique(object_ids), np.array([v_id - 2, v_id - 1, v_id, v_id + 1, v_id + 2])
+    assert_equal(
+        index_type,
+        np.unique(object_ids),
+        np.array([v_id + i for i in range(-10, 11)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_array_cond=f"test_attr >= {dim_id}",
-        k=5,
+        k=21,
         **query_kwargs,
     )
-    assert np.array_equiv(
-        objects["external_id"], np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    assert_equal(
+        index_type,
+        np.unique(objects["external_id"]),
+        np.array([v_id + i for i in range(0, 21)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
 
     distances, object_ids = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])},
         metadata_array_cond=f"test_attr >= {dim_id}",
-        k=5,
+        k=21,
         return_objects=False,
         return_metadata=False,
         **query_kwargs,
     )
-    assert np.array_equiv(
-        object_ids, np.array([v_id, v_id + 1, v_id + 2, v_id + 3, v_id + 4])
+    assert_equal(
+        index_type,
+        np.unique(object_ids),
+        np.array([v_id + i for i in range(0, 21)]),
+        ivf_pq_accuracy_threshold=0.8,
     )
 
 
@@ -256,12 +313,8 @@ def test_object_index(tmp_path):
 
         # Check initial ingestion
         index.update_index(partitions=10)
-
-        # TODO(SC-48908): Fix IVF_PQ with object index queries and remove.
-        if index_type == "IVF_PQ":
-            continue
-
         evaluate_query(
+            index_type=index_type,
             index_uri=index_uri,
             query_kwargs={"nprobe": 10, "l_search": 250},
             dim_id=42,
@@ -272,6 +325,7 @@ def test_object_index(tmp_path):
         index = object_index.ObjectIndex(uri=index_uri)
         index.update_index(partitions=10)
         evaluate_query(
+            index_type=index_type,
             index_uri=index_uri,
             query_kwargs={"nprobe": 10, "l_search": 500},
             dim_id=42,
@@ -288,6 +342,7 @@ def test_object_index(tmp_path):
         index.update_object_reader(reader)
         index.update_index(partitions=10)
         evaluate_query(
+            index_type=index_type,
             index_uri=index_uri,
             query_kwargs={"nprobe": 10, "l_search": 500},
             dim_id=1042,
@@ -304,6 +359,7 @@ def test_object_index(tmp_path):
         index.update_object_reader(reader)
         index.update_index(partitions=10)
         evaluate_query(
+            index_type=index_type,
             index_uri=index_uri,
             query_kwargs={"nprobe": 10, "l_search": 500},
             dim_id=2042,
@@ -351,6 +407,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         config=config,
     )
     evaluate_query(
+        index_type="IVF_FLAT",
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
         dim_id=42,
@@ -381,6 +438,7 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         config=config,
     )
     evaluate_query(
+        index_type="IVF_FLAT",
         index_uri=index_uri,
         query_kwargs={"nprobe": 10},
         dim_id=1042,
@@ -409,6 +467,7 @@ def test_object_index_flat(tmp_path):
     # Check initial ingestion
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=42,
@@ -419,6 +478,7 @@ def test_object_index_flat(tmp_path):
     index = object_index.ObjectIndex(uri=index_uri)
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=42,
@@ -435,6 +495,7 @@ def test_object_index_flat(tmp_path):
     index.update_object_reader(reader)
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=1042,
@@ -451,6 +512,7 @@ def test_object_index_flat(tmp_path):
     index.update_object_reader(reader)
     index.update_index()
     evaluate_query(
+        index_type="FLAT",
         index_uri=index_uri,
         query_kwargs={},
         dim_id=2042,

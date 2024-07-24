@@ -67,7 +67,8 @@ int ivf_index(
     size_t start_pos,
     size_t end_pos,
     size_t nthreads,
-    uint64_t timestamp) {
+    uint64_t timestamp,
+    size_t partition_start = 0) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -190,7 +191,8 @@ int ivf_index(
           temporal_policy);
     }
     if (index_uri != "") {
-      write_vector(ctx, indices, index_uri, 0, false, temporal_policy);
+      write_vector(
+          ctx, indices, index_uri, partition_start, false, temporal_policy);
     }
     if (id_uri != "") {
       write_vector(
@@ -218,7 +220,8 @@ int ivf_index(
     size_t start_pos = 0,
     size_t end_pos = 0,
     size_t nthreads = 0,
-    uint64_t timestamp = 0) {
+    uint64_t timestamp = 0,
+    size_t partition_start = 0) {
   TemporalPolicy temporal_policy = (timestamp == 0) ?
                                        TemporalPolicy() :
                                        TemporalPolicy(TimeTravel, timestamp);
@@ -253,7 +256,8 @@ int ivf_index(
       start_pos,
       end_pos,
       nthreads,
-      timestamp);
+      timestamp,
+      partition_start);
 }
 
 /**
@@ -272,7 +276,8 @@ int ivf_index(
     size_t start_pos = 0,
     size_t end_pos = 0,
     size_t nthreads = 0,
-    uint64_t timestamp = 0) {
+    uint64_t timestamp = 0,
+    size_t partition_start = 0) {
   // Read all rows from column `start_pos` -> `end_pos`. Set no upper_bound.
   auto input_vectors = tdbColMajorMatrix<FeatureType>(
       ctx,
@@ -296,7 +301,8 @@ int ivf_index(
       start_pos,
       end_pos,
       nthreads,
-      timestamp);
+      timestamp,
+      partition_start);
 }
 
 /*
@@ -317,7 +323,8 @@ int ivf_index(
     size_t start_pos = 0,
     size_t end_pos = 0,
     size_t nthreads = 0,
-    uint64_t timestamp = 0) {
+    uint64_t timestamp = 0,
+    size_t partition_start = 0) {
   std::vector<IdsType> external_ids;
   if (external_ids_uri.empty()) {
     external_ids = std::vector<IdsType>(input_vectors.num_cols());
@@ -338,7 +345,8 @@ int ivf_index(
       start_pos,
       end_pos,
       nthreads,
-      timestamp);
+      timestamp,
+      partition_start);
 }
 
 }  // namespace detail::ivf

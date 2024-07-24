@@ -196,7 +196,6 @@ class tdbBlockedMatrixWithIds
           "Error computing IDs to load: " + std::to_string(elements_to_load));
     }
 
-
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(this->ctx_, *ids_array_);
     subarray.add_range<size_type>(

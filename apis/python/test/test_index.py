@@ -1,28 +1,14 @@
 import json
-import time
 
 import numpy as np
-import pytest
 from array_paths import *
 from common import *
-from common import load_metadata
 
 from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
-from tiledb.vector_search import ivf_flat_index
-from tiledb.vector_search import ivf_pq_index
-from tiledb.vector_search import vamana_index
-from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import DATASET_TYPE
-from tiledb.vector_search.index import create_metadata
-from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
-from tiledb.vector_search.ivf_pq_index import IVFPQIndex
-from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
-from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.vamana_index import VamanaIndex
 
 
 def query_and_check_distances(
@@ -122,11 +108,12 @@ def test_flat_index(tmp_path):
     Index.delete_index(uri=uri, config={})
     assert vfs.dir_size(uri) == 0
 
+
 def test_array(tmp_path):
     return
     tile = 1000
     index_uri = os.path.join(tmp_path, "test_array")
-    
+
     ids_array_rows_dim = tiledb.Dim(
         name="rows",
         # 616 works, 615 fails.
@@ -148,6 +135,7 @@ def test_array(tmp_path):
         tile_order="col-major",
     )
     tiledb.Array.create(index_uri, ids_schema)
+
 
 # def test_ivf_flat_index(tmp_path):
 #     partitions = 10

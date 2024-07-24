@@ -36,7 +36,7 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 //
-//TEMPLATE_TEST_CASE(
+// TEMPLATE_TEST_CASE(
 //    "constructors",
 //    "[tdb_matrix_with_ids]",
 //    float,
@@ -50,7 +50,8 @@
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
 //  std::string tmp_ids_uri =
-//      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+//      (std::filesystem::temp_directory_path() /
+//      "tmp_tdb_ids_matrix").string();
 //  int offset = 13;
 //  size_t Mrows = 200;
 //  size_t Ncols = 500;
@@ -101,12 +102,13 @@
 //  }
 //}
 //
-//TEST_CASE("different types", "[tdb_matrix_with_ids]") {
+// TEST_CASE("different types", "[tdb_matrix_with_ids]") {
 //  tiledb::Context ctx;
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
 //  std::string tmp_ids_uri =
-//      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+//      (std::filesystem::temp_directory_path() /
+//      "tmp_tdb_ids_matrix").string();
 //  int offset = 13;
 //  size_t Mrows = 200;
 //  size_t Ncols = 500;
@@ -142,13 +144,14 @@
 //  }
 //}
 //
-//TEMPLATE_TEST_CASE(
+// TEMPLATE_TEST_CASE(
 //    "assign to matrix", "[tdb_matrix_with_ids]", float, uint8_t) {
 //  tiledb::Context ctx;
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
 //  std::string tmp_ids_uri =
-//      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+//      (std::filesystem::temp_directory_path() /
+//      "tmp_tdb_ids_matrix").string();
 //  int offset = 123;
 //  size_t Mrows = 200;
 //  size_t Ncols = 500;
@@ -236,12 +239,13 @@ TEST_CASE("load from uri", "[tdb_matrix_with_ids]") {
   CHECK(qk.num_ids() == num_queries);
 }
 //
-//TEST_CASE("empty matrix", "[tdb_matrix_with_ids]") {
+// TEST_CASE("empty matrix", "[tdb_matrix_with_ids]") {
 //  tiledb::Context ctx;
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
 //  std::string tmp_ids_uri =
-//      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+//      (std::filesystem::temp_directory_path() /
+//      "tmp_tdb_ids_matrix").string();
 //  size_t matrix_dimension{128};
 //  int32_t matrix_domain{1000};
 //  int32_t tile_extent{100};
@@ -289,23 +293,20 @@ TEST_CASE("load from uri", "[tdb_matrix_with_ids]") {
 //
 //  {
 //    // No constraints.
-//    auto X = tdbColMajorMatrixWithIds<float>(ctx, tmp_matrix_uri, tmp_ids_uri);
-//    X.load();
-//    CHECK(X.num_cols() == 0);
-//    CHECK(num_vectors(X) == 0);
-//    CHECK(X.num_rows() == 0);
-//    CHECK(dimensions(X) == 0);
-//    CHECK(X.num_ids() == 0);
-//    CHECK(X.raveled_ids().size() == 0);
+//    auto X = tdbColMajorMatrixWithIds<float>(ctx, tmp_matrix_uri,
+//    tmp_ids_uri); X.load(); CHECK(X.num_cols() == 0); CHECK(num_vectors(X) ==
+//    0); CHECK(X.num_rows() == 0); CHECK(dimensions(X) == 0); CHECK(X.num_ids()
+//    == 0); CHECK(X.raveled_ids().size() == 0);
 //  }
 //}
 //
-//TEMPLATE_TEST_CASE("preload", "[tdb_matrix_with_ids]", float, uint8_t) {
+// TEMPLATE_TEST_CASE("preload", "[tdb_matrix_with_ids]", float, uint8_t) {
 //  tiledb::Context ctx;
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
 //  std::string tmp_ids_uri =
-//      (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
+//      (std::filesystem::temp_directory_path() /
+//      "tmp_tdb_ids_matrix").string();
 //  int offset = 13;
 //  size_t Mrows = 200;
 //  size_t Ncols = 500;
@@ -363,7 +364,7 @@ TEST_CASE("load from uri", "[tdb_matrix_with_ids]") {
 //  }
 //}
 //
-//TEST_CASE("time travel", "[tdb_matrix_with_ids]") {
+// TEST_CASE("time travel", "[tdb_matrix_with_ids]") {
 //  tiledb::Context ctx;
 //  std::string tmp_matrix_uri =
 //      (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -434,7 +435,8 @@ TEST_CASE("load from uri", "[tdb_matrix_with_ids]") {
 //  }
 //
 //  {
-//    // We get no data if we load the matrix at an earlier timestamp, even if we
+//    // We get no data if we load the matrix at an earlier timestamp, even if
+//    we
 //    // specify we want to read 4 rows and 2 cols.
 //    auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
 //        ctx,

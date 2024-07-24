@@ -410,8 +410,7 @@ TEMPLATE_TEST_CASE("view", "[matrix_with_ids]", char, float, int32_t, int64_t) {
 
 TEST_CASE("large matrix", "[matrix_with_ids]") {
   auto large = ColMajorMatrixWithIds<float, uint64_t, uint64_t>(
-      std::numeric_limits<int>::max() - 1,
-      std::numeric_limits<int>::max() - 2);
+      std::numeric_limits<int>::max() - 1, std::numeric_limits<int>::max() - 2);
   CHECK(large.num_rows() == std::numeric_limits<uint32_t>::max() - 1);
   CHECK(large.num_cols() == std::numeric_limits<uint32_t>::max() - 2);
 }

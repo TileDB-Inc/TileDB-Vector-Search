@@ -265,18 +265,21 @@ void init_type_erased_module(py::module_& m) {
       .def("ids_type_string", &FeatureVectorArray::ids_type_string)
       .def_buffer([](FeatureVectorArray& v) -> py::buffer_info {
         return py::buffer_info(
-          /* Pointer to buffer */
+            /* Pointer to buffer */
             v.data(),
-             /* Size of one scalar */
+            /* Size of one scalar */
             datatype_to_size(v.feature_type()),
-             /* Python struct-style format descriptor */
+            /* Python struct-style format descriptor */
             datatype_to_format(v.feature_type()),
             /* Number of dimensions */
             2,
-             /* Buffer dimensions -- row major */
-            {static_cast<size_t>(v.num_vectors()), static_cast<size_t>(v.dimensions())},
-             /* Strides (in bytes) for each index */
-            {datatype_to_size(v.feature_type()) * static_cast<size_t>(v.dimensions()), datatype_to_size(v.feature_type())});
+            /* Buffer dimensions -- row major */
+            {static_cast<size_t>(v.num_vectors()),
+             static_cast<size_t>(v.dimensions())},
+            /* Strides (in bytes) for each index */
+            {datatype_to_size(v.feature_type()) *
+                 static_cast<size_t>(v.dimensions()),
+             datatype_to_size(v.feature_type())});
       })
       .def(
           py::init([](py::array vectors, py::array ids) {
@@ -482,10 +485,11 @@ void init_type_erased_module(py::module_& m) {
           })
       .def(
           "train",
-          [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
-            index.train(vectors);
-          },
-          py::arg("vectors"))
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             std::optional<size_t> nlist) { index.train(vectors, nlist); },
+          py::arg("vectors"),
+          py::arg("nlist") = std::nullopt)
       .def(
           "add",
           [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {

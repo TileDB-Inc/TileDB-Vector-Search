@@ -88,7 +88,8 @@ std::vector<T> read_vector_helper(
   tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
-  std::vector<uint64_t> subarray_vals = {start_pos, end_pos == 0 ? 0 : end_pos - 1};
+  std::vector<uint64_t> subarray_vals = {
+      start_pos, end_pos == 0 ? 0 : end_pos - 1};
   tiledb::Subarray subarray(ctx, *array_);
   subarray.set_subarray(subarray_vals);
 
@@ -222,7 +223,10 @@ void write_matrix(
                    TILEDB_COL_MAJOR;
   query.set_layout(order)
       .set_data_buffer(
-          "values", &A(0, 0), static_cast<uint64_t>(A.num_rows()) * static_cast<uint64_t>(A.num_cols()))
+          "values",
+          &A(0, 0),
+          static_cast<uint64_t>(A.num_rows()) *
+              static_cast<uint64_t>(A.num_cols()))
       .set_subarray(subarray);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
 
@@ -319,8 +323,7 @@ void write_vector(
   }
 
   // Set the subarray to write into
-  std::vector<uint64_t> subarray_vals{
-      start_pos, start_pos + size(v) - 1};
+  std::vector<uint64_t> subarray_vals{start_pos, start_pos + size(v) - 1};
 
   // Open array for writing
   auto array = tiledb_helpers::open_array(
