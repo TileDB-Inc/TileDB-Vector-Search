@@ -70,12 +70,12 @@ class tdbBlockedMatrix : public MatrixBase {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  using view_type = Base;
+  //  using view_type = Base;
 
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  protected:
-  using row_domain_type = int32_t;
+  //  using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
   log_timer constructor_timer{"tdbBlockedMatrix constructor"};
@@ -428,34 +428,16 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
 };
 
 /**
- * Convenience class for row-major blocked matrices.
- */
-template <class T, class I = size_t>
-using tdbRowMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major blockef matrices.
  */
 template <class T, class I = size_t>
 using tdbColMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
 
 /**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t>
-using tdbRowMajorMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
 using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t>
-using tdbRowMajorPreLoadMatrix = tdbPreLoadMatrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.

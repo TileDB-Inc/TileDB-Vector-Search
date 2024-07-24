@@ -89,13 +89,12 @@ template <
   // @todo This should work with num_top_k as min, rather than k_nn if
   // k_nn < num_vectors(db) but somehow it doesn't
   // A matrix with many uninitialized values is created....
-  auto num_top_k = std::min<decltype(k_nn)>(k_nn, num_vectors(db));
+  //  auto num_top_k = std::min<decltype(k_nn)>(k_nn, num_vectors(db));
   ColMajorMatrix<id_type> top_k(k_nn, /*num_top_k,*/ num_vectors(q));
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
       std::move(par), q, [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-        size_t size_q = num_vectors(q);
         size_t size_db = num_vectors(db);
 
         // @todo can we do this more efficiently?
@@ -310,7 +309,6 @@ auto qv_query_heap_tiled(
   // algorithms have iterator-based interaces, and the `Matrix` class does not
   // yet have iterators.
   // @todo Implement iterator interface to `Matrix` class
-  size_t size_db = db.num_cols();
   size_t container_size = num_vectors(query);
   size_t block_size = (container_size + nthreads - 1) / nthreads;
 

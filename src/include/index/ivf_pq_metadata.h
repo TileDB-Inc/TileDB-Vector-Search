@@ -76,8 +76,8 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
 
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::string index_type_{"IVF_PQ"};
-  std::string partition_history_str_{""};
-  std::string indices_type_str_{""};
+  std::string partition_history_str_;
+  std::string indices_type_str_;
 
   uint64_t num_subspaces_{0};
   uint64_t sub_dimensions_{0};
@@ -88,8 +88,6 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   float reassign_ratio_{0.f};
 
  protected:
-  IndexKind index_kind_{IndexKind::IVFPQ};
-
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
       // name, member_variable, required
       {"index_type", index_type_, true},

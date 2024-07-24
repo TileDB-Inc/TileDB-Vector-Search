@@ -32,17 +32,9 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "concepts.h"
 #include "cpos.h"
-#include "detail/linalg/matrix.h"
-#include "detail/linalg/matrix_with_ids.h"
-#include "detail/linalg/partitioned_matrix.h"
-#include "detail/linalg/tdb_matrix.h"
-#include "detail/linalg/tdb_matrix_with_ids.h"
-#include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/linalg/vector.h"
 #include "scoring.h"
-#include "utils/print_types.h"
 
 #include <list>
 #include <string>

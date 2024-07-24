@@ -32,8 +32,6 @@
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
 #include <vector>
-#include "api/feature_vector_array.h"
-#include "detail/linalg/tdb_matrix.h"
 #include "index/vamana_index.h"
 #include "index/vamana_metadata.h"
 #include "test/utils/array_defs.h"

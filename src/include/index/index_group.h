@@ -156,7 +156,6 @@ class base_index_group {
     init_valid_array_names();
 
     // Get the active array names
-    auto count = read_group.member_count();
     for (size_t i = 0; i < read_group.member_count(); ++i) {
       auto member = read_group.member(i);
       auto name = member.name();

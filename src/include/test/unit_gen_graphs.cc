@@ -34,7 +34,6 @@
 #include <catch2/catch_all.hpp>
 
 #include "test/utils/gen_graphs.h"
-#include "utils/print_types.h"
 
 TEST_CASE("unigrid", "[gen_graphs]") {
   auto&& [vecs, edges] = gen_uni_grid(5, 7);

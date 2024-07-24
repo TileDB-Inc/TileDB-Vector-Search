@@ -33,7 +33,6 @@
 #include <catch2/catch_all.hpp>
 #include <iostream>
 #include <set>
-#include <span>
 #include <vector>
 #include "detail/linalg/vector.h"
 #include "utils/fixed_min_heap.h"
@@ -336,7 +335,7 @@ TEST_CASE(
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
       a.insert(10 + i, i);
     }
-    CHECK(a.size() == 0);
+    CHECK(a.empty());
   }
 }
 

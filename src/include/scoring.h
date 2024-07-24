@@ -133,10 +133,10 @@ inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
  */
 struct logging_sum_of_squares_distance {
   size_t num_comps_{0};
-  std::string msg_{""};
+  std::string msg_;
 
   logging_sum_of_squares_distance() = default;
-  logging_sum_of_squares_distance(const std::string& msg)
+  explicit logging_sum_of_squares_distance(const std::string& msg)
       : msg_(msg) {
   }
 

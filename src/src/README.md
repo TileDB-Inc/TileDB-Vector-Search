@@ -14,7 +14,7 @@ A wealth of internal performance information can be dumped from the programs.
 ```
 
 **Note:** The CLI programs build against `libtiledb`. You will need to point your the `TileDB_DIR` to the
-directory where `libtiledb` is installed (along with associated headers, etc) .
+directory where `libtiledb` is installed (along with associated headers, etc.) .
 
 That is, if the `libtiledb` you want to use is in `/usr/local/tiledb/lib/libtiledb.so` then you would set `TileDB_DIR` to `/usr/local/tiledb/lib/cmake`
 
@@ -95,15 +95,15 @@ to see other available packages variations.
 
 #### Building with Open BLAS (Linux)
 
-To install Open BLAS, you can install one of a number of different options. I am not sure which version offers best performance, so you may want to experiment with the `openmp` vs `pthreads` version. Depending on the compiler used, one or the other may be used. The Intel compilers generally provide the best `openmp` support (installing and using those is beyond the scope of this README however.)
+To install Open BLAS, you can install one of a number of different options. I am not sure which version offers the best performance, so you may want to experiment with the `openmp` vs `pthreads` version. Depending on the compiler used, one or the other may be used. The Intel compilers generally provide the best `openmp` support (installing and using those is beyond the scope of this README however.)
 
 ```
   % apt install libopenblas64-dev
 ```
 
-#### Building with MacOS
+#### Building with macOS
 
-If you are using MacOS, the `Accelerate` framework will automatically be selected. You should not have to do anything yourself to use optimized BLAS with MacOS.
+If you are using macOS, the `Accelerate` framework will automatically be selected. You should not have to do anything yourself to use optimized BLAS with macOS.
 
 ## `ivf_flat`: Inverted File Index with Stored Vectors
 
@@ -214,7 +214,7 @@ Example:
     --blocksize 1000000 --nqueries 1000 --nprobe 128 --log -v
 ```
 
-Since there are a large number of options, particular the long set of of array URIs, it is recommended that
+Since there are a large number of options, particular the long set of array URIs, it is recommended that
 you use the setup scripts in the `src/benchmarks` subdirectory. The setup script defines bash functions that
 automatically set the various options (notably the URIs) for `ivf_flat` and invoke the executable. There is
 some customization you may need to do to make the scripts work in your local environment. The README and comments
@@ -518,7 +518,7 @@ In general, the 1M or 10M examples are good for experimenting on your local mach
 
 ### Local Filesystem
 
-If you would prefer to have the arrays in local storage, you can download them from S3 using the `aws s3 sync` command (you will need to have AWS command line utilities installed).
+If you prefer to have the arrays in local storage, you can download them from S3 using the `aws s3 sync` command (you will need to have AWS command line utilities installed).
 The most basic usage of `aws s3 sync` is
 
 ```

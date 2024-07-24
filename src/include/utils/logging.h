@@ -191,7 +191,7 @@ class timing_data_class {
    * @return Vector of the individual times logged with the given name.
    */
   template <class D = std::chrono::milliseconds>
-  auto get_entries_separately(const std::string& string) {
+  auto get_entries_separately(const std::string& string) const {
     std::vector<double> intervals;
 
     auto range = interval_times_.equal_range(string);
@@ -210,7 +210,7 @@ class timing_data_class {
    * name.
    */
   template <class D = std::chrono::milliseconds>
-  auto get_entries_summed(const std::string& string) {
+  auto get_entries_summed(const std::string& string) const {
     double sum = 0.0;
     auto range = interval_times_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
@@ -223,7 +223,7 @@ class timing_data_class {
    * Return a vector of the names of all timers that have logged data.
    * @return Vector of the names of all timers that have logged data.
    */
-  auto get_timer_names() {
+  auto get_timer_names() const {
     std::set<std::string> multinames;
 
     std::vector<std::string> names;
@@ -231,6 +231,7 @@ class timing_data_class {
     for (auto& i : interval_times_) {
       multinames.insert(i.first);
     }
+    names.reserve(multinames.size());
     for (auto& i : multinames) {
       names.push_back(i);
     }
@@ -241,7 +242,7 @@ class timing_data_class {
     verbose_ = verbose;
   }
 
-  bool get_verbose() {
+  bool get_verbose() const {
     return verbose_;
   }
 
@@ -249,7 +250,7 @@ class timing_data_class {
     debug_ = debug;
   }
 
-  bool get_debug() {
+  bool get_debug() const {
     return debug_;
   }
 };
@@ -324,7 +325,7 @@ class log_timer {
    * Return the name associated with the timer.
    * @return The name associated with the timer.
    */
-  std::string name() const {
+  const std::string& name() const {
     return msg_;
   }
 };
@@ -406,7 +407,7 @@ class memory_data {
    * @param string Name to be queried.
    * @return Vector of memory consumption values associated with the name.
    */
-  auto get_entries_separately(const std::string& string) {
+  auto get_entries_separately(const std::string& string) const {
     std::vector<double> usages;
 
     auto range = memory_usages_.equal_range(string);
@@ -421,7 +422,7 @@ class memory_data {
    * @param string Name to be queried.
    * @return Vector of memory consumption values associated with the name.
    */
-  auto get_entries_summed(const std::string& string) {
+  auto get_entries_summed(const std::string& string) const {
     double sum = 0.0;
     auto range = memory_usages_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
@@ -434,7 +435,7 @@ class memory_data {
    * Get the names associated with the memory consumption entries.
    * @return Vector of names associated with the memory consumption entries.
    */
-  auto get_usage_names() {
+  auto get_usage_names() const {
     std::set<std::string> multinames;
 
     std::vector<std::string> names;
@@ -452,7 +453,7 @@ class memory_data {
     verbose_ = verbose;
   }
 
-  bool get_verbose() {
+  bool get_verbose() const {
     return verbose_;
   }
 
@@ -460,7 +461,7 @@ class memory_data {
     debug_ = debug;
   }
 
-  bool get_debug() {
+  bool get_debug() const {
     return debug_;
   }
 };
@@ -526,7 +527,7 @@ class count_data {
    * @param string Name to be queried.
    * @return Vector of count values associated with the name.
    */
-  auto get_entries_separately(const std::string& string) {
+  auto get_entries_separately(const std::string& string) const {
     std::vector<double> usages;
 
     auto range = count_usages_.equal_range(string);
@@ -541,7 +542,7 @@ class count_data {
    * @param string Name to be queried.
    * @return Vector of count values associated with the name.
    */
-  auto get_entries_summed(const std::string& string) {
+  auto get_entries_summed(const std::string& string) const {
     double sum = 0.0;
     auto range = count_usages_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
@@ -554,7 +555,7 @@ class count_data {
    * Get the names associated with the count entries.
    * @return Vector of names associated with the count entries.
    */
-  auto get_usage_names() {
+  std::vector<std::string> get_usage_names() const {
     std::set<std::string> multinames;
 
     std::vector<std::string> names;
@@ -572,7 +573,7 @@ class count_data {
     verbose_ = verbose;
   }
 
-  bool get_verbose() {
+  bool get_verbose() const {
     return verbose_;
   }
 
@@ -580,7 +581,7 @@ class count_data {
     debug_ = debug;
   }
 
-  bool get_debug() {
+  bool get_debug() const {
     return debug_;
   }
 };
@@ -647,7 +648,7 @@ class stats_data {
      * @param string Name to be queried.
      * @return Vector of memory consumption values associated with the name.
      */
-    auto get_entries_separately(const std::string& string) {
+    auto get_entries_separately(const std::string& string) const {
       std::vector<double> usages;
 
       auto range = stats_.equal_range(string);

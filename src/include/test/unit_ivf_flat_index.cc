@@ -35,7 +35,6 @@
 #include <iostream>
 #include <vector>
 
-#include "../linalg.h"
 #include "index/ivf_flat_index.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/gen_graphs.h"
@@ -239,7 +238,6 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
 TEST_CASE("ivf_index write and read", "[ivf_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
-  size_t nprobe = 10;
   size_t k_nn = 10;
   size_t nthreads = 1;
 

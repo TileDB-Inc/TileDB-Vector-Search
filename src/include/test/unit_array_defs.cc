@@ -37,7 +37,6 @@
 #include "test/utils/array_defs.h"
 
 #include "detail/flat/qv.h"
-#include "detail/linalg/tdb_matrix.h"
 
 std::vector<std::string> test_array_roots{
     sift_root,

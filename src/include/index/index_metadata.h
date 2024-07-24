@@ -96,14 +96,14 @@ class base_index_metadata {
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
 
   // A non-empty value indicates an expected value / default value
-  std::string base_sizes_str_{""};
+  std::string base_sizes_str_;
   std::string dataset_type_{"vector_search"};
-  std::string dtype_{""};
-  std::string ingestion_timestamps_str_{""};
+  std::string dtype_;
+  std::string ingestion_timestamps_str_;
   std::string storage_version_{current_storage_version};
 
-  std::string feature_type_str_{""};
-  std::string id_type_str_{""};
+  std::string feature_type_str_;
+  std::string id_type_str_;
 
   /**************************************************************************
    * Initializer structs for metadata

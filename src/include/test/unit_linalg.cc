@@ -763,7 +763,7 @@ TEMPLATE_LIST_TEST_CASE(
   std::filesystem::remove_all(uri);
 }
 
-using LayoutTypes = std::tuple<Kokkos::layout_right, Kokkos::layout_left>;
+// using LayoutTypes = std::tuple<Kokkos::layout_right, Kokkos::layout_left>;
 
 TEMPLATE_LIST_TEST_CASE(
     "test write/read Matrix",

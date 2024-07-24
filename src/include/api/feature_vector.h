@@ -226,7 +226,6 @@ class FeatureVector {
   std::unique_ptr<const vector_base> vector_;
 };
 
-using QueryVector = FeatureVector;
 using IdVector = FeatureVector;
 
 #endif  // TILEDB_API_FEATURE_VECTOR_H

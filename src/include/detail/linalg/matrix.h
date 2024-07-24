@@ -61,7 +61,7 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  using span_type = std::span<T>;
+  //  using span_type = std::span<T>;
 
  public:
   MatrixView(const Base& rhs)
@@ -117,18 +117,6 @@ class MatrixView : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
 };
 
 /**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t>
-using RowMajorMatrixView = MatrixView<T, stdx::layout_right, I>;
-
-/**
- * Convenience class for column-major matrices.
- */
-template <class T, class I = size_t>
-using ColMajorMatrixView = MatrixView<T, stdx::layout_left, I>;
-
-/**
  * @brief A 2-D matrix class that owns its storage.  The interface is
  * that of mdspan.
  *
@@ -149,7 +137,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  using view_type = Matrix;
+  //  using view_type = Matrix;
   using span_type = std::span<T>;
 
  protected:
@@ -170,10 +158,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   Matrix& operator=(Matrix&& rhs) = default;
   virtual ~Matrix() = default;
 
-  Matrix(
-      size_type nrows,
-      size_type ncols,
-      LayoutPolicy policy = LayoutPolicy()) noexcept
+  Matrix(size_type nrows, size_type ncols) noexcept
       : num_rows_(nrows)
       , num_cols_(ncols)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
@@ -186,10 +171,7 @@ class Matrix : public stdx::mdspan<T, matrix_extents<I>, LayoutPolicy> {
   }
 
   Matrix(
-      std::unique_ptr<T[]>&& storage,
-      size_type nrows,
-      size_type ncols,
-      LayoutPolicy policy = LayoutPolicy()) noexcept
+      std::unique_ptr<T[]>&& storage, size_type nrows, size_type ncols) noexcept
       : num_rows_(nrows)
       , num_cols_(ncols)
       , storage_{std::move(storage)} {
@@ -395,7 +377,7 @@ class SubMatrixView
  public:
   SubMatrixView() noexcept = delete;
 
-  SubMatrixView(
+  explicit SubMatrixView(
       const stdx::mdspan<ElementType, Extents, LayoutPolicy, AccessorPolicy>& m)
       : Base{m}
       , num_rows_{this->extent(0)}

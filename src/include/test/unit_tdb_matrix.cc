@@ -60,12 +60,10 @@ TEMPLATE_TEST_CASE("constructors", "[tdb_matrix]", float, uint8_t) {
 
   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
   Y.load();
-
-  auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
-
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimensions(Y) == dimensions(X));
 
+  auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
   CHECK(num_vectors(Z) == num_vectors(X));
   CHECK(dimensions(Z) == dimensions(X));
 
@@ -396,6 +394,6 @@ TEST_CASE("time travel", "[tdb_matrix]") {
         ctx, tmp_matrix_uri, 4, 2, 0, TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
     CHECK(dimensions(Y) == 0);
-    CHECK(Y.size() == 0);
+    CHECK(Y.empty());
   }
 }

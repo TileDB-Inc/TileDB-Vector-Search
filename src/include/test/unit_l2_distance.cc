@@ -31,7 +31,6 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "detail/linalg/matrix.h"
 #include "detail/scoring/l2_distance.h"
 
 TEMPLATE_TEST_CASE("naive_sum_of_squares", "[l2_distance]", int8_t, uint8_t) {

@@ -16,7 +16,7 @@ DiskANN uses a graph-based indexing scheme along with a highly efficient out-of-
 
 There are two fundamental operations in a vector search system: creating the index ("ingestion"), and querying the index (search). The process for ingestion and for search both rely on a "greedy search" algorithm. Ingestion further relies on a "robust prune" algorithm.
 
-We note that the description of the ingestion process changed between the second and the third paper. It originally was based on construction a random nearest neighbor graph and then iterating over it with greedy search and robust prune to obtain, essentially, a "small worlds" graph. The third paper implements ingestion by simply invoking node insertion for all of the input vectors.
+We note that the description of the ingestion process changed between the second and the third paper. It originally was based on construction a random nearest neighbor graph and then iterating over it with greedy search and robust prune to obtain, essentially, a "small worlds" graph. The third paper implements ingestion by simply invoking node insertion for all the input vectors.
 
 ## Greedy Search
 

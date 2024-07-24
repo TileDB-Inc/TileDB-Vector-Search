@@ -475,7 +475,6 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
   using id_type_type = uint32_t;
-  using adjacency_row_index_type_type = uint64_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
   uint64_t dimensions = 3;

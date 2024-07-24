@@ -24,7 +24,7 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
 }
 ```
 
-All of the distance functions are templated on the type of vector they compute over
+All the distance functions are templated on the type of vector they compute over
 accept and the vectors are required to meet the requirements of `feature_vector`.
 Because of the need to case non-`float` elements, there are four concept-based
 overloads for each function, depending on the `value_type` of each vector. The overloads
@@ -167,7 +167,7 @@ Users can pass the type `sum_of_squared_distance` where it is required as a temp
 
 ### Functions parameterized by distance function
 
-All of the functions in the TileDB-Vector-Search library that use a distance function have been
+All the functions in the TileDB-Vector-Search library that use a distance function have been
 parameterized by the type of the distance function. Except for the pq related functions, they
 also take the distance function as an argument.
 
