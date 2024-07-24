@@ -80,4 +80,4 @@ auto best_first_O4(const Graph& graph, const A& db, id_type source, const V& que
 }
 ```
 
-In profiling previsou implementation, the lookups of node state in the bitmap consumed a substantial fraction of time. This was improved by using a bitmap rather than a `std::unordered_set`. However, there is a cost in terms of memory usage with that approach.
+In profiling previous implementation, the lookups of node state in the bitmap consumed a substantial fraction of time. This was improved by using a bitmap rather than a `std::unordered_set`. However, there is a cost in terms of memory usage with that approach.

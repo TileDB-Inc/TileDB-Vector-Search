@@ -51,7 +51,7 @@ TEMPLATE_TEST_CASE(
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   std::string tmp_ids_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
-  int offset = 13;
+  size_t offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;
   auto X = ColMajorMatrixWithIds<TestType, TestType, size_t>(Mrows, Ncols);

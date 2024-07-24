@@ -201,7 +201,7 @@ classes and to reuse as much code as possible.
 
 The `flat` and `ivf` indexes can all support additions and deletions in the same way -- by using an auxiliary array to hold the updates. Queries are performed by first querying the "main" index and then filtering those results using the contents of the query applied to the updates array. When the updates array has grown sufficiently large, the indexes are re-indexed.
 
-In the non-cloud case, insertions into the `vamana` (graph-based) indexes is extrememly efficient and can be done immediately (without the use of a separate updates array).
+In the non-cloud case, insertions into the `vamana` (graph-based) indexes is extremely efficient and can be done immediately (without the use of a separate updates array).
 
 ### `ivf_flat_index`
 

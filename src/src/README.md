@@ -192,7 +192,7 @@ The user can also specify a number of options related to the search.
 - The number of queries from the given query array to search for (`--nqueries`). The first `nqueries` vectors from the query array will be used if the specified value for `nqueries` is less than the total number of vectors in the query array.
   The default is to use all the queries in the query array, which can also be specified with the option value of `0`.
 - Which search algorithm in the C++ library to use for performing the search (`--algo`). It is recommended to use the default (other algorithms are currently WIP).
-- Whether to load the entire partitioned array into memory when performing the search or (if the `--infinite` option is given) whether to load only the necesary partitions, given the specified query. It is recommended to generally use the default value except in the case of large values of `nqueries` and `nprobe` and the availability of sufficient RAM to hold the entire partitioned array. (For backward compatibility, there is also a `--finite` flag which had the complementary behavior to `--infinite`). If `--blocksize` is specified with the finite-memory option, `ivf_flat` also operate in out-of-core fashion, loading subsets of partitions into memory, in the order they appear in the partitioned vector array.
+- Whether to load the entire partitioned array into memory when performing the search or (if the `--infinite` option is given) whether to load only the necessary partitions, given the specified query. It is recommended to generally use the default value except in the case of large values of `nqueries` and `nprobe` and the availability of sufficient RAM to hold the entire partitioned array. (For backward compatibility, there is also a `--finite` flag which had the complementary behavior to `--infinite`). If `--blocksize` is specified with the finite-memory option, `ivf_flat` also operate in out-of-core fashion, loading subsets of partitions into memory, in the order they appear in the partitioned vector array.
 - An upper bound to the number of vectors to be loaded during each batch when using the finite-memory case. `ivf_flat` will load complete partitions on each out-of-core iteration, so the number of vectors loaded will generally be fewer than the specified upper bound. Similarly, the specified upper bound must be larger than the largest partition in the partitioned array. Out of core operation is necessary if available RAM cannot hold all the index data (in general due to the size of the vector data to be searched). Even if available memory can accommodate the entire partitioned array, out of core operation can be useful for making more efficient use of hierarchical memory.
 - The AWS region to use when accessing TileDB arrays stored in S3 (`--region`). The example array URIs provided with TileDB-Vector-Search are located in the `us-east-1` region, which is the default value.
 - The name of a file to write logging information to (`--log`). The default is nil, meaning no logs will be written. If the value `-` is specified, the output will be written to `std::cout`.
@@ -345,7 +345,7 @@ been installed locally in the `gp3` subdirectory (see [Example Datasets](#exampl
 
 ### Setup
 
-Prior to runnning any benchmakrs, we first set up the benchmarking environment
+Prior to running any benchmarks, we first set up the benchmarking environment
 
 ```
   cd src/benchmarks
@@ -538,7 +538,7 @@ So, for example, to download the array `s3://tiledb-vector-search/bigann10M/biga
 aws s3 sync s3://tiledb-vector-search/bigann10M/bigann10M_base ./bigann10M_base --recursive
 ```
 
-**Warning** The `sift_inputs_uri` and `sift_parts_uri` arrays for `bigann1B` are more than 120GB each, meaning downloading the full set of arrays for this problem will consume a quarter of a TB of storage (and incur the corresponding egress chages).
+**Warning** The `sift_inputs_uri` and `sift_parts_uri` arrays for `bigann1B` are more than 120GB each, meaning downloading the full set of arrays for this problem will consume a quarter of a TB of storage (and incur the corresponding egress changes).
 It is recommended that you copy the 1B and 100M examples to local storage only if you know your machine has sufficient available storage.
 
 #### Using arrays in your local filesystem
@@ -581,8 +581,8 @@ To download a single set of arrays
 aws s3 sync s3://tiledb-vector-search/bigann10M/ ./bigann10M --recursive
 ```
 
-Note that the `bigann100M` and `bigann1B` array sets are quite large and will tax both the disk storage of a typical desktop or laptop. It is recommended that you copy those to local storage only if you know your machine has sufficient available storage. You should also use the `--finite` option with a sutable value of `--blocksize` if you intend to perform queries on
-a desktop or laptop agains the 100M or 1B vector datasets.
+Note that the `bigann100M` and `bigann1B` array sets are quite large and will tax both the disk storage of a typical desktop or laptop. It is recommended that you copy those to local storage only if you know your machine has sufficient available storage. You should also use the `--finite` option with a suitable value of `--blocksize` if you intend to perform queries on
+a desktop or laptop against the 100M or 1B vector datasets.
 
 _If you have sufficient storage and only if you have sufficient storage_ you can download the entire corpus with
 To download a single set of arrays

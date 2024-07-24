@@ -108,7 +108,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
 
   void clear_history_impl(uint64_t timestamp) {
     std::vector<partition_history_type> new_partition_history;
-    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (uint64_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_partition_history.push_back(partition_history_[i]);
