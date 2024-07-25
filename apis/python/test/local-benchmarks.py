@@ -5,11 +5,13 @@
 # - ~/repo/TileDB-Vector-Search pip install ".[benchmarks]"
 # - ~/repo/TileDB-Vector-Search python apis/python/test/local-benchmarks.py
 
+import logging
 import os
 import shutil
 import tarfile
 import time
 import urllib.request
+from datetime import datetime
 from enum import Enum
 
 import matplotlib
@@ -21,6 +23,7 @@ from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import load_fvecs
 
+# Use headless mode for matplotlib.
 matplotlib.use("Agg")
 
 USE_SIFT_SMALL = True
@@ -34,6 +37,24 @@ SIFT_FOLDER_NAME = "siftsmall" if USE_SIFT_SMALL else "sift"
 
 TEMP_DIR = os.path.join(os.path.dirname(__file__), "tmp")
 os.makedirs(TEMP_DIR, exist_ok=True)
+
+RESULTS_DIR = os.path.join(TEMP_DIR, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+# Configure logging.
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(message)s")
+
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+file_handler = logging.FileHandler(os.path.join(RESULTS_DIR, "logs.txt"))
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 SIFT_DOWNLOAD_PATH = os.path.join(
     TEMP_DIR, "siftsmall.tar.gz" if USE_SIFT_SMALL else "sift.tar.gz"
@@ -122,7 +143,7 @@ class Timer:
 
         return summary
 
-    def summarize(self):
+    def summary_string(self):
         summary = self.summarize_data()
         summary_str = ""
         for tag, data in summary.items():
@@ -138,7 +159,7 @@ class Timer:
             summary_str += "\n"
         return summary_str
 
-    def create_charts(self):
+    def save_charts(self):
         summary = self.summarize_data()
 
         # Plot ingestion.
@@ -159,7 +180,7 @@ class Timer:
             plt.scatter(y, x, marker="o", label=tag)
 
         plt.legend()
-        plt.savefig(os.path.join(TEMP_DIR, "ingestion_time_vs_accuracy.png"))
+        plt.savefig(os.path.join(RESULTS_DIR, "ingestion_time_vs_accuracy.png"))
         plt.close()
 
         # Plot query.
@@ -177,24 +198,30 @@ class Timer:
             plt.plot(y, x, marker="o", label=tag)
 
         plt.legend()
-        plt.savefig(os.path.join(TEMP_DIR, "query_time_vs_accuracy.png"))
+        plt.savefig(os.path.join(RESULTS_DIR, "query_time_vs_accuracy.png"))
         plt.close()
+
+    def save_and_print_results(self):
+        summary_string = self.summary_string()
+        logger.info(summary_string)
+
+        self.save_charts()
 
 
 def download_and_extract(url, download_path, extract_path):
     if os.path.exists(download_path):
-        print(
+        logger.info(
             f"Skipping download of {url} to {download_path} because it already exists."
         )
     else:
-        print(f"Downloading {url} to {download_path}.")
+        logger.info(f"Downloading {url} to {download_path}.")
         urllib.request.urlretrieve(url, download_path)
-        print("Finished download.")
+        logger.info("Finished download.")
 
-    print("Extracting files.")
+    logger.info("Extracting files.")
     with tarfile.open(download_path, "r:gz") as tar:
         tar.extractall(path=extract_path)
-        print("Finished extracting files.")
+        logger.info("Finished extracting files.")
 
 
 def benchmark_ivf_flat():
@@ -207,7 +234,7 @@ def benchmark_ivf_flat():
 
     for partitions in [20, 50, 100, 200]:
         tag = f"{index_type}_partitions={partitions}"
-        print(f"Running {tag}")
+        logger.info(f"Running {tag}")
 
         index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
         if os.path.exists(index_uri):
@@ -228,12 +255,11 @@ def benchmark_ivf_flat():
             _, result = index.query(queries, k=k, nprobe=nprobe)
             query_time = timer.stop(tag, TimerMode.QUERY)
             acc = timer.accuracy(tag, accuracy(result, gt_i))
-            print(
+            logger.info(
                 f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
             )
 
-    print(timer.summarize())
-    timer.create_charts()
+    timer.save_and_print_results()
 
 
 def benchmark_vamana():
@@ -244,10 +270,10 @@ def benchmark_vamana():
     queries = load_fvecs(SIFT_QUERIES_PATH)
     gt_i, gt_d = get_groundtruth_ivec(SIFT_GROUNDTRUTH_PATH, k=k, nqueries=len(queries))
 
-    for l_build in [10, 25, 40]:
-        for r_max_degree in [10, 25]:
+    for l_build in [40]:
+        for r_max_degree in [10, 15, 20, 25, 30, 35, 40]:
             tag = f"{index_type}_l_build={l_build}_r_max_degree={r_max_degree}"
-            print(f"Running {tag}")
+            logger.info(f"Running {tag}")
 
             index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
             if os.path.exists(index_uri):
@@ -269,12 +295,11 @@ def benchmark_vamana():
                 _, result = index.query(queries, k=k, l_search=l_search)
                 query_time = timer.stop(tag, TimerMode.QUERY)
                 acc = timer.accuracy(tag, accuracy(result, gt_i))
-                print(
+                logger.info(
                     f"Finished {tag} with l_search={l_search}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
                 )
 
-    print(timer.summarize())
-    timer.create_charts()
+    timer.save_and_print_results()
 
 
 def benchmark_ivf_pq():
@@ -289,7 +314,7 @@ def benchmark_ivf_pq():
     for partitions in [50]:
         for num_subspaces in [dimensions / 2, dimensions / 4, dimensions / 8]:
             tag = f"{index_type}_partitions={partitions}_num_subspaces={num_subspaces}"
-            print(f"Running {tag}")
+            logger.info(f"Running {tag}")
 
             index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
             if os.path.exists(index_uri):
@@ -311,12 +336,11 @@ def benchmark_ivf_pq():
                 _, result = index.query(queries, k=k, nprobe=nprobe)
                 query_time = timer.stop(tag, TimerMode.QUERY)
                 acc = timer.accuracy(tag, accuracy(result, gt_i))
-                print(
+                logger.info(
                     f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
                 )
 
-    print(timer.summarize())
-    timer.create_charts()
+    timer.save_and_print_results()
 
 
 def main():
