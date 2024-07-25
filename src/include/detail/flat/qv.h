@@ -78,7 +78,7 @@ template <
 [[deprecated]] auto qv_query_heap_0(
     const DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned int nthreads,
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
@@ -141,7 +141,7 @@ auto qv_query_heap(
     const DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{});
 
@@ -149,7 +149,7 @@ template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto qv_query_heap(
     const DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(
@@ -161,7 +161,7 @@ auto qv_query_heap(
     const DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -179,7 +179,7 @@ auto qv_query_heap(
     const DB& db,
     const Q& query,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
@@ -237,7 +237,7 @@ template <
 auto qv_query_heap(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(
@@ -259,7 +259,7 @@ auto qv_query_heap(
     DB& db,
     const Q& q,
     const std::vector<Index>& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -290,7 +290,7 @@ auto qv_query_heap_tiled(
     DB& db,
     const Q& query,
     [[maybe_unused]] const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   load(db);
@@ -438,7 +438,7 @@ template <
 auto qv_query_heap_tiled(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap_tiled(
@@ -454,7 +454,7 @@ auto qv_query_heap_tiled(
     DB& db,
     const Q& q,
     const std::vector<Index>& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads, distance);

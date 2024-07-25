@@ -393,20 +393,24 @@ class base_index_metadata {
               *static_cast<double*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_FLOAT32:
           if (*static_cast<float*>(value) != *static_cast<float*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_INT64:
           if (*static_cast<int64_t*>(value) !=
               *static_cast<int64_t*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_UINT64:
           if (*static_cast<uint64_t*>(value) !=
               *static_cast<uint64_t*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_UINT32:
           if (*static_cast<uint32_t*>(value) !=
               *static_cast<uint32_t*>(rhs_value)) {

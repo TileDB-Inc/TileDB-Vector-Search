@@ -307,7 +307,7 @@ TEST_CASE(
     auto&& [scores, ids] = index.query(query_set, k_nn);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
     auto num_ids = num_vectors(ids);
-    auto recall = ((double)intersections) / ((double)num_ids * k_nn);
+    auto recall = intersections / static_cast<double>(num_ids * k_nn);
     CHECK(recall == 1.0);
   }
 }
@@ -376,7 +376,7 @@ TEST_CASE("build index and query", "[api_vamana_index]") {
 
   auto intersections = count_intersections(t, groundtruth_set, k_nn);
   auto nt = num_vectors(t);
-  auto recall = ((double)intersections) / ((double)nt * k_nn);
+  auto recall = intersections / static_cast<double>(nt * k_nn);
   CHECK(recall == 1.0);
 }
 
@@ -414,7 +414,7 @@ TEST_CASE("read index and query", "[api_vamana_index]") {
   auto nt = num_vectors(t);
   auto nv = num_vectors(v);
   CHECK(nt == nv);
-  auto recall = ((double)intersections_a) / ((double)nt * k_nn);
+  auto recall = intersections_a / static_cast<double>(nt * k_nn);
   CHECK(recall == 1.0);
 }
 

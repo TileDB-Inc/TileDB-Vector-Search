@@ -346,7 +346,8 @@ TEMPLATE_TEST_CASE(
     std::tie(top_k_ivf_scores, top_k_ivf) =
         ivf_idx2.qv_query_heap_infinite_ram(query2, k_nn, 1);  // k, nprobe
     size_t intersections0 = count_intersections(top_k_ivf, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
     CHECK(intersections0 == k_nn * num_vectors(query2));
     CHECK(recall0 == 1.0);
 
@@ -355,8 +356,10 @@ TEMPLATE_TEST_CASE(
     std::tie(top_k_ivf_scores, top_k_ivf) =
         ivf_idx4.qv_query_heap_infinite_ram(query4, k_nn, 1);  // k, nprobe
 
-    size_t intersections1 = (long)count_intersections(top_k_ivf, top_k, k_nn);
-    double recall1 = intersections1 / ((double)top_k.num_cols() * k_nn);
+    size_t intersections1 =
+        static_cast<long>(count_intersections(top_k_ivf, top_k, k_nn));
+    double recall1 =
+        intersections1 / static_cast<double>(top_k.num_cols() * k_nn);
     CHECK(intersections1 == k_nn * num_vectors(query4));
     CHECK(recall1 == 1.0);
   }
@@ -614,7 +617,8 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   }
 
   size_t intersections1 = count_intersections(top_k_ivf, groundtruth_set, k_nn);
-  double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
+  double recall1 =
+      intersections1 / static_cast<double>(top_k_ivf.num_cols() * k_nn);
   if (nlist == 1) {
     CHECK(intersections1 == num_vectors(top_k_ivf) * dimensions(top_k_ivf));
     CHECK(recall1 == 1.0);
