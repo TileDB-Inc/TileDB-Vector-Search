@@ -210,9 +210,8 @@ class IndexIVFPQ {
         reassign_ratio_,
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
                  std::nullopt,
-                 distance_metric_,
-                 std::random_device{}()
-        );
+        distance_metric_,
+        std::random_device{}());
 
     index_->train(training_set);
 

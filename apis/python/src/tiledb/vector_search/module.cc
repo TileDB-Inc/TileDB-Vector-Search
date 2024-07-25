@@ -290,7 +290,7 @@ static void declare_nuv_query_heap_finite_ram(
 
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
             mat, query_vectors, active_queries, k_nn, upper_bound, nthreads);
-            
+
         return r;
       },
       py::keep_alive<1, 2>());
