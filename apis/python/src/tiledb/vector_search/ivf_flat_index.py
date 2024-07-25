@@ -371,33 +371,23 @@ class IVFFlatIndex(index.Index):
             k_nn: int,
             config: Optional[Mapping[str, Any]] = None,
             timestamp: int = 0,
+            memory_budget: int = -1,
         ):
             queries_m = array_to_matrix(np.transpose(query_vectors))
-            if timestamp == 0:
-                r = dist_qv(
-                    dtype=dtype,
-                    parts_uri=parts_uri,
-                    ids_uri=ids_uri,
-                    query_vectors=queries_m,
-                    active_partitions=active_partitions,
-                    active_queries=active_queries,
-                    indices=indices,
-                    k_nn=k_nn,
-                    ctx=Ctx(config),
-                )
-            else:
-                r = dist_qv(
-                    dtype=dtype,
-                    parts_uri=parts_uri,
-                    ids_uri=ids_uri,
-                    query_vectors=queries_m,
-                    active_partitions=active_partitions,
-                    active_queries=active_queries,
-                    indices=indices,
-                    k_nn=k_nn,
-                    ctx=Ctx(config),
-                    timestamp=timestamp,
-                )
+            r = dist_qv(
+                dtype=dtype,
+                parts_uri=parts_uri,
+                ids_uri=ids_uri,
+                query_vectors=queries_m,
+                active_partitions=active_partitions,
+                active_queries=active_queries,
+                indices=indices,
+                k_nn=k_nn,
+                ctx=Ctx(config),
+                timestamp=timestamp,
+                # TODO(nikos) add this after the library change gets released in TileDB cloud
+                # upper_bound=0 if memory_budget == -1 else memory_budget,
+            )
             results = []
             for q in range(len(r)):
                 tmp_results = []
@@ -464,6 +454,7 @@ class IVFFlatIndex(index.Index):
                     k_nn=k,
                     config=config,
                     timestamp=self.base_array_timestamp,
+                    memory_budget=self.memory_budget,
                     resource_class="large"
                     if (not resources and not resource_class)
                     else resource_class,
