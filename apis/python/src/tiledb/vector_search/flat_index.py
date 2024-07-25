@@ -177,7 +177,6 @@ def create(
     distance_metric: vspy.DistanceMetric
         Distance metric to use for the index.
         If not provided, use L2 distance.
-
     """
     validate_storage_version(storage_version)
 

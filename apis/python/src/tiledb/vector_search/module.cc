@@ -173,6 +173,7 @@ static void declare_qv_query_heap_infinite_ram(
             centroids, query_vectors, nprobe, nthreads);
         auto r = detail::ivf::qv_query_heap_infinite_ram(
             top_centroids, mat, query_vectors, nprobe, k_nn, nthreads);
+
         return make_python_pair(std::move(r));
       },
       py::keep_alive<1, 2>());
@@ -210,6 +211,7 @@ static void declare_qv_query_heap_finite_ram(
             upper_bound,
             nthreads,
             timestamp);
+
         return make_python_pair(std::move(r));
       },
       py::keep_alive<1, 2>());
@@ -288,6 +290,7 @@ static void declare_nuv_query_heap_finite_ram(
 
         auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
             mat, query_vectors, active_queries, k_nn, upper_bound, nthreads);
+            
         return r;
       },
       py::keep_alive<1, 2>());

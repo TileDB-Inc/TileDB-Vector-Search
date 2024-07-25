@@ -3005,7 +3005,6 @@ def ingest(
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
-
             group.close()
 
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)

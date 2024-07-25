@@ -533,7 +533,7 @@ def create(
         raise ValueError(
             f"Distance metric {distance_metric} is not supported in IVF_FLAT"
         )
-
+    
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,

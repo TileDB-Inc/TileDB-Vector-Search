@@ -297,8 +297,9 @@ class ivf_pq_index {
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      uint64_t seed = std::random_device{}(),
-      DistanceMetric distance_metric = DistanceMetric::L2)
+      DistanceMetric distance_metric = DistanceMetric::L2,
+      uint64_t seed = std::random_device{}()
+      )
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
@@ -307,8 +308,9 @@ class ivf_pq_index {
       , max_iterations_(max_iterations)
       , convergence_tolerance_(convergence_tolerance)
       , reassign_ratio_(reassign_ratio)
-      ,seed_{seed},
-      distance_metric_{distance_metric} {
+      , distance_metric_{distance_metric}
+      , seed_{seed}
+      {
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
           "num_subspaces (" + std::to_string(num_subspaces_) +
@@ -358,6 +360,7 @@ class ivf_pq_index {
     convergence_tolerance_ = group_->get_convergence_tolerance();
     reassign_ratio_ = group_->get_reassign_ratio();
     distance_metric_ = group_->get_distance_metric();
+
     flat_ivf_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
             group_->cached_ctx(),

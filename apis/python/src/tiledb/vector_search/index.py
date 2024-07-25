@@ -67,7 +67,6 @@ class Index:
             raise ValueError(
                 f"Invalid distance metric in metadata: {self.group.meta.get('distance_metric')}."
             )
-
         if (
             not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
             and timestamp is not None

@@ -70,8 +70,8 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
       2.5E-05,
       0.075F,
       std::nullopt,
-      std::random_device{}(),
-      DistanceMetric::COSINE);
+      DistanceMetric::COSINE
+      );
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
