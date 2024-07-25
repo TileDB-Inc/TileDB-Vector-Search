@@ -250,10 +250,10 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
       (std::filesystem::temp_directory_path() / "ids").string();
 
   std::vector<int> num_vectors_options = {9, 199, 2143};
-  std::vector<int> dimensions_options = {3, 77};
+  std::vector<uint64_t> dimensions_options = {3, 77};
   std::vector<int> num_parts_options = {1, 3, 99, 989, 2143};
   for (auto num_vectors : num_vectors_options) {
-    for (auto dimensions : dimensions_options) {
+    for (uint64_t dimensions : dimensions_options) {
       for (auto num_parts : num_parts_options) {
         auto training_set =
             ColMajorMatrix<feature_type>(dimensions, num_vectors);
@@ -337,7 +337,7 @@ TEST_CASE(
       (std::filesystem::temp_directory_path() / "ids").string();
 
   size_t num_vectors = 10000;
-  size_t dimensions = 128;
+  uint64_t dimensions = 128;
 
   // Setup data.
   {

@@ -292,7 +292,7 @@ class ivf_pq_index {
    */
   ivf_pq_index(
       size_t nlist = 0,
-      size_t num_subspaces = 16,
+      uint64_t num_subspaces = 16,
       size_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
@@ -1323,7 +1323,7 @@ class ivf_pq_index {
     return *group_;
   }
 
-  auto dimensions() const {
+  uint64_t dimensions() const {
     return dimensions_;
   }
 
@@ -1342,11 +1342,11 @@ class ivf_pq_index {
     return num_partitions_;
   }
 
-  auto num_subspaces() const {
+  uint64_t num_subspaces() const {
     return num_subspaces_;
   }
 
-  auto sub_dimensions() const {
+  uint64_t sub_dimensions() const {
     return sub_dimensions_;
   }
 

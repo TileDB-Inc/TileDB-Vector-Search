@@ -437,8 +437,8 @@ class base_index_group {
   auto get_dimensions() const {
     return metadata_.dimensions_;
   }
-  auto set_dimensions(size_t dim) {
-    metadata_.dimensions_ = dim;
+  auto set_dimensions(uint64_t dimensions) {
+    metadata_.dimensions_ = dimensions;
   }
 
   auto get_history_index() const {
