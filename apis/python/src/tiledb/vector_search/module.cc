@@ -496,10 +496,10 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
          std::vector<indices_type>& indices,             // 5
          const std::string& id_uri,
          size_t k_nn,
-         uint64_t timestamp
+         uint64_t timestamp,
+         size_t upper_bound
          /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
       ) { /* TODO return type */
-          size_t upper_bound{0};
           auto nthreads = std::thread::hardware_concurrency();
 
           return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
@@ -511,7 +511,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
               indices,
               id_uri,
               k_nn,
-              timestamp);
+              timestamp,
+              upper_bound);
       },
       py::keep_alive<1, 2>());
   m.def(
@@ -525,11 +526,11 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
          std::vector<shuffled_ids_type>& indices,
          const std::string& id_uri,
          size_t k_nn,
-         uint64_t timestamp
+         uint64_t timestamp,
+         size_t upper_bound
          /* size_t nthreads @todo: optional arg w/ fallback to C++ default arg
           */
       ) { /* @todo: return type */
-          size_t upper_bound{0};
           auto nthreads = std::thread::hardware_concurrency();
           auto temporal_policy{
               (timestamp == 0) ? TemporalPolicy() :
@@ -564,7 +565,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
               indices,
               id_uri,
               k_nn,
-              timestamp);
+              timestamp,
+              upper_bound);
       },
       py::keep_alive<1, 2>());
 }
