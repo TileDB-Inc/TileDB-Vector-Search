@@ -34,12 +34,14 @@
 #define TDB_VAMANA_INDEX_H
 
 #include <cstddef>
+#include <execution>
 #include <functional>
 #include <future>
 #include <queue>
 #include <tiledb/tiledb>
 #include <unordered_set>
 
+#include "algorithm.h"
 #include "detail/graph/adj_list.h"
 #include "detail/graph/best_first.h"
 #include "detail/graph/bfs.h"
@@ -608,6 +610,27 @@ class vamana_index {
           std::copy(tk.data(), tk.data() + k, top_k[i].data());
         });
 
+    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+  }
+
+  /**
+   * @brief Query the index for the top k nearest neighbors of a single
+   * query vector
+   * @tparam Q Type of query vector
+   * @param query_vec The vector to query
+   * @param k How many nearest neighbors to return
+   * @param l_search How deep to search
+   * @return Top k scores and top k ids
+   */
+  template <query_vector Q, class Distance = sum_of_squares_distance>
+  auto query(
+      const Q& query_vec,
+      size_t k,
+      std::optional<size_t> l_search = std::nullopt,
+      Distance distance = Distance{}) {
+    size_t L = l_search ? *l_search : l_build_;
+    auto&& [top_k_scores, top_k, V] = greedy_search(
+        graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
