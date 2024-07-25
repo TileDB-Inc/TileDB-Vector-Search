@@ -344,7 +344,7 @@ class base_index_metadata {
 
     std::vector<ingestion_timestamps_type> new_ingestion_timestamps;
     std::vector<base_sizes_type> new_base_sizes;
-    for (uint64_t i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (size_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_ingestion_timestamps.push_back(ingestion_timestamp);
