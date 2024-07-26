@@ -136,6 +136,7 @@ def create(
     r_max_degree: int = R_MAX_DEGREE_DEFAULT,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> VamanaIndex:
     """
@@ -168,12 +169,17 @@ def create(
             f"Storage version {storage_version} is not supported for VamanaIndex. VamanaIndex requires storage version 0.3 or higher."
         )
     ctx = vspy.Ctx(config)
+    if distance_metric != vspy.DistanceMetric.L2:
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in VAMANA"
+        )
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
         l_build=l_build if l_build > 0 else L_BUILD_DEFAULT,
         r_max_degree=r_max_degree if l_build > 0 else R_MAX_DEGREE_DEFAULT,
+        distance_metric=int(distance_metric),
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

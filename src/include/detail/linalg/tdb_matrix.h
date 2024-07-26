@@ -111,6 +111,10 @@ class tdbBlockedMatrix : public MatrixBase {
   // size_t pending_row_offset{0};
   // size_t pending_col_offset{0};
 
+  size_t get_elements_to_load() const {
+    return std::min(load_blocksize_, last_col_ - last_resident_col_);
+  }
+
  public:
   tdbBlockedMatrix(tdbBlockedMatrix&& rhs) = default;
 
@@ -321,11 +325,11 @@ class tdbBlockedMatrix : public MatrixBase {
     }
 
     size_t dimension = last_row_ - first_row_;
-    auto elements_to_load =
-        std::min(load_blocksize_, last_col_ - last_resident_col_);
+    auto elements_to_load = get_elements_to_load();
 
     // Return if we're at the end
     if (elements_to_load == 0 || dimension == 0) {
+      array_->close();
       return false;
     }
 
@@ -358,6 +362,10 @@ class tdbBlockedMatrix : public MatrixBase {
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete");
+    }
+
+    if (get_elements_to_load() == 0) {
+      array_->close();
     }
 
     num_loads_++;

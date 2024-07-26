@@ -54,9 +54,9 @@
 
 #include "index/index_defs.h"
 #include "index/index_group.h"
-#include "tdb_defs.h"
-
 #include "nlohmann/json.hpp"
+#include "scoring.h"
+#include "tdb_defs.h"
 
 /**
  * @brief Metadata for an IVF_FLAT index.
@@ -560,5 +560,32 @@ class base_index_metadata {
     static_cast<const IndexMetadata*>(this)->dump_json_impl();
   }
 };
+
+inline DistanceMetric parseAndValidateDistanceMetric(
+    const std::string& value,
+    const std::function<bool(DistanceMetric)>& additionalValidation = nullptr,
+    const std::string& validationErrorMsg = "") {
+  try {
+    int metric_value = std::stoi(value);
+    if (metric_value < 0 ||
+        metric_value > static_cast<int>(DistanceMetric::COSINE)) {
+      throw std::runtime_error("Invalid distance metric value: " + value);
+    }
+
+    DistanceMetric distance_metric = static_cast<DistanceMetric>(metric_value);
+
+    if (additionalValidation && !additionalValidation(distance_metric)) {
+      throw std::runtime_error(
+          validationErrorMsg.empty() ?
+              "Additional validation failed for distance metric: " + value :
+              validationErrorMsg + ": " + value);
+    }
+
+    return distance_metric;
+  } catch (const std::exception& e) {
+    throw std::runtime_error(
+        "Error setting distance metric: " + std::string(e.what()));
+  }
+}
 
 #endif  // TILEDB_INDEX_METADATA_H

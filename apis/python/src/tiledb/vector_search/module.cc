@@ -496,10 +496,10 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
          std::vector<indices_type>& indices,             // 5
          const std::string& id_uri,
          size_t k_nn,
-         uint64_t timestamp
+         uint64_t timestamp,
+         size_t upper_bound
          /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
       ) { /* TODO return type */
-          size_t upper_bound{0};
           auto nthreads = std::thread::hardware_concurrency();
 
           return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
@@ -511,7 +511,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
               indices,
               id_uri,
               k_nn,
-              timestamp);
+              timestamp,
+              upper_bound);
       },
       py::keep_alive<1, 2>());
   m.def(
@@ -525,11 +526,11 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
          std::vector<shuffled_ids_type>& indices,
          const std::string& id_uri,
          size_t k_nn,
-         uint64_t timestamp
+         uint64_t timestamp,
+         size_t upper_bound
          /* size_t nthreads @todo: optional arg w/ fallback to C++ default arg
           */
       ) { /* @todo: return type */
-          size_t upper_bound{0};
           auto nthreads = std::thread::hardware_concurrency();
           auto temporal_policy{
               (timestamp == 0) ? TemporalPolicy() :
@@ -564,7 +565,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
               indices,
               id_uri,
               k_nn,
-              timestamp);
+              timestamp,
+              upper_bound);
       },
       py::keep_alive<1, 2>());
 }
@@ -577,11 +579,22 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
          ColMajorMatrix<float>& query_vectors,
          const std::vector<uint64_t>& ids,
          int k,
-         size_t nthreads)
+         size_t nthreads,
+         DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        auto r =
-            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
-        return r;
+        if (distance_metric == DistanceMetric::L2) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, sum_of_squares_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, inner_product_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::COSINE) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, cosine_distance{});
+          return r;
+        }
       });
 }
 
@@ -594,11 +607,22 @@ static void declare_vq_query_heap_pyarray(
          ColMajorMatrix<float>& query_vectors,
          const std::vector<uint64_t>& ids,
          int k,
-         size_t nthreads)
+         size_t nthreads,
+         DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        auto r =
-            detail::flat::vq_query_heap(data, query_vectors, ids, k, nthreads);
-        return r;
+        if (distance_metric == DistanceMetric::L2) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, sum_of_squares_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, inner_product_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::COSINE) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, ids, k, nthreads, cosine_distance{});
+          return r;
+        }
       });
 }
 
@@ -718,10 +742,22 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       [](ColMajorMatrix<float>& data,
          ColMajorMatrix<float>& query_vectors,
          int k,
-         size_t nthreads)
+         size_t nthreads,
+         DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
-        return r;
+        if (distance_metric == DistanceMetric::L2) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, sum_of_squares_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, inner_product_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::COSINE) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, cosine_distance{});
+          return r;
+        }
       });
 
   m.def(
@@ -729,10 +765,22 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       [](tdbColMajorMatrix<uint8_t>& data,
          ColMajorMatrix<float>& query_vectors,
          int k,
-         size_t nthreads)
+         size_t nthreads,
+         DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
-        return r;
+        if (distance_metric == DistanceMetric::L2) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, sum_of_squares_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, inner_product_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::COSINE) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, cosine_distance{});
+          return r;
+        }
       });
 
   m.def(
@@ -740,10 +788,22 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       [](tdbColMajorMatrix<int8_t>& data,
          ColMajorMatrix<float>& query_vectors,
          int k,
-         size_t nthreads)
+         size_t nthreads,
+         DistanceMetric distance_metric = DistanceMetric::L2)
           -> std::tuple<ColMajorMatrix<float>, ColMajorMatrix<uint64_t>> {
-        auto r = detail::flat::vq_query_heap(data, query_vectors, k, nthreads);
-        return r;
+        if (distance_metric == DistanceMetric::L2) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, sum_of_squares_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::INNER_PRODUCT) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, inner_product_distance{});
+          return r;
+        } else if (distance_metric == DistanceMetric::COSINE) {
+          auto r = detail::flat::vq_query_heap(
+              data, query_vectors, k, nthreads, cosine_distance{});
+          return r;
+        }
       });
 
   m.def(
@@ -815,6 +875,12 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   declare_debug_matrix<int8_t>(m, "_i8");
   declare_debug_matrix<float>(m, "_f32");
   declare_debug_matrix<uint64_t>(m, "_u64");
+
+  py::enum_<DistanceMetric>(m, "DistanceMetric")
+      .value("L2", DistanceMetric::L2)
+      .value("INNER_PRODUCT", DistanceMetric::INNER_PRODUCT)
+      .value("COSINE", DistanceMetric::COSINE)
+      .export_values();
 
   /* === Module inits === */
 

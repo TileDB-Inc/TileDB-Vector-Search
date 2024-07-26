@@ -86,6 +86,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   uint64_t max_iterations_{0};
   float convergence_tolerance_{0.f};
   float reassign_ratio_{0.f};
+  DistanceMetric distance_metric_{DistanceMetric::L2};
 
  protected:
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
@@ -104,6 +105,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
       {"max_iterations", &max_iterations_, TILEDB_UINT64, true},
       {"convergence_tolerance", &convergence_tolerance_, TILEDB_FLOAT32, true},
       {"reassign_ratio", &reassign_ratio_, TILEDB_FLOAT32, true},
+      {"distance_metric", &distance_metric_, TILEDB_UINT32, true},
   };
 
   void clear_history_impl(uint64_t timestamp) {

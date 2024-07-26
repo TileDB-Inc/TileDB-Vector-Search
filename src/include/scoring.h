@@ -260,22 +260,22 @@ struct inner_product_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return avx2_inner_product(a, b);
+    return -avx2_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return avx2_inner_product(a);
+    return -avx2_inner_product(a);
   }
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return unroll4_inner_product(a, b);
+    return -unroll4_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return unroll4_inner_product(a);
+    return -unroll4_inner_product(a);
   }
 #endif
 };
@@ -285,6 +285,25 @@ struct inner_product_distance {
 using inner_product_distance = _inner_product_distance::inner_product_distance;
 inline constexpr auto inner_product =
     _inner_product_distance::inner_product_distance{};
+
+/**
+ * @brief Function object for computing the cosine distance between two vectors.
+ * @tparam T
+ */
+namespace _cosine_distance {
+
+struct cosine_distance {
+  template <feature_vector V, feature_vector U>
+  inline float operator()(const V& a, const U& b) const {
+    float mag = sqrt(l2_distance(a) * l2_distance(b));
+    return 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag);
+  }
+};
+
+}  // namespace _cosine_distance
+using cosine_distance = _cosine_distance::cosine_distance;
+
+enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn

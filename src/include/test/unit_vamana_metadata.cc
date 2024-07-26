@@ -34,6 +34,7 @@
 #include <vector>
 #include "index/vamana_index.h"
 #include "index/vamana_metadata.h"
+#include "scoring.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 
@@ -60,8 +61,8 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  auto idx =
-      vamana_index<siftsmall_feature_type, siftsmall_ids_type>(0, 20, 40);
+  auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
+      0, 20, 40, std::nullopt, DistanceMetric::COSINE);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
@@ -70,6 +71,7 @@ TEST_CASE("load metadata from index", "[vamana_metadata]") {
       {"id_datatype", 10},
       {"adjacency_scores_datatype", 2},
       {"adjacency_row_index_datatype", 10},
+      {"distance_metric", static_cast<size_t>(DistanceMetric::COSINE)},
   };
 
   {

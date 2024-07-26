@@ -167,6 +167,7 @@ class tdbBlockedMatrixWithIds
   bool load() {
     scoped_timer _{tdb_func__ + " " + this->ids_uri_};
     if (!Base::load()) {
+      ids_array_->close();
       return false;
     }
 
@@ -212,6 +213,10 @@ class tdbBlockedMatrixWithIds
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status for IDs is not complete");
+    }
+
+    if (this->get_elements_to_load() == 0) {
+      ids_array_->close();
     }
 
     return true;

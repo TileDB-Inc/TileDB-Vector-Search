@@ -448,6 +448,7 @@ def dist_qv(
     k_nn: int,
     ctx: "Ctx" = None,
     timestamp: int = 0,
+    upper_bound: int = 0,
 ):
     if ctx is None:
         ctx = vspy.Ctx({})
@@ -462,6 +463,7 @@ def dist_qv(
             ids_uri,
             k_nn,
             timestamp,
+            upper_bound,
         ]
     )
 
