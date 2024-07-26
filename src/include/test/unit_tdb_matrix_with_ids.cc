@@ -63,7 +63,10 @@ TEMPLATE_TEST_CASE(
 
   auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
       ctx, tmp_matrix_uri, tmp_ids_uri);
-  Y.load();
+  CHECK(Y.load() == true);
+  for (int i = 0; i < 5; ++i) {
+    CHECK(Y.load() == false);
+  }
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimensions(Y) == dimensions(X));
   CHECK(std::equal(

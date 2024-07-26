@@ -59,7 +59,10 @@ TEMPLATE_TEST_CASE("constructors", "[tdb_matrix]", float, uint8_t) {
   write_matrix(ctx, X, tmp_matrix_uri);
 
   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
-  Y.load();
+  CHECK(Y.load() == true);
+  for (int i = 0; i < 5; ++i) {
+    CHECK(Y.load() == false);
+  }
 
   auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
 
