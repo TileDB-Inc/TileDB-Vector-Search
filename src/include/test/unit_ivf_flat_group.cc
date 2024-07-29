@@ -36,7 +36,6 @@
 #include <string>
 
 #include "index/ivf_flat_group.h"
-#include "test/utils/array_defs.h"
 
 // This test is for debugging and checks whether a particular group can be
 // opened

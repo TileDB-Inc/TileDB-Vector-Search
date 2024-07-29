@@ -112,9 +112,6 @@ class nn_graph {
     }
   }
 
-  auto sort_edges(id_type i) {
-  }
-
   auto build_in_edges() {
     for (size_t i = 0; i < num_vertices_; ++i) {
       in_edges_[i].clear();

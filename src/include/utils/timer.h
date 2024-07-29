@@ -114,7 +114,7 @@ class life_timer : public empty_timer, public ms_timer {
   ~life_timer() {
     stop();
 
-    if (ms_timer::msg_ != "") {
+    if (!ms_timer::msg_.empty()) {
       if (debug_) {
         std::cout << "# [ " + msg_ + " ]: ";
         std::cout << elapsed() << " ms" << std::endl;
@@ -134,7 +134,7 @@ namespace {
 [[maybe_unused]] std::ostream& operator<<(
     std::ostream& os, const seconds_timer& t) {
   std::string name = t.name();
-  if (t.name() != "") {
+  if (!t.name().empty()) {
     os << "# [ " + t.name() + " ]: ";
   }
   os << t.elapsed() << " sec";
@@ -143,7 +143,7 @@ namespace {
 
 [[maybe_unused]] std::ostream& operator<<(std::ostream& os, const ms_timer& t) {
   std::string name = t.name();
-  if (t.name() != "") {
+  if (!t.name().empty()) {
     os << "# [ " + t.name() + " ]: ";
   }
 
@@ -153,7 +153,7 @@ namespace {
 
 [[maybe_unused]] std::ostream& operator<<(std::ostream& os, const us_timer& t) {
   std::string name = t.name();
-  if (t.name() != "") {
+  if (!t.name().empty()) {
     os << "# [ " + t.name() + " ]: ";
   }
   os << t.elapsed() << " us";

@@ -106,7 +106,6 @@ TEST_CASE(
 TEST_CASE("api: queries", "[api][flat_l2_index]") {
   tiledb::Context ctx;
   size_t k_nn = 10;
-  size_t nthreads = 8;
   size_t num_queries = 50;
   auto sift_test_tuple = std::make_tuple(
       sift_inputs_uri,

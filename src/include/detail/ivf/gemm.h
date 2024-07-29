@@ -52,7 +52,7 @@ auto ivf_blocked_gemm_contiguous(
     size_t k_nn,
     bool nth,
     size_t nthreads) {
-  // get closest centroid for each query vector
+  // get the closest centroid for each query vector
   // Does this even need to be blocked...?
   // The whole point of ivf is to avoid loading everything
   // The shuffled_db is the big array to avoid loading

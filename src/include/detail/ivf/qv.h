@@ -115,10 +115,10 @@ auto qv_query_heap_infinite_ram(
   scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
-  auto indices = partitioned_vectors.indices();
-  auto partitioned_ids = partitioned_vectors.ids();
-
   using score_type = float;
+
+  const auto& indices = partitioned_vectors.indices();
+  const auto& partitioned_ids = partitioned_vectors.ids();
 
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_vectors(query), fixed_min_pair_heap<score_type, id_type>(k_nn));
@@ -190,8 +190,8 @@ auto nuv_query_heap_infinite_ram(
   using id_type = typename F::id_type;
   using score_type = float;
 
-  auto partitioned_ids = partitioned_vectors.ids();
-  auto indices = partitioned_vectors.indices();
+  const auto& partitioned_ids = partitioned_vectors.ids();
+  const auto& indices = partitioned_vectors.indices();
 
   auto num_queries = num_vectors(query);
 
@@ -297,8 +297,8 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
   using id_type = typename F::id_type;
   using score_type = float;
 
-  auto partitioned_ids = partitioned_vectors.ids();
-  auto indices = partitioned_vectors.indices();
+  const auto& partitioned_ids = partitioned_vectors.ids();
+  const auto& indices = partitioned_vectors.indices();
 
   auto num_queries = num_vectors(query);
 
@@ -484,8 +484,8 @@ auto nuv_query_heap_finite_ram(
   while (partitioned_vectors.load()) {
     _i.start();
 
-    auto indices = partitioned_vectors.indices();
-    auto partitioned_ids = partitioned_vectors.ids();
+    const auto& indices = partitioned_vectors.indices();
+    const auto& partitioned_ids = partitioned_vectors.ids();
 
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
@@ -611,8 +611,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
   while (partitioned_vectors.load()) {
     _i.start();
 
-    auto indices = partitioned_vectors.indices();
-    auto partitioned_ids = partitioned_vectors.ids();
+    const auto& indices = partitioned_vectors.indices();
+    const auto& partitioned_ids = partitioned_vectors.ids();
 
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
@@ -809,8 +809,6 @@ auto qv_query_heap_finite_ram(
   using indices_type =
       typename std::remove_reference_t<decltype(indices)>::value_type;
   using parts_type = indices_type;
-
-  size_t num_queries = num_vectors(query);
 
   auto&& [active_partitions, active_queries] =
       detail::ivf::partition_ivf_flat_index<parts_type>(

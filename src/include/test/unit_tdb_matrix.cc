@@ -399,6 +399,6 @@ TEST_CASE("time travel", "[tdb_matrix]") {
         ctx, tmp_matrix_uri, 4, 2, 0, TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
     CHECK(dimensions(Y) == 0);
-    CHECK(Y.size() == 0);
+    CHECK(Y.empty());
   }
 }
