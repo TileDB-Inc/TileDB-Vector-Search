@@ -193,8 +193,6 @@ class vamana_index {
       , r_max_degree_{r_max_degree},
       distance_metric_{distance_metric} {
 
-        // print type of distance_function_
-        fprintf(stderr, "Distance type in creation: %s\n", typeid(Distance).name());
         distance_function_ = Distance{};
 
   }
@@ -222,7 +220,6 @@ class vamana_index {
     medoid_ = group_->get_medoid();
     distance_metric_ = group_->get_distance_metric();
 
-    fprintf(stderr, "Distance type in loading: %s\n", typeid(Distance).name());
     distance_function_ = Distance{};
 
     if (group_->should_skip_query()) {
@@ -601,8 +598,6 @@ class vamana_index {
       const Q& query_set,
       size_t k,
       std::optional<size_t> l_search = std::nullopt) {
-    // PRINT TYPE OF Distance FUNCTION
-    fprintf(stderr, "Distance type: %s\n", typeid(Distance).name());
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
     size_t L = l_search ? *l_search : l_build_;

@@ -139,8 +139,9 @@ class IndexVamana {
       const tiledb::Context& ctx,
       const URI& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
-    read_types(ctx, group_uri, &feature_datatype_, &id_datatype_, &distance_metric);
-
+    tiledb_datatype_t distance_metric_raw;
+    read_types(ctx, group_uri, &feature_datatype_, &id_datatype_, &distance_metric_raw);
+    distance_metric = static_cast<DistanceMetric>(distance_metric_raw);
     auto type = std::tuple{
         feature_datatype_, id_datatype_, adjacency_row_index_datatype_, distance_metric};
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
@@ -247,8 +248,8 @@ class IndexVamana {
       uint64_t timestamp) {
     tiledb_datatype_t feature_datatype{TILEDB_ANY};
     tiledb_datatype_t id_datatype{TILEDB_ANY};
-    DistanceMetric distance_metric;
-    read_types(ctx, group_uri, &feature_datatype, &id_datatype, &distance_metric);
+    tiledb_datatype_t distance_metric_raw;
+    read_types(ctx, group_uri, &feature_datatype, &id_datatype, &distance_metric_raw);
 
     auto type = std::tuple{
         feature_datatype, id_datatype, adjacency_row_index_datatype_};
@@ -301,13 +302,13 @@ class IndexVamana {
       const std::string& group_uri,
       tiledb_datatype_t* feature_datatype,
       tiledb_datatype_t* id_datatype,
-      DistanceMetric* distance_metric) {
+      tiledb_datatype_t* distance_metric) {
     using metadata_element =
         std::tuple<std::string, tiledb_datatype_t*, tiledb_datatype_t>;
     std::vector<metadata_element> metadata{
         {"feature_datatype", feature_datatype, TILEDB_UINT32},
         {"id_datatype", id_datatype, TILEDB_UINT32},
-        {"distance_metric", reinterpret_cast<tiledb_datatype_t*>(&distance_metric), TILEDB_UINT32}
+        {"distance_metric", distance_metric, TILEDB_UINT32}
         };
         // add distance metric here
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
@@ -434,7 +435,6 @@ class IndexVamana {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
 
-      fprintf(stderr, "Querying!\n");
       // print distance function typr
       // @note We need to maintain same layout -> or swap extents
       switch (dtype) {

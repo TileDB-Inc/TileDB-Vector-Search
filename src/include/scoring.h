@@ -96,7 +96,6 @@ struct sum_of_squares_distance {
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    fprintf(stderr, "sum_of_squares_distance\n");
     return unroll4_sum_of_squares(a, b);
   }
 
@@ -297,8 +296,6 @@ struct cosine_distance {
   template <feature_vector V, feature_vector U>
   inline float operator()(const V& a, const U& b) const {
     float mag = sqrt(l2_distance(a) * l2_distance(b));
-    fprintf(stderr, "mag: %f\n", mag);
-    fprintf(stderr, "result: %f\n", 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag));
     return 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag);
   }
 };
