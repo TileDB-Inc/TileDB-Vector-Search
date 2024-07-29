@@ -74,8 +74,8 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
 
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::string index_type_{"IVF_PQ"};
-  std::string partition_history_str_{""};
-  std::string indices_type_str_{""};
+  std::string partition_history_str_;
+  std::string indices_type_str_;
 
   uint64_t num_subspaces_{0};
   uint64_t sub_dimensions_{0};
@@ -87,8 +87,6 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   DistanceMetric distance_metric_{DistanceMetric::L2};
 
  protected:
-  IndexKind index_kind_{IndexKind::IVFPQ};
-
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
       // name, member_variable, required
       {"index_type", index_type_, true},
@@ -110,7 +108,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
 
   void clear_history_impl(uint64_t timestamp) {
     std::vector<uint64_t> new_partition_history;
-    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (size_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_partition_history.push_back(partition_history_[i]);

@@ -244,7 +244,8 @@ void train_no_init(
     std::fill(begin(degrees), end(degrees), 0);
 
     // How many centroids should we try to fix up
-    size_t heap_size = std::ceil(reassign_ratio_ * num_partitions_) + 5;
+    size_t heap_size =
+        std::ceil(reassign_ratio_ * static_cast<float>(num_partitions_)) + 5;
     auto high_scores = fixed_min_pair_heap<
         feature_type,
         index_type,
@@ -269,7 +270,8 @@ void train_no_init(
       max_degree = std::max<size_t>(max_degree, degree);
       low_degrees.insert(degree, i);
     }
-    size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio_);
+    size_t lower_degree_bound =
+        std::ceil(reassign_ratio_ * static_cast<float>(max_degree));
 
     // Don't reassign if we are on last iteration
     if (iter != max_iter_ - 1) {
@@ -459,10 +461,7 @@ auto sub_kmeans(
     uint32_t num_clusters,
     double tol,
     size_t max_iter,
-    size_t num_threads,
-    float reassign_ratio = 0.05,
-    bool reassign_later = false) {
-  size_t sub_dimension_ = sub_end - sub_begin;
+    size_t num_threads) {
   auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
   std::vector<size_t> degrees(num_clusters, 0);

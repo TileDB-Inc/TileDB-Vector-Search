@@ -374,7 +374,7 @@ TEST_CASE(
         index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
     auto num_ids = num_vectors(ids);
-    auto recall = ((double)intersections) / ((double)num_ids * k_nn);
+    auto recall = intersections / static_cast<double>(num_ids * k_nn);
     CHECK(recall > 0.7);
   }
 }
@@ -447,7 +447,7 @@ TEST_CASE("build index and query", "[api_ivf_pq_index]") {
 
   auto intersections = count_intersections(t, groundtruth_set, k_nn);
   auto nt = num_vectors(t);
-  auto recall = ((double)intersections) / ((double)nt * k_nn);
+  auto recall = intersections / static_cast<double>(nt * k_nn);
   CHECK(recall > 0.6);
 }
 
@@ -487,7 +487,7 @@ TEST_CASE("read index and query", "[api_ivf_pq_index]") {
   auto nt = num_vectors(t);
   auto nv = num_vectors(v);
   CHECK(nt == nv);
-  auto recall = ((double)intersections_a) / ((double)nt * k_nn);
+  auto recall = intersections_a / static_cast<double>(nt * k_nn);
   CHECK(recall > 0.7);
 }
 

@@ -37,20 +37,6 @@
 #include "test/utils/array_defs.h"
 
 #include "detail/flat/qv.h"
-#include "detail/linalg/tdb_matrix.h"
-
-std::vector<std::string> test_array_roots{
-    sift_root,
-    siftsmall_root,
-    bigann1M_root,
-    bigann10k_root,
-    fmnist_root,
-    diskann_root,
-};
-
-std::vector<std::string> test_file_roots{
-    siftsmall_files_root,
-};
 
 TEST_CASE("test array root uris", "[array_defs]") {
   for (auto& uri : {siftsmall_root, bigann10k_root}) {
@@ -60,16 +46,6 @@ TEST_CASE("test array root uris", "[array_defs]") {
     REQUIRE(std::filesystem::is_directory(uri));
   }
 }
-
-std::vector<std::string> sift_array_uris{
-    sift_inputs_uri,
-    sift_centroids_uri,
-    sift_index_uri,
-    sift_ids_uri,
-    sift_parts_uri,
-    sift_query_uri,
-    sift_groundtruth_uri,
-};
 
 std::vector<std::string> siftsmall_array_uris{
     siftsmall_inputs_uri,
@@ -91,28 +67,6 @@ std::vector<std::string> bigann10k_array_uris{
     bigann10k_parts_uri,
     bigann10k_query_uri,
     bigann10k_groundtruth_uri,
-};
-
-std::vector<std::string> bigann1M_array_uris{
-    bigann1M_inputs_uri,
-    bigann1M_centroids_uri,
-    bigann1M_index_uri,
-    bigann1M_ids_uri,
-    bigann1M_parts_uri,
-    bigann1M_query_uri,
-    bigann1M_groundtruth_uri,
-};
-
-// Note that we don't have a canonical IVF index for fmnist yet, so some
-// of these URIs are placeholders
-std::vector<std::string> fmnist_array_uris{
-    fmnist_inputs_uri,
-    fmnist_centroids_uri,
-    fmnist_index_uri,
-    fmnist_ids_uri,
-    fmnist_parts_uri,
-    fmnist_query_uri,
-    fmnist_groundtruth_uri,
 };
 
 std::vector<std::string> siftsmall_files{

@@ -300,7 +300,6 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   uint32_t max_iterationss = 4;
   size_t nprobe = 10;
   size_t k_nn = 10;
-  size_t nthreads = 1;
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -316,7 +315,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
   std::iota(begin(ids), end(ids), 0);
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
-      nlist, num_subspaces, max_iterationss, nthreads);
+      nlist, num_subspaces, max_iterations);
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
   idx.add(training_set, ids);
   idx.write_index(ctx, ivf_index_uri);

@@ -75,11 +75,11 @@ auto medoid(auto&& P, Distance distance = Distance{}) {
   for (size_t j = 0; j < n; ++j) {
     auto p = P[j];
     for (size_t i = 0; i < p.size(); ++i) {
-      centroid[i] += p[i];
+      centroid[i] += static_cast<float>(p[i]);
     }
   }
   for (size_t i = 0; i < centroid.size(); ++i) {
-    centroid[i] /= (float)num_vectors(P);
+    centroid[i] /= static_cast<float>(num_vectors(P));
   }
 
   std::vector<float> tmp{begin(centroid), end(centroid)};
@@ -285,7 +285,7 @@ class vamana_index {
     }
   }
 
-  vamana_index(const std::string& diskann_index) {
+  explicit vamana_index(const std::string& diskann_index) {
     const std::string diskann_data = diskann_index + ".data";
     feature_vectors_ = read_diskann_data(diskann_data);
     size_t num_nodes = num_vectors(feature_vectors_);
@@ -785,7 +785,7 @@ class vamana_index {
     for (size_t i = 0; i < num_vertices(graph_); ++i) {
       adj_index[i] = edge_offset;
       for (auto&& [score, id] : graph_.out_edges(i)) {
-        adj_scores[edge_offset] = score;
+        adj_scores[edge_offset] = static_cast<adjacency_scores_type>(score);
         adj_ids[edge_offset] = id;
         ++edge_offset;
       }

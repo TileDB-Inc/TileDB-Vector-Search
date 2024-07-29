@@ -181,7 +181,7 @@ int ivf_index(
     TemporalPolicy temporal_policy = (timestamp == 0) ?
                                          TemporalPolicy() :
                                          TemporalPolicy(TimeTravel, timestamp);
-    if (parts_uri != "") {
+    if (!parts_uri.empty()) {
       write_matrix<FeatureType, stdx::layout_left, size_t>(
           ctx,
           shuffled_input_vectors,
@@ -190,11 +190,11 @@ int ivf_index(
           false,
           temporal_policy);
     }
-    if (index_uri != "") {
+    if (!index_uri.empty()) {
       write_vector(
           ctx, indices, index_uri, partition_start, false, temporal_policy);
     }
-    if (id_uri != "") {
+    if (!id_uri.empty()) {
       write_vector(
           ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
     }

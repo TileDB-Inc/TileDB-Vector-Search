@@ -139,9 +139,6 @@ class vamana_index_group : public base_index_group<index_type> {
   void set_num_edges(uint64_t num_edges) {
     metadata_.num_edges_history_[this->history_index_] = num_edges;
   }
-  void set_last_num_edges(uint64_t num_edges) {
-    metadata_.num_edges_history_.back() = num_edges;
-  }
   uint64_t get_l_build() const {
     return metadata_.l_build_;
   }

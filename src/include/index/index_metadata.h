@@ -93,14 +93,14 @@ class base_index_metadata {
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
 
   // A non-empty value indicates an expected value / default value
-  std::string base_sizes_str_{""};
+  std::string base_sizes_str_;
   std::string dataset_type_{"vector_search"};
-  std::string dtype_{""};
-  std::string ingestion_timestamps_str_{""};
+  std::string dtype_;
+  std::string ingestion_timestamps_str_;
   std::string storage_version_{current_storage_version};
 
-  std::string feature_type_str_{""};
-  std::string id_type_str_{""};
+  std::string feature_type_str_;
+  std::string id_type_str_;
 
   /**************************************************************************
    * Initializer structs for metadata
@@ -340,7 +340,7 @@ class base_index_metadata {
 
     std::vector<uint64_t> new_ingestion_timestamps;
     std::vector<uint64_t> new_base_sizes;
-    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (size_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_ingestion_timestamps.push_back(ingestion_timestamp);
@@ -389,20 +389,24 @@ class base_index_metadata {
               *static_cast<double*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_FLOAT32:
           if (*static_cast<float*>(value) != *static_cast<float*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_INT64:
           if (*static_cast<int64_t*>(value) !=
               *static_cast<int64_t*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_UINT64:
           if (*static_cast<uint64_t*>(value) !=
               *static_cast<uint64_t*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_UINT32:
           if (*static_cast<uint32_t*>(value) !=
               *static_cast<uint32_t*>(rhs_value)) {

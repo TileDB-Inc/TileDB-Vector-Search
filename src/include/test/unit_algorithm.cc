@@ -170,5 +170,7 @@ TEST_CASE("for_each", "[algorithm]") {
     case 0:
       CHECK(v.empty());
       break;
+    default:
+      CHECK(false);
   }
 }
