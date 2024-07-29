@@ -488,7 +488,11 @@ class IndexVamana {
   using constructor_function = std::function<std::unique_ptr<index_base>(size_t, uint64_t, uint64_t, std::optional<TemporalPolicy>, DistanceMetric)>;
   using table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, constructor_function>;
   static const table_type dispatch_table;
+
+  using uri_constructor_function = std::function<std::unique_ptr<index_base>(const tiledb::Context&, const std::string&, std::optional<TemporalPolicy>)>;
+  using uri_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, uri_constructor_function>;
   static const uri_table_type uri_dispatch_table;
+
   using clear_history_constructor_function = std::function<void(const tiledb::Context&, const std::string&, uint64_t)>;
   using clear_history_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, clear_history_constructor_function>;
   static const clear_history_table_type clear_history_dispatch_table;

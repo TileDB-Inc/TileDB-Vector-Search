@@ -244,11 +244,11 @@ class ivf_pq_index {
   float convergence_tolerance_{0.f};
   float reassign_ratio_{0.f};
 
+  DistanceMetric distance_metric_{DistanceMetric::L2};
+
   // Some parameters for execution
   uint64_t num_threads_{std::thread::hardware_concurrency()};
   uint64_t seed_{std::random_device{}()};
-
-  DistanceMetric distance_metric_{DistanceMetric::L2};
 
  public:
   using value_type = feature_type;
