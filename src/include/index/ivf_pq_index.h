@@ -1246,16 +1246,17 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
+
+    auto query_vectors_encoded =
+        std::move(*pq_encode<Q, pq_ivf_centroid_storage_type>(query_vectors));
     return detail::ivf::query_infinite_ram(
         *partitioned_pq_vectors_,
         active_partitions,
-        query_vectors,
+        query_vectors_encoded,
         active_queries,
         k_nn,
         num_threads_,
-        make_pq_distance_asymmetric<
-            std::span<typename Q::value_type>,
-            decltype(pq_storage_type{}[0])>());
+        make_pq_distance_symmetric());
   }
 
   /**
