@@ -673,7 +673,7 @@ class vamana_index {
   auto update() {
   }
 
-  constexpr auto dimensions() const {
+  constexpr uint64_t dimensions() const {
     return dimensions_;
   }
 

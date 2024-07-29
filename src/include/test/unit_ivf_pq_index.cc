@@ -47,7 +47,7 @@ struct dummy_pq_index {
   using pq_vector_feature_type = pq_code_type;
   using score_type = float;
 
-  auto dimensions() const {
+  uint64_t dimensions() const {
     return 128;
   }
   auto num_subspaces() const {
@@ -297,7 +297,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
   size_t num_subspaces = 16;
-  size_t max_iters = 4;
+  size_t max_iterationss = 4;
   size_t nprobe = 10;
   size_t k_nn = 10;
   size_t nthreads = 1;
@@ -316,7 +316,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
   std::iota(begin(ids), end(ids), 0);
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
-      nlist, num_subspaces, max_iters, nthreads);
+      nlist, num_subspaces, max_iterationss, nthreads);
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
   idx.add(training_set, ids);
   idx.write_index(ctx, ivf_index_uri);
@@ -484,8 +484,13 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
 
   auto init = siftsmall_test_init<index>(ctx, nlist, 16);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, convergence_tolerance] =
+      std::tie(
+          init.nprobe,
+          init.k_nn,
+          init.nthreads,
+          init.max_iterations,
+          init.convergence_tolerance);
   auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
@@ -581,7 +586,7 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
   size_t num_vectors = 0;
-  size_t dimensions = 10;
+  uint64_t dimensions = 10;
   size_t nlist = 1;
   auto index = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
       nlist, dimensions / 2);
@@ -639,19 +644,29 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   tiledb::VFS vfs(ctx);
 
   size_t num_vectors = 4;
-  size_t dimensions = 4;
+  uint64_t dimensions = 4;
   size_t nlist = 1;
   size_t num_subspaces = 2;
-  size_t max_iter = 1;
-  float tol = 0.000025;
+  size_t max_iterations = 1;
+  float convergence_tolerance = 0.000025f;
+  float reassign_ratio = 0.09f;
   std::optional<TemporalPolicy> temporal_policy = std::nullopt;
   size_t num_clusters = 4;
   using feature_type = float;
   using id_type = uint32_t;
   auto index = ivf_pq_index<feature_type, id_type>(
-      nlist, num_subspaces, max_iter, tol, temporal_policy, num_clusters);
+      nlist,
+      num_subspaces,
+      max_iterations,
+      convergence_tolerance,
+      reassign_ratio,
+      temporal_policy,
+      DistanceMetric::L2,
+      num_clusters);
   auto ivf_index_uri =
       (std::filesystem::temp_directory_path() / "ivf_index").string();
+
+  CHECK(index.nlist() == nlist);
 
   // We can train, add, query, and then write the index.
   {
@@ -712,11 +727,11 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
-  size_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t n_list = 1;
   size_t num_subspaces = 1;
-  float convergence_tolerance = 0.00003f;
-  size_t max_iterations = 3;
+  float convergence_convergence_toleranceerance = 0.00003f;
+  size_t max_iterationsations = 3;
 
   // Write the empty index.
   {

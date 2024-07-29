@@ -140,8 +140,8 @@ struct siftsmall_test_init_defaults {
 
   size_t k_nn = 10;
   size_t nthreads = 0;
-  size_t max_iter = 10;
-  float tolerance = 1e-4;
+  size_t max_iterations = 10;
+  float convergence_tolerance = 1e-4;
 };
 
 template <class IndexType>
@@ -172,11 +172,12 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     if constexpr (std::is_same_v<
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
-      idx = IndexType(nlist, max_iter, tolerance);
+      idx = IndexType(nlist, max_iterations, convergence_tolerance);
     } else if constexpr (std::is_same_v<
                              IndexType,
                              ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx = IndexType(nlist, num_subspaces, max_iter, tolerance);
+      idx = IndexType(
+          nlist, num_subspaces, max_iterations, convergence_tolerance);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }

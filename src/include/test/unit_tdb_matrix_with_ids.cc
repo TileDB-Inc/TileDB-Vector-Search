@@ -63,7 +63,10 @@ TEMPLATE_TEST_CASE(
 
   auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
       ctx, tmp_matrix_uri, tmp_ids_uri);
-  Y.load();
+  CHECK(Y.load() == true);
+  for (int i = 0; i < 5; ++i) {
+    CHECK(Y.load() == false);
+  }
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimensions(Y) == dimensions(X));
   CHECK(std::equal(
@@ -260,9 +263,10 @@ TEST_CASE("empty matrix", "[tdb_matrix_with_ids]") {
       matrix_dimension,
       matrix_domain,
       matrix_dimension,
-      tile_extent);
+      tile_extent,
+      TILEDB_FILTER_NONE);
   create_empty_for_vector<uint64_t>(
-      ctx, tmp_ids_uri, matrix_domain, tile_extent);
+      ctx, tmp_ids_uri, matrix_domain, tile_extent, TILEDB_FILTER_NONE);
 
   {
     // Empty.

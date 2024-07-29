@@ -183,6 +183,9 @@ TEST_CASE("can load correctly", "[tdb_partitioned_matrix]") {
         std::vector<part_index_type>{}.begin()));
     CHECK(std::equal(
         matrix.indices().begin(), matrix.indices().end(), indices.begin()));
+
+    CHECK_FALSE(matrix.load());
+    CHECK_FALSE(matrix.load());
   }
 }
 
@@ -247,10 +250,10 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
       (std::filesystem::temp_directory_path() / "ids").string();
 
   std::vector<int> num_vectors_options = {9, 199, 2143};
-  std::vector<int> dimensions_options = {3, 77};
+  std::vector<uint64_t> dimensions_options = {3, 77};
   std::vector<int> num_parts_options = {1, 3, 99, 989, 2143};
   for (auto num_vectors : num_vectors_options) {
-    for (auto dimensions : dimensions_options) {
+    for (uint64_t dimensions : dimensions_options) {
       for (auto num_parts : num_parts_options) {
         auto training_set =
             ColMajorMatrix<feature_type>(dimensions, num_vectors);
@@ -311,6 +314,8 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
           CHECK(
               tdb_partitioned_matrix.num_partitions() ==
               expected_num_partitions);
+
+          CHECK_FALSE(tdb_partitioned_matrix.load());
         }
       }
     }
@@ -332,7 +337,7 @@ TEST_CASE(
       (std::filesystem::temp_directory_path() / "ids").string();
 
   size_t num_vectors = 10000;
-  size_t dimensions = 128;
+  uint64_t dimensions = 128;
 
   // Setup data.
   {
@@ -388,4 +393,51 @@ TEST_CASE(
     CHECK(matrix.num_partitions() > 0);
     CHECK(_cpo::dimensions(matrix) == dimensions);
   }
+
+  CHECK_FALSE(matrix.load());
+}
+
+TEST_CASE("single vector and single partition", "[tdb_partitioned_matrix]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+
+  using feature_type = int;
+  using id_type = int;
+  using part_index_type = int;
+
+  std::string partitioned_vectors_uri =
+      (std::filesystem::temp_directory_path() /
+       "single_vector_partitioned_vectors")
+          .string();
+  std::string ids_uri =
+      (std::filesystem::temp_directory_path() / "single_vector_ids").string();
+  // Setup data.
+  {
+    if (vfs.is_dir(partitioned_vectors_uri)) {
+      vfs.remove_dir(partitioned_vectors_uri);
+    }
+    if (vfs.is_dir(ids_uri)) {
+      vfs.remove_dir(ids_uri);
+    }
+
+    auto partitioned_vectors = ColMajorMatrix<feature_type>{{1}};
+    write_matrix(ctx, partitioned_vectors, partitioned_vectors_uri);
+    std::vector<id_type> ids = {1};
+    write_vector(ctx, ids, ids_uri);
+  }
+
+  std::vector<part_index_type> indices = {0, 1};
+  std::vector<part_index_type> relevant_parts = {0};
+
+  auto matrix =
+      tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+          ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
+  matrix.load();
+
+  CHECK(matrix.num_vectors() == 1);
+  CHECK(matrix.num_partitions() == 1);
+  CHECK(matrix.data()[0] == 1);
+  CHECK(matrix.ids()[0] == 1);
+  CHECK(matrix.indices() == indices);
+  CHECK_FALSE(matrix.load());
 }

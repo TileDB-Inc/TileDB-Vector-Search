@@ -225,7 +225,7 @@ class Index:
         self,
         queries: np.ndarray,
         k: int,
-        driver_mode: Mode = None,
+        driver_mode: Optional[Mode] = None,
         driver_resources: Optional[str] = None,
         driver_access_credentials_name: Optional[str] = None,
         **kwargs,
@@ -275,13 +275,13 @@ class Index:
                 f"Expected queries to have dtype np.float32, but it had dtype {queries.dtype}"
             )
 
-        if driver_mode == Mode.LOCAL:
-            # @todo: Fix bug with driver_mode=Mode.LOCAL and remove this check.
-            raise TypeError(
-                "Cannot pass driver_mode=Mode.LOCAL to query() - use driver_mode=None to query locally."
-            )
-
         if driver_mode is not None:
+            if driver_mode == Mode.LOCAL:
+                # @todo: Fix bug with driver_mode=Mode.LOCAL and remove this check.
+                raise TypeError(
+                    "Cannot pass driver_mode=Mode.LOCAL to query() - use driver_mode=None to query locally."
+                )
+
             return self._query_with_driver(
                 queries,
                 k,
@@ -315,6 +315,7 @@ class Index:
             k,
             self.dtype,
             self.updates_array_uri,
+            self.distance_metric,
             int(os.cpu_count() / 2),
             self.update_array_timestamp,
             self.config,
@@ -460,6 +461,9 @@ class Index:
         are added to the index. It triggers a base index re-indexing, merging the non-consolidated
         updates and the rest of the base vectors.
 
+        TODO(sc-51202): This throws with a unintuitive error message if update()/delete()/etc. has
+        not been called.
+
         Parameters
         ----------
         retrain_index: bool
@@ -472,10 +476,6 @@ class Index:
             Extra kwargs passed here are passed to `ingest` function.
         """
         from tiledb.vector_search.ingestion import ingest
-
-        if self.index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            raise ValueError("IVF_PQ indexes do not support consolidation yet.")
 
         fragments_info = tiledb.array_fragments(
             self.updates_array_uri, ctx=tiledb.Ctx(self.config)
@@ -594,6 +594,7 @@ class Index:
                     vspy.IndexIVFPQ.clear_history(ctx, uri, timestamp)
                 else:
                     raise ValueError(f"Unsupported index_type: {index_type}")
+                group.close()
                 return
 
             ingestion_timestamps = [
@@ -693,6 +694,7 @@ class Index:
         k,
         dtype,
         updates_array_uri,
+        distance_metric,
         nthreads=8,
         timestamp=None,
         config=None,
@@ -819,6 +821,7 @@ def create_metadata(
     vector_type: np.dtype,
     index_type: str,
     storage_version: str,
+    distance_metric: vspy.DistanceMetric,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,

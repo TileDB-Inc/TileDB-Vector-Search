@@ -77,19 +77,9 @@ class VamanaIndex(index.Index):
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
 
-        schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimensions()
-
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
-        if self.dtype is None:
-            self.dtype = np.dtype(schema.attr("values").dtype)
-        else:
-            self.dtype = np.dtype(self.dtype)
-
-        if self.base_size == -1:
-            self.size = schema.domain.dim(1).domain[1] + 1
-        else:
-            self.size = self.base_size
+        self.size = self.base_size
 
     def get_dimensions(self):
         """
@@ -179,6 +169,10 @@ def create(
             f"Storage version {storage_version} is not supported for VamanaIndex. VamanaIndex requires storage version 0.3 or higher."
         )
     ctx = vspy.Ctx(config)
+    if distance_metric != vspy.DistanceMetric.L2:
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in VAMANA"
+        )
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,

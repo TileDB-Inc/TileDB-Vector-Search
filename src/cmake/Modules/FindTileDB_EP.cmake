@@ -52,15 +52,18 @@ else()
     include(DownloadPrebuiltTileDB)
 
     # Try to download prebuilt artifacts unless the user specifies to build from source
+    # To update these:
+    # - Find the TileDB release, i.e. https://github.com/TileDB-Inc/TileDB/releases/tag/2.24.1.
+    # - Copy the release hash from the `releases.csv.sha256` file in the release.
     if(DOWNLOAD_TILEDB_PREBUILT)
         fetch_prebuilt_tiledb(
-                VERSION 2.24.1
-                RELLIST_HASH SHA256=76d4deebd42afd059729fac7f13b172e1187ab43b8e3d2404f0328a47221a231
+                VERSION 2.25.0
+                RELLIST_HASH SHA256=398a1da194a59817b6f354b3232f6575c97c350d6dc792de54c529162e30763c
         )
     else() # Build from source
         fetch_source_tiledb(
-                VERSION 2.24.1
-                RELLIST_HASH SHA256=76d4deebd42afd059729fac7f13b172e1187ab43b8e3d2404f0328a47221a231
+                VERSION 2.25.0
+                RELLIST_HASH SHA256=398a1da194a59817b6f354b3232f6575c97c350d6dc792de54c529162e30763c
         )
     endif()
 

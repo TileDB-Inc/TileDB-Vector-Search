@@ -821,7 +821,7 @@ class ivf_flat_index {
    * Note that we don't have a `num_vectors` because it isn't clear what
    * that means for a partitioned (possibly out-of-core) index.
    ***************************************************************************/
-  auto dimensions() const {
+  uint64_t dimensions() const {
     return dimensions_;
   }
 

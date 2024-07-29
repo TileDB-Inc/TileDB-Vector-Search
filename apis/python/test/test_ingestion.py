@@ -617,9 +617,6 @@ def test_ingestion_timetravel(tmp_path):
             timestamp=20,
         )
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
 
         # We still have no results before timestamp 10.
@@ -827,12 +824,7 @@ def test_ingestion_with_updates(tmp_path):
         ingestion_timestamp = ingestion_timestamps[0]
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        if index_type == "IVF_PQ":
-            # TODO(paris): We get 0.989 accuracy instead of 1.0. Investigate why - it should be 1.0
-            # when we have `nprobe = partitions` and `num_subspaces = dimensions`.
-            assert accuracy(result, gt_i) > 0.9
-            continue
-        assert accuracy(result, gt_i) == 1.0
+        assert accuracy(result, gt_i) >= (0.998 if index_type == "IVF_PQ" else 1.0)
 
         update_ids_offset = MAX_UINT64 - size
         updated_ids = {}
@@ -844,16 +836,22 @@ def test_ingestion_with_updates(tmp_path):
             updated_ids[i] = i + update_ids_offset
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index = index.consolidate_updates(retrain_index=True, partitions=20)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert base_sizes == [1000, 1000]
@@ -890,7 +888,7 @@ def test_ingestion_with_batch_updates(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        minimum_accuracy = 0.85 if index_type == "IVF_PQ" else 0.99
+        minimum_accuracy = 0.84 if index_type == "IVF_PQ" else 0.99
 
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
@@ -928,9 +926,6 @@ def test_ingestion_with_batch_updates(tmp_path):
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, updated_ids=updated_ids) > minimum_accuracy
@@ -1051,9 +1046,6 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i) == 1.0
 
         # Consolidate updates
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
@@ -1170,6 +1162,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
         # Clear all history
+        assert index.latest_ingestion_timestamp == 102
         Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp)
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -1256,9 +1249,6 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
         _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
         _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)

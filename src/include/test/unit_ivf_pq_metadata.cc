@@ -36,6 +36,7 @@
 #include "detail/linalg/tdb_matrix.h"
 #include "index/ivf_pq_index.h"
 #include "index/ivf_pq_metadata.h"
+#include "scoring.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/test_utils.h"
 
@@ -62,7 +63,8 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
   }
-  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(0, 16);
+  auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+      0, 16, 2, 2.5E-05, 0.075F, std::nullopt, DistanceMetric::COSINE);
 
   std::vector<std::tuple<std::string, size_t>> expected_arithmetic{
       {"temp_size", 0},
@@ -74,6 +76,13 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
       {"sub_dimensions", 8},
       {"bits_per_subspace", 8},
       {"num_clusters", 256},
+      {"max_iterations", 2},
+      {"distance_metric", static_cast<size_t>(DistanceMetric::COSINE)},
+  };
+
+  std::vector<std::tuple<std::string, float>> expected_arithmetic_float{
+      {"convergence_tolerance", 0.000025f},
+      {"reassign_ratio", 0.075f},
   };
 
   {
@@ -97,7 +106,11 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         {"base_sizes", "[0]"},
         {"partition_history", "[0]"},
     };
-    validate_metadata(read_group, expected_str, expected_arithmetic);
+    validate_metadata(
+        read_group,
+        expected_str,
+        expected_arithmetic,
+        expected_arithmetic_float);
 
     auto x = ivf_pq_metadata();
     x.load_metadata(read_group);
