@@ -106,10 +106,7 @@ class IndexVamana {
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
         } else if (key == "distance_metric") {
-          distance_metric_ = parseAndValidateDistanceMetric(
-              value,
-              [](DistanceMetric dm) { return dm == DistanceMetric::L2; },
-              "Invalid distance metric for Vamana");
+          distance_metric_ = parseAndValidateDistanceMetric(value);
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -138,12 +135,12 @@ class IndexVamana {
         &feature_datatype_,
         &id_datatype_,
         &distance_metric_raw);
-    distance_metric = static_cast<DistanceMetric>(distance_metric_raw);
+    distance_metric_ = static_cast<DistanceMetric>(distance_metric_raw);
     auto type = std::tuple{
         feature_datatype_,
         id_datatype_,
         adjacency_row_index_datatype_,
-        distance_metric};
+        distance_metric_};
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
@@ -180,7 +177,7 @@ class IndexVamana {
         feature_datatype_,
         id_datatype_,
         adjacency_row_index_datatype_,
-        distance_metric};
+        distance_metric_};
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }

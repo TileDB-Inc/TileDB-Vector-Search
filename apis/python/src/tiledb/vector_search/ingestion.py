@@ -20,7 +20,6 @@ import numpy as np
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
-from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
