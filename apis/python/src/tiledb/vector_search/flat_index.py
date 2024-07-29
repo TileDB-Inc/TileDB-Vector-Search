@@ -137,7 +137,9 @@ class FlatIndex(index.Index):
             )
 
         queries_m = array_to_matrix(np.transpose(queries))
-        d, i = query_vq_heap(self._db, queries_m, self._ids, k, nthreads)
+        d, i = query_vq_heap(
+            self._db, queries_m, self._ids, k, nthreads, self.distance_metric
+        )
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
 
@@ -149,6 +151,7 @@ def create(
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> FlatIndex:
     """
@@ -171,6 +174,9 @@ def create(
     storage_version: str
         The TileDB vector search storage version to use.
         If not provided, use hte latest stable storage version.
+    distance_metric: vspy.DistanceMetric
+        Distance metric to use for the index.
+        If not provided, use L2 distance.
     """
     validate_storage_version(storage_version)
 
@@ -180,6 +186,7 @@ def create(
         vector_type=vector_type,
         index_type=INDEX_TYPE,
         storage_version=storage_version,
+        distance_metric=distance_metric,
         group_exists=group_exists,
         config=config,
     )

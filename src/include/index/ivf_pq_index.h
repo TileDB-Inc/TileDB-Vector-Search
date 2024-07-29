@@ -248,6 +248,8 @@ class ivf_pq_index {
   uint64_t num_threads_{std::thread::hardware_concurrency()};
   uint64_t seed_{std::random_device{}()};
 
+  DistanceMetric distance_metric_{DistanceMetric::L2};
+
  public:
   using value_type = feature_type;
   using index_type = partitioning_indices_type;  // @todo This isn't quite right
@@ -295,7 +297,9 @@ class ivf_pq_index {
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      uint64_t seed = std::random_device{}())
+      DistanceMetric distance_metric = DistanceMetric::L2,
+      uint64_t seed = std::random_device{}()
+      )
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
@@ -304,7 +308,9 @@ class ivf_pq_index {
       , max_iterations_(max_iterations)
       , convergence_tolerance_(convergence_tolerance)
       , reassign_ratio_(reassign_ratio)
-      , seed_{seed} {
+      , distance_metric_{distance_metric}
+      , seed_{seed}
+      {
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
           "num_subspaces (" + std::to_string(num_subspaces_) +
@@ -353,6 +359,7 @@ class ivf_pq_index {
     max_iterations_ = group_->get_max_iterations();
     convergence_tolerance_ = group_->get_convergence_tolerance();
     reassign_ratio_ = group_->get_reassign_ratio();
+    distance_metric_ = group_->get_distance_metric();
 
     flat_ivf_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
@@ -1024,6 +1031,7 @@ class ivf_pq_index {
     write_group.set_max_iterations(max_iterations_);
     write_group.set_convergence_tolerance(convergence_tolerance_);
     write_group.set_reassign_ratio(reassign_ratio_);
+    write_group.set_distance_metric(distance_metric_);
 
     if (num_subspaces_ * sub_dimensions_ != dimensions_) {
       throw std::runtime_error(
@@ -1374,6 +1382,10 @@ class ivf_pq_index {
     return num_partitions_;
   }
 
+  constexpr auto distance_metric() const {
+    return distance_metric_;
+  }
+
   /***************************************************************************
    * Methods to aid Testing and Debugging
    *
@@ -1577,6 +1589,9 @@ class ivf_pq_index {
       return false;
     }
     if (reassign_ratio_ != rhs.reassign_ratio_) {
+      return false;
+    }
+    if (distance_metric_ != rhs.distance_metric_) {
       return false;
     }
 

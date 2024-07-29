@@ -88,6 +88,8 @@ class vamana_index_metadata
   float alpha_max_{1.2};
   uint64_t medoid_{0};
 
+  DistanceMetric distance_metric_{DistanceMetric::L2};
+
  protected:
   IndexKind index_kind_{IndexKind::Vamana};
 
@@ -113,6 +115,7 @@ class vamana_index_metadata
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32, false},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
       {"medoid", &medoid_, TILEDB_UINT64, false},
+      {"distance_metric", &distance_metric_, TILEDB_UINT32, false},
   };
 
   void clear_history_impl(uint64_t timestamp) {

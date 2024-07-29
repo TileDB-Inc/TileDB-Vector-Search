@@ -158,6 +158,7 @@ class vamana_index {
   uint64_t r_max_degree_{0};  // diskANN paper says default = 64
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
+  DistanceMetric distance_metric_{DistanceMetric::L2};
 
  public:
   /****************************************************************************
@@ -179,14 +180,16 @@ class vamana_index {
       size_t num_nodes,
       uint64_t l_build,
       uint64_t r_max_degree,
-      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
+      DistanceMetric distance_metric = DistanceMetric::L2)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
       , num_vectors_{num_nodes}
       , graph_{num_vectors_}
       , l_build_{l_build}
-      , r_max_degree_{r_max_degree} {
+      , r_max_degree_{r_max_degree},
+      distance_metric_{distance_metric} {
   }
 
   /**
@@ -210,6 +213,7 @@ class vamana_index {
     alpha_min_ = group_->get_alpha_min();
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
+    distance_metric_ = group_->get_distance_metric();
 
     if (group_->should_skip_query()) {
       num_vectors_ = 0;
@@ -673,6 +677,10 @@ class vamana_index {
     return r_max_degree_;
   }
 
+  constexpr auto distance_metric() const {
+    return distance_metric_;
+  }
+
   /**
    * @brief Write the index to a TileDB group. The group consists of the
    * original feature vectors, and the graph index, which comprises the
@@ -717,6 +725,7 @@ class vamana_index {
     write_group.set_alpha_min(alpha_min_);
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
+    write_group.set_distance_metric(distance_metric_);
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
@@ -911,6 +920,13 @@ class vamana_index {
                    "rhs.temporal_policy_.timestamp_start()"
                 << temporal_policy_.timestamp_start()
                 << " ! = " << rhs.temporal_policy_.timestamp_start()
+                << std::endl;
+      return false;
+    }
+    if (distance_metric_ != rhs.distance_metric_) {
+      std::cout << "distance_metric_ != rhs.distance_metric_"
+                << static_cast<int>(distance_metric_)
+                << " != " << static_cast<int>(rhs.distance_metric_)
                 << std::endl;
       return false;
     }
