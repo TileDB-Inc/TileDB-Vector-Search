@@ -140,10 +140,18 @@ class IndexVamana {
       const URI& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
     tiledb_datatype_t distance_metric_raw;
-    read_types(ctx, group_uri, &feature_datatype_, &id_datatype_, &distance_metric_raw);
+    read_types(
+        ctx,
+        group_uri,
+        &feature_datatype_,
+        &id_datatype_,
+        &distance_metric_raw);
     distance_metric = static_cast<DistanceMetric>(distance_metric_raw);
     auto type = std::tuple{
-        feature_datatype_, id_datatype_, adjacency_row_index_datatype_, distance_metric};
+        feature_datatype_,
+        id_datatype_,
+        adjacency_row_index_datatype_,
+        distance_metric};
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
@@ -176,7 +184,10 @@ class IndexVamana {
     }
 
     auto type = std::tuple{
-        feature_datatype_, id_datatype_, adjacency_row_index_datatype_, distance_metric};
+        feature_datatype_,
+        id_datatype_,
+        adjacency_row_index_datatype_,
+        distance_metric};
     if (dispatch_table.find(type) == dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
@@ -249,7 +260,8 @@ class IndexVamana {
     tiledb_datatype_t feature_datatype{TILEDB_ANY};
     tiledb_datatype_t id_datatype{TILEDB_ANY};
     tiledb_datatype_t distance_metric_raw;
-    read_types(ctx, group_uri, &feature_datatype, &id_datatype, &distance_metric_raw);
+    read_types(
+        ctx, group_uri, &feature_datatype, &id_datatype, &distance_metric_raw);
 
     auto type = std::tuple{
         feature_datatype, id_datatype, adjacency_row_index_datatype_};
@@ -308,9 +320,8 @@ class IndexVamana {
     std::vector<metadata_element> metadata{
         {"feature_datatype", feature_datatype, TILEDB_UINT32},
         {"id_datatype", id_datatype, TILEDB_UINT32},
-        {"distance_metric", distance_metric, TILEDB_UINT32}
-        };
-        // add distance metric here
+        {"distance_metric", distance_metric, TILEDB_UINT32}};
+    // add distance metric here
     tiledb::Group read_group(ctx, group_uri, TILEDB_READ, ctx.config());
 
     for (auto& [name, value, datatype] : metadata) {
@@ -396,7 +407,7 @@ class IndexVamana {
           extents(training_set)[0],
           extents(training_set)[1]};
 
-      using id_type = typename T::id_type;      
+      using id_type = typename T::id_type;
 
       if (num_ids(training_set) > 0) {
         auto ids = std::span<id_type>(
@@ -528,35 +539,35 @@ const IndexVamana::table_type IndexVamana::dispatch_table = {
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint32_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint32_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint32_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint32_t, uint64_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint32_t, uint64_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint32_t, uint64_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<int8_t,  uint64_t, uint32_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<uint8_t, uint64_t, uint32_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint32_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
@@ -572,7 +583,7 @@ const IndexVamana::table_type IndexVamana::dispatch_table = {
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64, DistanceMetric::L2}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t, sum_of_squares_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64, DistanceMetric::INNER_PRODUCT}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t, inner_product_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64, DistanceMetric::COSINE}, [](size_t num_vectors, size_t l_build, size_t r_max_degree, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t, cosine_distance>>>(num_vectors, l_build, r_max_degree, temporal_policy, distance_metric); }},
-  
+
   };
 
 const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {

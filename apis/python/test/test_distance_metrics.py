@@ -200,6 +200,7 @@ def test_ivf_flat_cosine_simple(tmp_path):
         nprobe=2,
     )
 
+
 def test_vamana_cosine_simple(tmp_path):
     # Create 5 input vectors
 
@@ -402,12 +403,12 @@ def test_vamana_create_l2(tmp_path):
 def test_vamana_create_cosine(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
     ingest(
-            index_type="VAMANA",
-            index_uri=index_uri,
-            source_uri=siftsmall_uri,
-            source_type="FVEC",
-            distance_metric=vspy.DistanceMetric.COSINE,
-        )
+        index_type="VAMANA",
+        index_uri=index_uri,
+        source_uri=siftsmall_uri,
+        source_type="FVEC",
+        distance_metric=vspy.DistanceMetric.COSINE,
+    )
 
 
 def test_ivf_flat_create_cosine_numpy(tmp_path):

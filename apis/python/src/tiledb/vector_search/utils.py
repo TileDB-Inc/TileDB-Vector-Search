@@ -106,7 +106,6 @@ def write_fvecs(uri, data, ctx_or_config=None):
     _write_vecs_t(uri, data, np.float32, ctx_or_config)
 
 
-
 def normalize_vector(vector: np.array) -> np.array:
     """
     Normalize a single vector to unit length.

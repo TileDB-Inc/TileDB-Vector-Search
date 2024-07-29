@@ -228,7 +228,6 @@ static void declare_qv_query_heap_finite_ram(
           -> py::tuple {  // std::tuple<ColMajorMatrix<float>,
                           // ColMajorMatrix<size_t>> { //
                           // TODO change return type
-
         if (distance_metric == DistanceMetric::L2) {
           auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
               ctx,
