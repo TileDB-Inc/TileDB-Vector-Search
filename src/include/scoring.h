@@ -96,6 +96,7 @@ struct sum_of_squares_distance {
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
+    fprintf(stderr, "sum_of_squares_distance\n");
     return unroll4_sum_of_squares(a, b);
   }
 
@@ -296,6 +297,8 @@ struct cosine_distance {
   template <feature_vector V, feature_vector U>
   inline float operator()(const V& a, const U& b) const {
     float mag = sqrt(l2_distance(a) * l2_distance(b));
+    fprintf(stderr, "mag: %f\n", mag);
+    fprintf(stderr, "result: %f\n", 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag));
     return 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag);
   }
 };
@@ -314,52 +317,7 @@ using cosine_distance_normalized = _cosine_distance::cosine_distance_normalized;
 enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
 
 
-class DistanceWrapper {
-    struct Concept {
-        virtual float operator()(const float* a, const float* b) const = 0;
-        virtual float operator()(const float* a) const = 0;
-        virtual ~Concept() = default;
-    };
-    
-    template<typename T>
-    struct Model : Concept {
-        T func;
-        Model(T f) : func(std::move(f)) {}
-        float operator()(const float* a, const float* b) const override {
-            return func(a, b);
-        }
-        float operator()(const float* a) const override {
-            return func(a);
-        }
-    };
-    
-    std::unique_ptr<Concept> ptr;
 
-public:
-    template<typename T>
-    DistanceWrapper(T f) : ptr(std::make_unique<Model<T>>(std::move(f))) {}
-    
-    float operator()(const float* a, const float* b) const {
-        return (*ptr)(a, b);
-    }
-    
-    float operator()(const float* a) const {
-        return (*ptr)(a);
-    }
-};
-
-static DistanceWrapper get_distance_struct(DistanceMetric metric) {
-    switch (metric) {
-        case DistanceMetric::L2:
-            return DistanceWrapper(sum_of_squares_distance{});
-        case DistanceMetric::INNER_PRODUCT:
-            return DistanceWrapper(inner_product_distance{});
-        case DistanceMetric::COSINE:
-            return DistanceWrapper(cosine_distance{});
-        default:
-            throw std::invalid_argument("Unknown distance metric");
-    }
-}
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn

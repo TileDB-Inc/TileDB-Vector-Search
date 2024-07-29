@@ -297,6 +297,8 @@ auto greedy_search_O1(
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
 
+  // print distance type
+  fprintf(stderr, "%s \n", typeid(distance).name());
   static_assert(std::integral<id_type>);
 
   if (L < k_nn) {
@@ -446,6 +448,8 @@ auto greedy_search(
     size_t L,
     Distance&& distance = Distance{},
     bool convert_to_db_ids = false) {
+      // print type of distance
+      fprintf(stderr, "distance type: %s\n", typeid(distance).name());
   if (graph.num_vertices() == 0) {
     using id_type = typename std::decay_t<decltype(graph)>::id_type;
     using score_type = typename std::decay_t<decltype(graph)>::score_type;
