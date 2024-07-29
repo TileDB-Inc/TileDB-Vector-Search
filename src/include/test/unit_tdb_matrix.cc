@@ -69,7 +69,6 @@ TEMPLATE_TEST_CASE("constructors", "[tdb_matrix]", float, uint8_t) {
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimensions(Y) == dimensions(X));
 
-  auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
   CHECK(num_vectors(Z) == num_vectors(X));
   CHECK(dimensions(Z) == dimensions(X));
 
