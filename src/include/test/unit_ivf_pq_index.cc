@@ -297,7 +297,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
   uint64_t num_subspaces = 16;
-  uint32_t max_iterationss = 4;
+  uint32_t max_iterations = 4;
   size_t nprobe = 10;
   size_t k_nn = 10;
 
