@@ -43,7 +43,7 @@
 #   https://docs.microsoft.com/en-us/cpp/sanitizers/asan-building
 #   https://devblogs.microsoft.com/cppblog/addresssanitizer-asan-for-windows-with-msvc/
 #   https://devblogs.microsoft.com/cppblog/address-sanitizer-for-msvc-now-generally-available/
-# 
+#
 # Based on:
 # - https://github.com/TileDB-Inc/TileDB/blob/dev/cmake/Modules/Sanitizer.cmake
 
