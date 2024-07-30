@@ -125,22 +125,6 @@ def normalize_vector(vector: np.array) -> np.array:
     return vector / norm
 
 
-def normalize_vector(vector: np.array) -> np.array:
-    """
-    Normalize a single vector to unit length.
-
-    Args:
-    vector (np.array): Input vector to be normalized.
-
-    Returns:
-    np.array: Normalized vector.
-    """
-    norm = np.linalg.norm(vector)
-    if norm == 0:
-        return vector  # Return the original vector if it's all zeros
-    return vector / norm
-
-
 def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
     """
     Normalize an array of vectors to unit length while preserving the original array structure.
