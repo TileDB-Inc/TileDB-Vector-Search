@@ -574,6 +574,45 @@ class ivf_pq_index {
     };
     return pq_distance{this};
   }
+  /**
+   * @brief Computes the distance between a query and and a pq_encoded_vector
+   * given the distance table of the query to the pq_centroids
+   * query_to_pq_centroid_distance_table.
+   *
+   * @param query_to_pq_centroid_distance_table Distance table of the query
+   * vector to the pq_centroids.
+   * @param pq_encoded_vector PQ encoded database vector.
+   *
+   */
+  template <feature_vector U, feature_vector V>
+  float sub_distance_query_to_pq_centroid_distance_tables(
+      const U& query_to_pq_centroid_distance_table,
+      const V& pq_encoded_vector) const {
+    float pq_distance = 0.0;
+    size_t sub_id = 0;
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto j = pq_encoded_vector[subspace];
+      pq_distance += query_to_pq_centroid_distance_table[sub_id + j];
+      sub_id += num_clusters_;
+    }
+    return pq_distance;
+  }
+
+  template <
+      typename query_to_pq_centroid_distance_tables_type,
+      typename index_feature_type>
+  auto make_pq_distance_query_to_pq_centroid_distance_tables() const {
+    using A = query_to_pq_centroid_distance_tables_type;
+    using B = index_feature_type;
+
+    struct pq_distance {
+      const ivf_pq_index* outer_;
+      inline float operator()(const A& a, const B& b) {
+        return outer_->sub_distance_query_to_pq_centroid_distance_tables(a, b);
+      }
+    };
+    return pq_distance{this};
+  }
 
   /**
    * @brief Uncompress the b and compute the distance between a and b
@@ -809,6 +848,53 @@ class ivf_pq_index {
     auto& pqv = *pq_vectors;
     for (size_t i = 0; i < num_vectors(training_set); ++i) {
       pq_encode_one(training_set[i], pqv[i], distance);
+    }
+    return pq_vectors;
+  }
+
+  /**
+   * @brief Builds distance tables between each query and pq centroid.
+   *
+   * For each query, we iterate through each of it's subspaces, and for
+   * each subspace we will compute the distance from the vector's subspace to
+   * each of the (num_clusters_) pq_centroids. This results in a distance table
+   * per query that is used during the actual distance computation between the
+   * query and the encoded database vectors. This should be combined with
+   * sub_distance_query_to_pq_centroid_distance_tables.
+   *
+   *
+   * @param query_vectors Array of query vectors to compute centroid distance
+   * tables for.
+   * @param distance Distance function.
+   *
+   */
+  template <
+      feature_vector_array U,
+      class Matrix,
+      class Distance = uncached_sub_sum_of_squares_distance>
+  auto generate_query_to_pq_centroid_distance_tables(
+      const U& query_vectors, Distance distance = Distance{}) const {
+    auto pq_vectors = std::make_unique<Matrix>(
+        num_subspaces_ * num_clusters_, num_vectors(query_vectors));
+    auto& pqv = *pq_vectors;
+    auto local_distance = Distance{};
+    for (size_t i = 0; i < num_vectors(query_vectors); ++i) {
+      auto sub_begin = 0;
+      auto sub_id = 0;
+      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        auto sub_end = sub_begin + sub_dimensions_;
+        for (size_t centroid_id = 0; centroid_id < num_clusters_;
+             ++centroid_id) {
+          float pq_distance = local_distance(
+              query_vectors[i],
+              cluster_centroids_[centroid_id],
+              sub_begin,
+              sub_end);
+          pqv[i][sub_id + centroid_id] = pq_distance;
+        }
+        sub_begin = sub_end;
+        sub_id += num_clusters_;
+      }
     }
     return pq_vectors;
   }
@@ -1246,15 +1332,19 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
+    auto query_to_pq_centroid_distance_tables =
+        std::move(*generate_query_to_pq_centroid_distance_tables<
+                  Q,
+                  ColMajorMatrix<float>>(query_vectors));
     return detail::ivf::query_infinite_ram(
         *partitioned_pq_vectors_,
         active_partitions,
-        query_vectors,
+        query_to_pq_centroid_distance_tables,
         active_queries,
         k_nn,
         num_threads_,
-        make_pq_distance_asymmetric<
-            std::span<typename Q::value_type>,
+        make_pq_distance_query_to_pq_centroid_distance_tables<
+            std::span<float>,
             decltype(pq_storage_type{}[0])>());
   }
 
@@ -1299,16 +1389,19 @@ class ivf_pq_index {
     }
     auto&& [active_partitions, active_queries] =
         read_index_finite(query_vectors, nprobe, upper_bound);
-
+    auto query_to_pq_centroid_distance_tables =
+        std::move(*generate_query_to_pq_centroid_distance_tables<
+                  Q,
+                  ColMajorMatrix<float>>(query_vectors));
     return detail::ivf::query_finite_ram(
         *partitioned_pq_vectors_,
-        query_vectors,
+        query_to_pq_centroid_distance_tables,
         active_queries,
         k_nn,
         upper_bound,
         num_threads_,
-        make_pq_distance_asymmetric<
-            std::span<typename Q::value_type>,
+        make_pq_distance_query_to_pq_centroid_distance_tables<
+            std::span<float>,
             decltype(pq_storage_type{}[0])>());
   }
 
