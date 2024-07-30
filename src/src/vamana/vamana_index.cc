@@ -90,8 +90,8 @@ int main(int argc, char* argv[]) {
 
   float alpha_0 = 1.0;
 
-  uint64_t Lbuild = args["--Lbuild"].asLong();
-  uint64_t max_degree = args["--max_degree"].asLong();
+  uint32_t Lbuild = args["--Lbuild"].asLong();
+  uint32_t max_degree = args["--max_degree"].asLong();
   std::string alpha_str = args["--alpha"].asString();
   float alpha_1 = std::atof(alpha_str.c_str());
 

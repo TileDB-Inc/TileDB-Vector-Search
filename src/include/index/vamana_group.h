@@ -145,7 +145,7 @@ class vamana_index_group : public base_index_group<index_type> {
   void set_l_build(uint32_t l_build) {
     metadata_.l_build_ = l_build;
   }
-  uint64_t get_r_max_degree() const {
+  uint32_t get_r_max_degree() const {
     return metadata_.r_max_degree_;
   }
   void set_r_max_degree(uint32_t r_max_degree) {

@@ -444,7 +444,7 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  auto bfs_O1(const Q& queries, size_t k_nn, uint64_t Lbuild) {
+  auto bfs_O1(const Q& queries, size_t k_nn, uint32_t Lbuild) {
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       ::bfs_O1(graph_, feature_vectors_, medoid_, queries[i], Lbuild);
     }
@@ -458,7 +458,7 @@ class vamana_index {
   }
 
   template <query_vector_array Q>
-  auto best_first_O1(const Q& queries, size_t k_nn, uint64_t Lbuild) {
+  auto best_first_O1(const Q& queries, size_t k_nn, uint32_t Lbuild) {
     for (size_t i = 0; i < num_vectors(queries); ++i) {
       ::best_first_O1(graph_, feature_vectors_, medoid_, queries[i], Lbuild);
     }
@@ -466,8 +466,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O2(
-      const Q& queries, size_t k_nn, std::optional<uint64_t> l_search) {
-    uint64_t Lbuild = l_search ? *l_search : l_build_;
+      const Q& queries, size_t k_nn, std::optional<uint32_t> l_search) {
+    uint32_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -493,8 +493,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O3(
-      const Q& queries, size_t k_nn, std::optional<uint64_t> l_search) {
-    uint64_t Lbuild = l_search ? *l_search : l_build_;
+      const Q& queries, size_t k_nn, std::optional<uint32_t> l_search) {
+    uint32_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -520,8 +520,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O4(
-      const Q& queries, size_t k_nn, std::optional<uint64_t> l_search) {
-    uint64_t Lbuild = l_search ? *l_search : l_build_;
+      const Q& queries, size_t k_nn, std::optional<uint32_t> l_search) {
+    uint32_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -547,8 +547,8 @@ class vamana_index {
 
   template <query_vector_array Q>
   auto best_first_O5(
-      const Q& queries, size_t k_nn, std::optional<uint64_t> l_search) {
-    uint64_t Lbuild = l_search ? *l_search : l_build_;
+      const Q& queries, size_t k_nn, std::optional<uint32_t> l_search) {
+    uint32_t Lbuild = l_search ? *l_search : l_build_;
 
     auto top_k = ColMajorMatrix<id_type>(k_nn, ::num_vectors(queries));
     auto top_k_scores =
@@ -584,11 +584,11 @@ class vamana_index {
   auto query(
       const Q& query_set,
       size_t k,
-      std::optional<uint64_t> l_search = std::nullopt,
+      std::optional<uint32_t> l_search = std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer __{tdb_func__ + std::string{" (outer)"}};
 
-    uint64_t L = l_search ? *l_search : l_build_;
+    uint32_t L = l_search ? *l_search : l_build_;
     // L = std::min<size_t>(L, l_build_);
 
     auto top_k = ColMajorMatrix<id_type>(k, ::num_vectors(query_set));
@@ -652,9 +652,9 @@ class vamana_index {
   auto query(
       const Q& query_vec,
       size_t k,
-      std::optional<uint64_t> l_search = std::nullopt,
+      std::optional<uint32_t> l_search = std::nullopt,
       Distance distance = Distance{}) {
-    uint64_t L = l_search ? *l_search : l_build_;
+    uint32_t L = l_search ? *l_search : l_build_;
     auto&& [top_k_scores, top_k, V] = greedy_search(
         graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
 

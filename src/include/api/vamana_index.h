@@ -215,7 +215,7 @@ class IndexVamana {
   [[nodiscard]] auto query(
       const QueryVectorArray& vectors,
       size_t top_k,
-      std::optional<uint64_t> l_search = std::nullopt) {
+      std::optional<uint32_t> l_search = std::nullopt) {
     if (!index_) {
       throw std::runtime_error("Cannot query() because there is no index.");
     }
@@ -331,7 +331,7 @@ class IndexVamana {
     query(
         const QueryVectorArray& vectors,
         size_t top_k,
-        std::optional<uint64_t> l_search) = 0;
+        std::optional<uint32_t> l_search) = 0;
 
     virtual void write_index(
         const tiledb::Context& ctx,
@@ -418,7 +418,7 @@ class IndexVamana {
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors,
         size_t top_k,
-        std::optional<uint64_t> l_search) override {
+        std::optional<uint32_t> l_search) override {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
 
