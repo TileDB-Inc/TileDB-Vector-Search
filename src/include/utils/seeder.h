@@ -101,7 +101,6 @@ class Seeder {
    * @param seed Seed to set.
    */
   void set_seed(uint64_t seed) {
-    std::cout << "Seeder::set_seed" << seed << std::endl;
     std::lock_guard<std::mutex> lock(mtx_);
 
     if (lifespan_state_ != 0) {

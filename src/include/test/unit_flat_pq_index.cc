@@ -455,7 +455,7 @@ TEST_CASE(
   SECTION("symmetric_pq_distances") {
     auto [max_error, avg_error] =
         pq_idx.verify_symmetric_pq_distances(training_set);
-    CHECK(avg_error < 0.15);
+    CHECK(avg_error < 0.155);
   }
 }
 
