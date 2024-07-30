@@ -25,6 +25,7 @@ from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
 from tiledb.vector_search.utils import is_type_erased_index
+from tiledb.vector_search.utils import normalize_vectors
 from tiledb.vector_search.utils import to_temporal_policy
 
 
@@ -1249,13 +1250,14 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     ) -> np.ndarray:
         logger = setup(config, verbose)
         logger.debug(
             "Initialising centroids by reading the first vectors in the source data."
         )
         with tiledb.scope_ctx(ctx_or_config=config):
-            return read_input_vectors(
+            vectors = read_input_vectors(
                 source_uri=source_uri,
                 source_type=source_type,
                 vector_type=vector_type,
@@ -1266,6 +1268,8 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             ).astype(np.float32)
+
+            return vectors
 
     def assign_points_and_partial_new_centroids(
         centroids: np.ndarray,
@@ -1678,6 +1682,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     ):
         import os
         import random
@@ -1880,8 +1885,12 @@ def ingest(
             verbose=verbose,
             trace_id=trace_id,
         )
+
         if additions_vectors is None:
             return
+
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+            additions_vectors = normalize_vectors(additions_vectors)
 
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
         ivf_index(
@@ -2073,6 +2082,56 @@ def ingest(
                 ids_array[start_pos:end_pos] = ids
             parts_array.close()
             ids_array.close()
+
+    def normalize_source_vectors(
+        source_uri: str,
+        normalized_uri: str,
+        source_type: str,
+        vector_type: np.dtype,
+        dimensions: int,
+        source_start_pos: int,
+        source_end_pos: int,
+        batch: int,
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+        trace_id: Optional[str] = None,
+    ):
+        """
+        Reads a batch of vectors from the source data, normalizes them, and writes them to the output array.
+        """
+        logger = setup(config, verbose)
+        logger.debug(f"Normalizing vectors from {source_uri} to {normalized_uri}")
+        logger.debug(f"Processing range: {source_start_pos} to {source_end_pos}")
+
+        with tiledb.scope_ctx(ctx_or_config=config):
+            for start in range(source_start_pos, source_end_pos, batch):
+                end = min(start + batch, source_end_pos)
+
+                # Read from the source data
+                vectors = read_input_vectors(
+                    source_uri=source_uri,
+                    source_type=source_type,
+                    vector_type=vector_type,
+                    dimensions=dimensions,
+                    start_pos=start,
+                    end_pos=end,
+                    config=config,
+                    verbose=verbose,
+                    trace_id=trace_id,
+                )
+
+                # Normalize the vectors
+                normalized_vectors = normalize_vectors(vectors)
+
+                # Write to the normalized array
+                with tiledb.open(
+                    normalized_uri, mode="w", timestamp=index_timestamp
+                ) as A:
+                    A[0:dimensions, start:end] = np.transpose(normalized_vectors)
+
+        logger.debug(
+            f"Finished normalizing vectors for range {source_start_pos} to {source_end_pos}"
+        )
 
     # --------------------------------------------------------------------
     # DAG
@@ -2333,6 +2392,54 @@ def ingest(
                     **kwargs,
                 )
             else:
+                # If the distance metric is cosine, we need to create a node that everything depends on
+                # Which reads the vectors and normalizes them, then swaps source_uri for normalized_uri
+                # This is because the cosine distance metric requires normalized vectors
+                normalization_nodes = []
+                if distance_metric == vspy.DistanceMetric.COSINE:
+                    group = tiledb.Group(index_group_uri, "w")
+                    normalized_uri = create_array(
+                        group=group,
+                        size=size,
+                        dimensions=dimensions,
+                        vector_type=vector_type,
+                        array_name="normalized_vectors",
+                    )
+                    group.close()
+
+                    # Create normalization nodes
+                    for start in range(
+                        0, size, input_vectors_batch_size_during_sampling
+                    ):
+                        end = min(
+                            start + input_vectors_batch_size_during_sampling, size
+                        )
+
+                        normalization_nodes.append(
+                            submit(
+                                normalize_source_vectors,
+                                source_uri=source_uri,
+                                normalized_uri=normalized_uri,
+                                source_type=source_type,
+                                vector_type=vector_type,
+                                dimensions=dimensions,
+                                source_start_pos=start,
+                                source_end_pos=end,
+                                batch=input_vectors_per_work_item_during_sampling,
+                                config=config,
+                                verbose=verbose,
+                                trace_id=trace_id,
+                                name=f"normalize-vectors-{start}-{end}",
+                                resources=random_sample_resources,  # We can use similar resources as random sampling
+                                image_name=DEFAULT_IMG_NAME,
+                                **kwargs,
+                            )
+                        )
+
+                    # Update source_uri and source_type for subsequent operations
+                    source_uri = normalized_uri
+                    source_type = "TILEDB_ARRAY"
+
                 random_sample_nodes = []
                 if training_sampling_policy == TrainingSamplingPolicy.RANDOM:
                     # Create an empty array to write the sampled vectors to.
@@ -2394,6 +2501,13 @@ def ingest(
                         raise ValueError(
                             f"The random sampling ran into an issue: num_sampled ({num_sampled}) != training_sample_size ({training_sample_size})"
                         )
+                # Add dependencies for normalization
+                for node in normalization_nodes:
+                    if copy_centroids_uri is not None:
+                        centroids_node.depends_on(node)
+                    else:
+                        for random_sample_node in random_sample_nodes:
+                            random_sample_node.depends_on(node)
 
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
                     centroids_node = submit(
@@ -2440,6 +2554,7 @@ def ingest(
                         config=config,
                         verbose=verbose,
                         trace_id=trace_id,
+                        # distance_metric=
                         name="init-centroids",
                         resources=copy_centroids_resources,
                         image_name=DEFAULT_IMG_NAME,
@@ -2910,6 +3025,12 @@ def ingest(
             storage_version=storage_version,
         )
 
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+            if input_vectors is not None:
+                input_vectors = normalize_vectors(input_vectors)
+            if training_input_vectors is not None:
+                training_input_vectors = normalize_vectors(training_input_vectors)
+
         if training_input_vectors is not None:
             training_source_uri = write_input_vectors(
                 group=temp_data_group,
@@ -2920,7 +3041,6 @@ def ingest(
                 array_name=TRAINING_INPUT_VECTORS_ARRAY_NAME,
             )
             training_source_type = "TILEDB_ARRAY"
-
         if input_vectors is not None:
             source_uri = write_input_vectors(
                 group=temp_data_group,
@@ -3005,6 +3125,7 @@ def ingest(
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
+
             group.close()
 
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)
