@@ -36,6 +36,7 @@
 
 #include "detail/flat/qv.h"
 #include "utils/logging.h"
+#include "utils/prng.h"
 
 enum class kmeans_init { none, kmeanspp, random };
 
@@ -68,9 +69,6 @@ enum class kmeans_init { none, kmeanspp, random };
  * @todo Finish implementation using triangle inequality.
  */
 
-namespace {
-static std::mt19937 gen_;
-}
 template <
     feature_vector_array V,
     feature_vector_array C,
@@ -88,7 +86,7 @@ void kmeans_pp(
   using score_type = typename C::value_type;
 
   std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-  auto choice = dis(gen_);
+  auto choice = dis(PRNG::get().generator());
 
   std::copy(
       begin(training_set[choice]),
@@ -142,7 +140,7 @@ void kmeans_pp(
     // since `discrete_distribution` implicitly does that for us
     std::discrete_distribution<size_t> probabilityDistribution(
         distances.begin(), distances.end());
-    size_t nextIndex = probabilityDistribution(gen_);
+    size_t nextIndex = probabilityDistribution(PRNG::get().generator());
     std::copy(
         begin(training_set[nextIndex]),
         end(training_set[nextIndex]),
@@ -179,7 +177,7 @@ void kmeans_random_init(
   for (size_t i = 0; i < num_partitions_; ++i) {
     size_t index;
     do {
-      index = dis(gen_);
+      index = dis(PRNG::get().generator());
     } while (visited[index]);
     indices[i] = index;
     visited[index] = true;
@@ -281,7 +279,7 @@ void train_no_init(
         std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
         for (auto&& [degree, zero_part] : low_degrees) {
           if (degree < lower_degree_bound) {
-            auto index = dis(gen_);
+            auto index = dis(PRNG::get().generator());
             auto rand_vector = training_set[index];
             auto low_centroid = new_centroids[zero_part];
             std::copy(begin(rand_vector), end(rand_vector), begin(low_centroid));
@@ -394,11 +392,7 @@ void train_no_init(
 
 template <feature_vector_array V, feature_vector_array C>
 void sub_kmeans_random_init(
-    const V& training_set,
-    C& centroids,
-    size_t sub_begin,
-    size_t sub_end,
-    size_t seed = 0) {
+    const V& training_set, C& centroids, size_t sub_begin, size_t sub_end) {
   scoped_timer _{__FUNCTION__};
 
   size_t num_clusters =
@@ -407,7 +401,6 @@ void sub_kmeans_random_init(
     return;
   }
 
-  std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
   std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
 
   std::vector<size_t> indices(num_clusters);
@@ -415,7 +408,7 @@ void sub_kmeans_random_init(
   for (size_t i = 0; i < num_clusters; ++i) {
     size_t index;
     do {
-      index = dis(gen);
+      index = dis(PRNG::get().generator());
     } while (visited.contains(index));
     indices[i] = index;
     visited.insert(index);

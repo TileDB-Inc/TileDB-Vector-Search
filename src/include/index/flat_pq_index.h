@@ -202,8 +202,7 @@ class flat_pq_index {
 
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
-      sub_kmeans_random_init(
-          training_set, centroids_, sub_begin, sub_end, 0xdeadbeef);
+      sub_kmeans_random_init(training_set, centroids_, sub_begin, sub_end);
       size_t iters;
       double conv;
       std::tie(iters, conv) = sub_kmeans<
