@@ -1205,7 +1205,6 @@ def ingest(
                         trace_id=trace_id,
                     ).astype(np.float32)
 
-
                 logger.debug("Start kmeans training")
                 if use_sklearn:
                     km = KMeans(
@@ -2375,7 +2374,6 @@ def ingest(
             )
             return d
         elif index_type == "IVF_FLAT":
-
             if copy_centroids_uri is not None:
                 centroids_node = submit(
                     copy_centroids,

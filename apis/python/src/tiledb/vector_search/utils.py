@@ -106,9 +106,6 @@ def write_fvecs(uri, data, ctx_or_config=None):
     _write_vecs_t(uri, data, np.float32, ctx_or_config)
 
 
-import numpy as np
-
-
 def normalize_vector(vector: np.array) -> np.array:
     """
     Normalize a single vector to unit length.
@@ -125,22 +122,6 @@ def normalize_vector(vector: np.array) -> np.array:
     norm = np.linalg.norm(vector)
     if norm == 0:
         return vector
-    return vector / norm
-
-
-def normalize_vector(vector: np.array) -> np.array:
-    """
-    Normalize a single vector to unit length.
-
-    Args:
-    vector (np.array): Input vector to be normalized.
-
-    Returns:
-    np.array: Normalized vector.
-    """
-    norm = np.linalg.norm(vector)
-    if norm == 0:
-        return vector  # Return the original vector if it's all zeros
     return vector / norm
 
 

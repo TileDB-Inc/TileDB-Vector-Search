@@ -318,7 +318,6 @@ class Index:
             int(os.cpu_count() / 2),
             self.update_array_timestamp,
             self.config,
-            self.distance_metric,
         )
         if self.query_base_array:
             internal_results_d, internal_results_i = self.query_internal(
@@ -697,7 +696,6 @@ class Index:
         nthreads=8,
         timestamp=None,
         config=None,
-        distance_metric=vspy.DistanceMetric.L2,
     ):
         additions_vectors, additions_external_ids, updated_ids = Index._read_additions(
             updates_array_uri, timestamp, config
@@ -823,7 +821,6 @@ def create_metadata(
     distance_metric: vspy.DistanceMetric,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
 ):
     """
     Creates the index group adding index metadata.

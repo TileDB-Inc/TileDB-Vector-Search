@@ -370,7 +370,7 @@ def test_vamana_create_l2(tmp_path):
 
 def test_vamana_create_cosine(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         ingest(
             index_type="VAMANA",
             index_uri=index_uri,

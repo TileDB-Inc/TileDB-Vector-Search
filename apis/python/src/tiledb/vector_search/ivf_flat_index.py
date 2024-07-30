@@ -568,10 +568,6 @@ def create(
             f"Distance metric {distance_metric} is not supported in IVF_FLAT"
         )
 
-    if distance_metric != vspy.DistanceMetric.L2:
-        raise ValueError(
-            f"Distance metric {distance_metric} is not supported in IVF_FLAT"
-        )
 
     index.create_metadata(
         uri=uri,
@@ -582,7 +578,6 @@ def create(
         distance_metric=distance_metric,
         group_exists=group_exists,
         config=config,
-        distance_metric=distance_metric,
     )
     with tiledb.scope_ctx(ctx_or_config=config):
         group = tiledb.Group(uri, "w")
