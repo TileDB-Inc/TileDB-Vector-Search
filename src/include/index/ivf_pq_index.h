@@ -1329,6 +1329,8 @@ class ivf_pq_index {
         ::num_vectors(*partitioned_pq_vectors_) == 0) {
       read_index_infinite();
     }
+    debug_partitioned_matrix(
+        *partitioned_pq_vectors_, "partitioned_pq_vectors_");
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
