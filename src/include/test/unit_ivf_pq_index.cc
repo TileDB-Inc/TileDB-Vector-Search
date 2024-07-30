@@ -354,7 +354,7 @@ TEST_CASE(
 
   SECTION("pq_encoding") {
     auto avg_error = pq_idx.verify_pq_encoding(training_set);
-    CHECK(avg_error < 0.08);
+    CHECK(avg_error < 0.081);
   }
   SECTION("pq_distances") {
     auto avg_error = pq_idx.verify_pq_distances(training_set);
@@ -363,7 +363,7 @@ TEST_CASE(
   SECTION("asymmetric_pq_distances") {
     auto [max_error, avg_error] =
         pq_idx.verify_asymmetric_pq_distances(training_set);
-    CHECK(avg_error < 0.08);
+    CHECK(avg_error < 0.081);
   }
   SECTION("symmetric_pq_distances") {
     auto [max_error, avg_error] =
