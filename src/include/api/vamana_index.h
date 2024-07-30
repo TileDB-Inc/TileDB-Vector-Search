@@ -90,7 +90,6 @@ class IndexVamana {
       const std::optional<IndexOptions>& config = std::nullopt) {
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
-
     if (config) {
       for (auto&& c : *config) {
         auto key = c.first;
@@ -521,7 +520,7 @@ class IndexVamana {
   static constexpr tiledb_datatype_t adjacency_row_index_datatype_{
       TILEDB_UINT64};
   std::unique_ptr<index_base> index_;
-  DistanceMetric distance_metric_;
+  DistanceMetric distance_metric_{DistanceMetric::L2};
 };
 
 // clang-format off
