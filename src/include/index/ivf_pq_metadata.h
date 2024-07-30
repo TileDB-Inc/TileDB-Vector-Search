@@ -77,8 +77,8 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   std::string partition_history_str_;
   std::string indices_type_str_;
 
-  uint64_t num_subspaces_{0};
-  uint64_t sub_dimensions_{0};
+  uint32_t num_subspaces_{0};
+  uint32_t sub_dimensions_{0};
   uint32_t bits_per_subspace_{0};
   uint32_t num_clusters_{0};
   uint32_t max_iterations_{0};
@@ -96,8 +96,8 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
 
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks_impl{
       {"px_datatype", &px_datatype_, TILEDB_UINT32, false},
-      {"num_subspaces", &num_subspaces_, TILEDB_UINT64, true},
-      {"sub_dimensions", &sub_dimensions_, TILEDB_UINT64, true},
+      {"num_subspaces", &num_subspaces_, TILEDB_UINT32, true},
+      {"sub_dimensions", &sub_dimensions_, TILEDB_UINT32, true},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT32, true},
       {"num_clusters", &num_clusters_, TILEDB_UINT32, true},
       {"max_iterations", &max_iterations_, TILEDB_UINT32, true},

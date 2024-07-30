@@ -129,7 +129,7 @@ class ivf_flat_index {
   centroids_storage_type centroids_;
 
   // Some parameters for performing kmeans clustering
-  uint64_t max_iter_{1};
+  uint32_t max_iterations_{1};
   float tol_{1.e-4};
   float reassign_ratio_{0.075};
 
@@ -187,7 +187,7 @@ class ivf_flat_index {
                           std::chrono::system_clock::now().time_since_epoch())
                           .count())}}
       , num_partitions_(nlist)
-      , max_iter_(max_iter)
+      , max_iterations_(max_iter)
       , tol_(tol)
       , seed_{seed} {
     gen_.seed(seed_);
@@ -312,7 +312,7 @@ class ivf_flat_index {
         centroids_,
         dimensions_,
         num_partitions_,
-        max_iter_,
+        max_iterations_,
         tol_,
         num_threads_,
         reassign_ratio_);

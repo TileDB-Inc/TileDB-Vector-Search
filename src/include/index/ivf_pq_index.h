@@ -200,8 +200,8 @@ class ivf_pq_index {
   uint64_t num_partitions_{0};
 
   // Cached information about the pq encoding
-  uint64_t num_subspaces_{0};
-  uint64_t sub_dimensions_{0};
+  uint32_t num_subspaces_{0};
+  uint32_t sub_dimensions_{0};
   constexpr static const uint32_t bits_per_subspace_{8};
   constexpr static const uint32_t num_clusters_{256};
 
@@ -292,7 +292,7 @@ class ivf_pq_index {
    */
   ivf_pq_index(
       size_t nlist = 0,
-      uint64_t num_subspaces = 16,
+      uint32_t num_subspaces = 16,
       uint32_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
@@ -483,7 +483,7 @@ class ivf_pq_index {
     // @todo IMPORTANT This is highly suboptimal and will make multiple passes
     // through the training set. We need to move iteration over subspaces to
     // the inner loop -- and SIMDize it
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
@@ -524,7 +524,7 @@ class ivf_pq_index {
     // keys of the vectors in each subspace (summing up the results obtained
     // from each subspace).
     // @todo SIMDize with subspace iteration in inner loop
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
@@ -553,7 +553,7 @@ class ivf_pq_index {
   // For each (i, j), distances should be stored contiguously
   float sub_distance_symmetric(auto&& a, auto&& b) const {
     float pq_distance = 0.0;
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto i = a[subspace];
       auto j = b[subspace];
 
@@ -596,7 +596,7 @@ class ivf_pq_index {
     float pq_distance = 0.0;
     auto local_distance = Distance{};
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
       auto i = b[subspace];
@@ -782,7 +782,7 @@ class ivf_pq_index {
     // We have broken the vector into num_subspaces_ subspaces, and we will look
     // in cluster_centroids_ and find the closest cluster_centroids_ to that
     // chunk of the vector.
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimensions_ * subspace;
       auto sub_end = sub_begin + sub_dimensions_;
 
@@ -836,7 +836,7 @@ class ivf_pq_index {
   inline auto encode(const V& v, W& pq) const {
     auto local_sub_distance = SubDistance{};
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimensions_ * subspace;
       auto sub_end = sub_begin + sub_dimensions_;
 
@@ -1342,11 +1342,11 @@ class ivf_pq_index {
     return num_partitions_;
   }
 
-  uint64_t num_subspaces() const {
+  uint32_t num_subspaces() const {
     return num_subspaces_;
   }
 
-  uint64_t sub_dimensions() const {
+  uint32_t sub_dimensions() const {
     return sub_dimensions_;
   }
 
@@ -1409,7 +1409,7 @@ class ivf_pq_index {
 
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       auto re = std::vector<float>(dimensions_);
-      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
         auto sub_begin = sub_dimensions_ * subspace;
         auto sub_end = sub_dimensions_ * (subspace + 1);
         auto centroid =
@@ -1458,7 +1458,7 @@ class ivf_pq_index {
         total_normalizer += real_distance;
         auto pq_distance = 0.0;
 
-        for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
           auto sub_distance = distance_tables_[subspace](
               (*unpartitioned_pq_vectors_)(subspace, i),
               (*unpartitioned_pq_vectors_)(subspace, j));

@@ -86,7 +86,7 @@ class ivf_pq_group : public base_index_group<index_type> {
       const std::string& version = std::string{""},
       uint64_t dimensions = 0,
       uint32_t num_clusters = 0,
-      uint64_t num_subspaces = 0)
+      uint32_t num_subspaces = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
       // num_clusters and num_subspaces must be set before we call
@@ -236,11 +236,11 @@ class ivf_pq_group : public base_index_group<index_type> {
   uint64_t get_num_subspaces() const {
     return metadata_.num_subspaces_;
   }
-  void set_num_subspaces(uint64_t num_subspaces) {
+  void set_num_subspaces(uint32_t num_subspaces) {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
-  void set_sub_dimensions(uint64_t sub_dimensions) {
+  void set_sub_dimensions(uint32_t sub_dimensions) {
     metadata_.sub_dimensions_ = sub_dimensions;
   }
 

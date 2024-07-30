@@ -478,8 +478,8 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   uint64_t dimensions = 3;
-  size_t l_build = 100;
-  size_t r_max_degree = 64;
+  uint32_t l_build = 100;
+  uint32_t r_max_degree = 64;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -523,8 +523,8 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   auto feature_type = "uint8";
   auto id_type = "uint32";
   uint64_t dimensions = 3;
-  size_t l_build = 100;
-  size_t r_max_degree = 64;
+  uint32_t l_build = 100;
+  uint32_t r_max_degree = 64;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();

@@ -82,8 +82,8 @@ class vamana_index_metadata
   std::string adjacency_scores_type_str_;
   std::string adjacency_row_index_type_str_;
 
-  uint64_t l_build_{0};
-  uint64_t r_max_degree_{0};
+  uint32_t l_build_{0};
+  uint32_t r_max_degree_{0};
   float alpha_min_{1.0};
   float alpha_max_{1.2};
   uint64_t medoid_{0};
@@ -108,8 +108,8 @@ class vamana_index_metadata
        &adjacency_row_index_datatype_,
        TILEDB_UINT32,
        false},
-      {"l_build", &l_build_, TILEDB_UINT64, false},
-      {"r_max_degree", &r_max_degree_, TILEDB_UINT64, false},
+      {"l_build", &l_build_, TILEDB_UINT32, false},
+      {"r_max_degree", &r_max_degree_, TILEDB_UINT32, false},
       {"alpha_min", &alpha_min_, TILEDB_FLOAT32, false},
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
       {"medoid", &medoid_, TILEDB_UINT64, false},

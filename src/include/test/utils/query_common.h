@@ -159,7 +159,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
   siftsmall_test_init(
       tiledb::Context ctx,
       size_t nl,
-      uint64_t num_subspaces = 0,
+      uint32_t num_subspaces = 0,
       size_t num_vectors = 0)
       : ctx_{ctx}
       , nlist(nl)

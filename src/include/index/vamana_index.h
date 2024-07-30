@@ -154,8 +154,8 @@ class vamana_index {
   /*
    * Training parameters
    */
-  uint64_t l_build_{0};       // diskANN paper says default = 100
-  uint64_t r_max_degree_{0};  // diskANN paper says default = 64
+  uint32_t l_build_{0};       // diskANN paper says default = 100
+  uint32_t r_max_degree_{0};  // diskANN paper says default = 64
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
   DistanceMetric distance_metric_{DistanceMetric::L2};
@@ -178,8 +178,8 @@ class vamana_index {
    */
   vamana_index(
       size_t num_nodes,
-      uint64_t l_build,
-      uint64_t r_max_degree,
+      uint32_t l_build,
+      uint32_t r_max_degree,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       DistanceMetric distance_metric = DistanceMetric::L2)
       : temporal_policy_{
@@ -669,11 +669,11 @@ class vamana_index {
     return num_vectors_;
   }
 
-  constexpr uint64_t l_build() const {
+  constexpr uint32_t l_build() const {
     return l_build_;
   }
 
-  constexpr uint64_t r_max_degree() const {
+  constexpr uint32_t r_max_degree() const {
     return r_max_degree_;
   }
 
