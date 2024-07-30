@@ -27,15 +27,17 @@
  *
  * @section DESCRIPTION
  *
- * This file declares the seeder for the library-wide 64-bit RNG facility.
+ * This file declares the seeder for the library-wide 64-bit RNG facility. Based
+ * on:
+ * - https://github.com/TileDB-Inc/TileDB/blob/dev/tiledb/common/random/seeder.h
  */
 
 #ifndef TILEDB_SEEDER_H
 #define TILEDB_SEEDER_H
 
+#include <iostream>
 #include <mutex>
 #include <optional>
-#include <iostream>
 #include <stdexcept>
 
 /**
@@ -122,16 +124,17 @@ class Seeder {
    * @return Seed, if set and not yet used. Else, throw or return nullopt.
    */
   std::optional<uint64_t> seed() {
-  std::lock_guard<std::mutex> lock(mtx_);
+    std::lock_guard<std::mutex> lock(mtx_);
 
-  if (lifespan_state_ == 2) {
-    throw std::logic_error(
-        "[Seeder::seed] Seed can only be used once and has already been used.");
+    if (lifespan_state_ == 2) {
+      throw std::logic_error(
+          "[Seeder::seed] Seed can only be used once and has already been "
+          "used.");
+    }
+
+    lifespan_state_ = 2;
+    return seed_;
   }
-
-  lifespan_state_ = 2;
-  return seed_;
-}
 
  private:
   /* ********************************* */

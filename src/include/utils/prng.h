@@ -27,7 +27,8 @@
  *
  * @section DESCRIPTION
  *
- * Contains a random number generator which can be seeded.
+ * Contains a random number generator which can be seeded. Based on:
+ * - https://github.com/TileDB-Inc/TileDB/blob/dev/tiledb/common/random/prng.h
  *
  */
 
@@ -40,60 +41,29 @@
 #include "utils/seeder.h"
 
 namespace {
-  /**
-  //  * Implementation of the random seed.
-  //  *
-  //  * This is a class template in order to use `if constexpr`.
-  //  *
-  //  * @tparam return_size_type The type of the seed to be returned
-  //  */
-  // template <class return_size_type>
-  // return_size_type random_seed() {
-  //   static constexpr size_t rng_size = sizeof(std::random_device::result_type);
-  //   static constexpr size_t ret_size = sizeof(return_size_type);
-  //   std::random_device rng{};
-  //   /*
-  //   * We will need 64 bits to adequately seed the PRNG (`ret_size`). We support
-  //   * cases where the result size of the RNG is 64 or 32 bits (`rng_size`).
-  //   */
-  //   if constexpr (ret_size == rng_size) {
-  //     return rng();
-  //   } else if constexpr (ret_size == 2 * rng_size) {
-  //     return (rng() << rng_size) + rng();
-  //   } else {
-  //     throw std::runtime_error("Unsupported combination of RNG sizes");
-  //   }
-  // }
-
-  // /**
-  //  * The PRNG used within the random constructor.
-  //  */
-  // std::mt19937_64 prng_random() {
-  //   return std::mt19937_64{random_seed<uint64_t>()};
-  // }
-
-  /**
-   * The PRNG used within the default constructor.
+/**
+ * The PRNG used within the default constructor.
+ */
+std::mt19937_64 prng_default() {
+  /*
+   * Retrieve optional seed, which may or may not have been set explicitly.
    */
-  std::mt19937_64 prng_default() {
-    /*
-    * Retrieve optional seed, which may or may not have been set explicitly.
-    */
-    auto seed{Seeder::get().seed()};
-    /*
-    * Use the seed if it has been set. Otherwise use a random seed.
-    */
-    if (seed.has_value()) {
-      std::cout << "Using seed :" << seed.value() << std::endl;
-      return std::mt19937_64{seed.value()};
-    } else {
-      // NOTE: If we wanted to have a default random seed, we could use this instead:
-      // return prng_random();
-      std::cout << "Using seed : 1234" << std::endl;
-      return std::mt19937_64{1234};
-    }
+  auto seed{Seeder::get().seed()};
+  /*
+   * Use the seed if it has been set. Otherwise use a random seed.
+   */
+  if (seed.has_value()) {
+    std::cout << "Using seed :" << seed.value() << std::endl;
+    return std::mt19937_64{seed.value()};
+  } else {
+    // NOTE: If we want to have a default random seed, look in
+    // https://github.com/TileDB-Inc/TileDB/blob/dev/tiledb/common/random/prng.h
+    // to see how they do it there.
+    std::cout << "Using seed : 1234" << std::endl;
+    return std::mt19937_64{1234};
   }
 }
+}  // namespace
 
 class PRNG {
  public:
@@ -107,7 +77,10 @@ class PRNG {
    * If `Seeder` has been seeded, the seed will be set on the engine. Otherwise,
    * the generator is constructed with a default seed.
    */
-  PRNG() : prng_(prng_default()), mtx_{} {}
+  PRNG()
+      : prng_(prng_default())
+      , mtx_{} {
+  }
 
   /** Copy constructor is deleted. */
   PRNG(const PRNG&) = delete;
@@ -140,10 +113,10 @@ class PRNG {
     return prng_();
   }
 
-  const std::mt19937_64 &generator() const {
+  const std::mt19937_64& generator() const {
     return prng_;
   }
-  std::mt19937_64 &generator() {
+  std::mt19937_64& generator() {
     return prng_;
   }
 

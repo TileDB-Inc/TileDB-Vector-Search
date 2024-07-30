@@ -1,5 +1,5 @@
 /**
- * @file   tdb_catch_prng.h
+ * @file tdb_catch_prng.h
  *
  * @section LICENSE
  *
@@ -28,15 +28,17 @@
  * @section DESCRIPTION
  *
  * This file declares a Catch2 hook to seed a global random number generator.
+ * Based on:
+ * - https://github.com/TileDB-Inc/TileDB/blob/dev/test/support/tdb_catch_prng.h
  */
 
 #ifndef SET_SEED_FROM_CATCH_H
 #define SET_SEED_FROM_CATCH_H
 
-#include "utils/prng.h"
-#include "utils/seeder.h"
 #include <catch2/catch_all.hpp>
 #include <iostream>
+#include "utils/prng.h"
+#include "utils/seeder.h"
 
 class SetSeedFromCatch : public Catch::EventListenerBase {
  public:
@@ -45,10 +47,6 @@ class SetSeedFromCatch : public Catch::EventListenerBase {
    * testPRNG using base class initialization.
    */
   using Catch::EventListenerBase::EventListenerBase;
-
-  // void testCaseEnded( Catch::TestCaseStats const& testCaseStats ) override {
-  //   std::cout << "testCaseEnded" << std::endl;
-  // }
 
   void testRunStarting(Catch::TestRunInfo const&) override {
     std::cout << "testRunStarting" << std::endl;

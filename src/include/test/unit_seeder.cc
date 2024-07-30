@@ -29,8 +29,8 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include "utils/seeder.h"
 #include <thread>
+#include "utils/seeder.h"
 
 TEST_CASE("Default seed", "[seeder]") {
   // Default seed is std::nullopt
@@ -56,7 +56,7 @@ TEST_CASE("Default seed", "[seeder]") {
   }
 }
 
-TEST_CASE( "Set seed", "[seeder]") {
+TEST_CASE("Set seed", "[seeder]") {
   // Set seed (state 0 -> 1)
   Seeder seeder;
   CHECK_NOTHROW(seeder.set_seed(123));
@@ -88,9 +88,7 @@ TEST_CASE( "Set seed", "[seeder]") {
 TEST_CASE("Concurrent access", "[seeder]") {
   Seeder seeder;
   std::optional<uint64_t> seed;
-  std::thread t1([&]() {
-    CHECK_NOTHROW(seeder.set_seed(999));
-  });
+  std::thread t1([&]() { CHECK_NOTHROW(seeder.set_seed(999)); });
 
   std::thread t2([&]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
