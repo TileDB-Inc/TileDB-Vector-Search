@@ -12,13 +12,13 @@
 #include "detail/ivf/dist_qv.h"
 #include "detail/ivf/index.h"
 #include "detail/ivf/qv.h"
-#include "utils/seeder.h"
 #include "detail/linalg/compat.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/partitioned_matrix.h"
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/time/temporal_policy.h"
+#include "utils/seeder.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
