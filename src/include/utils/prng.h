@@ -53,13 +53,11 @@ std::mt19937_64 prng_default() {
    * Use the seed if it has been set. Otherwise use a random seed.
    */
   if (seed.has_value()) {
-    std::cout << "Using seed :" << seed.value() << std::endl;
     return std::mt19937_64{seed.value()};
   } else {
     // NOTE: If we want to have a default random seed, look in
     // https://github.com/TileDB-Inc/TileDB/blob/dev/tiledb/common/random/prng.h
     // to see how they do it there.
-    std::cout << "Using seed : 1234" << std::endl;
     return std::mt19937_64{1234};
   }
 }
