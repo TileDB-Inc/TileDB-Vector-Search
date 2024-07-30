@@ -12,6 +12,7 @@
 #include "detail/ivf/dist_qv.h"
 #include "detail/ivf/index.h"
 #include "detail/ivf/qv.h"
+#include "utils/seeder.h"
 #include "detail/linalg/compat.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/partitioned_matrix.h"
@@ -870,6 +871,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   m.def("stats_reset", []() { core_stats.clear(); });
   m.def("stats_dump", []() { return json{core_stats}.dump(); });
+
+  m.def("set_seed", [](uint64_t seed) {
+    Seeder& seeder_ = Seeder::get();
+    seeder_.set_seed(seed);
+  });
 
   declare_debug_matrix<uint8_t>(m, "_u8");
   declare_debug_matrix<int8_t>(m, "_i8");
