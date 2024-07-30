@@ -575,6 +575,32 @@ class ivf_pq_index {
     return pq_distance{this};
   }
 
+  template <feature_vector U, feature_vector V>
+  float sub_distance_query_centroid_distances(const U& a, const V& b) const {
+    float pq_distance = 0.0;
+    size_t sub_id = 0;
+    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto j = b[subspace];
+      pq_distance += a[sub_id + j];
+      sub_id += num_clusters_;
+    }
+    return pq_distance;
+  }
+
+  template <typename queries_feature_type, typename index_feature_type>
+  auto make_pq_distance_query_centroid_distances() const {
+    using A = queries_feature_type;
+    using B = index_feature_type;
+
+    struct pq_distance {
+      const ivf_pq_index* outer_;
+      inline float operator()(const A& a, const B& b) {
+        return outer_->sub_distance_query_centroid_distances(a, b);
+      }
+    };
+    return pq_distance{this};
+  }
+
   /**
    * @brief Uncompress the b and compute the distance between a and b
    * @param a The uncompressed vector
@@ -809,6 +835,37 @@ class ivf_pq_index {
     auto& pqv = *pq_vectors;
     for (size_t i = 0; i < num_vectors(training_set); ++i) {
       pq_encode_one(training_set[i], pqv[i], distance);
+    }
+    return pq_vectors;
+  }
+
+  template <
+      feature_vector_array U,
+      class Matrix,
+      class Distance = uncached_sub_sum_of_squares_distance>
+  auto pq_query_centroid_distances(
+      const U& training_set, Distance distance = Distance{}) const {
+    auto pq_vectors = std::make_unique<Matrix>(
+        num_subspaces_ * num_clusters_, num_vectors(training_set));
+    auto& pqv = *pq_vectors;
+    auto local_distance = Distance{};
+    for (size_t i = 0; i < num_vectors(training_set); ++i) {
+      auto sub_begin = 0;
+      auto sub_id = 0;
+      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        auto sub_end = sub_begin + sub_dimensions_;
+        for (size_t centroid_id = 0; centroid_id < num_clusters_;
+             ++centroid_id) {
+          float pq_distance = local_distance(
+              training_set[i],
+              cluster_centroids_[centroid_id],
+              sub_begin,
+              sub_end);
+          pqv[i][sub_id + centroid_id] = pq_distance;
+        }
+        sub_begin = sub_end;
+        sub_id += num_clusters_;
+      }
     }
     return pq_vectors;
   }
@@ -1246,17 +1303,18 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
-
-    auto query_vectors_encoded =
-        std::move(*pq_encode<Q, pq_ivf_centroid_storage_type>(query_vectors));
+    auto query_centroid_distances = std::move(
+        *pq_query_centroid_distances<Q, ColMajorMatrix<float>>(query_vectors));
     return detail::ivf::query_infinite_ram(
         *partitioned_pq_vectors_,
         active_partitions,
-        query_vectors_encoded,
+        query_centroid_distances,
         active_queries,
         k_nn,
         num_threads_,
-        make_pq_distance_symmetric());
+        make_pq_distance_query_centroid_distances<
+            std::span<float>,
+            decltype(pq_storage_type{}[0])>());
   }
 
   /**

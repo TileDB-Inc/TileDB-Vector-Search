@@ -482,7 +482,7 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
   using s = siftsmall_test_init_defaults;
   using index = ivf_pq_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init<index>(ctx, nlist, 32);
+  auto init = siftsmall_test_init<index>(ctx, nlist, 16);
 
   auto&& [nprobe, k_nn, nthreads, max_iterations, convergence_tolerance] =
       std::tie(
