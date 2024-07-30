@@ -77,7 +77,7 @@ class flat_pq_index {
   // @todo Temporarily public to facilitate early testing
  public:
   // metadata
-  size_t dimensions_{0};
+  uint64_t dimensions_{0};
   size_t num_subspaces_{0};
   size_t sub_dimensions_{0};
   size_t bits_per_subspace_{8};
@@ -88,7 +88,7 @@ class flat_pq_index {
 
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
   std::vector<metadata_element> metadata{
-      {"dimensions", &dimensions_, TILEDB_UINT64},
+      {"dimensions", &dimensions_, TILEDB_UINT32},
       {"num_subspaces", &num_subspaces_, TILEDB_UINT64},
       {"sub_dimension", &sub_dimensions_, TILEDB_UINT64},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT64},
@@ -114,7 +114,7 @@ class flat_pq_index {
    * @todo We don't really need dimension as an argument for any of our indexes
    */
   flat_pq_index(
-      size_t dimensions,
+      uint64_t dimensions,
       size_t num_subspaces,
       size_t bits_per_subspace = 8,
       size_t num_clusters = 256)
@@ -151,10 +151,13 @@ class flat_pq_index {
       if (datatype == TILEDB_UINT64) {
         *reinterpret_cast<uint64_t*>(value) =
             *reinterpret_cast<uint64_t*>(addr);
+      } else if (datatype == TILEDB_UINT32) {
+        *reinterpret_cast<uint32_t*>(value) =
+            *reinterpret_cast<uint32_t*>(addr);
       } else if (datatype == TILEDB_FLOAT32) {
         *reinterpret_cast<float*>(value) = *reinterpret_cast<float*>(addr);
       } else {
-        throw std::runtime_error("Unsupported datatype");
+        throw std::runtime_error("Unsupported datatype for metadata: " + name);
       }
     }
 

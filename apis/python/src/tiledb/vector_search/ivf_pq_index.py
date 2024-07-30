@@ -58,8 +58,8 @@ class IVFPQIndex(index.Index):
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
         )
+        # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))
-        # TODO(paris): This is incorrect - should be fixed when we fix consolidation.
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -67,19 +67,9 @@ class IVFPQIndex(index.Index):
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
 
-        schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimensions()
-
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
-        if self.dtype is None:
-            self.dtype = np.dtype(schema.attr("values").dtype)
-        else:
-            self.dtype = np.dtype(self.dtype)
-
-        if self.base_size == -1:
-            self.size = schema.domain.dim(1).domain[1] + 1
-        else:
-            self.size = self.base_size
+        self.size = self.base_size
 
     def get_dimensions(self):
         """
@@ -182,7 +172,6 @@ def create(
         raise ValueError(
             f"Distance metric {distance_metric} is not supported in IVF_PQ"
         )
-
     index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,

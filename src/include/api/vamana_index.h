@@ -60,7 +60,7 @@
  *
  * We support all combinations of the following types for feature, id, and px
  * datatypes:
- *   - feature_type: uint8 or float
+ *   - feature_type: uint8, int8, or float
  *   - id_type: uint32 or uint64
  *   - adjacency_row_index_type: uint32 or uint64
  */
@@ -105,22 +105,10 @@ class IndexVamana {
         } else if (key == "id_type") {
           id_datatype_ = string_to_datatype(value);
         } else if (key == "distance_metric") {
-          try {
-            int metric_value = std::stoi(value);
-            if (metric_value < 0 ||
-                metric_value > static_cast<int>(DistanceMetric::COSINE)) {
-              throw std::runtime_error(
-                  "Invalid distance metric value: " + value);
-            }
-            distance_metric = static_cast<DistanceMetric>(metric_value);
-            if (distance_metric != DistanceMetric::L2) {
-              throw std::runtime_error(
-                  "Invalid distance metric for Vamana: " + value);
-            }
-          } catch (const std::exception& e) {
-            throw std::runtime_error(
-                "Error setting distance metric: " + std::string(e.what()));
-          }
+          distance_metric_ = parseAndValidateDistanceMetric(
+              value,
+              [](DistanceMetric dm) { return dm == DistanceMetric::L2; },
+              "Invalid distance metric for Vamana");
         } else {
           throw std::runtime_error("Invalid index config key: " + key);
         }
@@ -152,7 +140,7 @@ class IndexVamana {
     index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
     l_build_ = index_->l_build();
     r_max_degree_ = index_->r_max_degree();
-    distance_metric = index_->distance_metric();
+    distance_metric_ = index_->distance_metric();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -194,7 +182,7 @@ class IndexVamana {
         r_max_degree_,
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
                  std::nullopt,
-        distance_metric);
+        distance_metric_);
     index_->train(training_set);
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
@@ -270,7 +258,7 @@ class IndexVamana {
     return index_->temporal_policy();
   }
 
-  constexpr auto dimensions() const {
+  constexpr uint64_t dimensions() const {
     return dimensions_;
   }
 
@@ -350,7 +338,7 @@ class IndexVamana {
         std::optional<TemporalPolicy> temporal_policy,
         const std::string& storage_version) = 0;
 
-    [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual uint64_t dimensions() const = 0;
     [[nodiscard]] virtual size_t l_build() const = 0;
     [[nodiscard]] virtual size_t r_max_degree() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
@@ -468,7 +456,7 @@ class IndexVamana {
       impl_index_.write_index(ctx, group_uri, temporal_policy, storage_version);
     }
 
-    size_t dimensions() const override {
+    uint64_t dimensions() const override {
       return ::dimensions(impl_index_);
     }
 
@@ -509,7 +497,7 @@ class IndexVamana {
   static const clear_history_table_type clear_history_dispatch_table;
   // clang-format on
 
-  size_t dimensions_ = 0;
+  uint64_t dimensions_ = 0;
   size_t l_build_ = 100;
   size_t r_max_degree_ = 64;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
@@ -517,7 +505,7 @@ class IndexVamana {
   static constexpr tiledb_datatype_t adjacency_row_index_datatype_{
       TILEDB_UINT64};
   std::unique_ptr<index_base> index_;
-  DistanceMetric distance_metric;
+  DistanceMetric distance_metric_;
 };
 
 // clang-format off

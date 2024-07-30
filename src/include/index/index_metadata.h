@@ -90,20 +90,20 @@ class base_index_metadata {
   /** Record size of temp data */
   int64_t temp_size_{0};
 
-  uint32_t dimensions_{0};
+  uint64_t dimensions_{0};
 
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
 
   // A non-empty value indicates an expected value / default value
-  std::string base_sizes_str_{""};
+  std::string base_sizes_str_;
   std::string dataset_type_{"vector_search"};
-  std::string dtype_{""};
-  std::string ingestion_timestamps_str_{""};
+  std::string dtype_;
+  std::string ingestion_timestamps_str_;
   std::string storage_version_{current_storage_version};
 
-  std::string feature_type_str_{""};
-  std::string id_type_str_{""};
+  std::string feature_type_str_;
+  std::string id_type_str_;
 
   /**************************************************************************
    * Initializer structs for metadata
@@ -128,7 +128,7 @@ class base_index_metadata {
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks{
       // name, member_variable, type, required
       {"temp_size", &temp_size_, TILEDB_INT64, true},
-      {"dimensions", &dimensions_, TILEDB_UINT32, false},
+      {"dimensions", &dimensions_, TILEDB_UINT64, false},
       {"feature_datatype", &feature_datatype_, TILEDB_UINT32, false},
       {"id_datatype", &id_datatype_, TILEDB_UINT32, false},
   };
@@ -344,7 +344,7 @@ class base_index_metadata {
 
     std::vector<ingestion_timestamps_type> new_ingestion_timestamps;
     std::vector<base_sizes_type> new_base_sizes;
-    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (size_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_ingestion_timestamps.push_back(ingestion_timestamp);
@@ -393,20 +393,24 @@ class base_index_metadata {
               *static_cast<double*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_FLOAT32:
           if (*static_cast<float*>(value) != *static_cast<float*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_INT64:
           if (*static_cast<int64_t*>(value) !=
               *static_cast<int64_t*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_UINT64:
           if (*static_cast<uint64_t*>(value) !=
               *static_cast<uint64_t*>(rhs_value)) {
             return false;
           }
+          break;
         case TILEDB_UINT32:
           if (*static_cast<uint32_t*>(value) !=
               *static_cast<uint32_t*>(rhs_value)) {
@@ -556,5 +560,32 @@ class base_index_metadata {
     static_cast<const IndexMetadata*>(this)->dump_json_impl();
   }
 };
+
+inline DistanceMetric parseAndValidateDistanceMetric(
+    const std::string& value,
+    const std::function<bool(DistanceMetric)>& additionalValidation = nullptr,
+    const std::string& validationErrorMsg = "") {
+  try {
+    int metric_value = std::stoi(value);
+    if (metric_value < 0 ||
+        metric_value > static_cast<int>(DistanceMetric::COSINE)) {
+      throw std::runtime_error("Invalid distance metric value: " + value);
+    }
+
+    DistanceMetric distance_metric = static_cast<DistanceMetric>(metric_value);
+
+    if (additionalValidation && !additionalValidation(distance_metric)) {
+      throw std::runtime_error(
+          validationErrorMsg.empty() ?
+              "Additional validation failed for distance metric: " + value :
+              validationErrorMsg + ": " + value);
+    }
+
+    return distance_metric;
+  } catch (const std::exception& e) {
+    throw std::runtime_error(
+        "Error setting distance metric: " + std::string(e.what()));
+  }
+}
 
 #endif  // TILEDB_INDEX_METADATA_H

@@ -34,13 +34,12 @@
 #include <vector>
 #include "cpos.h"
 #include "detail/linalg/partitioned_matrix.h"
-#include "mdspan/mdspan.hpp"
 
 TEST_CASE("partitioned_matrix: sizes constructor", "[partitioned_matrix]") {
   using feature_type = int;
   using id_type = int;
   using part_index_type = int;
-  size_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t max_num_vectors = 5;
   size_t max_num_partitions = 2;
 

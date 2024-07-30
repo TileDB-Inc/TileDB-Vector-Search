@@ -59,7 +59,10 @@ TEMPLATE_TEST_CASE("constructors", "[tdb_matrix]", float, uint8_t) {
   write_matrix(ctx, X, tmp_matrix_uri);
 
   auto Y = tdbColMajorMatrix<TestType>(ctx, tmp_matrix_uri);
-  Y.load();
+  CHECK(Y.load() == true);
+  for (int i = 0; i < 5; ++i) {
+    CHECK(Y.load() == false);
+  }
 
   auto Z = tdbColMajorMatrix<TestType>(std::move(Y));
 
@@ -286,7 +289,8 @@ TEST_CASE("empty matrix", "[tdb_matrix]") {
       matrix_dimension,
       matrix_domain,
       matrix_dimension,
-      tile_extent);
+      tile_extent,
+      TILEDB_FILTER_NONE);
 
   {
     // No rows and no cols.
@@ -395,6 +399,6 @@ TEST_CASE("time travel", "[tdb_matrix]") {
         ctx, tmp_matrix_uri, 4, 2, 0, TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
     CHECK(dimensions(Y) == 0);
-    CHECK(Y.size() == 0);
+    CHECK(Y.empty());
   }
 }

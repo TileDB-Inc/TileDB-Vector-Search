@@ -48,10 +48,11 @@
  *   - sub_dimensions
  *   - bits_per_subspace
  *   - num_clusters
+ *   - max_iterations
+ *   - convergence_tolerance
+ *   - reassign_ratio
  *
  *   Execution specific
- *   - tol
- *   - max_iter
  *   - num_threads
  *
  *
@@ -75,18 +76,19 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
 
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::string index_type_{"IVF_PQ"};
-  std::string partition_history_str_{""};
-  std::string indices_type_str_{""};
+  std::string partition_history_str_;
+  std::string indices_type_str_;
 
-  uint32_t num_subspaces_{0};
-  uint32_t sub_dimensions_{0};
+  uint64_t num_subspaces_{0};
+  uint64_t sub_dimensions_{0};
   uint32_t bits_per_subspace_{0};
   uint32_t num_clusters_{0};
+  uint64_t max_iterations_{0};
+  float convergence_tolerance_{0.f};
+  float reassign_ratio_{0.f};
   DistanceMetric distance_metric_{DistanceMetric::L2};
 
  protected:
-  IndexKind index_kind_{IndexKind::IVFPQ};
-
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
       // name, member_variable, required
       {"index_type", index_type_, true},
@@ -96,16 +98,19 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
 
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks_impl{
       {"px_datatype", &px_datatype_, TILEDB_UINT32, false},
-      {"num_subspaces", &num_subspaces_, TILEDB_UINT32, true},
-      {"sub_dimensions", &sub_dimensions_, TILEDB_UINT32, true},
+      {"num_subspaces", &num_subspaces_, TILEDB_UINT64, true},
+      {"sub_dimensions", &sub_dimensions_, TILEDB_UINT64, true},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT32, true},
       {"num_clusters", &num_clusters_, TILEDB_UINT32, true},
-      {"distance_metric", &distance_metric_, TILEDB_UINT32, false},
+      {"max_iterations", &max_iterations_, TILEDB_UINT64, true},
+      {"convergence_tolerance", &convergence_tolerance_, TILEDB_FLOAT32, true},
+      {"reassign_ratio", &reassign_ratio_, TILEDB_FLOAT32, true},
+      {"distance_metric", &distance_metric_, TILEDB_UINT32, true},
   };
 
   void clear_history_impl(uint64_t timestamp) {
     std::vector<partition_history_type> new_partition_history;
-    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (size_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_partition_history.push_back(partition_history_[i]);

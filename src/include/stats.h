@@ -104,8 +104,8 @@ class StatsCollectionScope final {
 #endif
 };
 
-static auto dump_logs = [](std::string filename,
-                           const std::string algorithm,
+static auto dump_logs = [](const std::string& filename,
+                           const std::string& algorithm,
                            size_t nqueries,
                            size_t nprobe,
                            size_t k_nn,
@@ -116,7 +116,7 @@ static auto dump_logs = [](std::string filename,
   // @todo encapsulate this as a function that can be customized
 
   // I don't know why this has to be done in two steps like this but oh well
-  auto c = filename == "" ? std::ofstream(filename) : std::ofstream();
+  auto c = filename.empty() ? std::ofstream(filename) : std::ofstream();
   std::ostream& output{(filename == "-") ? std::cout : c};
 
   // @todo print other information

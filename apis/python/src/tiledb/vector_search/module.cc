@@ -417,7 +417,7 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
   m.def(
       ("ivf_index_" + suffix).c_str(),
       [](tiledb::Context& ctx,
-         const ColMajorMatrix<T>& db,
+         const ColMajorMatrix<T>& input_vectors,
          const std::vector<uint64_t>& external_ids,
          const std::vector<uint64_t>& deleted_ids,
          const std::string& centroids_uri,
@@ -427,10 +427,11 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
          size_t start_pos,
          size_t end_pos,
          size_t nthreads,
-         uint64_t timestamp) -> int {
+         uint64_t timestamp,
+         size_t partition_start) -> int {
         return detail::ivf::ivf_index<T, uint64_t, float>(
             ctx,
-            db,
+            input_vectors,
             external_ids,
             deleted_ids,
             centroids_uri,
@@ -440,7 +441,8 @@ static void declare_ivf_index(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp);
+            timestamp,
+            partition_start);
       },
       py::keep_alive<1, 2>());
 }
@@ -452,7 +454,7 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
   m.def(
       ("ivf_index_tdb_" + suffix).c_str(),
       [](tiledb::Context& ctx,
-         const std::string& db_uri,
+         const std::string& input_vectors_uri,
          const std::string& external_ids_uri,
          const std::vector<uint64_t>& deleted_ids,
          const std::string& centroids_uri,
@@ -462,10 +464,11 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
          size_t start_pos,
          size_t end_pos,
          size_t nthreads,
-         uint64_t timestamp) -> int {
+         uint64_t timestamp,
+         size_t partition_start) -> int {
         return detail::ivf::ivf_index<T, uint64_t, float>(
             ctx,
-            db_uri,
+            input_vectors_uri,
             external_ids_uri,
             deleted_ids,
             centroids_uri,
@@ -475,7 +478,8 @@ static void declare_ivf_index_tdb(py::module& m, const std::string& suffix) {
             start_pos,
             end_pos,
             nthreads,
-            timestamp);
+            timestamp,
+            partition_start);
       },
       py::keep_alive<1, 2>());
 }
@@ -606,10 +610,10 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
          std::vector<indices_type>& indices,             // 5
          const std::string& id_uri,
          size_t k_nn,
-         uint64_t timestamp
+         uint64_t timestamp,
+         size_t upper_bound
          /* size_t nthreads TODO: optional arg w/ fallback to C++ default arg */
       ) { /* TODO return type */
-          size_t upper_bound{0};
           auto nthreads = std::thread::hardware_concurrency();
 
           return detail::ivf::dist_qv_finite_ram_part<T, shuffled_ids_type>(
@@ -621,7 +625,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
               indices,
               id_uri,
               k_nn,
-              timestamp);
+              timestamp,
+              upper_bound);
       },
       py::keep_alive<1, 2>());
   m.def(
@@ -635,11 +640,11 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
          std::vector<shuffled_ids_type>& indices,
          const std::string& id_uri,
          size_t k_nn,
-         uint64_t timestamp
+         uint64_t timestamp,
+         size_t upper_bound
          /* size_t nthreads @todo: optional arg w/ fallback to C++ default arg
           */
       ) { /* @todo: return type */
-          size_t upper_bound{0};
           auto nthreads = std::thread::hardware_concurrency();
           auto temporal_policy{
               (timestamp == 0) ? TemporalPolicy() :
@@ -674,7 +679,8 @@ static void declare_dist_qv(py::module& m, const std::string& suffix) {
               indices,
               id_uri,
               k_nn,
-              timestamp);
+              timestamp,
+              upper_bound);
       },
       py::keep_alive<1, 2>());
 }
@@ -699,7 +705,6 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
               data, query_vectors, ids, k, nthreads, inner_product_distance{});
           return r;
         } else if (distance_metric == DistanceMetric::COSINE) {
-          printf("cosine\n");
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, cosine_distance{});
           return r;

@@ -38,12 +38,10 @@
 #include "detail/graph/diskann.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
-#include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
 #include "index/vamana_index.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/gen_graphs.h"
-#include "test/utils/query_common.h"
 #include "test/utils/test_utils.h"
 #include "test/utils/tiny_graphs.h"
 #include "utils/logging.h"
@@ -611,7 +609,7 @@ TEST_CASE("greedy search with nn descent", "[vamana]") {
       nn_hypercube, k_near);
 
   auto valid = validate_graph(g, nn_hypercube);
-  CHECK(valid.size() == 0);
+  CHECK(valid.empty());
 
   for (int kk : {-1, 1}) {
     auto query = Vector<float>{kk * 1.05f, kk * 0.95f, 1.09f};
@@ -730,7 +728,7 @@ TEST_CASE("fmnist", "[vamana]") {
   auto g = detail::graph::init_random_nn_graph<score_type, id_type>(db, L);
 
   auto valid = validate_graph(g, db);
-  CHECK(valid.size() == 0);
+  CHECK(valid.empty());
 
   auto query = db[599];
 
@@ -769,7 +767,7 @@ TEST_CASE("fmnist", "[vamana]") {
     auto&& [top_k_scores, top_k, V] = greedy_search(g, db, 0UL, query, k_nn, L);
 
     auto valid = validate_graph(g, db);
-    CHECK(valid.size() == 0);
+    CHECK(valid.empty());
 
     if (debug) {
       std::cout << "size(V): " << size(V) << std::endl;
@@ -859,7 +857,7 @@ TEST_CASE("fmnist compare greedy search", "[vamana]") {
   auto g = detail::graph::init_random_nn_graph<score_type, id_type>(db, L);
 
   auto valid = validate_graph(g, db);
-  CHECK(valid.size() == 0);
+  CHECK(valid.empty());
 
   auto query = db[599];
 
@@ -925,7 +923,7 @@ TEST_CASE("robust prune hypercube", "[vamana]") {
       detail::graph::init_random_nn_graph<float, uint32_t>(nn_hypercube, R);
 
   auto valid = validate_graph(g, nn_hypercube);
-  CHECK(valid.size() == 0);
+  CHECK(valid.empty());
 
   auto query = Vector<float>{1.05, 0.95, 1.09};
 
@@ -964,12 +962,12 @@ TEST_CASE("robust prune hypercube", "[vamana]") {
           greedy_search(g, nn_hypercube, start, nn_hypercube[p], k_near, L);
 
       auto valid = validate_graph(g, nn_hypercube);
-      CHECK(valid.size() == 0);
+      CHECK(valid.empty());
 
       robust_prune(g, nn_hypercube, p, V, alpha, R);
 
       auto valid2 = validate_graph(g, nn_hypercube);
-      CHECK(valid2.size() == 0);
+      CHECK(valid2.empty());
 
       if (debug) {
         for (auto&& [s, t] : g.out_edges(p)) {
@@ -983,7 +981,7 @@ TEST_CASE("robust prune hypercube", "[vamana]") {
         greedy_search(g, nn_hypercube, start, query, k_near, L);
 
     auto valid = validate_graph(g, nn_hypercube);
-    CHECK(valid.size() == 0);
+    CHECK(valid.empty());
 
     if (debug) {
       std::cout << "V.size: " << size(V) << std::endl;
@@ -1026,7 +1024,7 @@ TEST_CASE("robust prune fmnist", "[vamana]") {
       init_random_nn_graph<siftsmall_feature_type, siftsmall_ids_type>(db, L);
 
   auto valid = validate_graph(g, db);
-  REQUIRE(valid.size() == 0);
+  REQUIRE(valid.empty());
 
   auto x = std::accumulate(begin(db[0]), end(db[0]), 0.0F);
 
@@ -1039,7 +1037,7 @@ TEST_CASE("robust prune fmnist", "[vamana]") {
   }
 
   auto valid6 = validate_graph(g, db);
-  REQUIRE(valid6.size() == 0);
+  REQUIRE(valid6.empty());
 
   auto qv_timer = log_timer{"qv", debug};
   auto&& [top_scores, qv_top_k] =
@@ -1048,7 +1046,7 @@ TEST_CASE("robust prune fmnist", "[vamana]") {
   qv_timer.stop();
 
   auto valid2 = validate_graph(g, db);
-  REQUIRE(valid2.size() == 0);
+  REQUIRE(valid2.empty());
 
   auto start = medoid(db);
 
@@ -1058,18 +1056,18 @@ TEST_CASE("robust prune fmnist", "[vamana]") {
     }
     for (size_t p = 0; p < db.num_cols(); ++p) {
       auto valid3 = validate_graph(g, db);
-      REQUIRE(valid3.size() == 0);
+      REQUIRE(valid3.empty());
 
       auto&& [top_k_scores, top_k, V] =
           greedy_search(g, db, start, db[p], k_nn, L);
 
       auto valid4 = validate_graph(g, db);
-      CHECK(valid4.size() == 0);
+      CHECK(valid4.empty());
 
       robust_prune(g, db, p, V, alpha, R);
 
       auto valid5 = validate_graph(g, db);
-      CHECK(valid5.size() == 0);
+      CHECK(valid5.empty());
     }
   }
 
@@ -1189,7 +1187,7 @@ TEST_CASE("vamana by hand random index", "[vamana]") {
   auto g = ::detail::graph::init_random_adj_list<float, uint32_t>(
       training_set_, r_max_degree);
 
-  auto dimensions_ = ::dimensions(training_set_);
+  uint64_t dimensions_ = ::dimensions(training_set_);
   auto num_vectors_ = ::num_vectors(training_set_);
   auto graph_ = ::detail::graph::
       init_random_nn_graph<siftsmall_feature_type, siftsmall_ids_type>(
@@ -1437,7 +1435,7 @@ TEST_CASE("query empty index", "[vamana]") {
   size_t l_build = 100;
   size_t r_max_degree = 100;
   size_t num_vectors = 0;
-  size_t dimensions = 5;
+  uint64_t dimensions = 5;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors, l_build, r_max_degree);
   auto data =

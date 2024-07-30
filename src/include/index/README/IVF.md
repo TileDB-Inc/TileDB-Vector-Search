@@ -25,7 +25,7 @@ having to do with TileDB arrays, including URIs, groups, arrays, metadata, and t
 like. That is all handled by the `ivf_flat_group` class.
 
 The `ivf_flat_group` is the interface between the `ivf_flat_index` and the
-TileDB index arrays. It contains all of the information necessary to fill the
+TileDB index arrays. It contains all the information necessary to fill the
 arrays in an `ivf_flat_index` at a given timestamp.
 
 The `ivf_flat_index_metadata` class encapsulates metadata in a class separate from
@@ -193,7 +193,7 @@ classes and to reuse as much code as possible.
 - `vector_search_index` base class that provides common API
 
 - `flat_l2_index` derived class supporting flat search with L2 norm distance. Note that the distance computation is parameterized so that `flat_l2_index` can also support dot, cosine, jaccard, etc.
-- `flat_pq_index` derived class supporting flat search with L2 norm (et al) distance. Vectors are compressed with PQ encoding.
+- `flat_pq_index` derived class supporting flat search with L2 norm distance. Vectors are compressed with PQ encoding.
 - `ivf_flat_index` derived class supporting inverted index search without compression, and with parameterized distance over uncompressed vectors.
 - `ivf_pq_index` derived class supporting inverted index search with parameterized distance over PQ compressed vectors.
 - `vamana_index` derived class supporting graph-based vamana indexing and querying with parameterized distance over uncompressed vectors.
@@ -201,7 +201,7 @@ classes and to reuse as much code as possible.
 
 The `flat` and `ivf` indexes can all support additions and deletions in the same way -- by using an auxiliary array to hold the updates. Queries are performed by first querying the "main" index and then filtering those results using the contents of the query applied to the updates array. When the updates array has grown sufficiently large, the indexes are re-indexed.
 
-In the non-cloud case, insertions into the `vamana` (graph-based) indexes is extrememly efficient and can be done immediately (without the use of a separate updates array).
+In the non-cloud case, insertions into the `vamana` (graph-based) indexes is extremely efficient and can be done immediately (without the use of a separate updates array).
 
 ### `ivf_flat_index`
 

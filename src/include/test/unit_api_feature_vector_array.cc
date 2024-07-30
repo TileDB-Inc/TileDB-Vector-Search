@@ -541,7 +541,13 @@ TEST_CASE("load empty matrix", "[api][index]") {
   }
 
   create_empty_for_matrix<float, stdx::layout_left>(
-      ctx, tmp_matrix_uri, dimension, domain, dimension, tile_extent);
+      ctx,
+      tmp_matrix_uri,
+      dimension,
+      domain,
+      dimension,
+      tile_extent,
+      TILEDB_FILTER_NONE);
 
   auto X = FeatureVectorArray(ctx, tmp_matrix_uri);
 }
@@ -696,7 +702,7 @@ TEST_CASE("temporal_policy", "[api]") {
     auto ids = std::span<IdsType>(
         (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
-    CHECK(ids.size() == 0);
-    CHECK(data.size() == 0);
+    CHECK(ids.empty());
+    CHECK(data.empty());
   }
 }

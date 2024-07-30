@@ -200,7 +200,7 @@ TEST_CASE("write empty vector", "[tdb_io]") {
       ctx, tmp_vector_uri, domain, tile_size, compression);
 
   auto empty_vector = read_vector<float>(ctx, tmp_vector_uri, 0, 0, {});
-  CHECK(empty_vector.size() == 0);
+  CHECK(empty_vector.empty());
 
   auto filled_vector = read_vector<float>(ctx, tmp_vector_uri);
   CHECK(filled_vector.size() == domain);

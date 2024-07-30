@@ -133,10 +133,10 @@ inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
  */
 struct logging_sum_of_squares_distance {
   size_t num_comps_{0};
-  std::string msg_{""};
+  std::string msg_;
 
   logging_sum_of_squares_distance() = default;
-  logging_sum_of_squares_distance(const std::string& msg)
+  explicit logging_sum_of_squares_distance(const std::string& msg)
       : msg_(msg) {
   }
 
@@ -389,7 +389,7 @@ auto get_top_k_from_scores(V const& scores, L&& top_k, size_t k = 0) {
 // size of the valid ranges in the scores matrix.
 // @todo pad top_k with sentinel if scores has sentinel
 template <class I, class T>
-auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
+auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, size_t k_nn) {
   auto top_k = ColMajorMatrix<I>(k_nn, scores.num_cols());
   for (size_t j = 0; j < scores.num_cols(); ++j) {
     get_top_k_from_scores(scores[j], top_k[j], k_nn);

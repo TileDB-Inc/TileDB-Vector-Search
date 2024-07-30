@@ -711,12 +711,14 @@ TEST_CASE("query siftsmall", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.asymmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
     CHECK(recall0 > 0.7);
 
     auto intersections1 =
         (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
-    double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
+    double recall1 =
+        intersections1 / static_cast<double>(top_k_pq.num_cols() * k_nn);
     CHECK(recall1 > 0.7);
 
     if (debug) {
@@ -728,12 +730,14 @@ TEST_CASE("query siftsmall", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.symmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
     CHECK(recall0 > 0.6);
 
     auto intersections1 =
         (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
-    double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
+    double recall1 =
+        intersections1 / static_cast<double>(top_k_pq.num_cols() * k_nn);
     CHECK(recall1 > 0.6);
 
     if (debug) {
@@ -775,8 +779,10 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
   SECTION("asymmetric") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.asymmetric_query(query_set, 10);
 
-    auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    auto intersections0 =
+        static_cast<long>(count_intersections(top_k_pq, top_k, k_nn));
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << std::endl;
@@ -788,7 +794,8 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.symmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << std::endl;
@@ -800,7 +807,8 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.asymmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << std::endl;
@@ -812,7 +820,7 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
 TEST_CASE("flat_pq_index write and read", "[flat_pq_index]") {
   const bool debug = false;
 
-  size_t dimensions_{128};
+  uint64_t dimensions_{128};
   size_t num_subspaces_{16};
   size_t bits_per_subspace_{8};
   size_t num_clusters_{256};
