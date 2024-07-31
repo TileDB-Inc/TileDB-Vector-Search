@@ -482,12 +482,11 @@ class ivf_flat_index {
         temporal_policy_,
         storage_version,
         dimensions_);
-
     write_group.set_dimensions(dimensions_);
-
     write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
     write_group.append_base_size(::num_vectors(*partitioned_vectors_));
     write_group.append_num_partitions(num_partitions_);
+    write_group.store_metadata();
 
     write_matrix(
         ctx,

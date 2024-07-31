@@ -1108,7 +1108,6 @@ class ivf_pq_index {
         dimensions_,
         num_clusters_,
         num_subspaces_);
-
     write_group.set_dimensions(dimensions_);
     write_group.set_num_subspaces(num_subspaces_);
     write_group.set_sub_dimensions(sub_dimensions_);
@@ -1118,6 +1117,7 @@ class ivf_pq_index {
     write_group.set_convergence_tolerance(convergence_tolerance_);
     write_group.set_reassign_ratio(reassign_ratio_);
     write_group.set_distance_metric(distance_metric_);
+    write_group.store_metadata();
 
     if (num_subspaces_ * sub_dimensions_ != dimensions_) {
       throw std::runtime_error(
