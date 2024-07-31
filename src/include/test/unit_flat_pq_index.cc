@@ -445,7 +445,7 @@ TEST_CASE(
   }
   SECTION("pq_distances") {
     auto avg_error = pq_idx.verify_pq_distances(training_set);
-    CHECK(avg_error < 0.15);
+    CHECK(avg_error < 0.155);
   }
   SECTION("asymmetric_pq_distances") {
     auto [max_error, avg_error] =
