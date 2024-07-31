@@ -60,12 +60,6 @@ if (NOT TILEDB_SANITIZER MATCHES "^[-A-Za-z]*$")
             " permissible characters are only alphabetic and hyphen")
 endif()
 
-# Verify that the sanitizer is one that some compiler supports
-string(TOLOWER ${TILEDB_SANITIZER} TILEDB_SANITIZER)
-if (NOT TILEDB_SANITIZER MATCHES "^address$")
-    message(FATAL_ERROR "Unsupported sanitizer ${sanitizer}")
-endif()
-
 # Catch has a conflict with ASAN on Windows. Disable the SEH handler in Catch to avoid the conflict.
 add_compile_definitions("$<$<CXX_COMPILER_ID:MSVC>:CATCH_CONFIG_NO_WINDOWS_SEH>")
 # Microsoft suppresses /INCREMENTAL, but emits a warning, so silence it.
@@ -95,9 +89,6 @@ macro(validate_sanitizer_options)
             if (MSVC_VERSION LESS 1929)
                 message(WARNING "MSVC version ${MSVC_VERSION} may only partially support address sanitizer." )
             endif()
-        else()
-            # MSVC support only the address sanitizer
-            message(FATAL_ERROR "MSVC only supports sanitizer \"address\"")
         endif()
 
         # May also need to explicitly remove /RTC flags
