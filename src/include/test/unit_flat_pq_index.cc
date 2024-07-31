@@ -821,9 +821,9 @@ TEST_CASE("flat_pq_index write and read", "[flat_pq_index]") {
   const bool debug = false;
 
   uint64_t dimensions_{128};
-  size_t num_subspaces_{16};
-  size_t bits_per_subspace_{8};
-  size_t num_clusters_{256};
+  uint32_t num_subspaces_{16};
+  uint32_t bits_per_subspace_{8};
+  uint32_t num_clusters_{256};
 
   tiledb::Context ctx;
   std::string flatpq_index_uri =

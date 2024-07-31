@@ -140,7 +140,7 @@ struct siftsmall_test_init_defaults {
 
   size_t k_nn = 10;
   size_t nthreads = 0;
-  size_t max_iterations = 10;
+  uint32_t max_iterations = 10;
   float convergence_tolerance = 1e-4;
 };
 
@@ -159,7 +159,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
   siftsmall_test_init(
       tiledb::Context ctx,
       size_t nl,
-      size_t num_subspaces = 0,
+      uint32_t num_subspaces = 0,
       size_t num_vectors = 0)
       : ctx_{ctx}
       , nlist(nl)
