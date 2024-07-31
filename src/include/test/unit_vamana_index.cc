@@ -1442,8 +1442,6 @@ TEST_CASE("query empty index", "[vamana]") {
       ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
   index.train(data, data.raveled_ids());
 
-  auto queries = std::vector<std::vector<siftsmall_feature_type>>{
-      {1, 1, 1, 1, 1}, {2, 2, 2, 2, 2}};
   auto&& [scores, ids] = index.query(data, 1);
   CHECK(_cpo::num_vectors(scores) == 0);
   CHECK(_cpo::num_vectors(ids) == 0);

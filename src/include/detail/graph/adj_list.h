@@ -36,6 +36,7 @@
 #include <list>
 #include <vector>
 #include "scoring.h"
+#include "utils/prng.h"
 
 namespace detail::graph {
 template <class I>
@@ -198,16 +199,14 @@ template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto init_random_adj_list(auto&& db, size_t R, Distance distance = Distance()) {
   auto num_vertices = num_vectors(db);
   adj_list<T, ID> g(num_vertices);
-  std::random_device rd;
-  std::mt19937 gen(rd());
 
   std::uniform_int_distribution<size_t> dis(0, num_vertices - 1);
 
   for (size_t i = 0; i < num_vertices; ++i) {
     for (size_t j = 0; j < R; ++j) {
-      auto nbr = dis(gen);
+      auto nbr = dis(PRNG::get().generator());
       while (nbr == i) {
-        nbr = dis(gen);
+        nbr = dis(PRNG::get().generator());
       }
       auto score = distance(db[i], db[nbr]);
       g.add_edge(i, nbr, score);

@@ -248,7 +248,6 @@ class ivf_pq_index {
 
   // Some parameters for execution
   uint64_t num_threads_{std::thread::hardware_concurrency()};
-  uint64_t seed_{std::random_device{}()};
 
  public:
   using value_type = feature_type;
@@ -276,7 +275,6 @@ class ivf_pq_index {
    * @param convergence_tolerance Convergence convergence_toleranceerance for
    * kmeans algorithm.
    * @param temporal_policy Temporal policy for the index.
-   * @param seed Random seed for kmeans algorithm.
    *
    * @note PQ encoding generally is described as having parameter nbits, how
    * many bits to use for indexing into the codebook. In real implementations,
@@ -297,9 +295,7 @@ class ivf_pq_index {
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      DistanceMetric distance_metric = DistanceMetric::L2,
-      uint64_t seed = std::random_device{}()
-      )
+      DistanceMetric distance_metric = DistanceMetric::L2)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
@@ -309,14 +305,12 @@ class ivf_pq_index {
       , convergence_tolerance_(convergence_tolerance)
       , reassign_ratio_(reassign_ratio)
       , distance_metric_{distance_metric}
-      , seed_{seed}
       {
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
           "num_subspaces (" + std::to_string(num_subspaces_) +
           ") must be greater than zero");
     }
-    gen_.seed(seed_);
   }
 
   /**
@@ -491,7 +485,7 @@ class ivf_pq_index {
 
       // @todo Make choice of kmeans init configurable
       sub_kmeans_random_init(
-          training_set, cluster_centroids_, sub_begin, sub_end, 0xdeadbeef);
+          training_set, cluster_centroids_, sub_begin, sub_end);
 
       // sub_kmeans will invoke the sub_distance function with centroids
       // against new_centroids, and will call flat::qv_partition with centroids
