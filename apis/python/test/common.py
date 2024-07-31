@@ -416,3 +416,30 @@ def load_metadata(index_uri):
     base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
     group.close()
     return ingestion_timestamps, base_sizes
+
+
+def query_and_check(index, queries, k, expected, expected_distances=None, **kwargs):
+    for _ in range(3):
+        result_d, result_i = index.query(queries, k=k, **kwargs)
+
+        # Check if the expected IDs are a subset of the result
+        assert expected.issubset(
+            set(result_i[0])
+        ), f"Expected IDs {expected} are not a subset of result IDs {set(result_i[0])}"
+
+        # If expected_distances is provided, check the distances
+        if expected_distances is not None:
+            expected_dict = dict(
+                zip(range(len(expected_distances)), expected_distances)
+            )
+
+            result_dict = dict(zip(result_i[0], result_d[0]))
+
+            for id in expected.intersection(set(result_i[0])):
+                np.testing.assert_allclose(
+                    result_dict[id],
+                    expected_dict[id],
+                    rtol=1e-5,
+                    atol=1e-5,
+                    err_msg=f"Distance mismatch for ID {id}",
+                )

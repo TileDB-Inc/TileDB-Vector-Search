@@ -2501,11 +2501,8 @@ def ingest(
                         )
                 # Add dependencies for normalization
                 for node in normalization_nodes:
-                    if copy_centroids_uri is not None:
-                        centroids_node.depends_on(node)
-                    else:
-                        for random_sample_node in random_sample_nodes:
-                            random_sample_node.depends_on(node)
+                    for random_sample_node in random_sample_nodes:
+                        random_sample_node.depends_on(node)
 
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
                     centroids_node = submit(
@@ -2531,6 +2528,11 @@ def ingest(
 
                     for random_sample_node in random_sample_nodes:
                         centroids_node.depends_on(random_sample_node)
+
+                    # if random sample nodes is empty then we need to depend on the normalization nodes
+                    if not random_sample_nodes:
+                        for node in normalization_nodes:
+                            centroids_node.depends_on(node)
                 else:
                     uri = (
                         training_source_uri
@@ -2561,6 +2563,11 @@ def ingest(
 
                     for random_sample_node in random_sample_nodes:
                         internal_centroids_node.depends_on(random_sample_node)
+
+                    # if random sample nodes is empty then we need to depend on the normalization nodes
+                    if not random_sample_nodes:
+                        for node in normalization_nodes:
+                            internal_centroids_node.depends_on(node)
 
                     for it in range(5):
                         kmeans_workers = []
