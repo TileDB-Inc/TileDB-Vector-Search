@@ -19,31 +19,25 @@ import boto3
 import paramiko
 
 installations = ["tiledb"]
-algorithms = [
-    "tiledb-ivf-flat",
-    "tiledb-ivf-pq",
-    "tiledb-flat",
-    # NOTE(paris): Commented out until Vamana disk space usage is optimized.
-    # "tiledb-vamana"
-]
+algorithms = ["tiledb-ivf-flat", "tiledb-ivf-pq", "tiledb-flat", "tiledb-vamana"]
 
 also_benchmark_others = True
 if also_benchmark_others:
     # TODO(paris): Some of these are failing so commented out. Investigate and re-enable.
     installations += [
-        # "flann",
-        # "faiss",
-        # "hnswlib",
+        "flann",
+        "faiss",
+        "hnswlib",
         # "weaviate"
         # "milvus",
-        "pgvector"
+        "pgvector",
     ]
     algorithms += [
-        # "flann",
-        # "faiss-ivf",
+        "flann",
+        "faiss-ivf",
         # "faiss-lsh",
-        # "faiss-ivfpqfs",
-        # "hnswlib",
+        "faiss-ivfpqfs",
+        "hnswlib",
         # "weaviate",
         # "milvus-flat",
         # "milvus-ivfflat",

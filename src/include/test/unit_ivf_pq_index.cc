@@ -50,7 +50,7 @@ struct dummy_pq_index {
   uint64_t dimensions() const {
     return 128;
   }
-  auto num_subspaces() const {
+  uint32_t num_subspaces() const {
     return 16;
   }
   auto num_clusters() const {
@@ -296,8 +296,8 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
 TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
-  size_t num_subspaces = 16;
-  size_t max_iterations = 4;
+  uint32_t num_subspaces = 16;
+  uint32_t max_iterations = 4;
   size_t nprobe = 10;
   size_t k_nn = 10;
 
@@ -645,8 +645,8 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   size_t num_vectors = 4;
   uint64_t dimensions = 4;
   size_t nlist = 1;
-  size_t num_subspaces = 2;
-  size_t max_iterations = 1;
+  uint32_t num_subspaces = 2;
+  uint32_t max_iterations = 1;
   float convergence_tolerance = 0.000025f;
   float reassign_ratio = 0.09f;
   std::optional<TemporalPolicy> temporal_policy = std::nullopt;
@@ -726,9 +726,9 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
   size_t n_list = 1;
-  size_t num_subspaces = 1;
+  uint32_t num_subspaces = 1;
   float convergence_convergence_toleranceerance = 0.00003f;
-  size_t max_iterationsations = 3;
+  uint32_t max_iterations = 3;
 
   // Write the empty index.
   {

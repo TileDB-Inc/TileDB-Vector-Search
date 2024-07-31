@@ -213,7 +213,7 @@ void train_no_init(
     C& centroids_,
     size_t dimension_,
     size_t num_partitions_,
-    size_t max_iter_,
+    uint32_t max_iterations,
     float tol_,
     size_t num_threads_,
     float reassign_ratio_ = 0.05,
@@ -230,7 +230,7 @@ void train_no_init(
   auto new_centroids =
       ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
 
-  for (size_t iter = 0; iter < max_iter_; ++iter) {
+  for (size_t iter = 0; iter < max_iterations; ++iter) {
     auto [scores, parts] = detail::flat::qv_partition_with_scores(
         centroids_, training_set, num_threads_, distancex);
 
@@ -272,7 +272,7 @@ void train_no_init(
         std::ceil(reassign_ratio_ * static_cast<float>(max_degree));
 
     // Don't reassign if we are on last iteration
-    if (iter != max_iter_ - 1) {
+    if (iter != max_iterations - 1) {
 // Experiment with random reassignment
 #if 0
         // Pick a random vector to be a new centroid
@@ -395,7 +395,7 @@ void sub_kmeans_random_init(
     const V& training_set, C& centroids, size_t sub_begin, size_t sub_end) {
   scoped_timer _{__FUNCTION__};
 
-  size_t num_clusters =
+  uint32_t num_clusters =
       std::min(num_vectors(training_set), num_vectors(centroids));
   if (num_clusters == 0) {
     return;
@@ -451,7 +451,7 @@ auto sub_kmeans(
     C& centroids,
     size_t sub_begin,
     size_t sub_end,
-    size_t num_clusters,
+    uint32_t num_clusters,
     double tol,
     size_t max_iter,
     size_t num_threads) {
