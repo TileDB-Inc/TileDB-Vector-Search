@@ -378,19 +378,6 @@ class base_index_group {
     store_metadata();
   }
 
-  /**
-   * @brief Destructor.  If opened for write, update the metadata.
-   *
-   * @todo Don't use default Config
-   */
-  // ~base_index_group() {
-  //   if (opened_for_ == TILEDB_WRITE && exists()) {
-  //     auto write_group = tiledb::Group(
-  //         cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
-  //     metadata_.store_metadata(write_group);
-  //   }
-  // }
-
   void store_metadata() {
     if (opened_for_ == TILEDB_READ) {
       throw std::runtime_error(

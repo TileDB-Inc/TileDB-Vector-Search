@@ -131,11 +131,12 @@ TEST_CASE("write constructor - create and read", "[ivf_pq_group]") {
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
 
-    // We throw b/c the ivf_pq_group hasn't actually been written (the
-    // write happens in the destructor).
+    // We throw b/c the ivf_pq_group hasn't actually been stored yet.
     CHECK_THROWS_WITH(
         ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
+
+    x.store_metadata();
   }
 
   ivf_pq_group y = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
@@ -168,8 +169,7 @@ TEST_CASE("write constructor - invalid create and read", "[ivf_pq_group]") {
     CHECK(x.get_dimensions() == dimensions);
     CHECK(x.get_num_clusters() == num_clusters);
     CHECK(x.get_num_subspaces() == num_subspaces);
-    // We throw b/c the ivf_pq_group hasn't actually been written (the
-    // write happens in the destructor).
+    // We throw b/c the ivf_pq_group hasn't actually been stored yet.
     CHECK_THROWS_WITH(
         ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
@@ -216,6 +216,7 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
     x.append_num_partitions(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
+    x.store_metadata();
   }
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
