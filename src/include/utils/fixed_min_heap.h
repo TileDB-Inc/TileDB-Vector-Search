@@ -121,7 +121,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
       //      if (Base::size() == max_size) {
-      //        std::make_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+      //        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
       //          return std::get<0>(a) < std::get<0>(b);
       //        });
       //      }
