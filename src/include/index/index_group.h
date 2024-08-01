@@ -360,7 +360,6 @@ class base_index_group {
           "Cannot clear history because group does not exist.");
     }
 
-    metadata_.clear_history(timestamp);
     try {
       tiledb::Array::delete_fragments(cached_ctx_, ids_uri(), 0, timestamp);
       static_cast<group_type*>(this)->clear_history_impl(timestamp);
@@ -374,6 +373,9 @@ class base_index_group {
       }
       throw e;
     }
+
+    metadata_.clear_history(timestamp);
+    store_metadata();
   }
 
   /**
@@ -391,12 +393,15 @@ class base_index_group {
 
   void store_metadata() {
     if (opened_for_ == TILEDB_READ) {
-      throw std::runtime_error("[index_group@write] Cannot write in read mode.");
+      throw std::runtime_error(
+          "[index_group@write] Cannot write in read mode.");
     }
     if (!exists()) {
-      throw std::runtime_error("[index_group@write] Cannot write because group does not exist.");
+      throw std::runtime_error(
+          "[index_group@write] Cannot write because group does not exist.");
     }
-    auto write_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
+    auto write_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
     metadata_.store_metadata(write_group);
   }
 

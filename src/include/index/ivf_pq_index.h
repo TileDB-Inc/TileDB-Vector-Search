@@ -1117,7 +1117,6 @@ class ivf_pq_index {
     write_group.set_convergence_tolerance(convergence_tolerance_);
     write_group.set_reassign_ratio(reassign_ratio_);
     write_group.set_distance_metric(distance_metric_);
-    write_group.store_metadata();
 
     if (num_subspaces_ * sub_dimensions_ != dimensions_) {
       throw std::runtime_error(
@@ -1155,6 +1154,8 @@ class ivf_pq_index {
       write_group.append_base_size(::num_vectors(*partitioned_pq_vectors_));
       write_group.append_num_partitions(num_partitions_);
     }
+
+    write_group.store_metadata();
 
     // When creating from Python we initially call write_index() at timestamp 0.
     // The goal here is just to create the arrays and save metadata. Return here
