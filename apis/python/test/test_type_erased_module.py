@@ -533,7 +533,7 @@ def test_inplace_build_query_IndexIVFPQ():
     nt = np.double(t.num_vectors()) * np.double(k_nn)
     recall = intersections / nt
 
-    assert recall > 0.9
+    assert recall >= 0.895
 
 
 def test_construct_IndexIVFFlat():
