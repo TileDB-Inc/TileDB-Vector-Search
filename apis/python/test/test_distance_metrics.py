@@ -115,7 +115,9 @@ def test_ivf_flat_cosine_simple(tmp_path):
         expected_distances=expected_distances,
         nprobe=2,
     )
-    distances, ids = index.query(queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5)
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
     assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
     sorted_distances = np.sort(distances)
     assert np.allclose(distances, sorted_distances, 1e-4)
@@ -174,8 +176,10 @@ def test_ivf_flat_index(capfd, tmp_path):
         expected_distances=expected_distances,
         nprobe=partitions,
     )
-    
-    distances, ids = index.query(queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5)
+
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
     assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
     sorted_distances = np.sort(distances)
     assert np.allclose(distances, sorted_distances, 1e-4)
