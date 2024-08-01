@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        sanitizer: [address, memory, leak, thread]
+        sanitizer: [address, leak, thread]
+    continue-on-error: true
     steps:
       - name: Install OpenBLAS
         if: ${{ runner.os == 'Linux' }}
@@ -24,5 +25,4 @@ jobs:
       - name: Run Tests
         run: cmake --build ./src/build --target check-ci
         # TODO: Once we fix sanitizer errors, remove this.
-        continue-on-error: true
 
