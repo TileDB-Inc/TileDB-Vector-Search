@@ -34,6 +34,7 @@
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
+#include <atomic>
 #include "concepts.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
