@@ -11,6 +11,7 @@ from common import load_metadata
 from sklearn.neighbors import NearestNeighbors
 
 from tiledb.cloud.dag import Mode
+from tiledb.vector_search import Index
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search.index import DATASET_TYPE
@@ -168,6 +169,90 @@ def test_ivf_flat_ingestion_cosine(tmp_path):
     assert accuracy(result, gt_i) > minimum_accuracy
 
 
+def test_vamana_ingestion_accuracy(tmp_path):
+    vfs = tiledb.VFS()
+
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    if os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+
+    # Parameters
+    size = 10000
+    dimensions = 100
+    nqueries = 100
+    k = 10
+    l_build = 101
+    r_max_degree = 65
+    ef_construction = 100
+    ef_search = 50
+
+    # Create dataset
+    create_random_dataset_f32(
+        nb=size,
+        d=dimensions,
+        nq=nqueries,
+        k=k,
+        path=dataset_dir,
+        distance_metric="cosine",
+    )
+    dtype = np.float32
+
+    queries = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+
+    # Create index
+    index = ingest(
+        index_type="VAMANA",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.f32bin"),
+        l_build=l_build,
+        r_max_degree=r_max_degree,
+        ef_construction=ef_construction,
+        distance_metric=vspy.DistanceMetric.COSINE,
+    )
+
+    # Test C++ type-erased index (not public API)
+    ctx = vspy.Ctx({})
+    type_erased_index = vspy.IndexVamana(ctx, index_uri, None)
+    assert type_erased_index.dimensions() == dimensions
+    assert type_erased_index.l_build() == l_build
+    assert type_erased_index.r_max_degree() == r_max_degree
+
+    # Test query accuracy
+    _, result = index.query(queries, k=k, ef_search=ef_search)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # Test after moving index
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = VamanaIndex(uri=index_uri)
+    _, result = index_ram.query(queries, k=k, ef_search=ef_search)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # Test with memory budget
+    index_ram = VamanaIndex(uri=index_uri, memory_budget=int(size / 10))
+    _, result = index_ram.query(queries, k=k, ef_search=ef_search)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # Test with NUV implementation
+    _, result = index_ram.query(
+        queries,
+        k=k,
+        ef_search=ef_search,
+        use_nuv_implementation=True,
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # Test in LOCAL mode
+    _, result = index_ram.query(queries, k=k, ef_search=ef_search, mode=Mode.LOCAL)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    # Test index deletion
+    assert vfs.dir_size(index_uri) > 0
+    Index.delete_index(uri=index_uri, config={})
+    assert vfs.dir_size(index_uri) == 0
+
+
 def test_ivf_flat_cosine_simple(tmp_path):
     # Create 5 input vectors
 
@@ -231,6 +316,13 @@ def test_vamana_cosine_simple(tmp_path):
         expected_distances=expected_distances,
         nprobe=2,
     )
+
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
+    assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
+    sorted_distances = np.sort(distances)
+    assert np.allclose(distances, sorted_distances, 1e-4)
 
 
 def test_ivf_flat_index(capfd, tmp_path):
