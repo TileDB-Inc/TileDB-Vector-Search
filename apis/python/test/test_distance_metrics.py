@@ -50,14 +50,10 @@ def test_ivf_flat_ingestion_cosine(tmp_path):
     queries = get_queries(dataset_dir, dtype=dtype)
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
-    index_type = "IVF_FLAT"
-    index_class = IVFFlatIndex
-    minimum_accuracy = (
-        MINIMUM_ACCURACY_IVF_PQ if index_type == "IVF_PQ" else MINIMUM_ACCURACY
-    )
-    index_uri = os.path.join(tmp_path, f"array_{index_type}")
+    minimum_accuracy = MINIMUM_ACCURACY
+    index_uri = os.path.join(tmp_path, f"array_IVF_FLAT")
     index = ingest(
-        index_type=index_type,
+        index_type="IVF_FLAT",
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
         partitions=partitions,
@@ -70,11 +66,11 @@ def test_ivf_flat_ingestion_cosine(tmp_path):
     assert accuracy(result, gt_i) > minimum_accuracy
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = index_class(uri=index_uri)
+    index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > minimum_accuracy
 
-    index_ram = index_class(uri=index_uri, memory_budget=int(size / 10))
+    index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > minimum_accuracy
 
