@@ -94,7 +94,7 @@ individually
  * @code{.cpp}
 // Print totals for all timers
 auto timers = _timing_data.get_timer_names();
-for (auto& timer : timers) {
+for (const auto& timer : timers) {
    std::cout << timer << ":  " <<
 _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 }
@@ -228,11 +228,11 @@ class timing_data_class {
 
     std::vector<std::string> names;
 
-    for (auto& i : interval_times_) {
+    for (const auto& i : interval_times_) {
       multinames.insert(i.first);
     }
     names.reserve(multinames.size());
-    for (auto& i : multinames) {
+    for (const auto& i : multinames) {
       names.push_back(i);
     }
     return names;
@@ -440,10 +440,10 @@ class memory_data {
 
     std::vector<std::string> names;
 
-    for (auto& i : memory_usages_) {
+    for (const auto& i : memory_usages_) {
       multinames.insert(i.first);
     }
-    for (auto& i : multinames) {
+    for (const auto& i : multinames) {
       names.push_back(i);
     }
     return names;
@@ -560,10 +560,10 @@ class count_data {
 
     std::vector<std::string> names;
 
-    for (auto& i : count_usages_) {
+    for (const auto& i : count_usages_) {
       multinames.insert(i.first);
     }
-    for (auto& i : multinames) {
+    for (const auto& i : multinames) {
       names.push_back(i);
     }
     return names;

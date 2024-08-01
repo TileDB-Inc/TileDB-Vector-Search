@@ -64,7 +64,7 @@ struct dummy_pq_index {
   }
 };
 
-void debug_flat_ivf_centroids(auto& index) {
+void debug_flat_ivf_centroids(const auto& index) {
   std::cout << "\nDebug Centroids:\n" << std::endl;
   for (size_t j = 0; j < index.get_flat_ivf_centroids().num_rows(); ++j) {
     for (size_t i = 0; i < index.get_flat_ivf_centroids().num_cols(); ++i) {

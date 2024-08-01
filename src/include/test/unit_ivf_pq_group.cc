@@ -190,7 +190,7 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
   size_t expected_ingestion = 867;
   size_t expected_base = 5309;
   size_t expected_partitions = 42;
-  size_t expected_temp_size = 314159;
+  int64_t expected_temp_size = 314159;
   uint64_t dimensions = 128;
   size_t num_clusters = 110;
   size_t num_subspaces = 120;
@@ -497,7 +497,7 @@ TEST_CASE("storage version", "[ivf_pq_group]") {
   size_t expected_ingestion = 23094;
   size_t expected_base = 9234;
   size_t expected_partitions = 200;
-  size_t expected_temp_size = 11;
+  int64_t expected_temp_size = 11;
   uint64_t dimensions = 19238;
   size_t num_clusters = 110;
   size_t num_subspaces = 120;

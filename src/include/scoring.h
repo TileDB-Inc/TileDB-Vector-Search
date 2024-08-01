@@ -570,9 +570,10 @@ template <class V, class L, class I>
 auto verify_top_k_scores(
     V const& scores, L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(
-          begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
-            return scores[a] == scores[b];
-          })) {
+          begin(top_k),
+          begin(top_k) + k,
+          g.begin(),
+          [&](const auto& a, auto& b) { return scores[a] == scores[b]; })) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
     for (int i = 0; i < std::min<int>(10, k); ++i) {
       std::cout << "  (" << top_k[i] << " " << scores[top_k[i]] << ") ";
@@ -689,7 +690,9 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
  */
 template <class M, class V, class Function>
 auto col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
+    const M& m, V& v, Function f = [](const auto& x) -> const auto& {
+      return x;
+    }) {
   int size_m = size(m);
   int size_m0 = size(m[0]);
 
@@ -708,7 +711,9 @@ auto col_sum(
  */
 template <class M, class V, class Function>
 auto mat_col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
+    const M& m, V& v, Function f = [](const auto& x) -> const auto& {
+      return x;
+    }) {
   auto num_cols = m.num_cols();
   auto num_rows = m.num_rows();
 

@@ -425,7 +425,7 @@ auto greedy_search_O1(
   // Optionally convert from the vector indexes to the db IDs. Used during
   // querying to map to external IDs.
   if (convert_to_db_ids) {
-    for (int i = 0; i < k_nn; ++i) {
+    for (size_t i = 0; i < k_nn; ++i) {
       if (top_k[i] != std::numeric_limits<id_type>::max()) {
         top_k[i] = db.ids()[top_k[i]];
       }
