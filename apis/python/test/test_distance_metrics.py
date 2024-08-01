@@ -207,6 +207,13 @@ def test_ivf_flat_index(capfd, tmp_path):
         nprobe=partitions,
     )
 
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
+    assert np.array_equal(ids, np.array([[5, 4, 2, 1, 0]], dtype=np.uint64))
+    sorted_distances = np.sort(distances)
+    assert np.allclose(distances, sorted_distances, 1e-4)
+
 
 def test_cosine_distance(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_FLAT")
@@ -403,8 +410,6 @@ def test_ivf_flat_create_cosine_numpy(tmp_path):
                 err_msg=f"L2 distance mismatch for query {i}, neighbor {j}",
             )
 
-    # Clean up
-    tiledb.VFS()
     Index.delete_index(uri=index_uri, config={})
     Index.delete_index(uri=index_uri_l2, config={})
 

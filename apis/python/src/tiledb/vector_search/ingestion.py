@@ -2428,7 +2428,7 @@ def ingest(
                                 verbose=verbose,
                                 trace_id=trace_id,
                                 name=f"normalize-vectors-{start}-{end}",
-                                resources=random_sample_resources,  # We can use similar resources as random sampling
+                                resources=random_sample_resources,
                                 image_name=DEFAULT_IMG_NAME,
                                 **kwargs,
                             )
