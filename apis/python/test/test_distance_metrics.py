@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 from array_paths import *
 from common import *
-
 from common import load_metadata
 from sklearn.neighbors import NearestNeighbors
 
@@ -50,7 +49,7 @@ def test_ivf_flat_ingestion_cosine(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     minimum_accuracy = MINIMUM_ACCURACY
-    index_uri = os.path.join(tmp_path, f"array_IVF_FLAT")
+    index_uri = os.path.join(tmp_path, "array_IVF_FLAT")
     index = ingest(
         index_type="IVF_FLAT",
         index_uri=index_uri,
