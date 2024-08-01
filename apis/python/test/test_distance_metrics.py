@@ -5,7 +5,6 @@ import pytest
 from array_paths import *
 from common import *
 
-# import capsys
 from common import load_metadata
 from sklearn.neighbors import NearestNeighbors
 

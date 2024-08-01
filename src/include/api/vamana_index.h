@@ -64,6 +64,7 @@
  *   - id_type: uint32 or uint64
  *   - adjacency_row_index_type: uint32 or uint64
  */
+
 class IndexVamana {
  public:
   IndexVamana(const IndexVamana&) = delete;
