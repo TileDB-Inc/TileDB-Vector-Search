@@ -1,10 +1,11 @@
 name: Nightly
 
 on:
-  pull_request:
-    branches: [main]
   schedule:
     - cron: "0 0 * * *"
+  # Comment this back in to test file updates.
+  # pull_request:
+  #   branches: [main]
 
 jobs:
   sanitizer:
