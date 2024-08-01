@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        sanitizer: [address, thread]
+        sanitizer: [address, memory, leak, thread]
     steps:
       - name: Install OpenBLAS
         if: ${{ runner.os == 'Linux' }}
