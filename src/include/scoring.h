@@ -34,6 +34,7 @@
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
+#include <atomic>
 #include "concepts.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
@@ -111,11 +112,11 @@ struct sum_of_squares_distance {
  * to count the number of comparisons.
  */
 struct counting_sum_of_squares_distance {
-  static size_t num_comps_;
+  static std::atomic<size_t> num_comps_;
 
   template <class V, class U>
   constexpr auto operator()(const V& a, const U& b) {
-    ++num_comps_;
+    num_comps_++;
     return unroll4_sum_of_squares(a, b);
   }
 
@@ -124,7 +125,7 @@ struct counting_sum_of_squares_distance {
   }
 };
 
-inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
+inline std::atomic<size_t> counting_sum_of_squares_distance::num_comps_ = 0;
 
 /**
  * @brief Function object for computing the sum of squared distance, augmented
@@ -133,10 +134,10 @@ inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
  */
 struct logging_sum_of_squares_distance {
   size_t num_comps_{0};
-  std::string msg_{""};
+  std::string msg_;
 
   logging_sum_of_squares_distance() = default;
-  logging_sum_of_squares_distance(const std::string& msg)
+  explicit logging_sum_of_squares_distance(const std::string& msg)
       : msg_(msg) {
   }
 
@@ -260,22 +261,22 @@ struct inner_product_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return avx2_inner_product(a, b);
+    return -avx2_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return avx2_inner_product(a);
+    return -avx2_inner_product(a);
   }
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return unroll4_inner_product(a, b);
+    return -unroll4_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return unroll4_inner_product(a);
+    return -unroll4_inner_product(a);
   }
 #endif
 };
@@ -285,6 +286,25 @@ struct inner_product_distance {
 using inner_product_distance = _inner_product_distance::inner_product_distance;
 inline constexpr auto inner_product =
     _inner_product_distance::inner_product_distance{};
+
+/**
+ * @brief Function object for computing the cosine distance between two vectors.
+ * @tparam T
+ */
+namespace _cosine_distance {
+
+struct cosine_distance {
+  template <feature_vector V, feature_vector U>
+  inline float operator()(const V& a, const U& b) const {
+    float mag = sqrt(l2_distance(a) * l2_distance(b));
+    return 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag);
+  }
+};
+
+}  // namespace _cosine_distance
+using cosine_distance = _cosine_distance::cosine_distance;
+
+enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
@@ -362,7 +382,7 @@ auto get_top_k_from_scores(V const& scores, L&& top_k, size_t k = 0) {
 // size of the valid ranges in the scores matrix.
 // @todo pad top_k with sentinel if scores has sentinel
 template <class I, class T>
-auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
+auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, size_t k_nn) {
   auto top_k = ColMajorMatrix<I>(k_nn, scores.num_cols());
   for (size_t j = 0; j < scores.num_cols(); ++j) {
     get_top_k_from_scores(scores[j], top_k[j], k_nn);
@@ -551,9 +571,10 @@ template <class V, class L, class I>
 auto verify_top_k_scores(
     V const& scores, L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(
-          begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
-            return scores[a] == scores[b];
-          })) {
+          begin(top_k),
+          begin(top_k) + k,
+          g.begin(),
+          [&](const auto& a, auto& b) { return scores[a] == scores[b]; })) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
     for (int i = 0; i < std::min<int>(10, k); ++i) {
       std::cout << "  (" << top_k[i] << " " << scores[top_k[i]] << ") ";
@@ -670,7 +691,9 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
  */
 template <class M, class V, class Function>
 auto col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
+    const M& m, V& v, Function f = [](const auto& x) -> const auto& {
+      return x;
+    }) {
   int size_m = size(m);
   int size_m0 = size(m[0]);
 
@@ -689,7 +712,9 @@ auto col_sum(
  */
 template <class M, class V, class Function>
 auto mat_col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
+    const M& m, V& v, Function f = [](const auto& x) -> const auto& {
+      return x;
+    }) {
   auto num_cols = m.num_cols();
   auto num_rows = m.num_rows();
 

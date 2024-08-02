@@ -64,7 +64,6 @@ std::vector<T> read_vector_helper(
 
   auto domain_{schema_.domain()};
 
-  auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
   if (read_full_vector) {
@@ -82,11 +81,9 @@ std::vector<T> read_vector_helper(
     return {};
   }
 
-  auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);
 
   std::string attr_name = attr.name();
-  tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
   std::vector<int32_t> subarray_vals = {
@@ -135,9 +132,15 @@ void create_empty_for_matrix(
   tiledb::Domain domain(ctx);
   domain
       .add_dimensions(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
+          ctx,
+          "rows",
+          {{0, std::max(0, (int)rows - 1)}},
+          static_cast<int>(row_extent)))
       .add_dimensions(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
+          ctx,
+          "cols",
+          {{0, std::max(0, (int)cols - 1)}},
+          static_cast<int>(col_extent)));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?

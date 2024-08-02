@@ -494,6 +494,7 @@ def create(
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> IVFFlatIndex:
     """
@@ -519,12 +520,18 @@ def create(
     """
     validate_storage_version(storage_version)
 
+    if distance_metric != vspy.DistanceMetric.L2:
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in IVF_FLAT"
+        )
+
     index.create_metadata(
         uri=uri,
         dimensions=dimensions,
         vector_type=vector_type,
         index_type=INDEX_TYPE,
         storage_version=storage_version,
+        distance_metric=distance_metric,
         group_exists=group_exists,
         config=config,
     )

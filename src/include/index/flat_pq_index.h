@@ -78,12 +78,12 @@ class flat_pq_index {
  public:
   // metadata
   uint64_t dimensions_{0};
-  size_t num_subspaces_{0};
-  size_t sub_dimensions_{0};
-  size_t bits_per_subspace_{8};
-  size_t num_clusters_{256};
-  float tol_ = 0.001;
-  size_t max_iter_ = 16;
+  uint32_t num_subspaces_{0};
+  uint32_t sub_dimensions_{0};
+  uint32_t bits_per_subspace_{8};
+  uint32_t num_clusters_{256};
+  float convergence_tolerance_ = 0.001;
+  uint32_t max_iterations_ = 16;
   size_t num_threads_ = std::thread::hardware_concurrency();
 
   using metadata_element = std::tuple<std::string, void*, tiledb_datatype_t>;
@@ -93,8 +93,8 @@ class flat_pq_index {
       {"sub_dimension", &sub_dimensions_, TILEDB_UINT64},
       {"bits_per_subspace", &bits_per_subspace_, TILEDB_UINT64},
       {"num_clusters", &num_clusters_, TILEDB_UINT64},
-      {"tol", &tol_, TILEDB_FLOAT32},
-      {"max_iter", &max_iter_, TILEDB_UINT64},
+      {"convergence_tolerance", &convergence_tolerance_, TILEDB_FLOAT32},
+      {"max_iterations", &max_iterations_, TILEDB_UINT64},
       {"num_threads", &num_threads_, TILEDB_UINT64},
   };
 
@@ -115,9 +115,9 @@ class flat_pq_index {
    */
   flat_pq_index(
       uint64_t dimensions,
-      size_t num_subspaces,
-      size_t bits_per_subspace = 8,
-      size_t num_clusters = 256)
+      uint32_t num_subspaces,
+      uint32_t bits_per_subspace = 8,
+      uint32_t num_clusters = 256)
       : dimensions_(dimensions)
       , num_subspaces_(num_subspaces)
       , bits_per_subspace_(bits_per_subspace)
@@ -166,7 +166,7 @@ class flat_pq_index {
             ctx, group_uri + "/centroids"));
     pq_vectors_ = std::move(tdbPreLoadMatrix<code_type, stdx::layout_left>(
         ctx, group_uri + "/pq_vectors"));
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       std::ostringstream oss;
       oss << std::setw(2) << std::setfill('0') << subspace;
       std::string number = oss.str();
@@ -196,14 +196,13 @@ class flat_pq_index {
           ColMajorMatrix<centroid_feature_type>(num_clusters_, num_clusters_);
     }
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
-      sub_kmeans_random_init(
-          training_set, centroids_, sub_begin, sub_end, 0xdeadbeef);
+      sub_kmeans_random_init(training_set, centroids_, sub_begin, sub_end);
       size_t iters;
       double conv;
       std::tie(iters, conv) = sub_kmeans<
@@ -215,15 +214,15 @@ class flat_pq_index {
           sub_begin,
           sub_end,
           num_clusters_,
-          tol_,
-          max_iter_,
+          convergence_tolerance_,
+          max_iterations_,
           num_threads_);
 
       auto x = 0;
     }
 
     // Create table
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
@@ -247,7 +246,7 @@ class flat_pq_index {
     pq_vectors_ =
         ColMajorMatrix<code_type>(num_subspaces_, num_vectors(feature_vectors));
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimensions_ * subspace;
       auto sub_end = sub_dimensions_ * (subspace + 1);
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
@@ -285,7 +284,7 @@ class flat_pq_index {
   // For each (i, j), distances should be stored contiguously
   float sub_distance_symmetric(auto&& a, auto&& b) const {
     float pq_distance = 0.0;
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto i = a[subspace];
       auto j = b[subspace];
 
@@ -327,7 +326,7 @@ class flat_pq_index {
   float sub_distance_asymmetric(const U& a, const V& b) const {
     float pq_distance = 0.0;
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
       auto i = b[subspace];
@@ -388,7 +387,7 @@ class flat_pq_index {
         V,
         decltype(centroids_[0])>
   auto encode(const V& v, W& pq) const {
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimensions_ * subspace;
       auto sub_end = sub_begin + sub_dimensions_;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
@@ -445,7 +444,7 @@ class flat_pq_index {
     // @todo Use Vector instead of std::vector
     auto un_pq = std::vector<local_feature_type>(dimensions_);
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
       auto i = pq[subspace];
@@ -478,7 +477,7 @@ class flat_pq_index {
     write_matrix(ctx, pq_vectors_, pq_vectors_uri);
     tiledb_helpers::add_to_group(write_group, pq_vectors_uri, "pq_vectors");
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       std::ostringstream oss;
       oss << std::setw(2) << std::setfill('0') << subspace;
       std::string number = oss.str();
@@ -511,7 +510,7 @@ class flat_pq_index {
 
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       auto re = std::vector<float>(dimensions_);
-      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
         auto sub_begin = sub_dimensions_ * subspace;
         auto sub_end = sub_dimensions_ * (subspace + 1);
         auto centroid = centroids_[pq_vectors_(subspace, i)];
@@ -559,7 +558,7 @@ class flat_pq_index {
         total_normalizer += real_distance;
         auto pq_distance = 0.0;
 
-        for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
           auto sub_distance = distance_tables_[subspace](
               pq_vectors_(subspace, i), pq_vectors_(subspace, j));
           pq_distance += sub_distance;
@@ -664,13 +663,14 @@ class flat_pq_index {
                 << " != " << rhs.num_clusters_ << std::endl;
       return false;
     }
-    if (tol_ != rhs.tol_) {
-      std::cout << "tol_ " << tol_ << " != " << rhs.tol_ << std::endl;
+    if (convergence_tolerance_ != rhs.convergence_tolerance_) {
+      std::cout << "convergence_tolerance_ " << convergence_tolerance_
+                << " != " << rhs.convergence_tolerance_ << std::endl;
       return false;
     }
-    if (max_iter_ != rhs.max_iter_) {
-      std::cout << "max_iter_ " << max_iter_ << " != " << rhs.max_iter_
-                << std::endl;
+    if (max_iterations_ != rhs.max_iterations_) {
+      std::cout << "max_iterations_ " << max_iterations_
+                << " != " << rhs.max_iterations_ << std::endl;
       return false;
     }
     if (num_threads_ != rhs.num_threads_) {

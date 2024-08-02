@@ -30,10 +30,7 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <set>
-#include <span>
 #include <vector>
-#include "detail/linalg/matrix.h"
 #include "scoring.h"
 
 #ifdef __AVX2__

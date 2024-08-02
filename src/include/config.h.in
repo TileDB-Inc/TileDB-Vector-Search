@@ -54,5 +54,6 @@ constexpr const char GIT_BRANCH[] = "@GIT_BRANCH@";
 constexpr const char GIT_COMMIT_HASH[] = "@GIT_COMMIT_HASH@";
 constexpr const char GIT_COMMIT_DATE[] = "@GIT_COMMIT_DATE@";
 constexpr const char GIT_COMMIT_TIME[] = "@GIT_COMMIT_TIME@";
+constexpr const char TILEDB_SANITIZER[] = "@TILEDB_SANITIZER@";
 
 #endif  // TILEDB_CONFIG_H

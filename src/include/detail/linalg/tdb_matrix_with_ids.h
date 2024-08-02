@@ -167,6 +167,7 @@ class tdbBlockedMatrixWithIds
   bool load() {
     scoped_timer _{tdb_func__ + " " + this->ids_uri_};
     if (!Base::load()) {
+      ids_array_->close();
       return false;
     }
 
@@ -212,6 +213,10 @@ class tdbBlockedMatrixWithIds
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status for IDs is not complete");
+    }
+
+    if (this->get_elements_to_load() == 0) {
+      ids_array_->close();
     }
 
     return true;
@@ -276,27 +281,6 @@ class tdbPreLoadMatrixWithIds
 };
 
 /**
- * Convenience class for row-major blocked matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
-
-/**
- * Convenience class for column-major blocked matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbColMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major matrices.
  */
 template <class T, class IdsType = uint64_t, class I = size_t>
@@ -312,13 +296,6 @@ template <
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 using tdbMatrixWithIds = tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorPreLoadMatrixWithIds =
-    tdbPreLoadMatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.

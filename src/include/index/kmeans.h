@@ -36,6 +36,7 @@
 
 #include "detail/flat/qv.h"
 #include "utils/logging.h"
+#include "utils/prng.h"
 
 enum class kmeans_init { none, kmeanspp, random };
 
@@ -68,9 +69,6 @@ enum class kmeans_init { none, kmeanspp, random };
  * @todo Finish implementation using triangle inequality.
  */
 
-namespace {
-static std::mt19937 gen_;
-}
 template <
     feature_vector_array V,
     feature_vector_array C,
@@ -88,7 +86,7 @@ void kmeans_pp(
   using score_type = typename C::value_type;
 
   std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-  auto choice = dis(gen_);
+  auto choice = dis(PRNG::get().generator());
 
   std::copy(
       begin(training_set[choice]),
@@ -142,7 +140,7 @@ void kmeans_pp(
     // since `discrete_distribution` implicitly does that for us
     std::discrete_distribution<size_t> probabilityDistribution(
         distances.begin(), distances.end());
-    size_t nextIndex = probabilityDistribution(gen_);
+    size_t nextIndex = probabilityDistribution(PRNG::get().generator());
     std::copy(
         begin(training_set[nextIndex]),
         end(training_set[nextIndex]),
@@ -179,7 +177,7 @@ void kmeans_random_init(
   for (size_t i = 0; i < num_partitions_; ++i) {
     size_t index;
     do {
-      index = dis(gen_);
+      index = dis(PRNG::get().generator());
     } while (visited[index]);
     indices[i] = index;
     visited[index] = true;
@@ -215,7 +213,7 @@ void train_no_init(
     C& centroids_,
     size_t dimension_,
     size_t num_partitions_,
-    size_t max_iter_,
+    uint32_t max_iterations,
     float tol_,
     size_t num_threads_,
     float reassign_ratio_ = 0.05,
@@ -232,7 +230,7 @@ void train_no_init(
   auto new_centroids =
       ColMajorMatrix<centroid_feature_type>(dimension_, num_partitions_);
 
-  for (size_t iter = 0; iter < max_iter_; ++iter) {
+  for (size_t iter = 0; iter < max_iterations; ++iter) {
     auto [scores, parts] = detail::flat::qv_partition_with_scores(
         centroids_, training_set, num_threads_, distancex);
 
@@ -244,7 +242,8 @@ void train_no_init(
     std::fill(begin(degrees), end(degrees), 0);
 
     // How many centroids should we try to fix up
-    size_t heap_size = std::ceil(reassign_ratio_ * num_partitions_) + 5;
+    size_t heap_size =
+        std::ceil(reassign_ratio_ * static_cast<float>(num_partitions_)) + 5;
     auto high_scores = fixed_min_pair_heap<
         feature_type,
         index_type,
@@ -269,17 +268,18 @@ void train_no_init(
       max_degree = std::max<size_t>(max_degree, degree);
       low_degrees.insert(degree, i);
     }
-    size_t lower_degree_bound = std::ceil(max_degree * reassign_ratio_);
+    size_t lower_degree_bound =
+        std::ceil(reassign_ratio_ * static_cast<float>(max_degree));
 
     // Don't reassign if we are on last iteration
-    if (iter != max_iter_ - 1) {
+    if (iter != max_iterations - 1) {
 // Experiment with random reassignment
 #if 0
         // Pick a random vector to be a new centroid
         std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
         for (auto&& [degree, zero_part] : low_degrees) {
           if (degree < lower_degree_bound) {
-            auto index = dis(gen_);
+            auto index = dis(PRNG::get().generator());
             auto rand_vector = training_set[index];
             auto low_centroid = new_centroids[zero_part];
             std::copy(begin(rand_vector), end(rand_vector), begin(low_centroid));
@@ -392,20 +392,15 @@ void train_no_init(
 
 template <feature_vector_array V, feature_vector_array C>
 void sub_kmeans_random_init(
-    const V& training_set,
-    C& centroids,
-    size_t sub_begin,
-    size_t sub_end,
-    size_t seed = 0) {
+    const V& training_set, C& centroids, size_t sub_begin, size_t sub_end) {
   scoped_timer _{__FUNCTION__};
 
-  size_t num_clusters =
+  uint32_t num_clusters =
       std::min(num_vectors(training_set), num_vectors(centroids));
   if (num_clusters == 0) {
     return;
   }
 
-  std::mt19937 gen(seed == 0 ? std::random_device{}() : seed);
   std::uniform_int_distribution<> dis(0, num_vectors(training_set) - 1);
 
   std::vector<size_t> indices(num_clusters);
@@ -413,7 +408,7 @@ void sub_kmeans_random_init(
   for (size_t i = 0; i < num_clusters; ++i) {
     size_t index;
     do {
-      index = dis(gen);
+      index = dis(PRNG::get().generator());
     } while (visited.contains(index));
     indices[i] = index;
     visited.insert(index);
@@ -456,13 +451,10 @@ auto sub_kmeans(
     C& centroids,
     size_t sub_begin,
     size_t sub_end,
-    size_t num_clusters,
+    uint32_t num_clusters,
     double tol,
     size_t max_iter,
-    size_t num_threads,
-    float reassign_ratio = 0.05,
-    bool reassign_later = false) {
-  size_t sub_dimension_ = sub_end - sub_begin;
+    size_t num_threads) {
   auto local_sub_distance = SubDistance{sub_begin, sub_end};
 
   std::vector<size_t> degrees(num_clusters, 0);

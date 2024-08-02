@@ -31,6 +31,9 @@
 
 #include <catch2/catch_all.hpp>
 #include "algorithm.h"
+#include "api/feature_vector_array.h"
+#include "detail/linalg/matrix.h"
+#include "detail/linalg/vector.h"
 
 TEST_CASE("for_each", "[algorithm]") {
   size_t length = GENERATE(
@@ -170,5 +173,50 @@ TEST_CASE("for_each", "[algorithm]") {
     case 0:
       CHECK(v.empty());
       break;
+    default:
+      CHECK(false);
+  }
+}
+
+TEST_CASE("range_for_each", "[algorithm]") {
+  size_t k = 100;
+  size_t num_vectors = 100;
+  size_t dimensions = 128;
+
+  auto queries = ColMajorMatrix<float>(dimensions, num_vectors);
+  for (size_t i = 0; i < num_vectors; ++i) {
+    for (size_t j = 0; j < dimensions; ++j) {
+      queries[i][j] = i;
+    }
+  }
+
+  // Test with both a vector (b/c it's simple) and matrix (b/c it's what we use
+  // in practice).
+  std::vector<int> thread_used(num_vectors, 0);
+  auto thread_used_matrix = ColMajorMatrix<float>(k, num_vectors);
+
+  for (size_t num_threads = 1;
+       num_threads <= std::thread::hardware_concurrency();
+       ++num_threads) {
+    stdx::range_for_each(
+        stdx::execution::indexed_parallel_policy{num_threads},
+        queries,
+        [&](auto&& vector, auto thread_index, auto index) {
+          thread_used[index] = thread_index;
+          for (int j = 0; j < k; ++j) {
+            thread_used_matrix[index][j] = thread_index;
+          }
+        });
+
+    size_t block_size = (num_vectors + num_threads - 1) / num_threads;
+
+    for (size_t i = 0; i < num_vectors; ++i) {
+      size_t expected_thread = i / block_size;
+      CHECK(thread_used[i] == expected_thread);
+
+      for (size_t j = 0; j < k; ++j) {
+        CHECK(thread_used_matrix[i][j] == expected_thread);
+      }
+    }
   }
 }

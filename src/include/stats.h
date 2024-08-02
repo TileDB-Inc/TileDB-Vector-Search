@@ -104,8 +104,8 @@ class StatsCollectionScope final {
 #endif
 };
 
-static auto dump_logs = [](std::string filename,
-                           const std::string algorithm,
+static auto dump_logs = [](const std::string& filename,
+                           const std::string& algorithm,
                            size_t nqueries,
                            size_t nprobe,
                            size_t k_nn,
@@ -116,7 +116,7 @@ static auto dump_logs = [](std::string filename,
   // @todo encapsulate this as a function that can be customized
 
   // I don't know why this has to be done in two steps like this but oh well
-  auto c = filename == "" ? std::ofstream(filename) : std::ofstream();
+  auto c = filename.empty() ? std::ofstream(filename) : std::ofstream();
   std::ostream& output{(filename == "-") ? std::cout : c};
 
   // @todo print other information
@@ -149,9 +149,9 @@ static auto dump_logs = [](std::string filename,
 
   // A bit of a hack -- first set units to seconds
   auto units = std::string(" (s)");
-  for (auto& timers :
+  for (const auto& timers :
        {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
-    for (auto& timer : timers) {
+    for (const auto& timer : timers) {
       std::string text;
       if (size(timer) < 3) {
         text = timer;
@@ -184,7 +184,7 @@ static auto dump_logs = [](std::string filename,
   output.precision(original_precision);
   output << std::fixed << std::setprecision(3);
   auto timers = _timing_data.get_timer_names();
-  for (auto& timer : timers) {
+  for (const auto& timer : timers) {
     auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
     if (ms < 1000) {
       output << std::fixed << std::setprecision(6);
@@ -201,7 +201,7 @@ static auto dump_logs = [](std::string filename,
   output << std::fixed << std::setprecision(0);
 
   auto usages = _memory_data.get_usage_names();
-  for (auto& usage : usages) {
+  for (const auto& usage : usages) {
     auto mem = _memory_data.get_entries_summed(usage);
     if (mem < 1) {
       output << std::fixed << std::setprecision(3);
@@ -217,7 +217,7 @@ static auto dump_logs = [](std::string filename,
   output << std::endl;
   output << std::setprecision(original_precision);
 
-  for (auto& t : toc) {
+  for (const auto& t : toc) {
     output << t.first << ": " << t.second << std::endl;
   }
 };

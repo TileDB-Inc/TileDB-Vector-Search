@@ -51,6 +51,7 @@ option(TILEDB_VS_PYTHON "Build Python wrapping of C++ API" OFF)
 option(TILEDB_VS_ENABLE_BLAS "Build components and demos which require BLAS" OFF)
 option(BUILD_TESTS "Build the tests" ON)
 option(BUILD_CLI "Build the index and query command-line interface programs" OFF)
+option(TILEDB_SANITIZER "If set, use the specified sanitizer" "")
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -138,6 +139,13 @@ endif()
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "No build type selected, default to Release")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
+endif()
+
+if(TILEDB_SANITIZER)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/Sanitizer.cmake)
+    validate_sanitizer_options()
+else()
+    message(STATUS "No sanitizer enabled")
 endif()
 
 # -----------------------------------------------------------------------------
