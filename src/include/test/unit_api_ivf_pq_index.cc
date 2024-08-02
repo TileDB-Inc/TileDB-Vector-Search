@@ -32,6 +32,7 @@
 #include "api/ivf_pq_index.h"
 #include "catch2/catch_all.hpp"
 #include "test/utils/query_common.h"
+#include "test/utils/test_utils.h"
 
 TEST_CASE("init constructor", "[api_ivf_pq_index]") {
   SECTION("default") {
@@ -1037,5 +1038,237 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         all_ingestion_timestamps.begin(),
         all_ingestion_timestamps.end(),
         std::vector<uint64_t>{100}.begin()));
+  }
+}
+
+TEST_CASE("update index", "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  using partitioning_index_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto partitioning_index_type = "uint32";
+  size_t dimensions = 6;
+  size_t n_list = 1;
+  size_t num_subspaces = 3;
+  float convergence_tolerance = 0.00003f;
+  size_t max_iterations = 3;
+
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  // First create an index.
+  {
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"partitioning_index_type", partitioning_index_type},
+         {"n_list", std::to_string(n_list)},
+         {"num_subspaces", std::to_string(num_subspaces)},
+         {"convergence_tolerance", std::to_string(convergence_tolerance)},
+         {"max_iterations", std::to_string(max_iterations)}}));
+
+    auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+        {{1, 1, 1, 1, 1, 1},
+         {2, 2, 2, 2, 2, 2},
+         {3, 3, 3, 3, 3, 3},
+         {4, 4, 4, 4, 4, 4}},
+        {1, 2, 3, 4}};
+
+    auto training_vector_array = FeatureVectorArray(training);
+    index.train(training_vector_array);
+    index.add(training_vector_array);
+    index.write_index(ctx, index_uri);
+
+    query_and_check_equals(
+        index,
+        FeatureVectorArray(ColMajorMatrix<feature_type_type>{
+            {1, 1, 1, 1, 1, 1},
+            {2, 2, 2, 2, 2, 2},
+            {3, 3, 3, 3, 3, 3},
+            {4, 4, 4, 4, 4, 4}}),
+        1,
+        ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {4}},
+        ColMajorMatrix<float>{{0}, {0}, {0}, {0}},
+        n_list);
+  }
+
+  // Replace id 4 with id 44.
+  {
+    auto vectors_to_add = FeatureVectorArray(
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+            {{4, 4, 4, 4, 4, 4}}, {44}});
+    auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{4});
+
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+
+    query_and_check_equals(
+        index,
+        FeatureVectorArray(ColMajorMatrix<feature_type_type>{
+            {1, 1, 1, 1, 1, 1},
+            {2, 2, 2, 2, 2, 2},
+            {3, 3, 3, 3, 3, 3},
+            {4, 4, 4, 4, 4, 4}}),
+        1,
+        ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {44}},
+        ColMajorMatrix<float>{{0}, {0}, {0}, {0}},
+        n_list);
+
+    index.write_index(ctx, index_uri);
+
+    // We can still query even after writing the index.
+    query_and_check_equals(
+        index,
+        FeatureVectorArray(ColMajorMatrix<feature_type_type>{
+            {1, 1, 1, 1, 1, 1},
+            {2, 2, 2, 2, 2, 2},
+            {3, 3, 3, 3, 3, 3},
+            {4, 4, 4, 4, 4, 4}}),
+        1,
+        ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {44}},
+        ColMajorMatrix<float>{{0}, {0}, {0}, {0}},
+        n_list);
+  }
+
+  // Replace id 44 with id 444, but also delete ID's which do not exist at the
+  // same time.
+  {
+    auto vectors_to_add = FeatureVectorArray(
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+            {{4, 4, 4, 4, 4, 4}}, {444}});
+    auto vector_ids_to_remove = FeatureVector(
+        std::vector<id_type_type>{4, 44, 99, 123, 456, 1000, 999});
+
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
+    query_and_check_equals(
+        index,
+        FeatureVectorArray(ColMajorMatrix<feature_type_type>{
+            {1, 1, 1, 1, 1, 1},
+            {2, 2, 2, 2, 2, 2},
+            {3, 3, 3, 3, 3, 3},
+            {4, 4, 4, 4, 4, 4}}),
+        1,
+        ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {444}},
+        ColMajorMatrix<float>{{0}, {0}, {0}, {0}},
+        n_list);
+  }
+
+  // Add a new vector
+  std::cout << "Add a new vector ------------------------" << std::endl;
+  {
+    auto vectors_to_add = FeatureVectorArray(
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+            {{5, 5, 5, 5, 5, 5}}, {5}});
+    auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{5});
+
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
+    query_and_check_equals(
+        index,
+        FeatureVectorArray(ColMajorMatrix<feature_type_type>{
+            {1, 1, 1, 1, 1, 1},
+            {2, 2, 2, 2, 2, 2},
+            {3, 3, 3, 3, 3, 3},
+            {4, 4, 4, 4, 4, 4},
+            {5, 5, 5, 5, 5, 5}}),
+        1,
+        ColMajorMatrix<uint32_t>{{1}, {2}, {3}, {444}, {444}},
+        ColMajorMatrix<float>{{0}, {0}, {0}, {0}, {6}},
+        n_list);
+  }
+
+  // Remove id 1.
+  {
+    auto vectors_to_add = FeatureVectorArray(
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>{});
+    auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{1});
+
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
+    query_and_check_equals(
+        index,
+        FeatureVectorArray(ColMajorMatrix<feature_type_type>{
+            {1, 1, 1, 1, 1, 1},
+            {2, 2, 2, 2, 2, 2},
+            {3, 3, 3, 3, 3, 3},
+            {4, 4, 4, 4, 4, 4}}),
+        1,
+        // We have removed ID=1, so the next closest will be ID=2.
+        ColMajorMatrix<uint32_t>{{2}, {2}, {3}, {444}},
+        ColMajorMatrix<float>{{6}, {0}, {0}, {0}},
+        n_list);
+  }
+}
+
+TEST_CASE("create an empty index and then update", "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint64_t;
+  using partitioning_index_type_type = uint64_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint64";
+  auto partitioning_index_type = "uint64";
+  size_t dimensions = 3;
+  size_t n_list = 1;
+  size_t num_subspaces = 3;
+  float convergence_tolerance = 0.00003f;
+  size_t max_iterations = 3;
+
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index_foo")
+          .string();
+  std::cout << "index_uri: " << index_uri << std::endl;
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  // First create an empty index.
+  {
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"partitioning_index_type", partitioning_index_type},
+         {"num_subspaces", "1"}}));
+
+    size_t num_vectors = 0;
+    auto empty_training_vector_array =
+        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    index.train(empty_training_vector_array);
+    index.add(empty_training_vector_array);
+    index.write_index(ctx, index_uri);
+
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+  }
+
+  // Then add two vectors to it, while also testing we can remove their IDs
+  // (even though they are not present so it will be a no-op).
+  {
+    auto vectors_to_add = FeatureVectorArray(
+        ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+            {{0, 0, 0}, {1, 1, 1}}, {0, 1}});
+    auto vector_ids_to_remove = FeatureVector(std::vector<id_type_type>{0, 1});
+
+    auto index = IndexIVFPQ(ctx, index_uri);
+    index.update(vectors_to_add, vector_ids_to_remove);
+    index.write_index(ctx, index_uri);
+
+    // Note the querying here will not work b/c we have not trained any
+    // centroids. We just test that we don't crash.
   }
 }

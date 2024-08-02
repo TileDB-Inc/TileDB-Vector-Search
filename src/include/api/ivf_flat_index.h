@@ -630,7 +630,8 @@ class IndexIVFFlat {
           return {std::move(x), std::move(y)};
         }
         default:
-          throw std::runtime_error("Unsupported attribute type");
+          throw std::runtime_error(
+              "[ivf_flat_index@query_infinite_ram] Unsupported attribute type");
       }
     }
 
@@ -669,7 +670,8 @@ class IndexIVFFlat {
           return {std::move(x), std::move(y)};
         }
         default:
-          throw std::runtime_error("Unsupported attribute type");
+          throw std::runtime_error(
+              "[ivf_flat_index@query_finite_ram] Unsupported attribute type");
       }
     }
 

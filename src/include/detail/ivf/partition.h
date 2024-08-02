@@ -98,7 +98,7 @@ auto partition_ivf_flat_index(
 
   size_t num_queries = num_vectors(query);
 
-  // Get the closest centroid for each query vector
+  // Get the closest nprobe centroid's for each query vector.
   // There may be duplicates
   auto top_centroids = ivf_top_centroids(centroids, query, nprobe, nthreads);
 

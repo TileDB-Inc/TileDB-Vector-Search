@@ -239,6 +239,29 @@ class IndexIVFPQ {
     index_->add(data_set);
   }
 
+  /**
+   * @brief Update the index with new vectors and remove old vectors. Note that
+   * we do not-retrain the index, so we keep the old centroids. We'll just PQ
+   * encode the new vectors and partition them accordingly, and also remove
+   * vectors marked by `vector_ids_to_remove`.
+   * @param vectors_to_add Vectors to add to the index.
+   * @param vector_ids_to_remove Vector IDs to remove from the index.
+   */
+  void update(
+      const FeatureVectorArray& vectors_to_add,
+      const FeatureVector& vector_ids_to_remove) {
+    if (feature_datatype_ != vectors_to_add.feature_type()) {
+      throw std::runtime_error(
+          "Feature datatype mismatch: " +
+          datatype_to_string(feature_datatype_) +
+          " != " + datatype_to_string(vectors_to_add.feature_type()));
+    }
+    if (!index_) {
+      throw std::runtime_error("Cannot update() because there is no index.");
+    }
+    index_->update(vectors_to_add, vector_ids_to_remove);
+  }
+
   [[nodiscard]] auto query(
       QueryType queryType,
       const QueryVectorArray& vectors,
@@ -384,6 +407,10 @@ class IndexIVFPQ {
 
     virtual void add(const FeatureVectorArray& data_set) = 0;
 
+    virtual void update(
+        const FeatureVectorArray& vectors_to_add,
+        const FeatureVector& vector_ids_to_remove) = 0;
+
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query(
         QueryType queryType,
@@ -480,6 +507,34 @@ class IndexIVFPQ {
       }
     }
 
+    void update(
+        const FeatureVectorArray& vectors_to_add,
+        const FeatureVector& vector_ids_to_remove) override {
+      using feature_type = typename T::feature_type;
+      using id_type = typename T::id_type;
+      auto vector_ids_to_remove_span = std::span<id_type>(
+          (id_type*)vector_ids_to_remove.data(),
+          vector_ids_to_remove.dimensions());
+      debug_vector(vector_ids_to_remove_span, "vector_ids_to_remove_span");
+      std::cout << "::num_vectors(vector_ids_to_remove_span): "
+                << ::num_vectors(vector_ids_to_remove_span) << std::endl;
+
+      auto fspan = MatrixView<feature_type, stdx::layout_left>{
+          (feature_type*)vectors_to_add.data(),
+          extents(vectors_to_add)[0],
+          extents(vectors_to_add)[1]};
+
+      if (num_ids(vectors_to_add) > 0) {
+        auto ids = std::span<id_type>(
+            (id_type*)vectors_to_add.ids(), vectors_to_add.num_vectors());
+        impl_index_.update(fspan, ids, vector_ids_to_remove_span);
+      } else {
+        auto ids = std::vector<id_type>(::num_vectors(vectors_to_add));
+        std::iota(ids.begin(), ids.end(), 0);
+        impl_index_.update(fspan, ids, vector_ids_to_remove_span);
+      }
+    }
+
     /**
      * @brief Query the index with the given vectors.  The concrete query
      * function returns a tuple of arrays, which are type erased and returned as
@@ -525,7 +580,8 @@ class IndexIVFPQ {
           return {std::move(x), std::move(y)};
         }
         default:
-          throw std::runtime_error("Unsupported attribute type");
+          throw std::runtime_error(
+              "[ivf_pq_index@query] Unsupported attribute type");
       }
     }
 

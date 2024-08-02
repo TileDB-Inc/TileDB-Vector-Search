@@ -38,7 +38,7 @@
 // ----------------------------------------------------------------------------
 // FeatureVector tests
 // ----------------------------------------------------------------------------
-TEST_CASE("api: FeatureVector data", "[api]") {
+TEST_CASE("FeatureVector data", "[feature_vector]") {
   auto v = std::vector<int>{1, 2, 3};
   auto w = Vector<int>{1, 2, 3};
   auto dv = v.data();
@@ -79,7 +79,7 @@ TEST_CASE("api: FeatureVector data", "[api]") {
   }
 }
 
-TEST_CASE("api: FeatureVector dimension", "[api]") {
+TEST_CASE("FeatureVector dimension", "[feature_vector]") {
   auto v = std::vector<int>{1, 2, 3};
   auto w = Vector<int>{1, 2, 3};
   auto t = std::vector<int>{1, 2, 3};
@@ -107,10 +107,11 @@ TEST_CASE("api: FeatureVector dimension", "[api]") {
   CHECK(dimensions(FeatureVector(Vector<int>{1, 2, 3})) == 3);
 }
 
-using TestTypes = std::tuple<float, uint8_t, int32_t, uint32_t, uint64_t>;
+using TestTypes =
+    std::tuple<float, int8_t, uint8_t, int32_t, uint32_t, uint64_t>;
 
 int api_counter = 0;
-TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
+TEMPLATE_LIST_TEST_CASE("FeatureVector read", "[feature_vector]", TestTypes) {
   size_t N = GENERATE(1UL, 2UL, 8191UL, 8192UL, 8193UL);
 
   std::vector<TestType> v(N);
@@ -144,9 +145,10 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
 }
 
 TEMPLATE_TEST_CASE(
-    "api: FeatureVector feature_type",
-    "[api]",
+    "FeatureVector feature_type",
+    "[feature_vector]",
     int,
+    int8_t,
     uint8_t,
     uint32_t,
     float,
@@ -156,23 +158,43 @@ TEMPLATE_TEST_CASE(
   auto a = std::vector<TestType>{1, 2, 3};
   auto b = FeatureVector(a);
   CHECK(b.feature_type() == t);
+  CHECK(b.dimensions() == 3);
 
   auto c = FeatureVector{std::vector<TestType>{1, 2, 3}};
   CHECK(c.feature_type() == t);
+  CHECK(c.dimensions() == 3);
 
   auto f = std::vector<TestType>{1, 2, 3};
   auto d = FeatureVector{std::move(f)};
   CHECK(d.feature_type() == t);
+  CHECK(d.dimensions() == 3);
 
   auto e = FeatureVector{std::move(std::vector<TestType>{1, 2, 3})};
   CHECK(e.feature_type() == t);
+  CHECK(e.dimensions() == 3);
 
   auto g = std::move(e);
   CHECK(g.feature_type() == t);
+  CHECK(g.dimensions() == 3);
 
   auto h = FeatureVector{FeatureVector(std::vector<TestType>{1, 2, 3})};
   CHECK(h.feature_type() == t);
+  CHECK(h.dimensions() == 3);
 
   auto i = FeatureVector{FeatureVector(std::vector<TestType>{1, 2, 3})};
   CHECK(i.feature_type() == t);
+  CHECK(i.dimensions() == 3);
+}
+
+TEST_CASE("Empty FeatureVector", "[feature_vector]") {
+  auto t = tiledb::impl::type_to_tiledb<uint64_t>::tiledb_type;
+
+  auto a = std::vector<uint64_t>{};
+  auto b = FeatureVector(a);
+  CHECK(b.feature_type() == t);
+  CHECK(b.dimensions() == 0);
+
+  auto c = FeatureVector{0, "uint64"};
+  CHECK(c.feature_type() == t);
+  CHECK(c.dimensions() == 0);
 }
