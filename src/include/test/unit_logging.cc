@@ -321,3 +321,15 @@ TEST_CASE("highly concurrent count test", "[logging][count_data]") {
   auto f = _count_data.get_entries_summed(timer_name);
   CHECK(f >= num_threads * num_iterations);
 }
+
+TEST_CASE("dump", "[logging]") {
+  _timing_data.insert_entry(
+      "a",
+      std::chrono::high_resolution_clock::now() -
+          std::chrono::high_resolution_clock::now());
+  _count_data.insert_entry("b", 1);
+  _memory_data.insert_entry("c", 2);
+  std::cout << _timing_data.dump();
+  std::cout << _count_data.dump();
+  std::cout << _memory_data.dump();
+}
