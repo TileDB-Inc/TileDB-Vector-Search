@@ -729,6 +729,8 @@ class vamana_index {
       write_group.append_num_edges(graph_.num_edges());
     }
 
+    write_group.store_metadata();
+
     // When creating from Python we initially call write_index() at timestamp 0.
     // The goal here is just to create the arrays and save metadata. Return here
     // so that we don't write the arrays, as if we write with timestamp=0 then

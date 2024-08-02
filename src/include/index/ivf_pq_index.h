@@ -1102,7 +1102,6 @@ class ivf_pq_index {
         dimensions_,
         num_clusters_,
         num_subspaces_);
-
     write_group.set_dimensions(dimensions_);
     write_group.set_num_subspaces(num_subspaces_);
     write_group.set_sub_dimensions(sub_dimensions_);
@@ -1149,6 +1148,8 @@ class ivf_pq_index {
       write_group.append_base_size(::num_vectors(*partitioned_pq_vectors_));
       write_group.append_num_partitions(num_partitions_);
     }
+
+    write_group.store_metadata();
 
     // When creating from Python we initially call write_index() at timestamp 0.
     // The goal here is just to create the arrays and save metadata. Return here
