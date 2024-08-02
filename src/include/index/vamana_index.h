@@ -635,6 +635,7 @@ class vamana_index {
     uint32_t L = l_search ? *l_search : l_build_;
     auto&& [top_k_scores, top_k, V] = greedy_search(
         graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
+
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
 
