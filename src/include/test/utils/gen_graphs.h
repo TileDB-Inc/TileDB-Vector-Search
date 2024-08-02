@@ -42,6 +42,7 @@
 #include <vector>
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/matrix_with_ids.h"
+#include "utils/prng.h"
 
 auto random_geometric_2D(size_t N) {
   std::random_device rd;

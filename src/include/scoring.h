@@ -34,6 +34,7 @@
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
+#include <atomic>
 #include "concepts.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
@@ -111,11 +112,11 @@ struct sum_of_squares_distance {
  * to count the number of comparisons.
  */
 struct counting_sum_of_squares_distance {
-  static size_t num_comps_;
+  static std::atomic<size_t> num_comps_;
 
   template <class V, class U>
   constexpr auto operator()(const V& a, const U& b) {
-    ++num_comps_;
+    num_comps_++;
     return unroll4_sum_of_squares(a, b);
   }
 
@@ -124,7 +125,7 @@ struct counting_sum_of_squares_distance {
   }
 };
 
-inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
+inline std::atomic<size_t> counting_sum_of_squares_distance::num_comps_ = 0;
 
 /**
  * @brief Function object for computing the sum of squared distance, augmented
