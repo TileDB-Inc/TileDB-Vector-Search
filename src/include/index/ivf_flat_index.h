@@ -129,12 +129,11 @@ class ivf_flat_index {
   centroids_storage_type centroids_;
 
   // Some parameters for performing kmeans clustering
-  uint64_t max_iter_{1};
+  uint32_t max_iterations_{1};
   float tol_{1.e-4};
   float reassign_ratio_{0.075};
 
   uint64_t num_threads_{std::thread::hardware_concurrency()};
-  uint64_t seed_{std::random_device{}()};
 
  public:
   using value_type = feature_type;
@@ -161,7 +160,6 @@ class ivf_flat_index {
    * @param max_iter Maximum number of iterations for kmans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
    * @param timestamp Timestamp for the index.
-   * @param seed Random seed for kmeans algorithm.
    *
    * @todo Use chained parameter technique for arguments
    * @todo -- Need something equivalent to "None" since user could pass 0
@@ -172,10 +170,9 @@ class ivf_flat_index {
   ivf_flat_index(
       // size_t dim,
       size_t nlist = 0,
-      size_t max_iter = 2,
+      uint32_t max_iterations = 2,
       float tol = 0.000025,
-      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
-      uint64_t seed = std::random_device{}())
+      TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
       :  // , dimensions_(dim)
       temporal_policy_{
           temporal_policy.timestamp_end() != 0 ?
@@ -187,10 +184,8 @@ class ivf_flat_index {
                           std::chrono::system_clock::now().time_since_epoch())
                           .count())}}
       , num_partitions_(nlist)
-      , max_iter_(max_iter)
-      , tol_(tol)
-      , seed_{seed} {
-    gen_.seed(seed_);
+      , max_iterations_(max_iterations)
+      , tol_(tol) {
   }
 
   /**
@@ -312,7 +307,7 @@ class ivf_flat_index {
         centroids_,
         dimensions_,
         num_partitions_,
-        max_iter_,
+        max_iterations_,
         tol_,
         num_threads_,
         reassign_ratio_);

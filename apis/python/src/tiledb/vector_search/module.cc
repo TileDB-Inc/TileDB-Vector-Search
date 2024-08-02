@@ -18,6 +18,7 @@
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/time/temporal_policy.h"
+#include "utils/seeder.h"
 
 namespace py = pybind11;
 using Ctx = tiledb::Context;
@@ -870,6 +871,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
 
   m.def("stats_reset", []() { core_stats.clear(); });
   m.def("stats_dump", []() { return json{core_stats}.dump(); });
+
+  m.def("set_seed", [](uint64_t seed) {
+    Seeder& seeder_ = Seeder::get();
+    seeder_.set_seed(seed);
+  });
 
   declare_debug_matrix<uint8_t>(m, "_u8");
   declare_debug_matrix<int8_t>(m, "_i8");

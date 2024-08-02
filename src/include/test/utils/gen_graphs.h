@@ -42,17 +42,17 @@
 #include <vector>
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/matrix_with_ids.h"
+#include "utils/prng.h"
 
 auto random_geometric_2D(size_t N) {
   std::random_device rd;
-  std::mt19937 gen(rd());
   std::uniform_real_distribution<float> coord(-1.0, 1.0);
 
   auto X = ColMajorMatrixWithIds<float>(2, N);
   std::iota(X.ids(), X.ids() + X.num_ids(), 0);
   for (size_t i = 0; i < N; ++i) {
-    X(0, i) = coord(gen);
-    X(1, i) = coord(gen);
+    X(0, i) = coord(PRNG::get().generator());
+    X(1, i) = coord(PRNG::get().generator());
   }
 
   return X;

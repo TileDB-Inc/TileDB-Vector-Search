@@ -33,20 +33,17 @@
 #define TILEDB_RANDOMIZE_H
 
 #include <random>
+#include "utils/prng.h"
 
 template <std::ranges::range R>
 void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
   using element_type = std::ranges::range_value_t<R>;
 
-  std::random_device rd;
-  // std::mt19937 gen(rd());
-  std::mt19937 gen(2514908090);
-
   if constexpr (std::is_floating_point_v<element_type>) {
     std::uniform_real_distribution<element_type> dist(
         std::get<0>(range), std::get<1>(range));
     for (auto& x : r) {
-      x = dist(gen);
+      x = dist(PRNG::get().generator());
     }
   } else {
     if constexpr (sizeof(element_type) == 1u) {
@@ -55,13 +52,13 @@ void randomize(R& r, std::tuple<int, int> range = {0, 128}) {
       std::uniform_int_distribution<uint16_t> dist(
           std::get<0>(range), std::get<1>(range));
       for (auto& x : r) {
-        x = static_cast<element_type>(dist(gen));
+        x = static_cast<element_type>(dist(PRNG::get().generator()));
       }
     } else {
       std::uniform_int_distribution<element_type> dist(
           std::get<0>(range), std::get<1>(range));
       for (auto& x : r) {
-        x = dist(gen);
+        x = dist(PRNG::get().generator());
       }
     }
   }

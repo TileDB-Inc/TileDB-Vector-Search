@@ -34,6 +34,7 @@
 #ifndef TDB_SCORING_H
 #define TDB_SCORING_H
 
+#include <atomic>
 #include "concepts.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
@@ -111,11 +112,11 @@ struct sum_of_squares_distance {
  * to count the number of comparisons.
  */
 struct counting_sum_of_squares_distance {
-  static size_t num_comps_;
+  static std::atomic<size_t> num_comps_;
 
   template <class V, class U>
   constexpr auto operator()(const V& a, const U& b) {
-    ++num_comps_;
+    num_comps_++;
     return unroll4_sum_of_squares(a, b);
   }
 
@@ -124,7 +125,7 @@ struct counting_sum_of_squares_distance {
   }
 };
 
-inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
+inline std::atomic<size_t> counting_sum_of_squares_distance::num_comps_ = 0;
 
 /**
  * @brief Function object for computing the sum of squared distance, augmented
@@ -570,9 +571,10 @@ template <class V, class L, class I>
 auto verify_top_k_scores(
     V const& scores, L const& top_k, I const& g, int k, int qno) {
   if (!std::equal(
-          begin(top_k), begin(top_k) + k, g.begin(), [&](auto& a, auto& b) {
-            return scores[a] == scores[b];
-          })) {
+          begin(top_k),
+          begin(top_k) + k,
+          g.begin(),
+          [&](const auto& a, auto& b) { return scores[a] == scores[b]; })) {
     std::cout << "Query " << qno << " is incorrect" << std::endl;
     for (int i = 0; i < std::min<int>(10, k); ++i) {
       std::cout << "  (" << top_k[i] << " " << scores[top_k[i]] << ") ";
@@ -689,7 +691,9 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
  */
 template <class M, class V, class Function>
 auto col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
+    const M& m, V& v, Function f = [](const auto& x) -> const auto& {
+      return x;
+    }) {
   int size_m = size(m);
   int size_m0 = size(m[0]);
 
@@ -708,7 +712,9 @@ auto col_sum(
  */
 template <class M, class V, class Function>
 auto mat_col_sum(
-    const M& m, V& v, Function f = [](auto& x) -> const auto& { return x; }) {
+    const M& m, V& v, Function f = [](const auto& x) -> const auto& {
+      return x;
+    }) {
   auto num_cols = m.num_cols();
   auto num_rows = m.num_rows();
 

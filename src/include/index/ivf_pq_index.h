@@ -200,10 +200,10 @@ class ivf_pq_index {
   uint64_t num_partitions_{0};
 
   // Cached information about the pq encoding
-  uint64_t num_subspaces_{0};
-  uint64_t sub_dimensions_{0};
-  constexpr static const uint64_t bits_per_subspace_{8};
-  constexpr static const uint64_t num_clusters_{256};
+  uint32_t num_subspaces_{0};
+  uint32_t sub_dimensions_{0};
+  constexpr static const uint32_t bits_per_subspace_{8};
+  constexpr static const uint32_t num_clusters_{256};
 
   // The feature vectors. These contain the original input vectors, modified
   // with updates and deletions over time. Note that we only use this to
@@ -240,15 +240,14 @@ class ivf_pq_index {
 
   // Parameters for performing kmeans clustering for the ivf index and pq
   // compression.
-  uint64_t max_iterations_{0};
+  uint32_t max_iterations_{0};
   float convergence_tolerance_{0.f};
   float reassign_ratio_{0.f};
 
+  DistanceMetric distance_metric_{DistanceMetric::L2};
+
   // Some parameters for execution
   uint64_t num_threads_{std::thread::hardware_concurrency()};
-  uint64_t seed_{std::random_device{}()};
-
-  DistanceMetric distance_metric_{DistanceMetric::L2};
 
  public:
   using value_type = feature_type;
@@ -276,7 +275,6 @@ class ivf_pq_index {
    * @param convergence_tolerance Convergence convergence_toleranceerance for
    * kmeans algorithm.
    * @param temporal_policy Temporal policy for the index.
-   * @param seed Random seed for kmeans algorithm.
    *
    * @note PQ encoding generally is described as having parameter nbits, how
    * many bits to use for indexing into the codebook. In real implementations,
@@ -292,14 +290,12 @@ class ivf_pq_index {
    */
   ivf_pq_index(
       size_t nlist = 0,
-      uint64_t num_subspaces = 16,
-      size_t max_iterations = 2,
+      uint32_t num_subspaces = 16,
+      uint32_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      DistanceMetric distance_metric = DistanceMetric::L2,
-      uint64_t seed = std::random_device{}()
-      )
+      DistanceMetric distance_metric = DistanceMetric::L2)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
@@ -309,14 +305,12 @@ class ivf_pq_index {
       , convergence_tolerance_(convergence_tolerance)
       , reassign_ratio_(reassign_ratio)
       , distance_metric_{distance_metric}
-      , seed_{seed}
       {
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
           "num_subspaces (" + std::to_string(num_subspaces_) +
           ") must be greater than zero");
     }
-    gen_.seed(seed_);
   }
 
   /**
@@ -483,7 +477,7 @@ class ivf_pq_index {
     // @todo IMPORTANT This is highly suboptimal and will make multiple passes
     // through the training set. We need to move iteration over subspaces to
     // the inner loop -- and SIMDize it
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
@@ -491,7 +485,7 @@ class ivf_pq_index {
 
       // @todo Make choice of kmeans init configurable
       sub_kmeans_random_init(
-          training_set, cluster_centroids_, sub_begin, sub_end, 0xdeadbeef);
+          training_set, cluster_centroids_, sub_begin, sub_end);
 
       // sub_kmeans will invoke the sub_distance function with centroids
       // against new_centroids, and will call flat::qv_partition with centroids
@@ -524,7 +518,7 @@ class ivf_pq_index {
     // keys of the vectors in each subspace (summing up the results obtained
     // from each subspace).
     // @todo SIMDize with subspace iteration in inner loop
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
       auto local_sub_distance = SubDistance{sub_begin, sub_end};
@@ -553,7 +547,7 @@ class ivf_pq_index {
   // For each (i, j), distances should be stored contiguously
   float sub_distance_symmetric(auto&& a, auto&& b) const {
     float pq_distance = 0.0;
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto i = a[subspace];
       auto j = b[subspace];
 
@@ -635,7 +629,7 @@ class ivf_pq_index {
     float pq_distance = 0.0;
     auto local_distance = Distance{};
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = subspace * sub_dimensions_;
       auto sub_end = (subspace + 1) * sub_dimensions_;
       auto i = b[subspace];
@@ -821,7 +815,7 @@ class ivf_pq_index {
     // We have broken the vector into num_subspaces_ subspaces, and we will look
     // in cluster_centroids_ and find the closest cluster_centroids_ to that
     // chunk of the vector.
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimensions_ * subspace;
       auto sub_end = sub_begin + sub_dimensions_;
 
@@ -922,7 +916,7 @@ class ivf_pq_index {
   inline auto encode(const V& v, W& pq) const {
     auto local_sub_distance = SubDistance{};
 
-    for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
       auto sub_begin = sub_dimensions_ * subspace;
       auto sub_end = sub_begin + sub_dimensions_;
 
@@ -1436,19 +1430,19 @@ class ivf_pq_index {
     return num_partitions_;
   }
 
-  uint64_t num_subspaces() const {
+  uint32_t num_subspaces() const {
     return num_subspaces_;
   }
 
-  uint64_t sub_dimensions() const {
+  uint32_t sub_dimensions() const {
     return sub_dimensions_;
   }
 
-  auto bits_per_subspace() const {
+  uint32_t bits_per_subspace() const {
     return bits_per_subspace_;
   }
 
-  auto num_clusters() const {
+  uint32_t num_clusters() const {
     return num_clusters_;
   }
 
@@ -1456,23 +1450,23 @@ class ivf_pq_index {
     return temporal_policy_;
   }
 
-  auto max_iterations() const {
+  uint32_t max_iterations() const {
     return max_iterations_;
   }
 
-  auto convergence_tolerance() const {
+  float convergence_tolerance() const {
     return convergence_tolerance_;
   }
 
-  auto num_threads() const {
+  uint64_t num_threads() const {
     return num_threads_;
   }
 
-  auto reassign_ratio() const {
+  float reassign_ratio() const {
     return reassign_ratio_;
   }
 
-  auto nlist() const {
+  uint64_t nlist() const {
     return num_partitions_;
   }
 
@@ -1493,7 +1487,7 @@ class ivf_pq_index {
    * @param feature_vectors
    * @return
    */
-  auto verify_pq_encoding(
+  double verify_pq_encoding(
       const ColMajorMatrix<feature_type>& feature_vectors) const {
     double total_distance = 0.0;
     double total_normalizer = 0.0;
@@ -1503,7 +1497,7 @@ class ivf_pq_index {
 
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       auto re = std::vector<float>(dimensions_);
-      for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
         auto sub_begin = sub_dimensions_ * subspace;
         auto sub_end = sub_dimensions_ * (subspace + 1);
         auto centroid =
@@ -1552,7 +1546,7 @@ class ivf_pq_index {
         total_normalizer += real_distance;
         auto pq_distance = 0.0;
 
-        for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+        for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
           auto sub_distance = distance_tables_[subspace](
               (*unpartitioned_pq_vectors_)(subspace, i),
               (*unpartitioned_pq_vectors_)(subspace, j));

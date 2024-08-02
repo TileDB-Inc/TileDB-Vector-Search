@@ -1147,8 +1147,8 @@ TEST_CASE("vamana_index vector diskann_test_256bin", "[vamana]") {
   binary_file.read((char*)x.data(), npoints * ndim);
   binary_file.close();
 
-  size_t l_build = 50;
-  size_t r_max_degree = 4;
+  uint32_t l_build = 50;
+  uint32_t r_max_degree = 4;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(x), l_build, r_max_degree);
 
@@ -1178,8 +1178,8 @@ TEST_CASE("vamana by hand random index", "[vamana]") {
   float alpha_0 = 1.0;
   float alpha_1 = 1.2;
 
-  size_t l_build = 2;
-  size_t r_max_degree = 2;
+  uint32_t l_build = 2;
+  uint32_t r_max_degree = 2;
 
   auto training_set_ = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", training_set_);
@@ -1259,8 +1259,8 @@ TEST_CASE("vamana_index geometric 2D graph", "[vamana]") {
   float alpha_0 = 1.0;
   float alpha_1 = 1.2;
 
-  size_t l_build = 15;
-  size_t r_max_degree = 15;
+  uint32_t l_build = 15;
+  uint32_t r_max_degree = 15;
 
   size_t k_nn = 5;
 
@@ -1312,8 +1312,8 @@ TEST_CASE("vamana_index siftsmall", "[vamana]") {
   float alpha_0 = 1.0;
   float alpha_1 = 1.2;
 
-  size_t l_build = 15;
-  size_t r_max_degree = 12;
+  uint32_t l_build = 15;
+  uint32_t r_max_degree = 12;
 
   size_t k_nn = 10;
 
@@ -1357,8 +1357,8 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 
   set_noisy(noisy);
 
-  size_t l_build{37};
-  size_t r_max_degree{41};
+  uint32_t l_build{37};
+  uint32_t r_max_degree{41};
   size_t k_nn{10};
 
   tiledb::Context ctx;
@@ -1432,8 +1432,8 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 }
 
 TEST_CASE("query empty index", "[vamana]") {
-  size_t l_build = 100;
-  size_t r_max_degree = 100;
+  uint32_t l_build = 100;
+  uint32_t r_max_degree = 100;
   size_t num_vectors = 0;
   uint64_t dimensions = 5;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
@@ -1442,8 +1442,6 @@ TEST_CASE("query empty index", "[vamana]") {
       ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
   index.train(data, data.raveled_ids());
 
-  auto queries = std::vector<std::vector<siftsmall_feature_type>>{
-      {1, 1, 1, 1, 1}, {2, 2, 2, 2, 2}};
   auto&& [scores, ids] = index.query(data, 1);
   CHECK(_cpo::num_vectors(scores) == 0);
   CHECK(_cpo::num_vectors(ids) == 0);
