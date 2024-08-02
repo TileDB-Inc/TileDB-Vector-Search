@@ -166,19 +166,12 @@ class timing_data_class {
    * Return a reference to the singleton instance.
    * @return The singleton instance.
    */
-  // static timing_data_class& get_instance() {
-  //   static timing_data_class instance;
-  //   return instance;
-  // }
-
   static timing_data_class& get_instance() {
-      static std::once_flag flag;
-      // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
-      static timing_data_class* instance;
-      std::call_once(flag, []() {
-          instance = new timing_data_class();
-      });
-      return *instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static timing_data_class* instance;
+    std::call_once(flag, []() { instance = new timing_data_class(); });
+    return *instance;
   }
 
   /**
@@ -393,33 +386,13 @@ class memory_data {
    * Get a reference to the singleton instance of the class.
    * @return Reference to the singleton instance of the class.
    */
-  // static memory_data& get_instance() {
-  //   // std::cout << "[memory_data@get_instance]" << std::endl;
-  //   static memory_data instance;
-  //   return instance;
-  // }
-
   static memory_data& get_instance() {
     static std::once_flag flag;
     // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
     static memory_data* instance;
-    std::call_once(flag, []() {
-        instance = new memory_data();
-    });
+    std::call_once(flag, []() { instance = new memory_data(); });
     return *instance;
   }
-
-  // static memory_data& get_instance() {
-  //   std::cout << "[memory_data@get_instance]" << std::endl;
-  //     static std::once_flag flag;
-  //     static std::unique_ptr<memory_data> instance;
-  //     std::call_once(flag, []() {
-  //         instance.reset(new memory_data());
-  //     });
-  //     std::cout << "[memory_data@get_instance] instance: " << instance << std::endl;
-  //     return *instance;
-  // }
-
 
   /**
    * Insert a memory consumption entry into the multimap.
@@ -531,30 +504,13 @@ class count_data {
    * Get a reference to the singleton instance of the class.
    * @return Reference to the singleton instance of the class.
    */
-  // static count_data& get_instance() {
-  //   static count_data instance;
-  //   return instance;
-  // }
-
   static count_data& get_instance() {
-      std::cout << "[count_data@get_instance]" << std::endl;
-      static std::once_flag flag;
-      // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
-      static count_data* instance;
-      std::call_once(flag, []() {
-          instance = new count_data();
-      });
-      return *instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static count_data* instance;
+    std::call_once(flag, []() { instance = new count_data(); });
+    return *instance;
   }
-
-  // static count_data& get_instance() {
-  //     static std::once_flag flag;
-  //     static std::unique_ptr<count_data> instance;
-  //     std::call_once(flag, []() {
-  //         instance.reset(new count_data());
-  //     });
-  //     return *instance;
-  // }
 
   /**
    * Insert a count entry into the multimap.
