@@ -116,7 +116,7 @@ TEST_CASE("different types", "[tdb_matrix_with_ids]") {
   using DataType = float;
   using IdsType = uint64_t;
 
-  auto X = ColMajorMatrixWithIds<DataType, IdsType, size_t>(Mrows, Ncols);
+  auto X = ColMajorMatrixWithIds<DataType, IdsType>(Mrows, Ncols);
   fill_and_write_matrix(
       ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
   CHECK(X.ids()[0] == offset + 0);
@@ -156,7 +156,7 @@ TEMPLATE_TEST_CASE(
   size_t Mrows = 200;
   size_t Ncols = 500;
 
-  auto X = ColMajorMatrixWithIds<TestType, TestType, size_t>(Mrows, Ncols);
+  auto X = ColMajorMatrixWithIds<TestType, TestType>(Mrows, Ncols);
   fill_and_write_matrix(
       ctx, X, tmp_matrix_uri, tmp_ids_uri, Mrows, Ncols, offset);
   CHECK(X.ids()[0] == offset + 0);
@@ -164,7 +164,7 @@ TEMPLATE_TEST_CASE(
   CHECK(X.ids()[10] == offset + 10);
   CHECK(size(X.raveled_ids()) == Ncols);
 
-  auto B = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
+  auto B = ColMajorMatrixWithIds<TestType, TestType>(0, 0);
   {
     auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
         ctx, tmp_matrix_uri, tmp_ids_uri);
@@ -187,7 +187,7 @@ TEMPLATE_TEST_CASE(
   }
 
   // Check that we can assign to a matrix
-  auto Z = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
+  auto Z = ColMajorMatrixWithIds<TestType, TestType>(0, 0);
   Z = std::move(Y);
 
   CHECK(num_vectors(Z) == num_vectors(X));
@@ -200,7 +200,7 @@ TEMPLATE_TEST_CASE(
     }
   }
 
-  auto A = ColMajorMatrixWithIds<TestType, TestType, size_t>(0, 0);
+  auto A = ColMajorMatrixWithIds<TestType, TestType>(0, 0);
   A = std::move(Z);
   CHECK(size(A.raveled_ids()) == size(X.raveled_ids()));
   CHECK(num_vectors(A) == num_vectors(X));

@@ -265,15 +265,20 @@ void init_type_erased_module(py::module_& m) {
       .def("ids_type_string", &FeatureVectorArray::ids_type_string)
       .def_buffer([](FeatureVectorArray& v) -> py::buffer_info {
         return py::buffer_info(
-            v.data(),                           /* Pointer to buffer */
-            datatype_to_size(v.feature_type()), /* Size of one scalar */
-            datatype_to_format(
-                v.feature_type()), /* Python struct-style format descriptor */
-            2,                     /* Number of dimensions */
-            {v.num_vectors(),
-             v.dimensions()}, /* Buffer dimensions -- row major */
+            /* Pointer to buffer */
+            v.data(),
+            /* Size of one scalar */
+            datatype_to_size(v.feature_type()),
+            /* Python struct-style format descriptor */
+            datatype_to_format(v.feature_type()),
+            /* Number of dimensions */
+            2,
+            /* Buffer dimensions -- row major */
+            {static_cast<size_t>(v.num_vectors()),
+             static_cast<size_t>(v.dimensions())},
+            /* Strides (in bytes) for each index */
             {datatype_to_size(v.feature_type()) *
-                 v.dimensions(), /* Strides (in bytes) for each index */
+                 static_cast<size_t>(v.dimensions()),
              datatype_to_size(v.feature_type())});
       })
       .def(

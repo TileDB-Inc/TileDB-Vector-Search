@@ -61,11 +61,12 @@ template <
     class IdType,
     class PartIndexType,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t>
+    class I = uint64_t>
 class PartitionedMatrixWrapper {
  public:
   using value_type = T;  // should be same as T
   using index_type = PartIndexType;
+  using size_type = I;
   using reference = T&;
   using id_type = IdType;
 
@@ -85,10 +86,10 @@ class PartitionedMatrixWrapper {
       part_index_;  // @todo pointer and span?
 
   // Stores the number of valid vectors being stored
-  size_t num_vectors_{0};
+  size_type num_vectors_{0};
 
   // Stores the number of valid partitions being stored
-  size_t num_parts_{0};
+  size_type num_parts_{0};
 
  public:
   PartitionedMatrixWrapper() = default;
@@ -195,7 +196,7 @@ template <
     class T,
     class partitioned_ids_type,
     class part_index_type,
-    class I = size_t>
+    class I = uint64_t>
 using ColMajorPartitionedMatrixWrapper = PartitionedMatrixWrapper<
     T,
     partitioned_ids_type,

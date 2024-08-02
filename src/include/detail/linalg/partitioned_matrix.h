@@ -65,7 +65,7 @@ template <
     class IdType,
     class PartIndexType,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t>
+    class I = uint64_t>
 class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   // using Base::Base;
@@ -95,7 +95,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   std::vector<part_index_type> part_index_;  // @todo pointer and span?
 
   // Stores the number of valid vectors being stored
-  size_t num_vectors_{0};
+  size_type num_vectors_{0};
 
   // Stores the number of valid partitions being stored
   size_t num_parts_{0};
@@ -111,7 +111,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
    * @param max_num_vecs The maximum number of vectors
    * @param max_num_parts The maximum number of partitions
    */
-  PartitionedMatrix(size_t dim, size_t max_num_vecs, size_t max_num_parts)
+  PartitionedMatrix(size_type dim, size_type max_num_vecs, size_t max_num_parts)
       : Base(dim, max_num_vecs)
       , ids_(max_num_vecs)
       , part_index_(max_num_parts + 1) {
@@ -163,14 +163,14 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
 
     auto degrees = std::vector<size_t>(num_parts);
 
-    for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
+    for (size_type i = 0; i < ::num_vectors(training_set); ++i) {
       auto j = part_labels[i];
       ++degrees[j];
     }
     part_index_[0] = 0;
     std::inclusive_scan(begin(degrees), end(degrees), begin(part_index_) + 1);
 
-    for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
+    for (size_type i = 0; i < ::num_vectors(training_set); ++i) {
       size_t bin = part_labels[i];
       size_t ibin = part_index_[bin];
 
@@ -184,7 +184,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
         throw std::runtime_error(
             "[partitioned_matrix@PartitionedMatrix] ibin >= this->num_cols()");
       }
-      for (size_t j = 0; j < dimensions(training_set); ++j) {
+      for (size_type j = 0; j < dimensions(training_set); ++j) {
         this->operator()(j, ibin) = training_set(j, i);
       }
       ++part_index_[bin];
@@ -229,7 +229,7 @@ template <
     class T,
     class partitioned_ids_type,
     class part_index_type,
-    class I = size_t>
+    class I = uint64_t>
 using ColMajorPartitionedMatrix = PartitionedMatrix<
     T,
     partitioned_ids_type,

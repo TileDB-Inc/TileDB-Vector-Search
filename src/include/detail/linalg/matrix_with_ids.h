@@ -51,7 +51,7 @@ template <
     class T,
     class IdsType = uint64_t,
     class LayoutPolicy = stdx::layout_right,
-    class I = size_t>
+    class I = uint64_t>
 class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
 
@@ -155,7 +155,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
     std::copy(ids.begin(), ids.end(), ids_storage_.get());
   }
 
-  [[nodiscard]] size_t num_ids() const {
+  [[nodiscard]] size_type num_ids() const {
     return num_ids_;
   }
 
@@ -203,13 +203,13 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class IdsType = uint64_t, class I = size_t>
+template <class T, class IdsType = uint64_t, class I = uint64_t>
 using RowMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class IdsType = uint64_t, class I = size_t>
+template <class T, class IdsType = uint64_t, class I = uint64_t>
 using ColMajorMatrixWithIds = MatrixWithIds<T, IdsType, stdx::layout_left, I>;
 
 // TODO(paris): This only works on col-major matrices, fix for row-major.
@@ -218,13 +218,16 @@ void debug_matrix_with_ids(
     const MatrixWithIds& matrix,
     const std::string& msg = "",
     size_t max_size = 10) {
-  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(
+      dimensions(matrix), static_cast<MatrixWithIds::size_type>(max_size));
+  auto colsEnd = std::min(
+      num_vectors(matrix), static_cast<MatrixWithIds::size_type>(max_size));
 
   debug_matrix(matrix, msg, max_size);
 
   std::cout << "# ids: [";
-  auto end = std::min(matrix.num_ids(), static_cast<size_t>(max_size));
+  auto end = std::min(
+      matrix.num_ids(), static_cast<MatrixWithIds::size_type>(max_size));
   for (size_t i = 0; i < end; ++i) {
     std::cout << (float)matrix.ids()[i];
     if (i != matrix.num_ids() - 1) {

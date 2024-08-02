@@ -23,6 +23,8 @@ from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
+from tiledb.vector_search.utils import MAX_INT32
+from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import to_temporal_policy
@@ -342,7 +344,6 @@ def ingest(
     CENTRALISED_KMEANS_MAX_SAMPLE_SIZE = 1000000
 
     DEFAULT_IMG_NAME = "3.9-vectorsearch"
-    MAX_INT32 = 2**31 - 1
 
     class SourceType(enum.Enum):
         """SourceType of input vectors"""
@@ -405,8 +406,15 @@ def ingest(
     ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
-            size = schema.domain.dim(1).domain[1] + 1
-            dimensions = schema.domain.dim(0).domain[1] + 1
+            print("[ingestion@read_source_metdata@TILEDB_ARRAY] schema", schema)
+            size = int(schema.domain.dim(1).domain[1] + 1)
+            print("[ingestion@read_source_metdata@TILEDB_ARRAY] size", size, type(size))
+            dimensions = int(schema.domain.dim(0).domain[1] + 1)
+            print(
+                "[ingestion@read_source_metdata@TILEDB_ARRAY] dimensions",
+                dimensions,
+                type(dimensions),
+            )
             return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_SPARSE_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
@@ -494,13 +502,13 @@ def ingest(
             name="rows",
             domain=(0, dimensions - 1),
             tile=dimensions,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         input_vectors_array_cols_dim = tiledb.Dim(
             name="cols",
             domain=(0, size - 1),
             tile=tile_size,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         input_vectors_array_dom = tiledb.Domain(
             input_vectors_array_rows_dim, input_vectors_array_cols_dim
@@ -560,7 +568,7 @@ def ingest(
             name="rows",
             domain=(0, size - 1),
             tile=int(size / partitions),
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         ids_array_dom = tiledb.Domain(ids_array_rows_dim)
         ids_attr = tiledb.Attr(
@@ -647,9 +655,9 @@ def ingest(
             logger.debug("Creating temp ids array")
             ids_array_rows_dim = tiledb.Dim(
                 name="rows",
-                domain=(0, MAX_INT32),
+                domain=(0, MAX_UINT64),
                 tile=tile_size,
-                dtype=np.dtype(np.int32),
+                dtype=np.dtype(np.uint64),
             )
             ids_array_dom = tiledb.Domain(ids_array_rows_dim)
             ids_attr = tiledb.Attr(
@@ -679,13 +687,13 @@ def ingest(
                 name="rows",
                 domain=(0, dimensions - 1),
                 tile=dimensions,
-                dtype=np.dtype(np.int32),
+                dtype=np.dtype(np.uint64),
             )
             parts_array_cols_dim = tiledb.Dim(
                 name="cols",
-                domain=(0, MAX_INT32),
+                domain=(0, MAX_UINT64),
                 tile=tile_size,
-                dtype=np.dtype(np.int32),
+                dtype=np.dtype(np.uint64),
             )
             parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
             parts_attr = tiledb.Attr(name="values", dtype=vector_type, filters=filters)
@@ -1421,6 +1429,10 @@ def ingest(
 
         import tiledb.cloud
 
+        print("[ingestion@ingest_flat] dimensions", dimensions, type(dimensions))
+        print("[ingestion@ingest_flat] size", size, type(size))
+        print("[ingestion@ingest_flat] batch", batch, type(batch))
+
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
             updated_ids = read_updated_ids(
@@ -1478,7 +1490,9 @@ def ingest(
                     logger.debug("Writing input data to array %s", ids_array_uri)
                     ids_array[write_offset:end_offset] = external_ids
                     write_offset = end_offset
-
+            print(
+                "[ingestion@ingest_flat] write_offset", write_offset, type(write_offset)
+            )
             # Ingest additions
             additions_vectors, additions_external_ids = read_additions(
                 updates_uri=updates_uri,
@@ -1486,10 +1500,22 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             )
+            print(
+                "[ingestion@ingest_flat] write_offset", write_offset, type(write_offset)
+            )
             end = write_offset
             if additions_vectors is not None:
                 end += len(additions_external_ids)
                 logger.debug("Writing additions data to array %s", parts_array_uri)
+                print(
+                    "[ingestion@ingest_flat] dimensions", dimensions, type(dimensions)
+                )
+                print(
+                    "[ingestion@ingest_flat] write_offset",
+                    write_offset,
+                    type(write_offset),
+                )
+                print("[ingestion@ingest_flat] end", end, type(end))
                 parts_array[0:dimensions, write_offset:end] = np.transpose(
                     additions_vectors
                 )
@@ -1510,7 +1536,7 @@ def ingest(
         vector_type: np.dtype,
         external_ids_uri: str,
         external_ids_type: str,
-        dimensions: int,
+        dimensions: np.uint64,
         size: int,
         batch: int,
         partitions: int,
@@ -1645,7 +1671,7 @@ def ingest(
         centroids: np.ndarray,
         index_group_uri: str,
         partitions: int,
-        dimensions: int,
+        dimensions: np.uint64,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1669,7 +1695,7 @@ def ingest(
         external_ids_uri: str,
         external_ids_type: str,
         partitions: int,
-        dimensions: int,
+        dimensions: np.uint64,
         start: int,
         end: int,
         batch: int,
@@ -1972,7 +1998,7 @@ def ingest(
         partition_id_start: int,
         partition_id_end: int,
         batch: int,
-        dimensions: int,
+        dimensions: np.uint64,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -2093,7 +2119,7 @@ def ingest(
         external_ids_type: str,
         size: int,
         partitions: int,
-        dimensions: int,
+        dimensions: np.uint64,
         copy_centroids_uri: str,
         training_sample_size: int,
         training_source_uri: Optional[str],
@@ -2695,6 +2721,9 @@ def ingest(
             in_size, dimensions, vector_type = read_source_metadata(
                 source_uri=source_uri, source_type=source_type
             )
+        print("[ingestion@ingest] in_size", in_size, type(in_size))
+        print("[ingestion@ingest] dimensions", dimensions, type(dimensions))
+        print("[ingestion@ingest] vector_type", vector_type, type(vector_type))
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
         if is_type_erased_index(index_type):

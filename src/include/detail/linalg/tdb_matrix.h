@@ -46,6 +46,7 @@
 #include "detail/linalg/matrix_with_ids.h"
 #include "detail/linalg/tdb_helpers.h"
 #include "tdb_defs.h"
+#include "utils/print_types.h"
 
 /**
  * Derived from `Matrix`.  Initialized in construction by filling from a given
@@ -73,8 +74,6 @@ class tdbBlockedMatrix : public MatrixBase {
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  protected:
-  using col_domain_type = int32_t;
-
   log_timer constructor_timer{"tdbBlockedMatrix constructor"};
 
   tiledb::Context ctx_;
@@ -246,13 +245,10 @@ class tdbBlockedMatrix : public MatrixBase {
 
     auto domain_{schema_.domain()};
 
-    auto row_domain{domain_.dimension(0)};
-    auto col_domain{domain_.dimension(1)};
-
     // If non_empty_domain() is an empty vector it means that
     // the array is empty. Else If the user specifies a value then we use it,
     // otherwise we use the non-empty domain.
-    auto non_empty_domain = array_->non_empty_domain<int>();
+    auto non_empty_domain = array_->non_empty_domain<uint64_t>();
     if (non_empty_domain.empty()) {
       last_row_ = 0;
       last_col_ = 0;
@@ -271,8 +267,8 @@ class tdbBlockedMatrix : public MatrixBase {
       }
     }
 
-    size_t dimension = last_row_ - first_row_;
-    size_t num_vectors = last_col_ - first_col_;
+    size_type dimension = last_row_ - first_row_;
+    size_type num_vectors = last_col_ - first_col_;
 
     // The default is to load all of the vectors
     if (upper_bound == 0 || upper_bound > num_vectors) {
@@ -324,7 +320,7 @@ class tdbBlockedMatrix : public MatrixBase {
           datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
 
-    size_t dimension = last_row_ - first_row_;
+    size_type dimension = last_row_ - first_row_;
     auto elements_to_load = get_elements_to_load();
 
     // Return if we're at the end
@@ -344,9 +340,9 @@ class tdbBlockedMatrix : public MatrixBase {
 
     // Create a subarray for the next block of columns
     tiledb::Subarray subarray(ctx_, *array_);
-    subarray.add_range(0, 0, (int)dimension - 1);
-    subarray.add_range(
-        1, (int)first_resident_col_, (int)last_resident_col_ - 1);
+    subarray.add_range<size_type>(0, 0, dimension - 1);
+    subarray.add_range<size_type>(
+        1, first_resident_col_, last_resident_col_ - 1);
 
     auto layout_order = schema_.cell_order();
 
@@ -382,7 +378,7 @@ class tdbBlockedMatrix : public MatrixBase {
 
 };  // tdbBlockedMatrix
 
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = uint64_t>
 class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
   using Base = tdbBlockedMatrix<T, LayoutPolicy, I>;
   // This just about did me in.
@@ -435,13 +431,13 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
 /**
  * Convenience class for column-major blockef matrices.
  */
-template <class T, class I = size_t>
+template <class T, class I = uint64_t>
 using tdbColMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
 
 /**
  * Convenience class for column-major matrices.
  */
-template <class T, class I = size_t>
+template <class T, class I = uint64_t>
 using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
 
 /**
@@ -453,7 +449,7 @@ using tdbColMajorPreLoadMatrix = tdbPreLoadMatrix<T, stdx::layout_left, I>;
 /**
  * Convenience class for row-major matrices.
  */
-template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = uint64_t>
 using tdbMatrix = tdbBlockedMatrix<T, LayoutPolicy, I>;
 
 #endif  // TDB_MATRIX_H

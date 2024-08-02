@@ -31,11 +31,14 @@ def load_as_matrix(
     if isinstance(config, tiledb.Config):
         config = dict(config)
 
+    print("[module@load_as_matrix] size", size, type(size))
+
     if ctx is None:
         ctx = vspy.Ctx(config)
 
     a = tiledb.ArraySchema.load(path, ctx=tiledb.Ctx(config))
     dtype = a.attr(0).dtype
+    print("[module@load_as_matrix] dtype", dtype)
     # Read all rows from column 0 -> `size`. Set no upper_bound. Note that if `size` is None then
     # we'll read to the column domain length.
     if dtype == np.float32:

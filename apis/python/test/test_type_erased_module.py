@@ -1,13 +1,15 @@
-import logging
-
-import numpy as np
 from array_paths import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
-from tiledb.vector_search.utils import load_fvecs
-from tiledb.vector_search.utils import to_temporal_policy
+from tiledb.vector_search.utils import load_ivecs
 
 ctx = vspy.Ctx({})
+
+
+def test_foo():
+    a = load_ivecs(siftsmall_groundtruth_file)
+    print("a.shape:", a.shape)
+    print("a:", a)
 
 
 def test_construct_FeatureVector():
@@ -503,7 +505,7 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
     nt = np.double(t.num_vectors()) * np.double(k_nn)
     recall = intersections / nt
-    assert recall > 0.89
+    assert recall > 0.9
 
 
 def test_inplace_build_query_IndexIVFPQ():
@@ -533,7 +535,7 @@ def test_inplace_build_query_IndexIVFPQ():
     nt = np.double(t.num_vectors()) * np.double(k_nn)
     recall = intersections / nt
 
-    assert recall >= 0.895
+    assert recall > 0.9
 
 
 def test_construct_IndexIVFFlat():

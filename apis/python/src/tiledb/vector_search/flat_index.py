@@ -14,7 +14,6 @@ from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import storage_formats
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import MAX_FLOAT32
-from tiledb.vector_search.utils import MAX_INT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
 
@@ -182,7 +181,6 @@ def create(
 
     index.create_metadata(
         uri=uri,
-        dimensions=dimensions,
         vector_type=vector_type,
         index_type=INDEX_TYPE,
         storage_version=storage_version,
@@ -202,9 +200,9 @@ def create(
 
         ids_array_rows_dim = tiledb.Dim(
             name="rows",
-            domain=(0, MAX_INT32),
-            tile=tile_size,
-            dtype=np.dtype(np.int32),
+            domain=(0, MAX_UINT64 - 1000),
+            tile=1000,
+            dtype=np.dtype(np.uint64),
         )
         ids_array_dom = tiledb.Domain(ids_array_rows_dim)
         ids_attr = tiledb.Attr(
@@ -226,13 +224,13 @@ def create(
             name="rows",
             domain=(0, dimensions - 1),
             tile=dimensions,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         parts_array_cols_dim = tiledb.Dim(
             name="cols",
-            domain=(0, MAX_INT32),
+            domain=(0, MAX_UINT64 - tile_size),
             tile=tile_size,
-            dtype=np.dtype(np.int32),
+            dtype=np.dtype(np.uint64),
         )
         parts_array_dom = tiledb.Domain(parts_array_rows_dim, parts_array_cols_dim)
         parts_attr = tiledb.Attr(

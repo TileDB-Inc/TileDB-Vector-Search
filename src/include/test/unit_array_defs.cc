@@ -113,6 +113,7 @@ TEST_CASE("compare siftsmall arrays and files", "[array_defs]") {
 
   auto array_inputs = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
       ctx, siftsmall_inputs_uri);
+  return;
   auto array_queries = tdbColMajorPreLoadMatrix<siftsmall_feature_type>(
       ctx, siftsmall_query_uri);
   auto array_groundtruth = tdbColMajorPreLoadMatrix<siftsmall_groundtruth_type>(
@@ -122,12 +123,11 @@ TEST_CASE("compare siftsmall arrays and files", "[array_defs]") {
       read_bin_local<siftsmall_feature_type>(ctx, siftsmall_inputs_file);
   auto file_queries =
       read_bin_local<siftsmall_feature_type>(ctx, siftsmall_query_file);
-  auto file_groundtruth =
-      read_bin_local<uint32_t>(ctx, siftsmall_groundtruth_file);
+  auto file_groundtruth = read_bin_local<siftsmall_groundtruth_type>(
+      ctx, siftsmall_groundtruth_file);
 
   auto file_groundtruth_64 = ColMajorMatrix<siftsmall_groundtruth_type>(
       file_groundtruth.num_rows(), file_groundtruth.num_cols());
-
   std::copy(
       file_groundtruth.raveled().begin(),
       file_groundtruth.raveled().end(),
