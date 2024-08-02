@@ -437,6 +437,12 @@ using tdbColMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
 /**
  * Convenience class for column-major matrices.
  */
+template <class T, class I = uint64_t>
+using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
+
+/**
+ * Convenience class for column-major matrices.
+ */
 template <class T, class I = size_t>
 using tdbColMajorPreLoadMatrix = tdbPreLoadMatrix<T, stdx::layout_left, I>;
 

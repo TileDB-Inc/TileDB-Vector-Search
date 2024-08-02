@@ -437,17 +437,16 @@ TEST_CASE("time travel", "[tdb_matrix_with_ids]") {
   }
 
   {
-    // We get no data if we load the matrix at an earlier timestamp, even if
-    we
-        // specify we want to read 4 rows and 2 cols.
-        auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
-            ctx,
-            tmp_matrix_uri,
-            tmp_ids_uri,
-            4,
-            2,
-            0,
-            TemporalPolicy{TimeTravel, 5});
+    // We get no data if we load the matrix at an earlier timestamp, even if we
+    // specify we want to read 4 rows and 2 cols.
+    auto Y = tdbColMajorPreLoadMatrixWithIds<float, uint64_t, size_t>(
+        ctx,
+        tmp_matrix_uri,
+        tmp_ids_uri,
+        4,
+        2,
+        0,
+        TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
     CHECK(dimensions(Y) == 0);
     CHECK(Y.empty());

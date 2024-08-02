@@ -101,8 +101,7 @@ TEST_CASE("test array uris", "[array_defs]") {
   for (const auto& file : siftsmall_files) {
     if (debug) {
       std::cout << file << " "
-                << (std::filesystem::exists(file) ? "exists" : "does not
-                exist")
+                << (std::filesystem::exists(file) ? "exists" : "does not exist")
                 << std::endl;
     }
     CHECK(std::filesystem::is_regular_file(file));
