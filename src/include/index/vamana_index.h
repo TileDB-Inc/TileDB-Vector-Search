@@ -34,12 +34,14 @@
 #define TDB_VAMANA_INDEX_H
 
 #include <cstddef>
-
+#include <execution>
 #include <functional>
+#include <future>
 #include <queue>
+#include <tiledb/tiledb>
 #include <unordered_set>
 
-#include <tiledb/tiledb>
+#include "algorithm.h"
 #include "detail/graph/adj_list.h"
 #include "detail/graph/best_first.h"
 #include "detail/graph/bfs.h"
@@ -54,8 +56,6 @@
 #include "stats.h"
 #include "utils/fixed_min_heap.h"
 #include "utils/print_types.h"
-
-#include <tiledb/tiledb>
 
 /**
  * Find the vector that is closest to the centroid of the set of vectors P.
@@ -595,46 +595,24 @@ class vamana_index {
     auto top_k_scores =
         ColMajorMatrix<adjacency_scores_type>(k, ::num_vectors(query_set));
 
-#if 0
-    // Parallelized implementation -- we stay single-threaded for now
-    // for purposes of comparison
     size_t nthreads = std::thread::hardware_concurrency();
     auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
-    stdx::range_for_each(std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
-      auto&& [tk_scores, tk, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
-      std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
-      std::copy(tk.data(), tk.data() + k, top_k[i].data());
-    });
-#else
-    for (size_t i = 0; i < num_vectors(query_set); ++i) {
-      auto&& [tk_scores, tk, V] = greedy_search(
-          graph_,
-          feature_vectors_,
-          medoid_,
-          query_set[i],
-          k,
-          L,
-          distance,
-          true);
-      std::copy(tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
-      std::copy(tk.data(), tk.data() + k, top_k[i].data());
-      num_visited_vertices_ += V.size();
-    }
-#endif
-
-#if 0
-    for (size_t i = 0; i < ::num_vectors(query_set); ++i) {
-      auto&& [_top_k_scores, _top_k, V] = greedy_search(
-          graph_, feature_vectors_, medoid_, query_set[i], k, l_build_, distance, true);
-      std::copy(
-          _top_k_scores.data(),
-          _top_k_scores.data() + k,
-          top_k_scores[i].data());
-      std::copy(_top_k.data(), _top_k.data() + k, top_k[i].data());
-    }
-#endif
+    stdx::range_for_each(
+        std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
+          auto&& [tk_scores, tk, V] = greedy_search(
+              graph_,
+              feature_vectors_,
+              medoid_,
+              query_vec,
+              k,
+              L,
+              distance,
+              true);
+          std::copy(
+              tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
+          std::copy(tk.data(), tk.data() + k, top_k[i].data());
+        });
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
