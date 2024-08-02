@@ -42,7 +42,7 @@
 
 // kmeans and kmeans indexing still WIP
 
-void debug_centroids(auto& index) {
+void debug_centroids(const auto& index) {
   std::cout << "\nDebug Centroids:\n" << std::endl;
   for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
     for (size_t i = 0; i < index.get_centroids().num_cols(); ++i) {

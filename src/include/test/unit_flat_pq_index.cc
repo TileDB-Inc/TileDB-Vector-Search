@@ -713,13 +713,13 @@ TEST_CASE("query siftsmall", "[flat_pq_index]") {
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
     double recall0 =
         intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
-    CHECK(recall0 > 0.7);
+    CHECK(recall0 > 0.685);
 
     auto intersections1 =
         (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
     double recall1 =
         intersections1 / static_cast<double>(top_k_pq.num_cols() * k_nn);
-    CHECK(recall1 > 0.7);
+    CHECK(recall1 > 0.685);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;

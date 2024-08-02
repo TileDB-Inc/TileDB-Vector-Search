@@ -99,7 +99,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       : Base(0)
       , max_size{k} {
     Base::reserve(k);
-    for (auto& p : l) {
+    for (const auto& p : l) {
       insert(std::get<0>(p), std::get<1>(p));
     }
   }
@@ -117,7 +117,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
       Base::emplace_back(x, y);
 
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
       //      if (Base::size() == max_size) {
@@ -127,7 +127,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       //      }
       return true;
     } else if (compare_(x, std::get<0>(this->front()))) {
-      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
@@ -135,7 +135,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
         if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
               return std::get<1>(e) == y;
             }) != end(*this)) {
-          std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+          std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
             return compare_(std::get<0>(a), std::get<0>(b));
           });
           return false;
@@ -145,7 +145,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       //      this->pop_back();
       //      this->emplace_back(x, y);
       (*this)[max_size - 1] = std::make_tuple(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
       return true;
@@ -176,7 +176,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
       // Insert, since there is room
       Base::emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
@@ -188,7 +188,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
       // Get the old element
       auto tmp = this->front();
-      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
@@ -198,7 +198,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
               return std::get<1>(e) == y;
             }) != end(*this)) {
           // Since we had previously popped the heap, we need to unpop it
-          std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+          std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
             return compare_(std::get<0>(a), std::get<0>(b));
           });
           return {false, false, x, y};
@@ -207,7 +207,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
       // Replace the former max element with the new element and re-heapify
       (*this)[max_size - 1] = std::make_tuple(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
@@ -220,20 +220,20 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   }
 
   auto pop() {
-    std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+    std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
       return compare_(std::get<0>(a), std::get<0>(b));
     });
     this->pop_back();
   }
 
   void self_heapify() {
-    std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+    std::make_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
       return compare(std::get<0>(a), std::get<0>(b));
     });
   }
 
   void self_sort() {
-    std::sort_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+    std::sort_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
       return compare(std::get<0>(a), std::get<0>(b));
     });
   }
@@ -424,7 +424,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       : Base(0)
       , max_size{k} {
     Base::reserve(k);
-    for (auto& p : l) {
+    for (const auto& p : l) {
       insert(std::get<0>(p), std::get<1>(p));
     }
   }
@@ -432,16 +432,16 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   void insert(const T& x, const U& y) {
     if (Base::size() < max_size) {
       this->emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return std::get<0>(a) < std::get<0>(b);
       });
     } else if (x < std::get<0>(this->front())) {
-      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return std::get<0>(a) < std::get<0>(b);
       });
       this->pop_back();
       this->emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return std::get<0>(a) < std::get<0>(b);
       });
     }
@@ -540,7 +540,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
       , max_size{k}
       , compare_{std::move(compare)} {
     Base::reserve(k);
-    for (auto& p : l) {
+    for (const auto& p : l) {
       insert(std::get<0>(p), std::get<1>(p));
     }
   }
@@ -548,16 +548,16 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   void insert(const T& x, const U& y) {
     if (Base::size() < max_size) {
       this->emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
     } else if (compare_(x, std::get<0>(this->front()))) {
-      std::pop_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
       this->pop_back();
       this->emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
     }

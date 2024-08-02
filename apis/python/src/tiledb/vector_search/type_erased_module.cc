@@ -368,7 +368,9 @@ void init_type_erased_module(py::module_& m) {
       .def("dimensions", &IndexFlatL2::dimensions)
       .def(
           "query",
-          [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
+          [](IndexFlatL2& index,
+             const FeatureVectorArray& vectors,
+             size_t top_k) {
             auto r = index.query(vectors, top_k);
             return make_python_pair(std::move(r));
           });
@@ -419,7 +421,7 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "query",
           [](IndexVamana& index,
-             FeatureVectorArray& vectors,
+             const FeatureVectorArray& vectors,
              size_t top_k,
              uint32_t l_search) {
             auto r = index.query(vectors, top_k, l_search);
@@ -495,7 +497,7 @@ void init_type_erased_module(py::module_& m) {
           "query",
           [](IndexIVFPQ& index,
              QueryType queryType,
-             FeatureVectorArray& vectors,
+             const FeatureVectorArray& vectors,
              size_t top_k,
              size_t nprobe) {
             auto r = index.query(queryType, vectors, top_k, nprobe);

@@ -94,7 +94,7 @@ individually
  * @code{.cpp}
 // Print totals for all timers
 auto timers = _timing_data.get_timer_names();
-for (auto& timer : timers) {
+for (const auto& timer : timers) {
    std::cout << timer << ":  " <<
 _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 }

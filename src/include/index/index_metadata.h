@@ -134,7 +134,7 @@ class base_index_metadata {
   auto json_to_vector(const std::string& json_str) const {
     auto json = nlohmann::json::parse(json_str);
     std::vector<T> vec;
-    for (auto& item : json) {
+    for (const auto& item : json) {
       vec.push_back(item.get<T>());
     }
     return vec;
@@ -266,17 +266,17 @@ class base_index_metadata {
     uint32_t v_num;
     const void* v;
 
-    for (auto& check : metadata_string_checks) {
+    for (const auto& check : metadata_string_checks) {
       check_string_metadata(read_group, check);
     }
-    for (auto& check :
+    for (const auto& check :
          static_cast<IndexMetadata*>(this)->metadata_string_checks_impl) {
       check_string_metadata(read_group, check);
     }
-    for (auto& check : metadata_arithmetic_checks) {
+    for (const auto& check : metadata_arithmetic_checks) {
       check_arithmetic_metadata(read_group, check);
     }
-    for (auto& check :
+    for (const auto& check :
          static_cast<IndexMetadata*>(this)->metadata_arithmetic_checks_impl) {
       check_arithmetic_metadata(read_group, check);
     }

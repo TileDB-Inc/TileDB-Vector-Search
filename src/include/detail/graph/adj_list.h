@@ -53,7 +53,7 @@ class index_adj_list : public std::vector<std::list<I>> {
 
 #if 1
   index_adj_list(const std::vector<std::tuple<I, I>>& edge_list) {
-    for (auto& [src, dst] : edge_list) {
+    for (const auto& [src, dst] : edge_list) {
       Base::operator[](src).push_back(dst);
     }
   }
@@ -63,7 +63,7 @@ class index_adj_list : public std::vector<std::list<I>> {
   index_adj_list(AdjList&& l)
       : Base(size(l)) {
     for (size_t i = 0; i < size(l); ++i) {
-      for (auto& dst : l[i]) {
+      for (const auto& dst : l[i]) {
         add_edge(i, dst);
       }
     }
@@ -133,7 +133,7 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
 #if 0
   template <class EdgeList>
   index_adj_list(EdgeList&& edge_list) {
-    for (auto& [src, dst] : edge_list) {
+    for (const auto& [src, dst] : edge_list) {
       Base::operator[](src).push_back(dst);
     }
   }
