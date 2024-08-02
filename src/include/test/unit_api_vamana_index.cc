@@ -134,7 +134,7 @@ TEST_CASE("create empty index and then train and query", "[api_vamana_index]") {
   using feature_type_type = uint8_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  size_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -200,7 +200,7 @@ TEST_CASE(
   using id_type_type = uint32_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  size_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -307,7 +307,7 @@ TEST_CASE(
     auto&& [scores, ids] = index.query(query_set, k_nn);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
     auto num_ids = num_vectors(ids);
-    auto recall = ((double)intersections) / ((double)num_ids * k_nn);
+    auto recall = intersections / static_cast<double>(num_ids * k_nn);
     CHECK(recall == 1.0);
   }
 }
@@ -376,7 +376,7 @@ TEST_CASE("build index and query", "[api_vamana_index]") {
 
   auto intersections = count_intersections(t, groundtruth_set, k_nn);
   auto nt = num_vectors(t);
-  auto recall = ((double)intersections) / ((double)nt * k_nn);
+  auto recall = intersections / static_cast<double>(nt * k_nn);
   CHECK(recall == 1.0);
 }
 
@@ -414,7 +414,7 @@ TEST_CASE("read index and query", "[api_vamana_index]") {
   auto nt = num_vectors(t);
   auto nv = num_vectors(v);
   CHECK(nt == nv);
-  auto recall = ((double)intersections_a) / ((double)nt * k_nn);
+  auto recall = intersections_a / static_cast<double>(nt * k_nn);
   CHECK(recall == 1.0);
 }
 
@@ -424,7 +424,7 @@ TEST_CASE("storage_version", "[api_vamana_index]") {
   using id_type_type = uint32_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  size_t dimensions = 3;
+  uint64_t dimensions = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -471,6 +471,50 @@ TEST_CASE("storage_version", "[api_vamana_index]") {
   }
 }
 
+TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  uint64_t dimensions = 3;
+  uint32_t l_build = 100;
+  uint32_t r_max_degree = 64;
+
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_vamana_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  auto index = IndexVamana(std::make_optional<IndexOptions>(
+      {{"feature_type", feature_type},
+       {"id_type", id_type},
+       {"l_build", std::to_string(l_build)},
+       {"r_max_degree", std::to_string(r_max_degree)}}));
+
+  auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+      {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+  auto training_vector_array = FeatureVectorArray(training);
+  index.train(training_vector_array);
+  index.add(training_vector_array);
+  index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
+
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(training_vector_array, 1, 1);
+
+  auto second_index = IndexVamana(ctx, index_uri);
+  auto&& [scores_vector_array_2, ids_vector_array_2] =
+      second_index.query(training_vector_array, 1, 1);
+
+  // Here we check that we can clear_history() even with a index in memory. This
+  // makes sure that every Array which IndexVamana opens has been closed,
+  // otherwise clear_history() will throw when it tries to call
+  // delete_fragments() on the index Array's.
+  IndexVamana::clear_history(ctx, index_uri, 99);
+}
+
 TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   auto ctx = tiledb::Context{};
   using feature_type_type = uint8_t;
@@ -478,9 +522,9 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
   using adjacency_row_index_type_type = uint64_t;
   auto feature_type = "uint8";
   auto id_type = "uint32";
-  size_t dimensions = 3;
-  size_t l_build = 100;
-  size_t r_max_degree = 64;
+  uint64_t dimensions = 3;
+  uint32_t l_build = 100;
+  uint32_t r_max_degree = 64;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();

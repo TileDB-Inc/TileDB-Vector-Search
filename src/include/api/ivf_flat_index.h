@@ -105,7 +105,7 @@ class IndexIVFFlat {
         } else if (key == "dimensions") {
           dimensions_ = std::stol(value);
         } else if (key == "max_iter") {
-          max_iter_ = std::stol(value);
+          max_iterations_ = std::stol(value);
         } else if (key == "tolerance") {
           tolerance_ = std::stof(value);
         } else if (key == "num_threads") {
@@ -292,49 +292,49 @@ class IndexIVFFlat {
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint32_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint32_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint32_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT32 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint32_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint64_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT32) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint64_t, uint32_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     } else if (
         feature_datatype_ == TILEDB_UINT8 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<uint8_t, uint64_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     } else if (
         feature_datatype_ == TILEDB_FLOAT32 && id_datatype_ == TILEDB_UINT64 &&
         px_datatype_ == TILEDB_UINT64) {
       index_ = std::make_unique<
           index_impl<ivf_flat_index<float, uint64_t, uint64_t>>>(
-          nlist_, max_iter_, tolerance_, num_threads_);
+          nlist_, max_iterations_, tolerance_, num_threads_);
     }
 
     index_->train(training_set, init);
@@ -435,35 +435,35 @@ class IndexIVFFlat {
     index_->write_index(ctx, group_uri, storage_version);
   }
 
-  constexpr auto dimensions() const {
-    return dimensions_;  //::dimensions(*index_);
+  constexpr uint64_t dimensions() const {
+    return dimensions_;
   }
 
   constexpr auto num_partitions() const {
-    return nlist_;  // ::num_partitions(*index_);
+    return nlist_;
   }
 
-  constexpr auto feature_type() const {
+  constexpr tiledb_datatype_t feature_type() const {
     return feature_datatype_;
   }
 
-  inline auto feature_type_string() const {
+  inline std::string feature_type_string() const {
     return datatype_to_string(feature_datatype_);
   }
 
-  constexpr auto id_type() const {
+  constexpr tiledb_datatype_t id_type() const {
     return id_datatype_;
   }
 
-  inline auto id_type_string() const {
+  inline std::string id_type_string() const {
     return datatype_to_string(id_datatype_);
   }
 
-  constexpr auto px_type() const {
+  constexpr tiledb_datatype_t px_type() const {
     return px_datatype_;
   }
 
-  inline auto px_type_string() const {
+  inline std::string px_type_string() const {
     return datatype_to_string(px_datatype_);
   }
 
@@ -507,7 +507,7 @@ class IndexIVFFlat {
         const std::string& group_uri,
         const std::string& storage_version) const = 0;
 
-    [[nodiscard]] virtual size_t dimensions() const = 0;
+    [[nodiscard]] virtual uint64_t dimensions() const = 0;
 
     [[nodiscard]] virtual size_t num_partitions() const = 0;
   };
@@ -703,7 +703,7 @@ class IndexIVFFlat {
       //      index_.remove(ids);
     }
 
-    size_t dimensions() const override {
+    uint64_t dimensions() const override {
       return ::dimensions(impl_index_);
     }
 
@@ -718,9 +718,9 @@ class IndexIVFFlat {
     T impl_index_;
   };
 
-  size_t dimensions_ = 0;
+  uint64_t dimensions_ = 0;
   size_t nlist_ = 0;
-  size_t max_iter_ = 2;
+  uint32_t max_iterations_ = 2;
   float tolerance_ = 1e-4;
   std::optional<size_t> num_threads_ = std::nullopt;
   tiledb_datatype_t feature_datatype_{TILEDB_ANY};

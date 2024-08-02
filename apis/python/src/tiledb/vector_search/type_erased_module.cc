@@ -368,7 +368,9 @@ void init_type_erased_module(py::module_& m) {
       .def("dimensions", &IndexFlatL2::dimensions)
       .def(
           "query",
-          [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
+          [](IndexFlatL2& index,
+             const FeatureVectorArray& vectors,
+             size_t top_k) {
             auto r = index.query(vectors, top_k);
             return make_python_pair(std::move(r));
           });
@@ -419,9 +421,9 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "query",
           [](IndexVamana& index,
-             FeatureVectorArray& vectors,
+             const FeatureVectorArray& vectors,
              size_t top_k,
-             size_t l_search) {
+             uint32_t l_search) {
             auto r = index.query(vectors, top_k, l_search);
             return make_python_pair(std::move(r));
           },
@@ -480,10 +482,11 @@ void init_type_erased_module(py::module_& m) {
           })
       .def(
           "train",
-          [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
-            index.train(vectors);
-          },
-          py::arg("vectors"))
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             std::optional<size_t> nlist) { index.train(vectors, nlist); },
+          py::arg("vectors"),
+          py::arg("nlist") = std::nullopt)
       .def(
           "add",
           [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
@@ -503,7 +506,7 @@ void init_type_erased_module(py::module_& m) {
           "query",
           [](IndexIVFPQ& index,
              QueryType queryType,
-             FeatureVectorArray& vectors,
+             const FeatureVectorArray& vectors,
              size_t top_k,
              size_t nprobe) {
             auto r = index.query(queryType, vectors, top_k, nprobe);

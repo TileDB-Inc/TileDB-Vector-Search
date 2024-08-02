@@ -92,7 +92,7 @@ TEST_CASE("partition_ivf_index", "[partition]") {
   auto y = active_queries;
 
   CHECK(size(active_partitions) == size(active_queries));
-  auto sum = 0;
+  size_t sum = 0;
   for (size_t i = 0; i < size(active_queries); ++i) {
     sum += size(active_queries[i]);
   }

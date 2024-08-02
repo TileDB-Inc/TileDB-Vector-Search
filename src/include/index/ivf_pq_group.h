@@ -85,10 +85,12 @@ class ivf_pq_group : public base_index_group<index_type> {
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
       uint64_t dimensions = 0,
-      size_t num_clusters = 0,
-      size_t num_subspaces = 0)
+      uint32_t num_clusters = 0,
+      uint32_t num_subspaces = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
+      // num_clusters and num_subspaces must be set before we call
+      // create_default_impl().
       if (num_clusters == 0) {
         throw std::invalid_argument(
             "num_clusters must be specified when creating a new group.");
@@ -154,23 +156,31 @@ class ivf_pq_group : public base_index_group<index_type> {
   /*****************************************************************************
    * Partitioning / repartitioning history information
    ****************************************************************************/
-  auto get_previous_num_partitions() const {
+  uint64_t get_previous_num_partitions() const {
     return metadata_.partition_history_.back();
   }
-  auto get_num_partitions() const {
+  uint64_t get_num_partitions() const {
     return metadata_.partition_history_[this->history_index_];
   }
-  auto append_num_partitions(size_t size) {
+  void append_num_partitions(uint64_t size) {
     metadata_.partition_history_.push_back(size);
   }
-  auto get_all_num_partitions() const {
+  const std::vector<uint64_t>& get_all_num_partitions() const {
     return metadata_.partition_history_;
   }
-  auto set_num_partitions(size_t size) {
+  void set_num_partitions(uint64_t size) {
     metadata_.partition_history_[this->history_index_] = size;
   }
-  auto set_last_num_partitions(size_t size) {
+  void set_last_num_partitions(uint64_t size) {
     metadata_.partition_history_.back() = size;
+  }
+
+  DistanceMetric get_distance_metric() const {
+    return metadata_.distance_metric_;
+  }
+
+  void set_distance_metric(DistanceMetric metric) {
+    metadata_.distance_metric_ = metric;
   }
 
   /*****************************************************************************
@@ -221,35 +231,49 @@ class ivf_pq_group : public base_index_group<index_type> {
   }
 
   /*****************************************************************************
-   * Getters and setters for PQ related metadata: num_subspaces, sub_dimension,
-   * bits_per_subspace, num_clusters
+   * Getters and setters for PQ related metadata
    ****************************************************************************/
-  auto get_num_subspaces() const {
+  uint64_t get_num_subspaces() const {
     return metadata_.num_subspaces_;
   }
-  auto set_num_subspaces(size_t num_subspaces) {
+  void set_num_subspaces(uint32_t num_subspaces) {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
-  auto get_sub_dimensions() const {
-    return metadata_.sub_dimensions_;
-  }
-  auto set_sub_dimensions(size_t sub_dimensions) {
+  void set_sub_dimensions(uint32_t sub_dimensions) {
     metadata_.sub_dimensions_ = sub_dimensions;
   }
 
-  auto get_bits_per_subspace() const {
-    return metadata_.bits_per_subspace_;
-  }
-  auto set_bits_per_subspace(size_t bits_per_subspace) {
+  void set_bits_per_subspace(uint32_t bits_per_subspace) {
     metadata_.bits_per_subspace_ = bits_per_subspace;
   }
 
-  auto get_num_clusters() const {
+  uint32_t get_num_clusters() const {
     return metadata_.num_clusters_;
   }
-  auto set_num_clusters(size_t num_clusters) {
+  void set_num_clusters(uint32_t num_clusters) {
     metadata_.num_clusters_ = num_clusters;
+  }
+
+  uint32_t get_max_iterations() const {
+    return metadata_.max_iterations_;
+  }
+  void set_max_iterations(uint32_t max_iterations) {
+    metadata_.max_iterations_ = max_iterations;
+  }
+
+  float get_convergence_tolerance() const {
+    return metadata_.convergence_tolerance_;
+  }
+  void set_convergence_tolerance(float convergence_tolerance) {
+    metadata_.convergence_tolerance_ = convergence_tolerance;
+  }
+
+  float get_reassign_ratio() const {
+    return metadata_.reassign_ratio_;
+  }
+  void set_reassign_ratio(float reassign_ratio) {
+    metadata_.reassign_ratio_ = reassign_ratio;
   }
 
   /*****************************************************************************
@@ -416,7 +440,7 @@ class ivf_pq_group : public base_index_group<index_type> {
           write_group, this_table_uri, this_table_array_name);
     }
 
-    // Store the metadata if all of the arrays were created successfully
+    // Store the metadata if all the arrays were created successfully
     metadata_.store_metadata(write_group);
   }
 };

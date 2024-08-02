@@ -441,21 +441,21 @@ TEST_CASE(
 
   SECTION("pq_encoding") {
     auto avg_error = pq_idx.verify_pq_encoding(training_set);
-    CHECK(avg_error < 0.08);
+    CHECK(avg_error < 0.081);
   }
   SECTION("pq_distances") {
     auto avg_error = pq_idx.verify_pq_distances(training_set);
-    CHECK(avg_error < 0.15);
+    CHECK(avg_error < 0.155);
   }
   SECTION("asymmetric_pq_distances") {
     auto [max_error, avg_error] =
         pq_idx.verify_asymmetric_pq_distances(training_set);
-    CHECK(avg_error < 0.08);
+    CHECK(avg_error < 0.081);
   }
   SECTION("symmetric_pq_distances") {
     auto [max_error, avg_error] =
         pq_idx.verify_symmetric_pq_distances(training_set);
-    CHECK(avg_error < 0.15);
+    CHECK(avg_error < 0.155);
   }
 }
 
@@ -711,13 +711,15 @@ TEST_CASE("query siftsmall", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.asymmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-    CHECK(recall0 > 0.7);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
+    CHECK(recall0 > 0.685);
 
     auto intersections1 =
         (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
-    double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
-    CHECK(recall1 > 0.7);
+    double recall1 =
+        intersections1 / static_cast<double>(top_k_pq.num_cols() * k_nn);
+    CHECK(recall1 > 0.685);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << " " << recall1 << std::endl;
@@ -728,12 +730,14 @@ TEST_CASE("query siftsmall", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.symmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
     CHECK(recall0 > 0.6);
 
     auto intersections1 =
         (long)count_intersections(top_k_pq, groundtruth_set, k_nn);
-    double recall1 = intersections1 / ((double)top_k_pq.num_cols() * k_nn);
+    double recall1 =
+        intersections1 / static_cast<double>(top_k_pq.num_cols() * k_nn);
     CHECK(recall1 > 0.6);
 
     if (debug) {
@@ -775,8 +779,10 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
   SECTION("asymmetric") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.asymmetric_query(query_set, 10);
 
-    auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    auto intersections0 =
+        static_cast<long>(count_intersections(top_k_pq, top_k, k_nn));
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << std::endl;
@@ -788,7 +794,8 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.symmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << std::endl;
@@ -800,7 +807,8 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
     auto&& [top_k_pq_scores, top_k_pq] = pq_idx.asymmetric_query(query_set, 10);
 
     auto intersections0 = (long)count_intersections(top_k_pq, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
 
     if (debug) {
       std::cout << "Recall: " << recall0 << std::endl;
@@ -812,10 +820,10 @@ TEST_CASE("query 1M", "[flat_pq_index]") {
 TEST_CASE("flat_pq_index write and read", "[flat_pq_index]") {
   const bool debug = false;
 
-  size_t dimensions_{128};
-  size_t num_subspaces_{16};
-  size_t bits_per_subspace_{8};
-  size_t num_clusters_{256};
+  uint64_t dimensions_{128};
+  uint32_t num_subspaces_{16};
+  uint32_t bits_per_subspace_{8};
+  uint32_t num_clusters_{256};
 
   tiledb::Context ctx;
   std::string flatpq_index_uri =

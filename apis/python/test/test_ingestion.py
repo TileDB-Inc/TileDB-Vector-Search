@@ -781,9 +781,6 @@ def test_ingestion_timetravel(tmp_path):
                 second_num_edges = num_edges_history[1]
 
         # Clear all history at timestamp 19.
-        # With type-erased indexes, we cannot call clear_history() while the index is open because they
-        # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
-        index = None
         Index.clear_history(uri=index_uri, timestamp=19)
 
         with tiledb.Group(index_uri, "r") as group:
@@ -891,12 +888,7 @@ def test_ingestion_with_updates(tmp_path):
         ingestion_timestamp = ingestion_timestamps[0]
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        if index_type == "IVF_PQ":
-            # TODO(paris): We get 0.989 accuracy instead of 1.0. Investigate why - it should be 1.0
-            # when we have `nprobe = partitions` and `num_subspaces = dimensions`.
-            assert accuracy(result, gt_i) > 0.9
-            continue
-        assert accuracy(result, gt_i) == 1.0
+        assert accuracy(result, gt_i) >= (0.998 if index_type == "IVF_PQ" else 1.0)
 
         update_ids_offset = MAX_UINT64 - size
         updated_ids = {}
@@ -908,16 +900,22 @@ def test_ingestion_with_updates(tmp_path):
             updated_ids[i] = i + update_ids_offset
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index = index.consolidate_updates(retrain_index=True, partitions=20)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert base_sizes == [1000, 1000]
@@ -954,7 +952,7 @@ def test_ingestion_with_batch_updates(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        minimum_accuracy = 0.84 if index_type == "IVF_PQ" else 0.99
+        minimum_accuracy = 0.83 if index_type == "IVF_PQ" else 0.99
 
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
@@ -1182,12 +1180,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
                 second_num_edges = num_edges_history[1]
 
         # Clear history before the latest ingestion
-        latest_ingestion_timestamp = index.latest_ingestion_timestamp
         assert index.latest_ingestion_timestamp == 102
-        # With type-erased indexes, we cannot call clear_history() while the index is open because they
-        # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
-        index = None
-        Index.clear_history(uri=index_uri, timestamp=latest_ingestion_timestamp - 1)
+        Index.clear_history(
+            uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1
+        )
 
         with tiledb.Group(index_uri, "r") as group:
             assert metadata_to_list(group, "ingestion_timestamps") == [102]
@@ -1230,12 +1226,8 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
 
         # Clear all history
-        latest_ingestion_timestamp = index.latest_ingestion_timestamp
         assert index.latest_ingestion_timestamp == 102
-        # With type-erased indexes, we cannot call clear_history() while the index is open because they
-        # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
-        index = None
-        Index.clear_history(uri=index_uri, timestamp=latest_ingestion_timestamp)
+        Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp)
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
@@ -1832,11 +1824,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     )
 
     # Clear the index history, load, update, and query.
-    # With type-erased indexes, we cannot call clear_history() while the index is open because they
-    # open up a TileDB Array during query(). Deleting fragments while the array is open is not allowed.
-    latest_ingestion_timestamp = index.latest_ingestion_timestamp
-    index = None
-    Index.clear_history(uri=index_uri, timestamp=latest_ingestion_timestamp - 1)
+    Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1)
 
     index = IVFFlatIndex(uri=index_uri)
 

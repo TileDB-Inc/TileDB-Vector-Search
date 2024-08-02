@@ -125,11 +125,11 @@ class IndexFlatL2 {
     index_->remove(ids);
   }
 
-  auto dimensions() {
+  uint64_t dimensions() const {
     return _cpo::dimensions(*index_);
   }
 
-  auto num_vectors() {
+  auto num_vectors() const {
     return _cpo::num_vectors(*index_);
   }
 
@@ -162,7 +162,7 @@ class IndexFlatL2 {
 
     virtual void remove(const IdVector& ids) const = 0;
 
-    virtual size_t dimensions() const = 0;
+    virtual uint64_t dimensions() const = 0;
 
     virtual size_t num_vectors() const = 0;
   };
@@ -273,7 +273,7 @@ class IndexFlatL2 {
       //      index_.remove(ids);
     }
 
-    size_t dimensions() const override {
+    uint64_t dimensions() const override {
       return _cpo::dimensions(impl_index_);
     }
 

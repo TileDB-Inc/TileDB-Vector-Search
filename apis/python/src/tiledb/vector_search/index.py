@@ -59,6 +59,14 @@ class Index:
         self.ctx = vspy.Ctx(config)
         self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
+        try:
+            self.distance_metric = vspy.DistanceMetric(
+                self.group.meta.get("distance_metric", vspy.DistanceMetric.L2)
+            )
+        except ValueError:
+            raise ValueError(
+                f"Invalid distance metric in metadata: {self.group.meta.get('distance_metric')}."
+            )
         if (
             not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
             and timestamp is not None
@@ -306,6 +314,7 @@ class Index:
             k,
             self.dtype,
             self.updates_array_uri,
+            self.distance_metric,
             int(os.cpu_count() / 2),
             self.update_array_timestamp,
             self.config,
@@ -449,6 +458,9 @@ class Index:
         The consolidation process is used to avoid query latency degradation as more updates
         are added to the index. It triggers a base index re-indexing, merging the non-consolidated
         updates and the rest of the base vectors.
+
+        TODO(sc-51202): This throws with a unintuitive error message if update()/delete()/etc. has
+        not been called.
 
         Parameters
         ----------
@@ -691,6 +703,7 @@ class Index:
         k,
         dtype,
         updates_array_uri,
+        distance_metric,
         nthreads=8,
         timestamp=None,
         config=None,
@@ -708,6 +721,7 @@ class Index:
             StdVector_u64(additions_external_ids),
             k,
             nthreads,
+            distance_metric,
         )
         return np.transpose(np.array(d)), np.transpose(np.array(i)), updated_ids
 
@@ -815,6 +829,7 @@ def create_metadata(
     vector_type: np.dtype,
     index_type: str,
     storage_version: str,
+    distance_metric: vspy.DistanceMetric,
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
 ):
@@ -835,4 +850,5 @@ def create_metadata(
         group.meta["base_sizes"] = json.dumps([0])
         group.meta["ingestion_timestamps"] = json.dumps([0])
         group.meta["has_updates"] = False
+        group.meta["distance_metric"] = int(distance_metric)
         group.close()

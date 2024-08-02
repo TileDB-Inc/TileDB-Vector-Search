@@ -116,7 +116,6 @@ TEMPLATE_LIST_TEST_CASE("FeatureVector read", "[feature_vector]", TestTypes) {
 
   std::vector<TestType> v(N);
   randomize(v, {0, 128});
-  auto w{v};
   auto ctx = tiledb::Context{};
   auto vname = (std::filesystem::temp_directory_path() /
                 ("test_vector_" + std::to_string(api_counter++)))

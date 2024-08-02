@@ -702,7 +702,7 @@ TEST_CASE("temporal_policy", "[api]") {
     auto ids = std::span<IdsType>(
         (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
-    CHECK(ids.size() == 0);
-    CHECK(data.size() == 0);
+    CHECK(ids.empty());
+    CHECK(data.empty());
   }
 }

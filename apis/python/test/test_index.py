@@ -8,6 +8,7 @@ from common import *
 from common import load_metadata
 
 from tiledb.vector_search import Index
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import ivf_pq_index
@@ -417,7 +418,6 @@ def test_ivf_pq_index(tmp_path):
     )
 
     vfs = tiledb.VFS()
-
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
     assert vfs.dir_size(uri) == 0
@@ -575,7 +575,13 @@ def test_create_metadata(tmp_path):
     storage_version: str = STORAGE_VERSION
     group_exists: bool = False
     create_metadata(
-        uri, dimensions, vector_type, index_type, storage_version, group_exists
+        uri,
+        dimensions,
+        vector_type,
+        index_type,
+        storage_version,
+        vspy.DistanceMetric.L2,
+        group_exists,
     )
 
     # Check it contains the default metadata.

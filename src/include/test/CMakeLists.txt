@@ -40,6 +40,12 @@ endmacro (kmeans_add_exe)
 macro (kmeans_add_test TESTNAME)
     add_executable(${TESTNAME} ${TESTNAME}.cc)
     target_link_libraries(${TESTNAME} PRIVATE kmeans_lib Catch2::Catch2WithMain)
+    # target_include_directories(${TESTNAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/include/test/utils)
+    # target_compile_definitions(${TESTNAME} PRIVATE TDB_INCLUDE_PRNG_HEADER)
+    # target_compile_definitions(${TESTNAME} PRIVATE TILEDB_TDB_CATCH_PRNG_H)
+    # target_precompile_headers(${TESTNAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/include/test/utils/tdb_catch_prng.h)
+    target_precompile_headers(${TESTNAME} PRIVATE ${CMAKE_SOURCE_DIR}/include/test/utils/set_seed_from_catch.h)
+
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/data/")
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_FILE="${CMAKE_SOURCE_DIR}/data/karate.mtx")
     add_test(NAME ${TESTNAME}_test
@@ -148,7 +154,11 @@ kmeans_add_test(unit_nn-graph)
 
 kmeans_add_test(unit_partition)
 
+kmeans_add_test(unit_prng)
+
 kmeans_add_test(unit_scoring)
+
+kmeans_add_test(unit_seeder)
 
 kmeans_add_test(unit_slicing)
 

@@ -63,7 +63,7 @@ auto greedy_search_O2(
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t Lmax,
+    uint32_t Lmax,
     Distance&& distance = Distance{}) {
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L;
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> V;
@@ -170,7 +170,7 @@ auto greedy_search_O0(
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t Lmax,
+    uint32_t Lmax,
     Distance&& distance = Distance{}) {
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L;
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> V;
@@ -290,7 +290,7 @@ auto greedy_search_O1(
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t L,
+    uint32_t L,
     Distance&& distance = Distance{},
     bool convert_to_db_ids = false) {
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
@@ -425,7 +425,7 @@ auto greedy_search_O1(
   // Optionally convert from the vector indexes to the db IDs. Used during
   // querying to map to external IDs.
   if (convert_to_db_ids) {
-    for (int i = 0; i < k_nn; ++i) {
+    for (size_t i = 0; i < k_nn; ++i) {
       if (top_k[i] != std::numeric_limits<id_type>::max()) {
         top_k[i] = db.ids()[top_k[i]];
       }
@@ -443,7 +443,7 @@ auto greedy_search(
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t L,
+    uint32_t L,
     Distance&& distance = Distance{},
     bool convert_to_db_ids = false) {
   if (graph.num_vertices() == 0) {

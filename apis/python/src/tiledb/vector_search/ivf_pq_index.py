@@ -60,7 +60,6 @@ class IVFPQIndex(index.Index):
         )
         # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))
-        # TODO(paris): This is incorrect - should be fixed when we fix consolidation.
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -126,6 +125,7 @@ def create(
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     partitions: Optional[int] = None,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     **kwargs,
 ) -> IVFPQIndex:
     """
@@ -168,6 +168,10 @@ def create(
         raise ValueError(
             f"Number of dimensions ({dimensions}) must be divisible by num_subspaces ({num_subspaces})."
         )
+    if distance_metric != vspy.DistanceMetric.L2:
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in IVF_PQ"
+        )
     index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
@@ -175,6 +179,7 @@ def create(
         dimensions=dimensions,
         n_list=partitions if (partitions is not None and partitions is not -1) else 0,
         num_subspaces=num_subspaces,
+        distance_metric=int(distance_metric),
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

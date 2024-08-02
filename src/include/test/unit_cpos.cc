@@ -35,7 +35,6 @@
 #include <iostream>
 #include "cpos.h"
 #include "mdspan/mdspan.hpp"
-#include "utils/print_types.h"
 
 template <class I = size_t>
 using matrix_extents = stdx::dextents<I, 2>;

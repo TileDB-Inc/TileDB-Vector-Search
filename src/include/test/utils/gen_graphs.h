@@ -42,17 +42,17 @@
 #include <vector>
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/matrix_with_ids.h"
+#include "utils/prng.h"
 
 auto random_geometric_2D(size_t N) {
   std::random_device rd;
-  std::mt19937 gen(rd());
   std::uniform_real_distribution<float> coord(-1.0, 1.0);
 
   auto X = ColMajorMatrixWithIds<float>(2, N);
   std::iota(X.ids(), X.ids() + X.num_ids(), 0);
   for (size_t i = 0; i < N; ++i) {
-    X(0, i) = coord(gen);
-    X(1, i) = coord(gen);
+    X(0, i) = coord(PRNG::get().generator());
+    X(1, i) = coord(PRNG::get().generator());
   }
 
   return X;
@@ -91,8 +91,8 @@ auto gen_uni_grid(size_t M, size_t N) {
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
-      vec_array(0, i * N + j) = i;
-      vec_array(1, i * N + j) = j;
+      vec_array(0, i * N + j) = static_cast<float>(i);
+      vec_array(1, i * N + j) = static_cast<float>(j);
     }
   }
 
@@ -123,8 +123,8 @@ auto gen_bi_grid(size_t M, size_t N) {
 
   for (size_t i = 0; i < M; ++i) {
     for (size_t j = 0; j < N; ++j) {
-      vec_array(0, i * N + j) = i;
-      vec_array(1, i * N + j) = j;
+      vec_array(0, i * N + j) = static_cast<float>(i);
+      vec_array(1, i * N + j) = static_cast<float>(j);
     }
   }
 
@@ -214,7 +214,6 @@ auto normalize_matrix(
     for (size_t j = 0; j < from.num_cols(); ++j) {
       auto foo = from(i, j) - min;
       auto bar = max - min;
-      auto baz = foo / bar;
       to(i, j) =
           (T)(((max_val - min_val) * ((from(i, j) - min) / (max - min))) +
               min_val);
@@ -246,9 +245,9 @@ auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
   for (auto i : {-1, 1}) {
     for (auto j : {-1, 1}) {
       for (auto k : {-1, 1}) {
-        nn_hypercube(0, n) = i;
-        nn_hypercube(1, n) = j;
-        nn_hypercube(2, n) = k;
+        nn_hypercube(0, n) = static_cast<float>(i);
+        nn_hypercube(1, n) = static_cast<float>(j);
+        nn_hypercube(2, n) = static_cast<float>(k);
         ++n;
       }
     }
@@ -258,9 +257,9 @@ auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
     for (auto i : {-1, 1}) {
       for (auto j : {-1, 1}) {
         for (auto k : {-1, 1}) {
-          nn_hypercube(0, n) = i + dist_near(gen);
-          nn_hypercube(1, n) = j + dist_near(gen);
-          nn_hypercube(2, n) = k + dist_near(gen);
+          nn_hypercube(0, n) = static_cast<float>(i) + dist_near(gen);
+          nn_hypercube(1, n) = static_cast<float>(j) + dist_near(gen);
+          nn_hypercube(2, n) = static_cast<float>(k) + dist_near(gen);
           ++n;
         }
       }
@@ -271,9 +270,12 @@ auto build_hypercube(size_t k_near, size_t k_far, size_t seed = 0) {
     for (auto i : {-1, 1}) {
       for (auto j : {-1, 1}) {
         for (auto k : {-1, 1}) {
-          nn_hypercube(0, n) = i + (heads(gen) ? 1 : -1) * dist_far(gen);
-          nn_hypercube(1, n) = j + (heads(gen) ? 1 : -1) * dist_far(gen);
-          nn_hypercube(2, n) = k + (heads(gen) ? 1 : -1) * dist_far(gen);
+          nn_hypercube(0, n) =
+              static_cast<float>(i) + (heads(gen) ? 1.f : -1.f) * dist_far(gen);
+          nn_hypercube(1, n) =
+              static_cast<float>(j) + (heads(gen) ? 1.f : -1.f) * dist_far(gen);
+          nn_hypercube(2, n) =
+              static_cast<float>(k) + (heads(gen) ? 1.f : -1.f) * dist_far(gen);
           ++n;
         }
       }
