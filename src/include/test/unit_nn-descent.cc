@@ -35,9 +35,7 @@
 #include "detail/graph/nn-descent.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/compat.h"
-#include "detail/linalg/tdb_matrix.h"
 #include "test/utils/array_defs.h"
-#include "test/utils/query_common.h"
 
 #include <tiledb/tiledb>
 

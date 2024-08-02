@@ -566,7 +566,6 @@ class tdbPartitionedMatrix
       _memory_data.insert_entry(
           tdb_func__, col_count * dimensions_ * sizeof(T));
 
-      auto qs = query.query_status();
       // @todo Handle incomplete queries.
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
         throw std::runtime_error(

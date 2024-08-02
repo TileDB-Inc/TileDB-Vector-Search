@@ -209,11 +209,11 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return num_parts_;
   }
 
-  auto& ids() const {
+  const auto& ids() const {
     return ids_;
   }
 
-  auto& indices() const {
+  const auto& indices() const {
     return part_index_;
   }
 
@@ -221,21 +221,6 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return false;
   }
 };
-
-/**
- * Convenience class for row-major matrices.
- */
-template <
-    class T,
-    class partitioned_ids_type,
-    class part_index_type,
-    class I = uint64_t>
-using RowMajorPartitionedMatrix = PartitionedMatrix<
-    T,
-    partitioned_ids_type,
-    part_index_type,
-    stdx::layout_right,
-    I>;
 
 /**
  * Convenience class for column-major matrices.
@@ -257,9 +242,6 @@ void debug_partitioned_matrix(
     const PartitionedMatrix& matrix,
     const std::string& msg = "",
     size_t max_size = 10) {
-  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
-
   debug_matrix(matrix, msg, max_size);
 
   std::cout << "# ids: [";

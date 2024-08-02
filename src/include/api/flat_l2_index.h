@@ -124,11 +124,11 @@ class IndexFlatL2 {
     index_->remove(ids);
   }
 
-  uint64_t dimensions() {
+  uint64_t dimensions() const {
     return _cpo::dimensions(*index_);
   }
 
-  auto num_vectors() {
+  auto num_vectors() const {
     return _cpo::num_vectors(*index_);
   }
 

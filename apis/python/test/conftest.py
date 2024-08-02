@@ -1,6 +1,10 @@
 import ctypes
+import random
 
 import pytest
+
+from tiledb.vector_search.module import set_seed
+from tiledb.vector_search.utils import MAX_UINT64
 
 
 # Fails if there is any output to stdout or stderr.
@@ -20,3 +24,11 @@ def no_output(capfd):
     #     pytest.fail(
     #         f"Test failed because output was captured. out:\n{out}\nerr:\n{err}"
     #     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def set_native_seed():
+    set_seed(random.randint(0, MAX_UINT64))
+
+    # Wait for the test to finish.
+    yield

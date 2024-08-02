@@ -36,7 +36,6 @@
 #include <string>
 
 #include "index/ivf_flat_group.h"
-#include "test/utils/array_defs.h"
 
 // This test is for debugging and checks whether a particular group can be
 // opened
@@ -181,7 +180,7 @@ TEST_CASE(
   size_t expected_ingestion = 867;
   size_t expected_base = 5309;
   size_t expected_partitions = 42;
-  size_t expected_temp_size = 314159;
+  int64_t expected_temp_size = 314159;
   uint64_t expected_dimension = 128;
 
   tiledb::Context ctx;
@@ -370,7 +369,7 @@ TEST_CASE("storage version", "[ivf_flat_group]") {
   size_t expected_ingestion = 23094;
   size_t expected_base = 9234;
   size_t expected_partitions = 200;
-  size_t expected_temp_size = 11;
+  int64_t expected_temp_size = 11;
   uint64_t expected_dimension = 19238;
   auto offset = 2345;
 

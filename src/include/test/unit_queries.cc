@@ -55,13 +55,13 @@ TEST_CASE("test queries", "[queries]") {
   std::uniform_int_distribution<int> dist(-128, 128);
 
   auto db_mat = ColMajorMatrix<float>(dimension, num_vectors);
-  for (auto& x : raveled(db_mat)) {
+  for (const auto& x : raveled(db_mat)) {
     x = dist(gen);
   }
 
   //  auto b_db_mat =
   //      BlockedMatrix<float, stdx::layout_left>(dimension, num_vectors);
-  //  for (auto& x : raveled(b_db_mat)) {
+  //  for (const auto& x : raveled(b_db_mat)) {
   //    x = dist(gen);
   //  }
 

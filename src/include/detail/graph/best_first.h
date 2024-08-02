@@ -551,7 +551,7 @@ auto best_first_O4(
     typename std::decay_t<Graph>::id_type source,
     const V& query,
     size_t k_nn,
-    size_t Lmax,
+    uint32_t Lmax,
     Distance&& distance = Distance{}) {
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;

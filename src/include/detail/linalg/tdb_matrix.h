@@ -71,8 +71,6 @@ class tdbBlockedMatrix : public MatrixBase {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  using view_type = Base;
-
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  protected:
@@ -111,6 +109,10 @@ class tdbBlockedMatrix : public MatrixBase {
   // std::future<bool> fut_;
   // size_t pending_row_offset{0};
   // size_t pending_col_offset{0};
+
+  size_t get_elements_to_load() const {
+    return std::min(load_blocksize_, last_col_ - last_resident_col_);
+  }
 
  public:
   tdbBlockedMatrix(tdbBlockedMatrix&& rhs) = default;
@@ -317,12 +319,13 @@ class tdbBlockedMatrix : public MatrixBase {
           "Attribute type mismatch: " + datatype_to_string(attr_type) + " != " +
           datatype_to_string(tiledb::impl::type_to_tiledb<T>::tiledb_type));
     }
+
     size_type dimension = last_row_ - first_row_;
-    auto elements_to_load =
-        std::min(load_blocksize_, last_col_ - last_resident_col_);
+    auto elements_to_load = get_elements_to_load();
 
     // Return if we're at the end
     if (elements_to_load == 0 || dimension == 0) {
+      array_->close();
       return false;
     }
 
@@ -355,6 +358,10 @@ class tdbBlockedMatrix : public MatrixBase {
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete");
+    }
+
+    if (get_elements_to_load() == 0) {
+      array_->close();
     }
 
     num_loads_++;
@@ -422,34 +429,10 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
 };
 
 /**
- * Convenience class for row-major blocked matrices.
- */
-template <class T, class I = uint64_t>
-using tdbRowMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major blockef matrices.
  */
 template <class T, class I = uint64_t>
 using tdbColMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = uint64_t>
-using tdbRowMajorMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
-
-/**
- * Convenience class for column-major matrices.
- */
-template <class T, class I = uint64_t>
-using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = uint64_t>
-using tdbRowMajorPreLoadMatrix = tdbPreLoadMatrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.

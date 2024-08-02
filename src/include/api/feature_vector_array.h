@@ -367,7 +367,7 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
         a.feature_type_string() + " vs " + b.feature_type_string());
   }
 
-  auto proc_b = [&b](auto& aview) {
+  auto proc_b = [&b](const auto& aview) {
     switch (b.feature_type()) {
       case TILEDB_FLOAT32: {
         auto bview = MatrixView<float, stdx::layout_left>{
@@ -460,7 +460,7 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
  */
 auto count_intersections(
     const FeatureVectorArray& a, const FeatureVectorArray& b, size_t k_nn) {
-  auto proc_b = [&b, k_nn](auto& aview) {
+  auto proc_b = [&b, k_nn](const auto& aview) {
     switch (b.feature_type()) {
       case TILEDB_FLOAT32: {
         auto bview = MatrixView<float, stdx::layout_left>{

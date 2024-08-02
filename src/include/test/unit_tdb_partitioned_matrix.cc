@@ -35,9 +35,7 @@
 #include "cpos.h"
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_io.h"
-#include "detail/linalg/tdb_matrix_with_ids.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
-#include "mdspan/mdspan.hpp"
 
 using TestTypes = std::tuple<float, double, int, char, size_t, uint32_t>;
 
@@ -285,7 +283,7 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
         // num_parts = 3: [0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2].
         auto relevant_parts_combinations =
             generateSubsets<part_index_type>(num_parts);
-        for (auto relevant_parts : relevant_parts_combinations) {
+        for (const auto& relevant_parts : relevant_parts_combinations) {
           auto tdb_partitioned_matrix = tdbColMajorPartitionedMatrix<
               feature_type,
               id_type,
@@ -298,8 +296,8 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
               0);
           tdb_partitioned_matrix.load();
 
-          auto expected_num_vectors = 0;
-          auto expected_num_partitions = 0;
+          part_index_type expected_num_vectors = 0;
+          part_index_type expected_num_partitions = 0;
           for (auto part : relevant_parts) {
             auto expected_num_vectors_for_partition =
                 partitioned_matrix.indices()[part + 1] -

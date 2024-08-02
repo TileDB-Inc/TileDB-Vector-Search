@@ -35,8 +35,6 @@
 #include "../linalg.h"
 #include "test/utils/array_defs.h"
 
-std::string global_region = "us-east-1";
-
 TEST_CASE("slice", "[linalg]") {
   const bool debug = false;
 

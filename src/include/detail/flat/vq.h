@@ -65,7 +65,7 @@ auto vq_query_heap(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   // @todo Need to get the total number of queries, not just the first block
@@ -119,7 +119,11 @@ auto vq_query_heap(
 
 template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto vq_query_heap(
-    DB& db, Q& q, int k_nn, unsigned nthreads, Distance distance = Distance{}) {
+    DB& db,
+    Q& q,
+    size_t k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   return vq_query_heap(
       without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
@@ -133,7 +137,7 @@ auto vq_query_heap(
     DB& db,
     Q& q,
     const std::vector<Index>& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -155,7 +159,7 @@ auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance);
 
@@ -163,7 +167,7 @@ template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_tiled(
@@ -175,7 +179,7 @@ auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -187,7 +191,7 @@ auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance) {
   // @todo Need to get the total number of queries, not just the first block
@@ -249,7 +253,7 @@ auto vq_query_heap_2(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{});
 
@@ -257,7 +261,7 @@ template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto vq_query_heap_2(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_2(
@@ -273,7 +277,7 @@ auto vq_query_heap_2(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_2(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -285,7 +289,7 @@ auto vq_query_heap_2(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance) {
   // @todo Need to get the total number of queries, not just the first block

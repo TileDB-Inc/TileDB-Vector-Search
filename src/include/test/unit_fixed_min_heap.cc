@@ -33,7 +33,6 @@
 #include <catch2/catch_all.hpp>
 #include <iostream>
 #include <set>
-#include <span>
 #include <vector>
 #include "detail/linalg/vector.h"
 #include "utils/fixed_min_heap.h"
@@ -238,7 +237,7 @@ TEST_CASE("fixed_min_pair_heap", "[fixed_min_heap]") {
 
   SECTION("insert in ascending order") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert(10 - i, i);
+      a.insert(static_cast<float>(10 - i), i);
     }
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 1);
@@ -248,7 +247,7 @@ TEST_CASE("fixed_min_pair_heap", "[fixed_min_heap]") {
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert(10 + i, i);
+      a.insert(static_cast<float>(10 + i), i);
     }
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 10.0);
@@ -323,7 +322,7 @@ TEST_CASE(
 
   SECTION("insert in ascending order") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert(10 - i, i);
+      a.insert(static_cast<float>(10 - i), i);
     }
     CHECK(a.size() == 4);
     std::sort(begin(a), end(a));
@@ -334,9 +333,9 @@ TEST_CASE(
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert(10 + i, i);
+      a.insert(static_cast<float>(10 + i), i);
     }
-    CHECK(a.size() == 0);
+    CHECK(a.empty());
   }
 }
 
@@ -357,7 +356,7 @@ TEST_CASE(
   for (auto&& [e, f] : v) {
     a.insert(e, f);
   }
-  CHECK(a.size() != 0);
+  CHECK(!a.empty());
   for (auto&& [e, f] : a) {
     CHECK(e < thresh);
   }
@@ -365,7 +364,7 @@ TEST_CASE(
   a.resize(size(v));
   std::copy(begin(v), end(v), begin(a));
   a.filtered_heapify();
-  CHECK(a.size() != 0);
+  CHECK(!a.empty());
   for (auto&& [e, f] : a) {
     CHECK(e < thresh);
   }
@@ -374,7 +373,7 @@ TEST_CASE(
 TEST_CASE("threshold_heap: new threshold", "[threshold_heap]") {
   using element = std::tuple<float, int>;
 
-  float thresh = std::rand();
+  float thresh = static_cast<float>(std::rand());
   threshold_heap<float, int> a(thresh);
 
   std::vector<element> v(5500);
@@ -391,7 +390,7 @@ TEST_CASE("threshold_heap: new threshold", "[threshold_heap]") {
     CHECK(e < thresh);
   }
 
-  thresh -= thresh / 2.0;
+  thresh -= thresh / 2.f;
   a.set_threshold(thresh);
   for (auto&& [e, f] : a) {
     CHECK(e < thresh);

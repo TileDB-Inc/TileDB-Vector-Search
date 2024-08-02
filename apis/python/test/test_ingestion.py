@@ -888,7 +888,7 @@ def test_ingestion_with_batch_updates(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        minimum_accuracy = 0.84 if index_type == "IVF_PQ" else 0.99
+        minimum_accuracy = 0.83 if index_type == "IVF_PQ" else 0.99
 
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(

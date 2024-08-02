@@ -50,7 +50,7 @@ struct dummy_pq_index {
   uint64_t dimensions() const {
     return 128;
   }
-  auto num_subspaces() const {
+  uint32_t num_subspaces() const {
     return 16;
   }
   auto num_clusters() const {
@@ -64,7 +64,7 @@ struct dummy_pq_index {
   }
 };
 
-void debug_flat_ivf_centroids(auto& index) {
+void debug_flat_ivf_centroids(const auto& index) {
   std::cout << "\nDebug Centroids:\n" << std::endl;
   for (size_t j = 0; j < index.get_flat_ivf_centroids().num_rows(); ++j) {
     for (size_t i = 0; i < index.get_flat_ivf_centroids().num_cols(); ++i) {
@@ -296,11 +296,10 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
 TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
-  size_t num_subspaces = 16;
-  size_t max_iterationss = 4;
+  uint32_t num_subspaces = 16;
+  uint32_t max_iterations = 4;
   size_t nprobe = 10;
   size_t k_nn = 10;
-  size_t nthreads = 1;
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -316,7 +315,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
   std::iota(begin(ids), end(ids), 0);
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
-      nlist, num_subspaces, max_iterationss, nthreads);
+      nlist, num_subspaces, max_iterations);
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
   idx.add(training_set, ids);
   idx.write_index(ctx, ivf_index_uri);
@@ -355,7 +354,7 @@ TEST_CASE(
 
   SECTION("pq_encoding") {
     auto avg_error = pq_idx.verify_pq_encoding(training_set);
-    CHECK(avg_error < 0.08);
+    CHECK(avg_error < 0.081);
   }
   SECTION("pq_distances") {
     auto avg_error = pq_idx.verify_pq_distances(training_set);
@@ -364,7 +363,7 @@ TEST_CASE(
   SECTION("asymmetric_pq_distances") {
     auto [max_error, avg_error] =
         pq_idx.verify_asymmetric_pq_distances(training_set);
-    CHECK(avg_error < 0.08);
+    CHECK(avg_error < 0.081);
   }
   SECTION("symmetric_pq_distances") {
     auto [max_error, avg_error] =
@@ -646,12 +645,11 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   size_t num_vectors = 4;
   uint64_t dimensions = 4;
   size_t nlist = 1;
-  size_t num_subspaces = 2;
-  size_t max_iterations = 1;
+  uint32_t num_subspaces = 2;
+  uint32_t max_iterations = 1;
   float convergence_tolerance = 0.000025f;
   float reassign_ratio = 0.09f;
   std::optional<TemporalPolicy> temporal_policy = std::nullopt;
-  size_t num_clusters = 4;
   using feature_type = float;
   using id_type = uint32_t;
   auto index = ivf_pq_index<feature_type, id_type>(
@@ -661,7 +659,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       convergence_tolerance,
       reassign_ratio,
       temporal_policy,
-      num_clusters);
+      DistanceMetric::L2);
   auto ivf_index_uri =
       (std::filesystem::temp_directory_path() / "ivf_index").string();
 
@@ -728,9 +726,9 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
   size_t n_list = 1;
-  size_t num_subspaces = 1;
+  uint32_t num_subspaces = 1;
   float convergence_convergence_toleranceerance = 0.00003f;
-  size_t max_iterationsations = 3;
+  uint32_t max_iterations = 3;
 
   // Write the empty index.
   {

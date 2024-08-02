@@ -188,7 +188,7 @@ void debug_vector(
     std::cout << msg << ": ";
   }
   std::cout << "[";
-  int idx = 0;
+  size_t idx = 0;
   for (auto&& i : v) {
     if (idx++ >= max_size) {
       break;

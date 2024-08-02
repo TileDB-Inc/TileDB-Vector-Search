@@ -63,7 +63,6 @@ std::vector<T> read_vector_helper(
 
   auto domain_{schema_.domain()};
 
-  auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
   if (read_full_vector) {
@@ -85,7 +84,6 @@ std::vector<T> read_vector_helper(
   auto attr = schema_.attribute(0);
 
   std::string attr_name = attr.name();
-  tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
   std::vector<uint64_t> subarray_vals = {
