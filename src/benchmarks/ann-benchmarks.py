@@ -48,7 +48,7 @@ if also_benchmark_others:
     ]
 
 # If you want to skip running benchmarks and keep the instance running after the script finishes, set this to True. This is useful if you want to SSH into the instance and make changes to ann-benchmarks code. Make sure to terminate the instance manually on AWS when you are done.
-skip_benchmarks_and_leave_running = True
+skip_benchmarks_and_leave_running = False
 
 # You must set these before running the script:
 key_name = os.environ.get("TILEDB_EC2_KEY_NAME")
