@@ -47,6 +47,11 @@ if also_benchmark_others:
         "pgvector",
     ]
 
+# If you want to skip running benchmarks and keep the instance running after the script finishes,
+# set this to True. This is useful if you want to SSH into the instance and make changes to
+# ann-benchmarks code. Make sure to terminate the instance manually on AWS when you are done.
+skip_benchmarks_and_leave_running = False
+
 # You must set these before running the script:
 key_name = os.environ.get("TILEDB_EC2_KEY_NAME")
 key_path = os.environ.get("TILEDB_EC2_KEY_PATH")
@@ -221,42 +226,44 @@ try:
         "git clone https://github.com/TileDB-Inc/ann-benchmarks.git",
         f"cd {ann_benchmarks_dir} && pip3 install -r requirements.txt",
     ]
-    for installation in installations:
+    if not skip_benchmarks_and_leave_running:
+        for installation in installations:
+            post_reconnect_commands.append(
+                f"cd {ann_benchmarks_dir} && python3 install.py --algorithm {installation}"
+            )
+        for algorithm in algorithms:
+            post_reconnect_commands += [
+                f"cd {ann_benchmarks_dir} && python3 run.py --dataset sift-128-euclidean --algorithm {algorithm} --force --batch",
+                f"cd {ann_benchmarks_dir} && sudo chmod -R 777 results/sift-128-euclidean/10/{algorithm}-batch",
+            ]
         post_reconnect_commands.append(
-            f"cd {ann_benchmarks_dir} && python3 install.py --algorithm {installation}"
+            f"cd {ann_benchmarks_dir} && python3 create_website.py"
         )
-    for algorithm in algorithms:
-        post_reconnect_commands += [
-            f"cd {ann_benchmarks_dir} && python3 run.py --dataset sift-128-euclidean --algorithm {algorithm} --force --batch",
-            f"cd {ann_benchmarks_dir} && sudo chmod -R 777 results/sift-128-euclidean/10/{algorithm}-batch",
-        ]
-    post_reconnect_commands.append(
-        f"cd {ann_benchmarks_dir} && python3 create_website.py"
-    )
     execute_commands(ssh, post_reconnect_commands)
 
     logger.info("Finished running the benchmarks.")
 
     # Download the results.
-    remote_paths = [
-        f"{ann_benchmarks_dir}/index.html",
-        f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.png",
-        f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.html",
-    ]
-    for algorithm in algorithms:
-        remote_paths += [
-            f"{ann_benchmarks_dir}/{algorithm}-batch.png",
-            f"{ann_benchmarks_dir}/{algorithm}-batch.html",
+    if not skip_benchmarks_and_leave_running:
+        remote_paths = [
+            f"{ann_benchmarks_dir}/index.html",
+            f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.png",
+            f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.html",
         ]
-    sftp = ssh.open_sftp()
-    for remote_path in remote_paths:
-        local_filename = os.path.basename(remote_path)
-        local_path = os.path.join(results_dir, local_filename)
-        logger.info(f"Downloading {remote_path} to {local_path}...")
-        sftp.get(remote_path, local_path)
-        logger.info(f"File downloaded to {local_path}.")
-    logger.info("File downloading complete, closing the SFTP connection.")
-    sftp.close()
+        for algorithm in algorithms:
+            remote_paths += [
+                f"{ann_benchmarks_dir}/{algorithm}-batch.png",
+                f"{ann_benchmarks_dir}/{algorithm}-batch.html",
+            ]
+        sftp = ssh.open_sftp()
+        for remote_path in remote_paths:
+            local_filename = os.path.basename(remote_path)
+            local_path = os.path.join(results_dir, local_filename)
+            logger.info(f"Downloading {remote_path} to {local_path}...")
+            sftp.get(remote_path, local_path)
+            logger.info(f"File downloaded to {local_path}.")
+        logger.info("File downloading complete, closing the SFTP connection.")
+        sftp.close()
 
     logger.info("Benchmarking complete, closing the SSH connection.")
     ssh.close()
@@ -270,11 +277,16 @@ except Exception as e:
         terminate_instance(instance_id)
 
 else:
-    logger.info(
-        f"Finished, will try to terminate instance {instance_id} available at public_dns: {public_dns}."
-    )
-    if "instance_id" in locals():
-        logger.info(f"Will terminate instance {instance_id}.")
-        terminate_instance(instance_id)
+    if skip_benchmarks_and_leave_running:
+        logger.info(
+            f"We will leave instance {instance_id} available at public_dns: {public_dns}. Make sure to terminate it manually."
+        )
+    else:
+        logger.info(
+            f"Finished, will try to terminate instance {instance_id} available at public_dns: {public_dns}."
+        )
+        if "instance_id" in locals():
+            logger.info(f"Will terminate instance {instance_id}.")
+            terminate_instance(instance_id)
 
 logger.info("Done.")
