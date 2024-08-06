@@ -78,11 +78,7 @@ std::vector<std::string> siftsmall_files{
 TEST_CASE("test array uris", "[array_defs]") {
   bool debug = false;
 
-  for (const auto& test :
-       {siftsmall_array_uris,
-        // Not checked in to github
-        // siftsmall_uint8_array_uris,
-        bigann10k_array_uris}) {
+  for (const auto& test : {siftsmall_array_uris, bigann10k_array_uris}) {
     for (const auto& uri : test) {
       if (debug) {
         std::cout << uri << " "
