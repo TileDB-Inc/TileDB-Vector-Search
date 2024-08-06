@@ -32,31 +32,17 @@
 
 #include <catch2/catch_all.hpp>
 #include <filesystem>
-#include <tiledb/tiledb>
-#include "cpos.h"
-#include "detail/flat/qv.h"
 #include "detail/graph/adj_list.h"
 #include "detail/graph/best_first.h"
-#include "detail/graph/diskann.h"
-#include "detail/graph/nn-descent.h"
-#include "detail/graph/nn-graph.h"
-#include "detail/linalg/tdb_io.h"
-#include "index/vamana_index.h"
-#include "test/utils/array_defs.h"
 #include "test/utils/gen_graphs.h"
-#include "test/utils/test_utils.h"
 #include "test/utils/tiny_graphs.h"
-#include "utils/logging.h"
-#include "utils/utils.h"
-
-namespace fs = std::filesystem;
 
 TEST_CASE("best first", "[best_first]") {
   size_t num_vertices = 5;
   detail::graph::adj_list<size_t, size_t> graph(num_vertices);
   for (size_t src = 0; src < num_vertices; ++src) {
     for (size_t dst = 0; dst < num_vertices; ++dst) {
-      size_t score = static_cast<size_t>(
+      auto score = static_cast<size_t>(
           std::pow(static_cast<int>(src) - static_cast<int>(dst), 2));
       graph.add_edge(src, dst, score);
     }
@@ -121,7 +107,7 @@ TEST_CASE("best first", "[best_first]") {
     }
     CHECK(visited == expected_visited);
     // In this case we do not compute top_k and so these are empty.
-    CHECK(top_k_scores.size() == 0);
-    CHECK(top_k.size() == 0);
+    CHECK(top_k_scores.empty());
+    CHECK(top_k.empty());
   }
 }

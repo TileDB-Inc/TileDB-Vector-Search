@@ -567,6 +567,7 @@ auto best_first_O4(
 
   id_type p_star = source;
   set_enfrontiered(vertex_state_property_map[p_star]);
+
   do {
     visited.insert(p_star);
     set_visited(vertex_state_property_map[p_star]);
@@ -614,6 +615,7 @@ auto best_first_O4(
       throw std::runtime_error(
           "[best_first@best_first_O4] p_star is enfrontiered");
     }
+
     p_star = std::numeric_limits<id_type>::max();
     auto p_min_score = std::numeric_limits<score_type>::max();
 
@@ -635,6 +637,7 @@ auto best_first_O4(
         }
       }
     }
+
     // set_finished(vertex_state_property_map[p_star]);
   } while (p_star != std::numeric_limits<id_type>::max());
 

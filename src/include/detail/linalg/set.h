@@ -32,6 +32,8 @@
 #ifndef TILEDB_SET_H
 #define TILEDB_SET_H
 
+#include <unordered_set>
+
 template <typename T>
 void debug_unordered_set(
     const std::unordered_set<T>& s,
