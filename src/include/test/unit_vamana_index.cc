@@ -906,6 +906,7 @@ TEST_CASE("fmnist compare greedy search", "[vamana]") {
   auto num_intersected_O0 = count_intersections(top_n_O0, qv_top_k, k_nn);
   auto num_intersected_O1 = count_intersections(top_n_O1, qv_top_k, k_nn);
   auto num_intersected_O2 = count_intersections(top_n_O2, qv_top_k, k_nn);
+  CHECK(num_intersected_O0 == num_intersected_O1);
   CHECK(num_intersected_O0 == num_intersected_O2);
   if (debug) {
     std::cout << "num intersected_O0: " << num_intersected_O0 << " / " << L
