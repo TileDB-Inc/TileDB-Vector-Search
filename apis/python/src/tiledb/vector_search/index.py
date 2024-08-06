@@ -258,6 +258,11 @@ class Index:
         **kwargs
             Extra kwargs passed here are passed to the `query_internal` implementation of the concrete index class.
         """
+
+        def flip_results(results):
+            # multiplies by -1 to flip the results
+            results *= -1
+        
         if queries.ndim != 2:
             raise TypeError(
                 f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions"
@@ -280,8 +285,7 @@ class Index:
                 raise TypeError(
                     "Cannot pass driver_mode=Mode.LOCAL to query() - use driver_mode=None to query locally."
                 )
-
-            return self._query_with_driver(
+            results, indexes = self._query_with_driver(
                 queries,
                 k,
                 driver_mode,
@@ -289,6 +293,9 @@ class Index:
                 driver_access_credentials_name,
                 **kwargs,
             )
+            if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
+                flip_results(results)
+            return results, indexes
 
         if self.open_for_remote_query_execution:
             raise ValueError(
@@ -298,11 +305,16 @@ class Index:
         with tiledb.scope_ctx(ctx_or_config=self.config):
             if not self.has_updates:
                 if self.query_base_array:
-                    return self.query_internal(queries, k, **kwargs)
+                    results, indexes = self.query_internal(queries, k, **kwargs)
+                    if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
+                        flip_results(results)
+                    return results, indexes
                 else:
-                    return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
-                        (queries.shape[0], k), MAX_UINT64
-                    )
+                    results = np.full((queries.shape[0], k), MAX_FLOAT32)
+                    indexes = np.full((queries.shape[0], k), MAX_UINT64)
+                    if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
+                        flip_results(results)
+                    return results, indexes
 
         # Query with updates
         # Perform the queries in parallel
@@ -341,7 +353,8 @@ class Index:
         sort_index = np.argsort(internal_results_d, axis=1)
         internal_results_d = np.take_along_axis(internal_results_d, sort_index, axis=1)
         internal_results_i = np.take_along_axis(internal_results_i, sort_index, axis=1)
-
+        if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
+            flip_results(internal_results_d)
         # Merge update results
         if addition_results_d is None:
             return internal_results_d[:, 0:k], internal_results_i[:, 0:k]
@@ -359,6 +372,9 @@ class Index:
                 res_id += 1
             query_id += 1
 
+        if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
+            flip_results(addition_results_d)
+            
         results_d = np.hstack((internal_results_d, addition_results_d))
         results_i = np.hstack((internal_results_i, addition_results_i))
         sort_index = np.argsort(results_d, axis=1)
