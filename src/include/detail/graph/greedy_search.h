@@ -56,7 +56,7 @@ static inline bool noisy_robust_prune = false;
  * @brief Developmental code for performance analysis / optimization of
  * greedy search. "O1" is the OG.
  */
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search_O2(
     auto&& graph,
     auto&& db,
@@ -163,7 +163,7 @@ auto greedy_search_O2(
  * @param distance distance functor
  * @return top_k_scores, top_k, visited vertices
  */
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search_O0(
     auto&& graph,
     auto&& db,
@@ -280,10 +280,9 @@ auto greedy_search_O0(
  *
  * @todo -- add a `SearchPath `template parameter to determine whether to
  * return the top k results of the search or just the path taken.
- * @todo -- remove printf debugging code
  * @todo -- would it be more efficient somehow to process multiple queries?
  */
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search_O1(
     auto&& graph,
     auto&& db,
@@ -415,8 +414,6 @@ auto greedy_search_O1(
     q2.clear();
   }
 
-  // auto top_k = Vector<id_type>(k_nn);
-  // auto top_k_scores = Vector<score_type>(k_nn);
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
 
@@ -436,7 +433,7 @@ auto greedy_search_O1(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
 
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search(
     auto&& graph,
     auto&& db,
