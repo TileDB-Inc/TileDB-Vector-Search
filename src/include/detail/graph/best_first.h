@@ -413,8 +413,6 @@ auto best_first_O3(
     // Extract vertex with minimum score from frontier
     auto [_, p_star] = frontier.front();
 
-    auto debug_p_star = p_star;
-
     auto p_star_iter = vertex_state_map.find(p_star);
     if (p_star_iter == vertex_state_map.end()) {
       throw std::runtime_error(
@@ -470,7 +468,6 @@ auto best_first_O3(
           continue;
         }
       }
-      auto debug_neighbor_state = neighbor_state_iter->second;
 
       score_type heuristic = distance(db[neighbor_id], query);
 
@@ -541,9 +538,6 @@ auto best_first_O4(
     uint32_t Lmax,
     bool skip_top_k = false,
     Distance&& distance = Distance{}) {
-  scoped_timer __{"[best_first_O4][1] outer"};
-  debug_vector(query, "query");
-
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
 
@@ -565,7 +559,7 @@ auto best_first_O4(
   // Will be returned from this function
   std::unordered_set<id_type> visited;
 
-  //  scoped_timer __{tdb_func__};
+  scoped_timer __{tdb_func__};
 
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
@@ -573,17 +567,11 @@ auto best_first_O4(
 
   id_type p_star = source;
   set_enfrontiered(vertex_state_property_map[p_star]);
-  // debug_vector(vertex_state_property_map, "vertex_state_property_map A");
   do {
-    scoped_timer _2{"[best_first_O4][2] do loop"};
-    // std::cout << "[best_first_O4] p_star: " << p_star << std::endl;
     visited.insert(p_star);
-    // debug_unordered_set(visited, "[best_first_O4] visited");
     set_visited(vertex_state_property_map[p_star]);
 
-    scoped_timer _2a{"[best_first_O4][2a] do loop"};
     for (auto&& [_, neighbor_id] : graph[p_star]) {
-      scoped_timer _3{"[best_first_O4][3a] for graph loop"};
       auto neighbor_state = vertex_state_property_map[neighbor_id];
       if (!is_unvisited(neighbor_state)) {
         continue;
@@ -596,10 +584,6 @@ auto best_first_O4(
             std::to_string(::num_vectors(db)) + ")");
       }
       score_type heuristic = distance(db[neighbor_id], query);
-      // std::cout << "[best_first_O4] neighbor_id: " << neighbor_id <<
-      // std::endl; debug_vector(db[neighbor_id], "[best_first_O4] neighbor_id
-      // vector"); std::cout << "[best_first_O4] distance from neighbor to
-      // query: " << heuristic << std::endl;
 
       auto [inserted, evicted, evicted_score, evicted_id] =
           // pq.template evict_insert<unique_id>(heuristic, neighbor_id);
@@ -617,13 +601,8 @@ auto best_first_O4(
         set_evicted(vertex_state_property_map[neighbor_id]);
         clear_enpqd(vertex_state_property_map[neighbor_id]);
       }
-      // std::cout << "[best_first_O4] -- " << std::endl;
     }
-    // debug_vector(vertex_state_property_map, "vertex_state_property_map B");
-    scoped_timer _2b{"[best_first_O4][2b] do loop"};
     clear_enfrontiered(vertex_state_property_map[p_star]);
-    // debug_vector(vertex_state_property_map, "vertex_state_property_map C");
-    //    std::cout << "p_star " << p_star << std::endl;
     if (!is_visited(vertex_state_property_map[p_star])) {
       throw std::runtime_error(
           "[best_first@best_first_O4] p_star is not visited");
@@ -635,12 +614,10 @@ auto best_first_O4(
       throw std::runtime_error(
           "[best_first@best_first_O4] p_star is enfrontiered");
     }
-    scoped_timer _2c{"[best_first_O4][2c] do loop"};
     p_star = std::numeric_limits<id_type>::max();
     auto p_min_score = std::numeric_limits<score_type>::max();
 
     for (auto&& [pq_score, pq_id] : pq) {
-      scoped_timer _3{"[best_first_O4][3b] for graph loop 2"};
       if (pq_score < p_min_score) {
         auto pq_state = vertex_state_property_map[pq_id];
 
@@ -658,11 +635,9 @@ auto best_first_O4(
         }
       }
     }
-    std::cout << "[best_first_O4] --------------------- " << std::endl;
     // set_finished(vertex_state_property_map[p_star]);
   } while (p_star != std::numeric_limits<id_type>::max());
 
-  scoped_timer _4{"[best_first_O4][4] final part"};
   if (skip_top_k) {
     auto top_k = std::vector<id_type>(0);
     auto top_k_scores = std::vector<score_type>(0);
@@ -673,7 +648,6 @@ auto best_first_O4(
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
   get_top_k_with_scores_from_heap(pq, top_k, top_k_scores);
-  // debug_vector(vertex_state_property_map, "vertex_state_property_map final");
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited));
 }
@@ -747,7 +721,6 @@ auto best_first_O5(
           continue;
         }
       }
-      auto debug_neighbor_state = neighbor_state_iter->second;
 
       score_type heuristic = distance(db[neighbor_id], query);
 
