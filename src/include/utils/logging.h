@@ -167,8 +167,11 @@ class timing_data_class {
    * @return The singleton instance.
    */
   static timing_data_class& get_instance() {
-    static timing_data_class instance;
-    return instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static timing_data_class* instance;
+    std::call_once(flag, []() { instance = new timing_data_class(); });
+    return *instance;
   }
 
   /**
@@ -384,8 +387,11 @@ class memory_data {
    * @return Reference to the singleton instance of the class.
    */
   static memory_data& get_instance() {
-    static memory_data instance;
-    return instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static memory_data* instance;
+    std::call_once(flag, []() { instance = new memory_data(); });
+    return *instance;
   }
 
   /**
@@ -499,8 +505,11 @@ class count_data {
    * @return Reference to the singleton instance of the class.
    */
   static count_data& get_instance() {
-    static count_data instance;
-    return instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static count_data* instance;
+    std::call_once(flag, []() { instance = new count_data(); });
+    return *instance;
   }
 
   /**
