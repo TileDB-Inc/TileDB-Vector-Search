@@ -105,6 +105,7 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #define TDB_LOGGING_H
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -215,7 +216,7 @@ class timing_data_class {
    * name.
    */
   template <class D = std::chrono::milliseconds>
-  auto get_entries_summed(const std::string& string) const {
+  double get_entries_summed(const std::string& string) const {
     std::lock_guard<std::mutex> lock(mtx_);
     double sum = 0.0;
     auto range = interval_times_.equal_range(string);
@@ -251,6 +252,43 @@ class timing_data_class {
 
   bool get_verbose() const {
     return verbose_;
+  }
+
+  std::string dump() const {
+    std::ostringstream oss;
+    auto timer_names = get_timer_names();
+    for (const auto& name : timer_names) {
+      auto intervals = get_entries_separately<std::chrono::nanoseconds>(name);
+      double sum_ns = get_entries_summed<std::chrono::nanoseconds>(name);
+      double average_ns = sum_ns / intervals.size();
+
+      oss << name << ":";
+      oss << " count: " << intervals.size() << ",";
+      oss << " sum: " << format_duration_ns(sum_ns) << ",";
+      oss << " avg: " << format_duration_ns(average_ns);
+      oss << "\n";
+    }
+    return oss.str();
+  }
+
+ private:
+  std::string format_duration_ns(double duration_ns) const {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2);
+
+    if (duration_ns < 1000) {
+      oss << duration_ns;
+      return oss.str() + " ns";
+    } else if (duration_ns < 1000000) {
+      oss << (duration_ns / 1000.0);
+      return oss.str() + " µs";
+    } else if (duration_ns < 1000000000) {
+      oss << (duration_ns / 1000000.0);
+      return oss.str() + " ms";
+    } else {
+      oss << (duration_ns / 1000000000.0);
+      return oss.str() + " s";
+    }
   }
 };
 
@@ -461,6 +499,40 @@ class memory_data {
   bool get_verbose() const {
     return verbose_;
   }
+
+  std::string dump() const {
+    std::ostringstream oss;
+    auto usage_names = get_usage_names();
+    for (const auto& name : usage_names) {
+      auto usages = get_entries_separately(name);
+      double sum_mib = get_entries_summed(name);
+      double average_mib = sum_mib / usages.size();
+
+      oss << name << ":";
+      oss << " count: " << usages.size() << ",";
+      oss << " sum: " << format_memory_mib(sum_mib) << ",";
+      oss << " avg: " << format_memory_mib(average_mib);
+      oss << "\n";
+    }
+    return oss.str();
+  }
+
+ private:
+  std::string format_memory_mib(double memory_mib) const {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2);
+
+    if (memory_mib < 1) {
+      oss << (memory_mib * 1024);
+      return oss.str() + " KiB";
+    } else if (memory_mib < 1024) {
+      oss << memory_mib;
+      return oss.str() + " MiB";
+    } else {
+      oss << (memory_mib / 1024);
+      return oss.str() + " GiB";
+    }
+  }
 };
 
 inline memory_data& get_memory_data_instance() {
@@ -578,6 +650,23 @@ class count_data {
 
   bool get_verbose() const {
     return verbose_;
+  }
+
+  std::string dump() const {
+    std::ostringstream oss;
+    auto usage_names = get_usage_names();
+    for (const auto& name : usage_names) {
+      auto usages = get_entries_separately(name);
+      double sum = get_entries_summed(name);
+      double average = sum / usages.size();
+
+      oss << name << ":";
+      oss << " count: " << usages.size() << ",";
+      oss << " sum: " << sum << ",";
+      oss << " avg: " << average;
+      oss << "\n";
+    }
+    return oss.str();
   }
 };
 
