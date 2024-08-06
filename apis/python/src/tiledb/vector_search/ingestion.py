@@ -85,6 +85,7 @@ def ingest(
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
     distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    normalized: bool = False,
     **kwargs,
 ):
     """
@@ -1887,7 +1888,7 @@ def ingest(
         if additions_vectors is None:
             return
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
             additions_vectors = normalize_vectors(additions_vectors)
 
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
@@ -2394,7 +2395,7 @@ def ingest(
                 # Which reads the vectors and normalizes them, then swaps source_uri for normalized_uri
                 # This is because the cosine distance metric requires normalized vectors
                 normalization_nodes = []
-                if distance_metric == vspy.DistanceMetric.COSINE:
+                if distance_metric == vspy.DistanceMetric.COSINE and not normalized:
                     group = tiledb.Group(index_group_uri, "w")
                     normalized_uri = create_array(
                         group=group,
@@ -3030,7 +3031,7 @@ def ingest(
             storage_version=storage_version,
         )
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
             if input_vectors is not None:
                 input_vectors = normalize_vectors(input_vectors)
             if training_input_vectors is not None:
