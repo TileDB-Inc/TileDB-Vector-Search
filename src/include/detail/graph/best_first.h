@@ -38,9 +38,7 @@
 #include <queue>
 #include <unordered_set>
 #include <vector>
-
-#include <queue>
-
+#include "detail/linalg/set.h"
 template <class Node>
 struct compare_node {
   bool operator()(const Node& lhs, const Node& rhs) const {
@@ -80,17 +78,12 @@ auto best_first_O0(
         continue;
 
       score_type heuristic = distance(db[neighbor_id], query);
-      if (heuristic == 0) {
-        std::cout << "Found goal!" << std::endl;
-        return true;
-      }
       pq.push({heuristic, neighbor_id});
       visited.insert(neighbor_id);
     }
   }
 
-  std::cout << "Goal not found: visited " << size(visited) << std::endl;
-  return false;
+  return visited;
 }
 
 template <
@@ -103,18 +96,13 @@ auto best_first_O1(
     const A& db,
     typename std::decay_t<Graph>::id_type source,
     const V& query,
-    size_t Lmax,
     Distance&& distance = Distance{}) {
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
   using node_type = std::tuple<score_type, id_type>;
 
-  auto pq = k_min_heap<score_type, id_type>{Lmax};
-  auto frontier = std::vector<node_type>{};
   std::unordered_set<id_type> visited;
-
-  frontier.reserve(Lmax);
-  pq.insert(distance(db[source], query), source);
+  auto frontier = std::vector<node_type>{};
   frontier.push_back({distance(db[source], query), source});
 
   while (!frontier.empty()) {
@@ -122,7 +110,7 @@ auto best_first_O1(
     frontier.pop_back();
 
     if (visited.count(p_star) > 0) {
-      throw std::runtime_error("[best_first@best_first_O1] Vertex was visited");
+      continue;
     }
     visited.insert(p_star);
 
@@ -135,8 +123,7 @@ auto best_first_O1(
     }
   }
 
-  std::cout << "Goal not found: visited " << size(visited) << std::endl;
-  return false;
+  return visited;
 }
 
 template <
@@ -553,6 +540,9 @@ auto best_first_O4(
     size_t k_nn,
     uint32_t Lmax,
     Distance&& distance = Distance{}) {
+  scoped_timer __{"[best_first_O4][1] outer"};
+  debug_vector(query, "query");
+
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
 
@@ -582,20 +572,33 @@ auto best_first_O4(
 
   id_type p_star = source;
   set_enfrontiered(vertex_state_property_map[p_star]);
-
+  // debug_vector(vertex_state_property_map, "vertex_state_property_map A");
   do {
+    scoped_timer _2{"[best_first_O4][2] do loop"};
+    // std::cout << "[best_first_O4] p_star: " << p_star << std::endl;
     visited.insert(p_star);
+    // debug_unordered_set(visited, "[best_first_O4] visited");
     set_visited(vertex_state_property_map[p_star]);
 
+    scoped_timer _2a{"[best_first_O4][2a] do loop"};
     for (auto&& [_, neighbor_id] : graph[p_star]) {
-      auto debug_neighbor_id = neighbor_id;
+      scoped_timer _3{"[best_first_O4][3a] for graph loop"};
       auto neighbor_state = vertex_state_property_map[neighbor_id];
       if (!is_unvisited(neighbor_state)) {
         continue;
       }
       set_enpqd(vertex_state_property_map[neighbor_id]);
-
+      if (neighbor_id >= ::num_vectors(db)) {
+        throw std::runtime_error(
+            "[best_first@best_first_O4] neighbor_id (" +
+            std::to_string(neighbor_id) + ") >= ::num_vectors(db) (" +
+            std::to_string(::num_vectors(db)) + ")");
+      }
       score_type heuristic = distance(db[neighbor_id], query);
+      // std::cout << "[best_first_O4] neighbor_id: " << neighbor_id <<
+      // std::endl; debug_vector(db[neighbor_id], "[best_first_O4] neighbor_id
+      // vector"); std::cout << "[best_first_O4] distance from neighbor to
+      // query: " << heuristic << std::endl;
 
       auto [inserted, evicted, evicted_score, evicted_id] =
           // pq.template evict_insert<unique_id>(heuristic, neighbor_id);
@@ -613,8 +616,12 @@ auto best_first_O4(
         set_evicted(vertex_state_property_map[neighbor_id]);
         clear_enpqd(vertex_state_property_map[neighbor_id]);
       }
+      // std::cout << "[best_first_O4] -- " << std::endl;
     }
+    // debug_vector(vertex_state_property_map, "vertex_state_property_map B");
+    scoped_timer _2b{"[best_first_O4][2b] do loop"};
     clear_enfrontiered(vertex_state_property_map[p_star]);
+    // debug_vector(vertex_state_property_map, "vertex_state_property_map C");
     //    std::cout << "p_star " << p_star << std::endl;
     if (!is_visited(vertex_state_property_map[p_star])) {
       throw std::runtime_error(
@@ -627,11 +634,12 @@ auto best_first_O4(
       throw std::runtime_error(
           "[best_first@best_first_O4] p_star is enfrontiered");
     }
-
+    scoped_timer _2c{"[best_first_O4][2c] do loop"};
     p_star = std::numeric_limits<id_type>::max();
     auto p_min_score = std::numeric_limits<score_type>::max();
 
     for (auto&& [pq_score, pq_id] : pq) {
+      scoped_timer _3{"[best_first_O4][3b] for graph loop 2"};
       if (pq_score < p_min_score) {
         auto pq_state = vertex_state_property_map[pq_id];
 
@@ -649,13 +657,14 @@ auto best_first_O4(
         }
       }
     }
-
+    std::cout << "[best_first_O4] --------------------- " << std::endl;
     // set_finished(vertex_state_property_map[p_star]);
   } while (p_star != std::numeric_limits<id_type>::max());
 
+  scoped_timer _4{"[best_first_O4][4] final part"};
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
-
+  // debug_vector(vertex_state_property_map, "vertex_state_property_map final");
   get_top_k_with_scores_from_heap(pq, top_k, top_k_scores);
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited));
