@@ -33,30 +33,33 @@
 #define TILEDB_SET_H
 
 template <typename T>
-void debug_unordered_set(const std::unordered_set<T>& s, const std::string& msg = "", size_t max_size = 10) {
-    if (s.empty()) {
-        std::cout << msg << ": (empty)\n";
-        return;
+void debug_unordered_set(
+    const std::unordered_set<T>& s,
+    const std::string& msg = "",
+    size_t max_size = 10) {
+  if (s.empty()) {
+    std::cout << msg << ": (empty)\n";
+    return;
+  }
+
+  size_t end = std::min(max_size, s.size());
+  if (!msg.empty()) {
+    std::cout << msg << ": ";
+  }
+  std::cout << "[";
+  size_t i = 0;
+  for (const auto& val : s) {
+    std::cout << val;
+    if (i >= end) {
+      std::cout << "...";
+      break;
     }
-    
-    size_t end = std::min(max_size, s.size());
-    if (!msg.empty()) {
-        std::cout << msg << ": ";
+    if (i != end - 1) {
+      std::cout << ", ";
     }
-    std::cout << "[";
-    size_t i = 0;
-    for (const auto& val: s) {
-        std::cout << val;
-        if (i >= end) {
-            std::cout << "...";
-            break;
-        }
-        if (i != end -  1) {
-            std::cout << ", ";
-        }
-        i++;
-    }
-    std::cout << "]\n";
+    i++;
+  }
+  std::cout << "]\n";
 }
 
 #endif  // TILEDB_SET_H

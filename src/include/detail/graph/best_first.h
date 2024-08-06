@@ -539,6 +539,7 @@ auto best_first_O4(
     const V& query,
     size_t k_nn,
     uint32_t Lmax,
+    bool skip_top_k = false,
     Distance&& distance = Distance{}) {
   scoped_timer __{"[best_first_O4][1] outer"};
   debug_vector(query, "query");
@@ -564,7 +565,7 @@ auto best_first_O4(
   // Will be returned from this function
   std::unordered_set<id_type> visited;
 
-  scoped_timer __{tdb_func__};
+  //  scoped_timer __{tdb_func__};
 
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
@@ -662,10 +663,17 @@ auto best_first_O4(
   } while (p_star != std::numeric_limits<id_type>::max());
 
   scoped_timer _4{"[best_first_O4][4] final part"};
+  if (skip_top_k) {
+    auto top_k = std::vector<id_type>(0);
+    auto top_k_scores = std::vector<score_type>(0);
+    return std::make_tuple(
+        std::move(top_k_scores), std::move(top_k), std::move(visited));
+  }
+
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
-  // debug_vector(vertex_state_property_map, "vertex_state_property_map final");
   get_top_k_with_scores_from_heap(pq, top_k, top_k_scores);
+  // debug_vector(vertex_state_property_map, "vertex_state_property_map final");
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited));
 }

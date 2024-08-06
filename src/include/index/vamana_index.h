@@ -354,16 +354,15 @@ class vamana_index {
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
 
-        // Do not need top_k or top_k scores here -- use path_only enum
-        auto&& [top_k_scores, top_k, visited] =
-            ::best_first_O4 /*greedy_search*/ (
-                graph_,
-                feature_vectors_,
-                medoid_,
-                feature_vectors_[p],
-                1,
-                l_build_,
-                distance);
+        auto&& [_, __, visited] = ::best_first_O4 /*greedy_search*/ (
+            graph_,
+            feature_vectors_,
+            medoid_,
+            feature_vectors_[p],
+            1,
+            l_build_,
+            true,
+            distance);
         total_visited += visited.size();
 
         robust_prune(

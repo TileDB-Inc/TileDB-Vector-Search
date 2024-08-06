@@ -31,13 +31,15 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <filesystem>
+#include <tiledb/tiledb>
 #include "cpos.h"
 #include "detail/flat/qv.h"
 #include "detail/graph/adj_list.h"
+#include "detail/graph/best_first.h"
 #include "detail/graph/diskann.h"
 #include "detail/graph/nn-descent.h"
 #include "detail/graph/nn-graph.h"
-#include "detail/graph/best_first.h"
 #include "detail/linalg/tdb_io.h"
 #include "index/vamana_index.h"
 #include "test/utils/array_defs.h"
@@ -46,8 +48,6 @@
 #include "test/utils/tiny_graphs.h"
 #include "utils/logging.h"
 #include "utils/utils.h"
-#include <filesystem>
-#include <tiledb/tiledb>
 
 namespace fs = std::filesystem;
 
@@ -56,72 +56,72 @@ TEST_CASE("best first", "[best_first]") {
   detail::graph::adj_list<size_t, size_t> graph(num_vertices);
   for (size_t src = 0; src < num_vertices; ++src) {
     for (size_t dst = 0; dst < num_vertices; ++dst) {
-      size_t score = static_cast<size_t>(std::pow(static_cast<int>(src) - static_cast<int>(dst), 2));
+      size_t score = static_cast<size_t>(
+          std::pow(static_cast<int>(src) - static_cast<int>(dst), 2));
       graph.add_edge(src, dst, score);
     }
   }
   CHECK(detail::graph::num_vertices(graph) == num_vertices);
   CHECK(graph.num_vertices() == num_vertices);
-  std::vector<std::tuple<size_t, size_t>> expected = {{0, 0}, {1, 1}, {4, 2}, {9, 3}, {16, 4}};
-  CHECK(std::equal(expected.begin(), expected.end(), graph.out_edges(0).begin()));
+  std::vector<std::tuple<size_t, size_t>> expected = {
+      {0, 0}, {1, 1}, {4, 2}, {9, 3}, {16, 4}};
+  CHECK(
+      std::equal(expected.begin(), expected.end(), graph.out_edges(0).begin()));
 
-  auto feature_vectors = ColMajorMatrixWithIds<float, size_t>{{
-    {1.f, 1.f, 1.f}, {2.f, 2.f, 2.f}, {3.f, 3.f, 3.f}, {4.f, 4.f, 4.f}, {5.f, 5.f, 5.f}}, 
-    {1, 2, 3, 4, 5}
-  };
-
+  auto feature_vectors = ColMajorMatrixWithIds<float, size_t>{
+      {{1.f, 1.f, 1.f},
+       {2.f, 2.f, 2.f},
+       {3.f, 3.f, 3.f},
+       {4.f, 4.f, 4.f},
+       {5.f, 5.f, 5.f}},
+      {1, 2, 3, 4, 5}};
 
   size_t k_nn = 1;
   size_t source = 0;
   {
-    auto visited = best_first_O0(
-                  graph,
-                  feature_vectors,
-                  source,
-                  feature_vectors[0]);
+    auto visited =
+        best_first_O0(graph, feature_vectors, source, feature_vectors[0]);
     CHECK(visited == std::unordered_set<size_t>{0, 1, 2, 3, 4});
   }
 
   {
-    auto visited = best_first_O1(
-                  graph,
-                  feature_vectors,
-                  source,
-                  feature_vectors[0]);
+    auto visited =
+        best_first_O1(graph, feature_vectors, source, feature_vectors[0]);
     CHECK(visited == std::unordered_set<size_t>{0, 1, 2, 3, 4});
   }
 
-  // NOTE: Here is where you would expect to also test best_first_O2 and best_first_O3, but they do  not compile. We'll leave them for now, but eventually we should either remove them or get them building.
+  // NOTE: Here is where you would expect to also test best_first_O2 and
+  // best_first_O3, but they do  not compile. We'll leave them for now, but
+  // eventually we should either remove them or get them building.
 
   // Test best_first_O4 when used normally.
   for (size_t l_max = 1; l_max < 6; ++l_max) {
     auto&& [top_k_scores, top_k, visited] = best_first_O4(
-                  graph,
-                  feature_vectors,
-                  source,
-                  feature_vectors[0],
-                  k_nn,
-                  l_max);
-    
-    if (l_max == 1) {
-      CHECK(visited == std::unordered_set<size_t>{0});
+        graph, feature_vectors, source, feature_vectors[0], k_nn, l_max);
+
+    std::unordered_set<size_t> expected_visited;
+    for (size_t i = 0; i < l_max; ++i) {
+      expected_visited.insert(i);
     }
-    if (l_max == 2) {
-      CHECK(visited == std::unordered_set<size_t>{0, 1});
-    }
-    if (l_max == 3) {
-      CHECK(visited == std::unordered_set<size_t>{0, 1, 2});
-    }
-    if (l_max == 4) {
-      CHECK(visited == std::unordered_set<size_t>{0, 1, 2, 3});
-    }
-    if (l_max == 5) {
-      CHECK(visited == std::unordered_set<size_t>{0, 1, 2, 3, 4});
-    }
+    CHECK(visited == expected_visited);
+    CHECK(top_k_scores.size() == k_nn);
+    CHECK(top_k.size() == k_nn);
     CHECK(top_k_scores[0] == 0);
     CHECK(top_k[0] == 0);
   }
 
-  // Test best_first_O4 when with skip_top_k = True.
+  // Test best_first_O4 when with skip_top_k=true.
+  for (size_t l_max = 1; l_max < 6; ++l_max) {
+    auto&& [top_k_scores, top_k, visited] = best_first_O4(
+        graph, feature_vectors, source, feature_vectors[0], k_nn, l_max, true);
 
+    std::unordered_set<size_t> expected_visited;
+    for (size_t i = 0; i < l_max; ++i) {
+      expected_visited.insert(i);
+    }
+    CHECK(visited == expected_visited);
+    // In this case we do not compute top_k and so these are empty.
+    CHECK(top_k_scores.size() == 0);
+    CHECK(top_k.size() == 0);
+  }
 }
