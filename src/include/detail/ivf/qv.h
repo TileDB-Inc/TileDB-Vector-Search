@@ -1040,9 +1040,21 @@ auto query_finite_ram(
 
   log_timer _i{tdb_func__ + " in RAM"};
 
+  std::vector<std::future<decltype(min_scores)>> futs;
+  futs.reserve(nthreads);
+
   size_t part_offset = 0;
-  while (partitioned_vectors.load()) {
-    _i.start();
+  while (partitioned_vectors.load_tmp()) {
+    while (!futs.empty()) {
+      auto min_n = futs.back().get();
+      futs.pop_back();
+      for (size_t j = 0; j < num_queries; ++j) {
+        for (auto&& [e, f] : min_n[j]) {
+          min_scores[j].insert(e, f);
+        }
+      }
+    }
+    partitioned_vectors.swap();
 
     auto indices = partitioned_vectors.indices();
     auto partitioned_ids = partitioned_vectors.ids();
@@ -1050,15 +1062,11 @@ auto query_finite_ram(
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-    std::vector<std::future<decltype(min_scores)>> futs;
-    futs.reserve(nthreads);
-
     for (size_t n = 0; n < nthreads; ++n) {
       auto first_part =
           std::min<size_t>(n * parts_per_thread, current_part_size);
       auto last_part =
           std::min<size_t>((n + 1) * parts_per_thread, current_part_size);
-
       if (first_part != last_part) {
         futs.emplace_back(std::async(
             std::launch::async,
@@ -1084,18 +1092,16 @@ auto query_finite_ram(
       }
     }
 
-    for (size_t n = 0; n < size(futs); ++n) {
-      auto min_n = futs[n].get();
-
-      for (size_t j = 0; j < num_queries; ++j) {
-        for (auto&& [e, f] : min_n[j]) {
-          min_scores[j].insert(e, f);
-        }
+    part_offset += current_part_size;
+  }
+  while (!futs.empty()) {
+    auto min_n = futs.back().get();
+    futs.pop_back();
+    for (size_t j = 0; j < num_queries; ++j) {
+      for (auto&& [e, f] : min_n[j]) {
+        min_scores[j].insert(e, f);
       }
     }
-
-    part_offset += current_part_size;
-    _i.stop();
   }
 
   return get_top_k_with_scores(min_scores, k_nn);

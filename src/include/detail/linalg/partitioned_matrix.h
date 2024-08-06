@@ -76,6 +76,7 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
   using Base::num_rows;
 
  public:
+  using base_type = Base;
   using value_type = typename Base::value_type;  // should be same as T
   using typename Base::index_type;
   using typename Base::reference;
@@ -217,8 +218,15 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return part_index_;
   }
 
+  virtual bool load_tmp() {
+    return false;
+  }
+
   virtual bool load() {
     return false;
+  }
+
+  virtual void swap() {
   }
 };
 

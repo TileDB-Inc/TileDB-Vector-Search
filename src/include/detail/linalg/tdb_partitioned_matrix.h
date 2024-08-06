@@ -143,6 +143,12 @@ class tdbPartitionedMatrix
   std::unique_ptr<tiledb::Array> partitioned_ids_array_;
   tiledb::ArraySchema ids_schema_;
 
+  std::unique_ptr<std::vector<id_type>> temp_ids_;
+  std::unique_ptr<std::vector<indices_type>> temp_part_index_;
+  std::unique_ptr<typename Base::base_type> temp_data_;
+  size_t temp_num_vectors_{0};
+  size_t temp_num_parts_{0};
+
   /*****************************************************************************
    * Partitioning information
    ****************************************************************************/
@@ -418,6 +424,11 @@ class tdbPartitionedMatrix
         std::move(Base{dimensions_, column_capacity_, max_resident_parts_}));
     this->num_vectors_ = 0;
     this->num_parts_ = 0;
+    this->temp_ids_ = std::make_unique<std::vector<id_type>>(column_capacity_);
+    this->temp_part_index_ =
+        std::make_unique<std::vector<indices_type>>(max_resident_parts_ + 1);
+    this->temp_data_ = std::make_unique<typename Base::base_type>(
+        dimensions_, column_capacity_);
 
     if (this->part_index_.size() != max_resident_parts_ + 1) {
       throw std::runtime_error(
@@ -433,14 +444,14 @@ class tdbPartitionedMatrix
    * @todo -- col oriented only for now, should generalize.
    *
    */
-  bool load() override {
+  bool load_tmp() override {
     scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
 
-    if (this->part_index_.size() != max_resident_parts_ + 1) {
+    if (this->temp_part_index_->size() != max_resident_parts_ + 1) {
       throw std::runtime_error(
           "[tdb_partioned_matrix@load] Invalid partitioning, part_index_ "
           "size " +
-          std::to_string(this->part_index_.size()) +
+          std::to_string(this->temp_part_index_->size()) +
           " != " + std::to_string(max_resident_parts_ + 1));
     }
 
@@ -502,11 +513,11 @@ class tdbPartitionedMatrix
             std::to_string(num_resident_parts) + " resident parts");
       }
 
-      if (this->part_index_.size() != max_resident_parts_ + 1) {
+      if (this->temp_part_index_->size() != max_resident_parts_ + 1) {
         throw std::runtime_error(
             "[tdb_partioned_matrix@load] Invalid partitioning, part_index_ "
             "size (" +
-            std::to_string(this->part_index_.size()) +
+            std::to_string(this->temp_part_index_->size()) +
             ") != max_resident_parts_ + 1 (" +
             std::to_string(max_resident_parts_ + 1) + ")");
       }
@@ -558,7 +569,7 @@ class tdbPartitionedMatrix
 
       // c. Execute the vectors query.
       tiledb::Query query(ctx_, *(this->partitioned_vectors_array_));
-      auto ptr = this->data();
+      auto ptr = this->temp_data_->data();
       query.set_subarray(subarray)
           .set_layout(partitioned_vectors_schema_.cell_order())
           .set_data_buffer(attr_name, ptr, col_count * dimensions_);
@@ -575,7 +586,7 @@ class tdbPartitionedMatrix
 
       // d. Execute the IDs query.
       tiledb::Query ids_query(ctx_, *partitioned_ids_array_);
-      auto ids_ptr = this->ids_.data();
+      auto ids_ptr = this->temp_ids_->data();
       ids_query.set_subarray(ids_subarray)
           .set_data_buffer(ids_attr_name, ids_ptr, col_count);
       tiledb_helpers::submit_query(tdb_func__, partitioned_ids_uri_, ids_query);
@@ -594,19 +605,35 @@ class tdbPartitionedMatrix
     // Also [first_resident_part, last_resident_part_)
     auto sub = squashed_indices_[first_resident_part];
     for (size_t i = 0; i < num_resident_parts + 1; ++i) {
-      this->part_index_[i] = squashed_indices_[i + first_resident_part] - sub;
+      (*this->temp_part_index_)[i] =
+          squashed_indices_[i + first_resident_part] - sub;
     }
 
-    this->num_vectors_ = num_resident_cols_;
-    this->num_parts_ = num_resident_parts;
+    this->temp_num_vectors_ = num_resident_cols_;
+    this->temp_num_parts_ = num_resident_parts;
 
     if (last_resident_part_ == total_num_parts_ &&
         last_resident_col_ == total_max_cols_) {
       // We have loaded all the data we can, let's close our Array's.
       close();
     }
-
     return true;
+  }
+
+  bool load() override {
+    if (load_tmp()) {
+      swap();
+      return true;
+    }
+    return false;
+  }
+
+  void swap() override {
+    this->num_vectors_ = this->temp_num_vectors_;
+    this->num_parts_ = this->temp_num_parts_;
+    std::swap(this->ids_, *this->temp_ids_);
+    std::swap(this->part_index_, *this->temp_part_index_);
+    std::swap(static_cast<typename Base::base_type&>(*this), *this->temp_data_);
   }
 
   /**
