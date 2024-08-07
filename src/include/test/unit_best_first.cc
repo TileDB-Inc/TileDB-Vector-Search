@@ -96,6 +96,21 @@ TEST_CASE("best first", "[best_first]") {
     CHECK(top_k[0] == 0);
   }
 
+  for (size_t l_max = 1; l_max < 6; ++l_max) {
+    auto&& [top_k_scores, top_k, visited] = best_first_O5(
+        graph, feature_vectors, source, feature_vectors[0], k_nn, l_max);
+
+    std::unordered_set<size_t> expected_visited;
+    for (size_t i = 0; i < l_max; ++i) {
+      expected_visited.insert(i);
+    }
+    CHECK(visited == expected_visited);
+    CHECK(top_k_scores.size() == k_nn);
+    CHECK(top_k.size() == k_nn);
+    CHECK(top_k_scores[0] == 0);
+    CHECK(top_k[0] == 0);
+  }
+
   // Test best_first_O4 when with skip_top_k=true.
   for (size_t l_max = 1; l_max < 6; ++l_max) {
     auto&& [top_k_scores, top_k, visited] = best_first_O4(
