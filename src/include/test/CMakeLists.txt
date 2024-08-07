@@ -62,6 +62,8 @@ endmacro (kmeans_add_test)
 
 kmeans_add_exe(time_scoring)
 
+kmeans_add_test(unit_best_first)
+
 kmeans_add_test(unit_vamana_index)
 
 kmeans_add_test(unit_vamana_group)

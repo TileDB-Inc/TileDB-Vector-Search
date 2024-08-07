@@ -178,6 +178,20 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
   constexpr auto num_edges() const {
     return num_edges_;
   }
+
+  std::string dump(const std::string& msg = "adj_list") const {
+    std::string s;
+    s += msg + " (vertices: " + std::to_string(num_vertices()) +
+         ", edges: " + std::to_string(num_edges()) + ")\n";
+    for (size_t i = 0; i < num_vertices(); ++i) {
+      s += "  " + std::to_string(i) + ": ";
+      for (const auto& [val, dst] : out_edges(i)) {
+        s += std::to_string(dst) + "(" + std::to_string(val) + ") ";
+      }
+      s += "\n";
+    }
+    return s;
+  }
 };
 
 template <class T, std::integral I>
