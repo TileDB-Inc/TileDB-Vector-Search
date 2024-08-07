@@ -51,7 +51,7 @@ template <
     feature_vector_array A,
     feature_vector V,
     class Distance = sum_of_squares_distance>
-auto best_first_O0(
+std::unordered_set<typename std::decay_t<Graph>::id_type> best_first_O0(
     const Graph& graph,
     const A& db,
     typename std::decay_t<Graph>::id_type source,
@@ -91,7 +91,7 @@ template <
     feature_vector_array A,
     feature_vector V,
     class Distance = sum_of_squares_distance>
-auto best_first_O1(
+std::unordered_set<typename std::decay_t<Graph>::id_type> best_first_O1(
     const Graph& graph,
     const A& db,
     typename std::decay_t<Graph>::id_type source,
