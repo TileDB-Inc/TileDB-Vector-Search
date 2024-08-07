@@ -260,8 +260,17 @@ class Index:
         """
 
         def flip_results(results):
-            # multiplies by -1 to flip the results
-            results *= -1
+            # Modify results in-place, replacing each element with its reciprocal (1 / result)
+            # This is called for inner product results, as the internal query functions return 1 / inner product
+            # We need to handle potential division by zero
+            with np.errstate(divide='ignore', invalid='ignore'):
+                np.reciprocal(results, out=results)
+            # Replace inf (result of 1/0) with a large finite number
+            results[np.isinf(results)] = np.finfo(results.dtype).max
+            # Replace NaN (0/0) with 0
+            results[np.isnan(results)] = 0
+            
+            
         
         if queries.ndim != 2:
             raise TypeError(
