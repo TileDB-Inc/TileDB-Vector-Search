@@ -232,10 +232,137 @@ This is a 1D dense array that maps vector indices in the `shuffled_vectors` arra
 | :------------- | :-------------- | :--------------------------------- |
 | `values`       | `uint64_t`      | Contains the vector `external_id`. |
 
-### IVF_PQ
-
-TODO
-
 ### VAMANA
 
-TODO
+#### Metadata
+
+| Name           | Description                                                    |
+| -------------- | -------------------------------------------------------------- |
+| `l_build`      | The `l_build` parameter used when constructing the graph.      |
+| `r_max_degree` | The `r_max_degree` parameter used when constructing the graph. |
+
+#### `shuffled_vectors`
+
+This is a 2D dense array that holds all the vectors. Each vector partition is stored in a consecutive index range of this array.
+
+#### Basic schema parameters
+
+| **Parameter** | **Value** |
+| :------------ | :-------- |
+| Array type    | Dense     |
+| Rank          | 2D        |
+| Cell order    | Col-major |
+| Tile order    | Col-major |
+
+#### Dimensions
+
+| Dimension Name | TileDB Datatype | Domain            | Description                                               |
+| :------------- | :-------------- | :---------------- | :-------------------------------------------------------- |
+| `rows`         | `int32_t`       | `[0, dimensions]` | Corresponds to the vector dimensions.                     |
+| `cols`         | `int32_t`       | `[0, MAX_INT32]`  | Corresponds to the vector position in the set of vectors. |
+
+#### Attributes
+
+| Attribute Name | TileDB Datatype | Description                                          |
+| :------------- | :-------------- | :--------------------------------------------------- |
+| `values`       | `dtype`         | Contains the vector value at the specific dimension. |
+
+#### `shuffled_ids`
+
+This is a 1D dense array that maps vector indices in the `shuffled_vectors` array to `external_ids` of each vector.
+
+#### Basic schema parameters
+
+| **Parameter** | **Value** |
+| :------------ | :-------- |
+| Array type    | Dense     |
+| Rank          | 1D        |
+| Cell order    | Col-major |
+| Tile order    | Col-major |
+
+#### Dimensions
+
+| Dimension Name | TileDB Datatype | Domain           | Description                                               |
+| :------------- | :-------------- | :--------------- | :-------------------------------------------------------- |
+| `rows`         | `int32_t`       | `[0, MAX_INT32]` | Corresponds to the vector position in `shuffled_vectors`. |
+
+#### Attributes
+
+| Attribute Name | TileDB Datatype | Description                        |
+| :------------- | :-------------- | :--------------------------------- |
+| `values`       | `uint64_t`      | Contains the vector `external_id`. |
+
+#### `adjacency_row_index_array_name`
+
+This is a 1D dense array that holds the edges for each node in the compressed sparse row (CSR) format graph. Each value indicates where the neighbors (edges) for each successive node start in `adjacency_ids` and `adjacency_scores`. For example, we might have [0, 2, 8, 13] which indicates that the neighbors for node 0 start at index 0, the neighbors for node 1 start at index 2, and the neighbors for node 2 start at index 8. The final value is the end of the array, so the neighbors for node 2 end at index 13. With that information, we can look in `adjacency_ids` to determine the destination node. The source node can be inferred by the index of the Adjacency Row Indices array. Once you know the source or destination node index, you can look at that index in `shuffled_vectors` or `shuffled_ids` to get the vector or external ID for that node.
+
+#### Basic schema parameters
+
+| **Parameter** | **Value** |
+| :------------ | :-------- |
+| Array type    | Dense     |
+| Rank          | 1D        |
+| Cell order    | Col-major |
+| Tile order    | Col-major |
+
+#### Dimensions
+
+| Dimension Name | TileDB Datatype | Domain           | Description                                                                  |
+| :------------- | :-------------- | :--------------- | :--------------------------------------------------------------------------- |
+| `rows`         | `int32_t`       | `[0, MAX_INT32]` | Corresponds to the vector position in `shuffled_vectors` and `shuffled_ids`. |
+
+#### Attributes
+
+| Attribute Name | TileDB Datatype | Description                                                                                 |
+| :------------- | :-------------- | :------------------------------------------------------------------------------------------ |
+| `values`       | `uint64_t`      | Contains the start and stop indexes in `adjacency_ids` and `adjacency_scores` for the node. |
+
+#### `adjacency_ids`
+
+This is a 1D dense array that holds the indexes of the destination vector for each edge in the compressed sparse row (CSR) format graph. Each value is an index into the `shuffled_vectors` and `shuffled_ids` arrays. This only holds the destination nodes of the graph, the source node is in `adjacency_row_index_array_name`, which itself points to `adjacency_ids`.
+
+#### Basic schema parameters
+
+| **Parameter** | **Value** |
+| :------------ | :-------- |
+| Array type    | Dense     |
+| Rank          | 1D        |
+| Cell order    | Col-major |
+| Tile order    | Col-major |
+
+#### Dimensions
+
+| Dimension Name | TileDB Datatype | Domain           | Description                                                                  |
+| :------------- | :-------------- | :--------------- | :--------------------------------------------------------------------------- |
+| `rows`         | `int32_t`       | `[0, MAX_INT32]` | Corresponds to the vector position in `shuffled_vectors` and `shuffled_ids`. |
+
+#### Attributes
+
+| Attribute Name | TileDB Datatype | Description                                                              |
+| :------------- | :-------------- | :----------------------------------------------------------------------- |
+| `values`       | `uint64_t`      | Contains the index of the destination vector for this edge in the graph. |
+
+#### `adjacency_scores`
+
+This is a 1D dense array that holds the distance of the edge in `adjacency_ids` in the compressed sparse row (CSR) format graph. This follows the same pattern as `adjacency_ids`, but holds the edge distance instead of the destination node.
+
+#### Basic schema parameters
+
+| **Parameter** | **Value** |
+| :------------ | :-------- |
+| Array type    | Dense     |
+| Rank          | 1D        |
+| Cell order    | Col-major |
+| Tile order    | Col-major |
+
+#### Dimensions
+
+| Dimension Name | TileDB Datatype | Domain           | Description                                            |
+| :------------- | :-------------- | :--------------- | :----------------------------------------------------- |
+| `rows`         | `int32_t`       | `[0, MAX_INT32]` | Corresponds to the vector position in `adjacency_ids`. |
+
+#### Attributes
+
+| Attribute Name | TileDB Datatype | Description                                           |
+| :------------- | :-------------- | :---------------------------------------------------- |
+| `values`       | `float`         | Contains the distance between neighbors in the graph. |

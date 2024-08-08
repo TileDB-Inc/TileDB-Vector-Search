@@ -47,16 +47,16 @@
  *   - adjacency_ids: These are indexes into feature_vectors. Vertices go from 0
  * -> n-1 and each of those vertices indexes into feature_vectors. Then those
  * IDs correspond to the indexes. You can also think of it as holding the R
- * nearest neighbhors in the graph for each vertex.
+ * nearest neighbors in the graph for each vertex.
  *      - Example: Here we have 100 and 101 connected, 99 and 101 connected, and
  * 99 and 10 connected. Logically you can think of it like: [[1 2], [0, 2], [0,
  * 1]], but it's stored as [1, 2, 0, 2, 0, 1]
  *   - adjacency_scores: This holds the neighbor scores (i.e. the distances)
  *      - Example: [[distance between 0 and 1, distance between 0 and 2], etc.]
  *   -  adjacency_row_index: Each entry in the row index indicates where the
- * neighbhors for that index start. 0 because that's where neighbors for vertex
+ * neighbors for that index start. 0 because that's where neighbors for vertex
  * 0 start, then 2 b/c that's where neighbors for vertex 1 start, then 4 b/c
- * that's whre neighbors for vertex 2 start, then 6 b/c that's the end.
+ * that's where neighbors for vertex 2 start, then 6 b/c that's the end.
  *      - Example: [0, 2, 4, 6]
  */
 [[maybe_unused]] static StorageFormat vamana_storage_formats = {

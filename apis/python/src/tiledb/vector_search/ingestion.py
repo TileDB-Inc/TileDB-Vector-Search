@@ -2094,7 +2094,7 @@ def ingest(
         size: int,
         partitions: int,
         dimensions: int,
-        copy_centroids_uri: str,
+        copy_centroids_uri: Optional[str],
         training_sample_size: int,
         training_source_uri: Optional[str],
         training_source_type: Optional[str],
