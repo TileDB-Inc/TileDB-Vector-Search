@@ -352,6 +352,7 @@ TEST_CASE(
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);
   }
+
   {
     auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
@@ -370,6 +371,7 @@ TEST_CASE(
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
   }
+
   {
     auto index = IndexIVFPQ(ctx, index_uri);
 

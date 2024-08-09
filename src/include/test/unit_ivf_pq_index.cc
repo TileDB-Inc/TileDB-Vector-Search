@@ -688,7 +688,6 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
       auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
-
       auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
@@ -708,12 +707,10 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
       auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
-
       auto&& [scores_from_finite, ids_from_finite] =
           index2.query_finite_ram(queries, k_nn, nprobe, 5);
       CHECK(scores_from_finite(0, 0) == 0);
       CHECK(ids_from_finite(0, 0) == i * 11);
-
       auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);

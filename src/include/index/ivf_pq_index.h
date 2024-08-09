@@ -1394,21 +1394,18 @@ class ivf_pq_index {
           "try again. If you just wrote the index, open it up again by URI.");
     }
     if (partitioned_pq_vectors_) {
-      // We did an infinite query before this. Reset so we can load again..
+      // We did an infinite query before this. Reset so we can load again.
       partitioned_pq_vectors_.reset();
     }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
-
     auto&& [active_partitions, active_queries] =
         read_index_finite(query_vectors, nprobe, upper_bound);
-
     auto query_to_pq_centroid_distance_tables =
         std::move(*generate_query_to_pq_centroid_distance_tables<
                   Q,
                   ColMajorMatrix<float>>(query_vectors));
-
     return detail::ivf::query_finite_ram(
         *partitioned_pq_vectors_,
         query_to_pq_centroid_distance_tables,
