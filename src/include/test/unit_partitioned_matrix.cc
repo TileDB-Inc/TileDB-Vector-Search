@@ -126,7 +126,9 @@ TEST_CASE("partitioned_matrix: training constructor", "[partitioned_matrix]") {
       ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
           training_set, part_labels, num_parts);
   CHECK(partitioned_matrix.num_vectors() == _cpo::num_vectors(training_set));
-  CHECK(partitioned_matrix.total_num_vectors() == _cpo::num_vectors(training_set));
+  CHECK(
+      partitioned_matrix.total_num_vectors() ==
+      _cpo::num_vectors(training_set));
   CHECK(partitioned_matrix.num_partitions() == num_parts);
   CHECK(std::equal(
       partitioned_matrix.data(),

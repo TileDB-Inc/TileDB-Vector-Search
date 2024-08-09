@@ -117,11 +117,15 @@ class IVFPQIndex(index.Index):
         if not queries.flags.f_contiguous:
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
-        
+
         if self.memory_budget == -1:
-            distances, ids = self.index.query_infinite_ram(queries_feature_vector_array, k, nprobe)
+            distances, ids = self.index.query_infinite_ram(
+                queries_feature_vector_array, k, nprobe
+            )
         else:
-            distances, ids = self.index.query_finite_ram(queries_feature_vector_array, k, nprobe, self.memory_budget)
+            distances, ids = self.index.query_finite_ram(
+                queries_feature_vector_array, k, nprobe, self.memory_budget
+            )
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 

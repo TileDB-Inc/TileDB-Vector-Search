@@ -499,7 +499,8 @@ void init_type_erased_module(py::module_& m) {
              const FeatureVectorArray& vectors,
              size_t top_k,
              size_t nprobe) {
-            auto r = index.query(QueryType::InfiniteRAM, vectors, top_k, nprobe);
+            auto r =
+                index.query(QueryType::InfiniteRAM, vectors, top_k, nprobe);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
@@ -512,7 +513,8 @@ void init_type_erased_module(py::module_& m) {
              size_t top_k,
              size_t nprobe,
              size_t memory_budget) {
-            auto r = index.query(QueryType::FiniteRAM, vectors, top_k, nprobe, memory_budget);
+            auto r = index.query(
+                QueryType::FiniteRAM, vectors, top_k, nprobe, memory_budget);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),

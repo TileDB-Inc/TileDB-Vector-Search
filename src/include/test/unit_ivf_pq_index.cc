@@ -688,7 +688,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
       auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
-      
+
       auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
@@ -708,11 +708,12 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
       auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
-      
-      auto&& [scores_from_finite, ids_from_finite] = index2.query_finite_ram(queries, k_nn, nprobe, 5);
+
+      auto&& [scores_from_finite, ids_from_finite] =
+          index2.query_finite_ram(queries, k_nn, nprobe, 5);
       CHECK(scores_from_finite(0, 0) == 0);
       CHECK(ids_from_finite(0, 0) == i * 11);
-      
+
       auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
@@ -776,15 +777,18 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
         partitioning_index_type_type>(ctx, index_uri);
     auto queries = ColMajorMatrix<feature_type_type>{
         {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
-    
-    auto&& [scores_from_finite, ids_from_finite] = index.query_finite_ram(queries, 1, n_list, 5);
+
+    auto&& [scores_from_finite, ids_from_finite] =
+        index.query_finite_ram(queries, 1, n_list, 5);
     CHECK(std::equal(
         scores_from_finite.data(),
         scores_from_finite.data() + 4,
         std::vector<float>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(
-        ids_from_finite.data(), ids_from_finite.data() + 4, std::vector<uint32_t>{1, 2, 3, 4}.begin()));
-    
+        ids_from_finite.data(),
+        ids_from_finite.data() + 4,
+        std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+
     auto&& [scores, ids] = index.query_infinite_ram(queries, 1, n_list);
     CHECK(std::equal(
         scores.data(),

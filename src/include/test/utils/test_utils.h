@@ -193,9 +193,15 @@ void validate_metadata(
   check_expected_arithmetic<float>(read_group, expected_arithmetic_float);
 }
 
-void check_single_vector_equals(const FeatureVectorArray &scores_vector_array, const FeatureVectorArray &ids_vector_array, const std::vector<float> &expected_scores, const std::vector<uint32_t> &expected_ids) {
-  auto scores = std::span<float>((float*)scores_vector_array.data(), scores_vector_array.num_vectors());
-  auto ids = std::span<uint32_t>((uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+void check_single_vector_equals(
+    const FeatureVectorArray& scores_vector_array,
+    const FeatureVectorArray& ids_vector_array,
+    const std::vector<float>& expected_scores,
+    const std::vector<uint32_t>& expected_ids) {
+  auto scores = std::span<float>(
+      (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  auto ids = std::span<uint32_t>(
+      (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
   CHECK(scores.size() == expected_scores.size());
   CHECK(ids.size() == expected_ids.size());
   if (!std::equal(scores.begin(), scores.end(), expected_scores.begin())) {
@@ -203,7 +209,7 @@ void check_single_vector_equals(const FeatureVectorArray &scores_vector_array, c
     debug_vector(expected_scores, "expected_scores");
     CHECK(false);
   }
-  if(!std::equal(ids.begin(), ids.end(), expected_ids.begin())) {
+  if (!std::equal(ids.begin(), ids.end(), expected_ids.begin())) {
     debug_vector(ids, "ids");
     debug_vector(expected_ids, "expected_ids");
     CHECK(false);
