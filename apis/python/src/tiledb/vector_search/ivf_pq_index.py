@@ -32,6 +32,11 @@ class IVFPQIndex(index.Index):
     timestamp: int or tuple(int)
         If int, open the index at a given timestamp.
         If tuple, open at the given start and end timestamps.
+    memory_budget: int
+        Main memory budget, in number of vectors, for query execution.
+        If not provided, all index data are loaded in main memory.
+        Otherwise, no index data are loaded in main memory and this memory budget is
+        applied during queries.
     open_for_remote_query_execution: bool
         If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
         If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
@@ -42,6 +47,7 @@ class IVFPQIndex(index.Index):
         uri: str,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        memory_budget: int = -1,
         open_for_remote_query_execution: bool = False,
         **kwargs,
     ):
@@ -49,6 +55,7 @@ class IVFPQIndex(index.Index):
             "uri": uri,
             "config": config,
             "timestamp": timestamp,
+            "memory_budget": memory_budget,
         }
         self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
@@ -66,6 +73,7 @@ class IVFPQIndex(index.Index):
         self.ids_uri = self.group[
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
+        self.memory_budget = memory_budget
 
         self.dimensions = self.index.dimensions()
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
@@ -109,10 +117,11 @@ class IVFPQIndex(index.Index):
         if not queries.flags.f_contiguous:
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
-
-        distances, ids = self.index.query(
-            vspy.QueryType.InfiniteRAM, queries_feature_vector_array, k, nprobe
-        )
+        
+        if self.memory_budget == -1:
+            distances, ids = self.index.query_infinite_ram(queries_feature_vector_array, k, nprobe)
+        else:
+            distances, ids = self.index.query_finite_ram(queries_feature_vector_array, k, nprobe, self.memory_budget)
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 

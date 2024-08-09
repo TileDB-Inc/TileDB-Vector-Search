@@ -609,6 +609,10 @@ class tdbPartitionedMatrix
     return true;
   }
 
+  unsigned long total_num_vectors() const override {
+    return total_max_cols_;
+  }
+
   /**
    * Destructor.  Closes arrays if they are open.
    */
@@ -617,7 +621,7 @@ class tdbPartitionedMatrix
     close();
   }
 
-  void debug_tdb_partitioned_matrix(const std::string& msg, size_t max_size) {
+  void debug_tdb_partitioned_matrix(const std::string& msg, size_t max_size = 10) {
     debug_partitioned_matrix(*this, msg, max_size);
     debug_vector(master_indices_, "# master_indices_", max_size);
     debug_vector(relevant_parts_, "# relevant_parts_", max_size);
