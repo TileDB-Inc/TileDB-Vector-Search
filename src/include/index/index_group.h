@@ -156,7 +156,6 @@ class base_index_group {
     init_valid_array_names();
 
     // Get the active array names
-    auto count = read_group.member_count();
     for (size_t i = 0; i < read_group.member_count(); ++i) {
       auto member = read_group.member(i);
       auto name = member.name();
@@ -186,7 +185,7 @@ class base_index_group {
       } else {
         // We have a (end) temporal_policy.
         history_index_ = 0;
-        for (int i = 0; i < metadata_.ingestion_timestamps_.size(); i++) {
+        for (size_t i = 0; i < metadata_.ingestion_timestamps_.size(); i++) {
           if (metadata_.ingestion_timestamps_[i] <=
               temporal_policy->timestamp_end()) {
             history_index_ = i;

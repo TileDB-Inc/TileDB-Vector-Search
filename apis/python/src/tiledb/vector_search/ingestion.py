@@ -85,6 +85,7 @@ def ingest(
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
     distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    normalized: bool = False,
     **kwargs,
 ):
     """
@@ -1257,7 +1258,7 @@ def ingest(
             "Initialising centroids by reading the first vectors in the source data."
         )
         with tiledb.scope_ctx(ctx_or_config=config):
-            vectors = read_input_vectors(
+            return read_input_vectors(
                 source_uri=source_uri,
                 source_type=source_type,
                 vector_type=vector_type,
@@ -1268,8 +1269,6 @@ def ingest(
                 verbose=verbose,
                 trace_id=trace_id,
             ).astype(np.float32)
-
-            return vectors
 
     def assign_points_and_partial_new_centroids(
         centroids: np.ndarray,
@@ -1889,7 +1888,7 @@ def ingest(
         if additions_vectors is None:
             return
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
             additions_vectors = normalize_vectors(additions_vectors)
 
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
@@ -2396,7 +2395,7 @@ def ingest(
                 # Which reads the vectors and normalizes them, then swaps source_uri for normalized_uri
                 # This is because the cosine distance metric requires normalized vectors
                 normalization_nodes = []
-                if distance_metric == vspy.DistanceMetric.COSINE:
+                if distance_metric == vspy.DistanceMetric.COSINE and not normalized:
                     group = tiledb.Group(index_group_uri, "w")
                     normalized_uri = create_array(
                         group=group,
@@ -2430,7 +2429,7 @@ def ingest(
                                 verbose=verbose,
                                 trace_id=trace_id,
                                 name=f"normalize-vectors-{start}-{end}",
-                                resources=random_sample_resources,  # We can use similar resources as random sampling
+                                resources=random_sample_resources,
                                 image_name=DEFAULT_IMG_NAME,
                                 **kwargs,
                             )
@@ -2503,11 +2502,8 @@ def ingest(
                         )
                 # Add dependencies for normalization
                 for node in normalization_nodes:
-                    if copy_centroids_uri is not None:
-                        centroids_node.depends_on(node)
-                    else:
-                        for random_sample_node in random_sample_nodes:
-                            random_sample_node.depends_on(node)
+                    for random_sample_node in random_sample_nodes:
+                        random_sample_node.depends_on(node)
 
                 if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
                     centroids_node = submit(
@@ -2533,6 +2529,11 @@ def ingest(
 
                     for random_sample_node in random_sample_nodes:
                         centroids_node.depends_on(random_sample_node)
+
+                    # if random sample nodes is empty then we need to depend on the normalization nodes
+                    if not random_sample_nodes:
+                        for node in normalization_nodes:
+                            centroids_node.depends_on(node)
                 else:
                     uri = (
                         training_source_uri
@@ -2563,6 +2564,11 @@ def ingest(
 
                     for random_sample_node in random_sample_nodes:
                         internal_centroids_node.depends_on(random_sample_node)
+
+                    # if random sample nodes is empty then we need to depend on the normalization nodes
+                    if not random_sample_nodes:
+                        for node in normalization_nodes:
+                            internal_centroids_node.depends_on(node)
 
                     for it in range(5):
                         kmeans_workers = []
@@ -3025,7 +3031,7 @@ def ingest(
             storage_version=storage_version,
         )
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE:
+        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
             if input_vectors is not None:
                 input_vectors = normalize_vectors(input_vectors)
             if training_input_vectors is not None:
@@ -3125,7 +3131,6 @@ def ingest(
             group.meta["partition_history"] = json.dumps(partition_history)
             group.meta["base_sizes"] = json.dumps(base_sizes)
             group.meta["ingestion_timestamps"] = json.dumps(ingestion_timestamps)
-
             group.close()
 
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)

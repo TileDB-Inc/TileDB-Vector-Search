@@ -40,7 +40,7 @@
 
 template <class id_type>
 std::string write_ids_to_uri(
-    const tiledb::Context& ctx, const tiledb::VFS vfs, size_t num_ids) {
+    const tiledb::Context& ctx, const tiledb::VFS& vfs, size_t num_ids) {
   std::vector<id_type> ids(num_ids);
   std::iota(begin(ids), end(ids), 0);
   std::string ids_uri =
@@ -168,8 +168,8 @@ void validate_metadata(
     tiledb::Group& read_group,
     const std::vector<std::tuple<std::string, std::string>>& expected_str,
     const std::vector<std::tuple<std::string, size_t>>& expected_arithmetic,
-    std::vector<std::tuple<std::string, float>> expected_arithmetic_float =
-        {}) {
+    const std::vector<std::tuple<std::string, float>>&
+        expected_arithmetic_float = {}) {
   for (auto& [name, value] : expected_str) {
     tiledb_datatype_t v_type;
     uint32_t v_num;

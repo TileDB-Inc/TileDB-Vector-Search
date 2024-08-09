@@ -133,10 +133,10 @@ inline size_t counting_sum_of_squares_distance::num_comps_ = 0;
  */
 struct logging_sum_of_squares_distance {
   size_t num_comps_{0};
-  std::string msg_{""};
+  std::string msg_;
 
   logging_sum_of_squares_distance() = default;
-  logging_sum_of_squares_distance(const std::string& msg)
+  explicit logging_sum_of_squares_distance(const std::string& msg)
       : msg_(msg) {
   }
 
@@ -260,22 +260,22 @@ struct inner_product_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return -avx2_inner_product(a, b);
+    return 1.0 / avx2_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return -avx2_inner_product(a);
+    return 1.0 / avx2_inner_product(a);
   }
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return -unroll4_inner_product(a, b);
+    return 1.0 / unroll4_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return -unroll4_inner_product(a);
+    return 1.0 / unroll4_inner_product(a);
   }
 #endif
 };
@@ -296,14 +296,14 @@ struct cosine_distance {
   template <feature_vector V, feature_vector U>
   inline float operator()(const V& a, const U& b) const {
     float mag = sqrt(l2_distance(a) * l2_distance(b));
-    return 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag);
+    return 1 - (1.0 / inner_product(a, b)) / (mag == 0 ? 1 : mag);
   }
 };
 
 struct cosine_distance_normalized {
   template <feature_vector V, feature_vector U>
   inline float operator()(const V& a, const U& b) const {
-    return 1 - (-inner_product(a, b));
+    return 1 - (1.0 / inner_product(a, b));
   }
 };
 
@@ -389,7 +389,7 @@ auto get_top_k_from_scores(V const& scores, L&& top_k, size_t k = 0) {
 // size of the valid ranges in the scores matrix.
 // @todo pad top_k with sentinel if scores has sentinel
 template <class I, class T>
-auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, int k_nn) {
+auto get_top_k_from_scores(const ColMajorMatrix<T>& scores, size_t k_nn) {
   auto top_k = ColMajorMatrix<I>(k_nn, scores.num_cols());
   for (size_t j = 0; j < scores.num_cols(); ++j) {
     get_top_k_from_scores(scores[j], top_k[j], k_nn);

@@ -35,5 +35,5 @@
 
 TEST_CASE("test build_config", "[stats]") {
   auto config = build_config();
-  CHECK(config.size() > 0);
+  CHECK(!config.empty());
 }

@@ -72,8 +72,6 @@ class PartitionedMatrixWrapper {
  private:
   using part_index_type = PartIndexType;
 
-  constexpr static auto matrix_order_{order_v<LayoutPolicy>};
-
  protected:
   // The partitioned vectors
   std::reference_wrapper<Matrix<T, LayoutPolicy, I>>
@@ -189,21 +187,6 @@ class PartitionedMatrixWrapper {
     return false;
   }
 };
-
-/**
- * Convenience class for row-major matrices.
- */
-template <
-    class T,
-    class partitioned_ids_type,
-    class part_index_type,
-    class I = size_t>
-using RowMajorPartitionedMatrixWrapper = PartitionedMatrixWrapper<
-    T,
-    partitioned_ids_type,
-    part_index_type,
-    stdx::layout_right,
-    I>;
 
 /**
  * Convenience class for column-major matrices.

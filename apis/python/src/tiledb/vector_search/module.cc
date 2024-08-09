@@ -202,6 +202,8 @@ static void declare_qv_query_heap_infinite_ram(
               nthreads,
               cosine_distance_normalized{});
           return make_python_pair(std::move(r));
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       },
       py::keep_alive<1, 2>());
@@ -273,6 +275,8 @@ static void declare_qv_query_heap_finite_ram(
               timestamp,
               cosine_distance_normalized{});
           return make_python_pair(std::move(r));
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       },
       py::keep_alive<1, 2>());
@@ -332,6 +336,8 @@ static void declare_nuv_query_heap_infinite_ram(
               nthreads,
               cosine_distance_normalized{});
           return r;
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       },
       py::keep_alive<1, 2>());
@@ -404,6 +410,8 @@ static void declare_nuv_query_heap_finite_ram(
               nthreads,
               cosine_distance_normalized{});
           return r;
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       },
       py::keep_alive<1, 2>());
@@ -707,6 +715,8 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, cosine_distance{});
           return r;
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       });
 }
@@ -735,6 +745,8 @@ static void declare_vq_query_heap_pyarray(
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, cosine_distance{});
           return r;
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       });
 }
@@ -870,6 +882,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, cosine_distance{});
           return r;
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       });
 
@@ -893,6 +907,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, cosine_distance{});
           return r;
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       });
 
@@ -916,6 +932,8 @@ PYBIND11_MODULE(_tiledbvspy, m) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, cosine_distance{});
           return r;
+        } else {
+          throw std::runtime_error("Invalid distance metric");
         }
       });
 

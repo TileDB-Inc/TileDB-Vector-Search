@@ -32,7 +32,6 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <chrono>
 #include <thread>
 #include "utils/logging.h"
 

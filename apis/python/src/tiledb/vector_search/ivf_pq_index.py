@@ -172,7 +172,6 @@ def create(
         raise ValueError(
             f"Distance metric {distance_metric} is not supported in IVF_PQ"
         )
-
     index = vspy.IndexIVFPQ(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,

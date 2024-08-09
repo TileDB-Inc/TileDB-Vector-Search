@@ -1,12 +1,9 @@
-import json
 import os
 
 import numpy as np
 import pytest
 from array_paths import *
 from common import *
-
-# import capsys
 from common import load_metadata
 from sklearn.neighbors import NearestNeighbors
 
@@ -14,93 +11,17 @@ from tiledb.cloud.dag import Mode
 from tiledb.vector_search import Index
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search import ivf_flat_index
-from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import MAX_UINT64
-from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import load_fvecs
-
-siftsmall_uri = siftsmall_inputs_file
-queries_uri = siftsmall_query_file
-
-
-def check_default_metadata(
-    uri, expected_vector_type, expected_storage_version, expected_index_type
-):
-    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-    assert "dataset_type" in group.meta
-    assert group.meta["dataset_type"] == DATASET_TYPE
-    assert type(group.meta["dataset_type"]) == str
-
-    assert "dtype" in group.meta
-    assert group.meta["dtype"] == np.dtype(expected_vector_type).name
-    assert type(group.meta["dtype"]) == str
-
-    assert "storage_version" in group.meta
-    assert group.meta["storage_version"] == expected_storage_version
-    assert type(group.meta["storage_version"]) == str
-
-    assert "index_type" in group.meta
-    assert group.meta["index_type"] == expected_index_type
-    assert type(group.meta["index_type"]) == str
-
-    assert "base_sizes" in group.meta
-    assert group.meta["base_sizes"] == json.dumps([0])
-    assert type(group.meta["base_sizes"]) == str
-
-    assert "ingestion_timestamps" in group.meta
-    assert group.meta["ingestion_timestamps"] == json.dumps([0])
-    assert type(group.meta["ingestion_timestamps"]) == str
-
-    if not is_type_erased_index(expected_index_type):
-        # NOTE(paris): Type-erased indexes do not write has_updates.
-        assert "has_updates" in group.meta
-        assert group.meta["has_updates"] == 0
-        assert type(group.meta["has_updates"]) == np.int64
-    else:
-        assert "has_updates" not in group.meta
-
-
-def query_and_check_distances(
-    index, queries, k, expected_distances, expected_ids, **kwargs
-):
-    for _ in range(1):
-        distances, ids = index.query(queries, k=k, **kwargs)
-        assert np.array_equal(ids, expected_ids)
-        assert np.array_equal(distances, expected_distances)
-
-
-def query_and_check(index, queries, k, expected, expected_distances=None, **kwargs):
-    for _ in range(3):
-        result_d, result_i = index.query(queries, k=k, **kwargs)
-
-        # Check if the expected IDs are a subset of the result
-        assert expected.issubset(
-            set(result_i[0])
-        ), f"Expected IDs {expected} are not a subset of result IDs {set(result_i[0])}"
-
-        # If expected_distances is provided, check the distances
-        if expected_distances is not None:
-            expected_dict = dict(
-                zip(range(len(expected_distances)), expected_distances)
-            )
-
-            result_dict = dict(zip(result_i[0], result_d[0]))
-
-            for id in expected.intersection(set(result_i[0])):
-                np.testing.assert_allclose(
-                    result_dict[id],
-                    expected_dict[id],
-                    rtol=1e-5,
-                    atol=1e-5,
-                    err_msg=f"Distance mismatch for ID {id}",
-                )
 
 
 def normalize_vectors(vectors):
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     return vectors / norms
 
+def normalize_vector(vector):
+    return vector / np.linalg.norm(vector)
 
 MINIMUM_ACCURACY = 0.85
 MINIMUM_ACCURACY_IVF_PQ = 0.75
@@ -129,14 +50,10 @@ def test_ivf_flat_ingestion_cosine(tmp_path):
     queries = get_queries(dataset_dir, dtype=dtype)
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
-    index_type = "IVF_FLAT"
-    index_class = IVFFlatIndex
-    minimum_accuracy = (
-        MINIMUM_ACCURACY_IVF_PQ if index_type == "IVF_PQ" else MINIMUM_ACCURACY
-    )
-    index_uri = os.path.join(tmp_path, f"array_{index_type}")
+    minimum_accuracy = MINIMUM_ACCURACY
+    index_uri = os.path.join(tmp_path, "array_IVF_FLAT")
     index = ingest(
-        index_type=index_type,
+        index_type="IVF_FLAT",
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
         partitions=partitions,
@@ -149,11 +66,11 @@ def test_ivf_flat_ingestion_cosine(tmp_path):
     assert accuracy(result, gt_i) > minimum_accuracy
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = index_class(uri=index_uri)
+    index_ram = IVFFlatIndex(uri=index_uri)
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > minimum_accuracy
 
-    index_ram = index_class(uri=index_uri, memory_budget=int(size / 10))
+    index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -284,6 +201,12 @@ def test_ivf_flat_cosine_simple(tmp_path):
         expected_distances=expected_distances,
         nprobe=2,
     )
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
+    assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
+    sorted_distances = np.sort(distances)
+    assert np.allclose(distances, sorted_distances, 1e-4)
 
 
 def test_vamana_cosine_simple(tmp_path):
@@ -324,6 +247,46 @@ def test_vamana_cosine_simple(tmp_path):
     sorted_distances = np.sort(distances)
     assert np.allclose(distances, sorted_distances, 1e-4)
 
+def test_vamana_cosine_simple(tmp_path):
+    # Create 5 input vectors
+
+    input_vectors = np.array(
+        [[1, 0, 0, 0], [1, 1, 0, 0], [32, 41, 30, 0], [1, 5, 3, 0], [4, 4, 4, 0]],
+        dtype=np.float32,
+    )
+
+    # Create IVF_FLAT index with cosine distance
+    index_uri = os.path.join(tmp_path, "vamana_cosine_simple")
+    index = ingest(
+        index_type="VAMANA",
+        index_uri=index_uri,
+        input_vectors=input_vectors,
+        distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
+    )
+
+    # Create a query vector
+    np.array([[2, 2, 2, 2]], dtype=np.float32)
+
+    expected_distances = np.array([0.500000, 0.292893, 0.142262, 0.239361, 0.133975])
+
+    # query_and_check(
+    #     index,
+    #     np.array([[2, 2, 2, 2]], dtype=np.float32),
+    #     3,
+    #     {2, 3, 4},
+    #     expected_distances=expected_distances,
+    #     nprobe=2,
+    # )
+
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
+    print(distances, ids)
+
+    assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
+    sorted_distances = np.sort(distances)
+    assert np.allclose(distances, sorted_distances, 1e-4)
+
 
 def test_ivf_flat_index(capfd, tmp_path):
     partitions = 10
@@ -348,7 +311,6 @@ def test_ivf_flat_index(capfd, tmp_path):
         {MAX_UINT64},
         nprobe=partitions,
     )
-    # check_default_metadata(uri, vector_type, STORAGE_VERSION, "IVF_FLAT")
 
     update_vectors = np.empty([5], dtype=object)
     update_vectors[0] = np.array([1, 0, 0, 0], dtype=vector_type)
@@ -380,19 +342,94 @@ def test_ivf_flat_index(capfd, tmp_path):
         nprobe=partitions,
     )
 
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
+    assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
+    sorted_distances = np.sort(distances)
+    assert np.allclose(distances, sorted_distances, 1e-4)
 
-def test_cosine_DISTANCE(tmp_path):
+    # Update the index with a new vector
+    index.update(
+        vector=np.array([2, 2, 2, 2], dtype=vector_type),
+        external_id=5,
+    )
+    expected_distances = np.append(expected_distances, 0.0)
+
+    # delete the vector with external id 3
+    index.delete(external_id=3)
+
+    # consolidate the updates
+    index = index.consolidate_updates()
+
+    # Query the index
+    query_and_check(
+        index,
+        np.array([[2, 2, 2, 2]], dtype=np.float32),
+        3,
+        {2, 4, 5},
+        expected_distances=expected_distances,
+        nprobe=partitions,
+    )
+
+    distances, ids = index.query(
+        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
+    )
+    assert np.array_equal(ids, np.array([[5, 4, 2, 1, 0]], dtype=np.uint64))
+    sorted_distances = np.sort(distances)
+    assert np.allclose(distances, sorted_distances, 1e-4)
+
+
+def test_ivf_flat_cosine_simple_normalized(tmp_path):
+    # Create 5 input vectors and normalize them
+    input_vectors = np.array([
+        normalize_vector([1, 0, 0, 0]),
+        normalize_vector([1, 1, 0, 0]),
+        normalize_vector([32, 41, 30, 0]),
+        normalize_vector([1, 5, 3, 0]),
+        normalize_vector([4, 4, 4, 0])
+    ], dtype=np.float32)
+
+    index_uri = os.path.join(tmp_path, "ivf_flat_cosine")
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        input_vectors=input_vectors,
+        distance_metric=vspy.DistanceMetric.COSINE,
+        partitions=1,
+        normalized=True
+    )
+
+    query_vector = normalize_vector(np.array([2, 2, 2, 2], dtype=np.float32))
+
+    expected_distances = np.array([0.500000, 0.292893, 0.142262, 0.239361, 0.133975])
+
+    query_and_check(
+        index,
+        query_vector.reshape(1, -1),
+        3,
+        {2, 3, 4},
+        expected_distances=expected_distances,
+        nprobe=2,
+    )
+
+    distances, ids = index.query(queries=query_vector.reshape(1, -1), k=5)
+    assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
+    sorted_distances = np.sort(distances)
+    assert np.allclose(distances, sorted_distances, atol=1e-4)
+
+def test_cosine_distance(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_FLAT")
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.COSINE,
     )
 
-    dataset_vectors = load_fvecs(siftsmall_uri)
-    query_vectors = load_fvecs(queries_uri)
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
 
     nn_cosine_sklearn = NearestNeighbors(n_neighbors=5, metric="cosine")
     nn_cosine_sklearn.fit(dataset_vectors)
@@ -411,22 +448,19 @@ def test_inner_product_distances(tmp_path):
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
     )
 
-    dataset_vectors = load_fvecs(siftsmall_uri)
-    query_vectors = load_fvecs(queries_uri)
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
 
     inner_products_sklearn = np.dot(query_vectors, dataset_vectors.T)
 
     sorted_inner_products_sklearn = np.sort(inner_products_sklearn, axis=1)[:, ::-1]
 
     distances, _ = index.query(query_vectors, k=5)
-
-    # multiply distances by -1 to get inner products, since library returns negative inner products
-    distances = -1 * distances
 
     for i in range(len(sorted_inner_products_sklearn)):
         compare = sorted_inner_products_sklearn[i][:5]
@@ -440,12 +474,12 @@ def test_l2_distance(tmp_path):
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
     )
 
-    dataset_vectors = load_fvecs(siftsmall_uri)
-    query_vectors = load_fvecs(queries_uri)
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
 
     nn_l2 = NearestNeighbors(n_neighbors=5, metric="euclidean")
     nn_l2.fit(dataset_vectors)
@@ -463,7 +497,7 @@ def test_wrong_distance_metric(tmp_path):
         ingest(
             index_type="FLAT",
             index_uri=index_uri,
-            source_uri=siftsmall_uri,
+            source_uri=siftsmall_inputs_file,
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.IDK,
         )
@@ -475,7 +509,7 @@ def test_wrong_type_with_distance_metric(tmp_path):
         ingest(
             index_type="IVF_FLAT",
             index_uri=index_uri,
-            source_uri=siftsmall_uri,
+            source_uri=siftsmall_inputs_file,
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
         )
@@ -486,7 +520,7 @@ def test_vamana_create_l2(tmp_path):
     ingest(
         index_type="VAMANA",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.L2,
     )
@@ -497,18 +531,27 @@ def test_vamana_create_cosine(tmp_path):
     ingest(
         index_type="VAMANA",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.COSINE,
     )
 
 
+def cosine_distance(a, b):
+    return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+
+def l2_distance(a, b):
+    return np.sum((a - b) ** 2)
+
+
 def test_ivf_flat_create_cosine_numpy(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
 
-    # create index with numpy input_vectors
-    input_vectors = load_fvecs(siftsmall_uri)
+    # Load input vectors
+    input_vectors = load_fvecs(siftsmall_inputs_file)
 
+    # Create index with numpy input_vectors
     index = ingest(
         index_type="IVF_FLAT",
         index_uri=index_uri,
@@ -516,20 +559,58 @@ def test_ivf_flat_create_cosine_numpy(tmp_path):
         distance_metric=vspy.DistanceMetric.COSINE,
     )
 
-    # query
-    query_vectors = load_fvecs(queries_uri)
-    distances, ids = index.query(query_vectors, k=5)
+    # Load query vectors
+    query_vectors = load_fvecs(siftsmall_query_file)
 
-    # now create index with L2 and print results
+    # Query
+    k = 5
+    distances, ids = index.query(query_vectors, k=k)
 
-    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
-    index2 = ingest(
+    # Compute cosine distances manually and compare
+    for i, query in enumerate(query_vectors):
+        for j, idx in enumerate(ids[i]):
+            manual_distance = cosine_distance(query, input_vectors[idx])
+            np.testing.assert_allclose(
+                manual_distance,
+                distances[i][j],
+                rtol=1e-4,
+                err_msg=f"Mismatch for query {i}, neighbor {j}",
+            )
+
+    # Verify that distances are sorted
+    assert np.all(
+        np.diff(distances, axis=1) >= 0
+    ), "Distances are not sorted in ascending order"
+
+    # Create index with L2 distance for comparison
+    index_uri_l2 = os.path.join(tmp_path, "sift10k_flat_L2")
+    index_l2 = ingest(
         index_type="IVF_FLAT",
-        index_uri=index_uri,
+        index_uri=index_uri_l2,
         input_vectors=input_vectors,
+        distance_metric=vspy.DistanceMetric.L2,
     )
 
-    distances2, ids2 = index2.query(query_vectors, k=5)
+    distances_l2, ids_l2 = index_l2.query(query_vectors, k=k)
+
+    # Verify that L2 results are different from cosine results
+    assert not np.array_equal(
+        ids, ids_l2
+    ), "Cosine and L2 queries returned the same indices"
+
+    for i, query in enumerate(query_vectors):
+        for j, idx in enumerate(ids_l2[i]):
+            manual_distance = l2_distance(query, input_vectors[idx])
+            np.testing.assert_allclose(
+                manual_distance,
+                distances_l2[i][j],
+                rtol=1e-5,
+                atol=1e-8,
+                err_msg=f"L2 distance mismatch for query {i}, neighbor {j}",
+            )
+
+    Index.delete_index(uri=index_uri, config={})
+    Index.delete_index(uri=index_uri_l2, config={})
 
 
 def test_ivfpq_create_l2(tmp_path):
@@ -537,7 +618,7 @@ def test_ivfpq_create_l2(tmp_path):
     ingest(
         index_type="IVF_PQ",
         index_uri=index_uri,
-        source_uri=siftsmall_uri,
+        source_uri=siftsmall_inputs_file,
         source_type="FVEC",
         distance_metric=vspy.DistanceMetric.L2,
         num_subspaces=2,
@@ -550,7 +631,7 @@ def test_ivfpq_create_cosine(tmp_path):
         ingest(
             index_type="IVF_PQ",
             index_uri=index_uri,
-            source_uri=siftsmall_uri,
+            source_uri=siftsmall_inputs_file,
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.COSINE,
             num_subspaces=2,

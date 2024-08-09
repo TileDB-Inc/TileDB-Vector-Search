@@ -31,10 +31,8 @@
 #include <catch2/catch_all.hpp>
 #include <tiledb/tiledb>
 
-#include <chrono>
 #include <filesystem>
 #include <string>
-#include "detail/linalg/tdb_matrix.h"
 #include "index/ivf_flat_index.h"
 #include "index/ivf_flat_metadata.h"
 #include "test/utils/array_defs.h"

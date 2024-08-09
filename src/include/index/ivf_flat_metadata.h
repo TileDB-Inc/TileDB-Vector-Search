@@ -51,12 +51,10 @@ class ivf_flat_index_metadata
 
   tiledb_datatype_t px_datatype_{TILEDB_ANY};
   std::string index_type_{"IVF_FLAT"};
-  std::string partition_history_str_{""};
-  std::string indices_type_str_{""};
+  std::string partition_history_str_;
+  std::string indices_type_str_;
 
  protected:
-  IndexKind index_kind_{IndexKind::IVFFlat};
-
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
       // name, member_variable, required
       {"index_type", index_type_, true},
@@ -79,7 +77,7 @@ class ivf_flat_index_metadata
 
   void clear_history_impl(uint64_t timestamp) {
     std::vector<partition_history_type> new_partition_history;
-    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (size_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_partition_history.push_back(partition_history_[i]);

@@ -73,7 +73,7 @@ class vamana_index_metadata
 
   /** Record number of partitions at each write at a given timestamp */
   std::vector<num_edges_history_type> num_edges_history_;
-  std::string num_edges_history_str_{""};
+  std::string num_edges_history_str_;
 
   /*
    * The type of the feature vectors and ids is "inherited"
@@ -81,8 +81,8 @@ class vamana_index_metadata
   tiledb_datatype_t adjacency_scores_datatype_{TILEDB_ANY};
   tiledb_datatype_t adjacency_row_index_datatype_{TILEDB_ANY};
 
-  std::string adjacency_scores_type_str_{""};
-  std::string adjacency_row_index_type_str_{""};
+  std::string adjacency_scores_type_str_;
+  std::string adjacency_row_index_type_str_;
 
   uint64_t l_build_{0};
   uint64_t r_max_degree_{0};
@@ -93,8 +93,6 @@ class vamana_index_metadata
   DistanceMetric distance_metric_{DistanceMetric::L2};
 
  protected:
-  IndexKind index_kind_{IndexKind::Vamana};
-
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
       // name, member_variable, required
       {"index_type", index_type_, true},
@@ -122,7 +120,7 @@ class vamana_index_metadata
 
   void clear_history_impl(uint64_t timestamp) {
     std::vector<num_edges_history_type> new_num_edges_history;
-    for (int i = 0; i < ingestion_timestamps_.size(); i++) {
+    for (size_t i = 0; i < ingestion_timestamps_.size(); i++) {
       auto ingestion_timestamp = ingestion_timestamps_[i];
       if (ingestion_timestamp > timestamp) {
         new_num_edges_history.push_back(num_edges_history_[i]);

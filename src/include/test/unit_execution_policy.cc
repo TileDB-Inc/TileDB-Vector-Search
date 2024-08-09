@@ -31,7 +31,6 @@
 
 #include <catch2/catch_all.hpp>
 
-#include <version>
 #ifdef __cpp_lib_execution
 
 #include <mdspan/mdspan.hpp>

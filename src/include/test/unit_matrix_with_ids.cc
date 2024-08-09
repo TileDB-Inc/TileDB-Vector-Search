@@ -32,7 +32,6 @@
 #include <algorithm>
 #include <catch2/catch_all.hpp>
 #include <type_traits>
-#include <typeinfo>
 #include <vector>
 #include "cpos.h"
 #include "detail/linalg/matrix_with_ids.h"

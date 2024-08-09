@@ -281,27 +281,6 @@ class tdbPreLoadMatrixWithIds
 };
 
 /**
- * Convenience class for row-major blocked matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
-
-/**
- * Convenience class for column-major blocked matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbColMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major matrices.
  */
 template <class T, class IdsType = uint64_t, class I = size_t>
@@ -317,13 +296,6 @@ template <
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 using tdbMatrixWithIds = tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorPreLoadMatrixWithIds =
-    tdbPreLoadMatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.
