@@ -341,7 +341,6 @@ class ivf_pq_index {
       : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
-    std::cout << "ivf_pq_index::ivf_pq_index(uri) -- uri: " << uri << std::endl;
     /**
      * Read the centroids. How the partitioned_pq_vectors_ are read in will be
      * determined by the type of query we are doing. But they will be read
@@ -1045,29 +1044,10 @@ class ivf_pq_index {
     if (!group_) {
       throw std::runtime_error("[ivf_pq_index@read_index_finite] group_ is not initialized. This happens if you do not load an index by URI. Please close the index and re-open it by URI.");
     }
-    // if (partitioned_pq_vectors_ &&
-    //     (::num_vectors(*partitioned_pq_vectors_) != 0 ||
-    //      ::num_vectors(partitioned_pq_vectors_->ids()) != 0)) {
-    //   throw std::runtime_error("Index already loaded");
-    // }
 
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
-
-
-    // if (!group_) {
-    //   std::cout << "[ivf_pq_index@read_index_finite] Finite RAM query will only work when you load an index by URI. Please close the index and re-open it by URI." << std::endl;
-    //   partitioned_pq_vectors_ = std::make_unique<ColMajorPartitionedMatrix<pq_code_type, partitioned_ids_type, indices_type>>(dimensions_, 0, 1);
-    //   return std::make_tuple(
-    //     std::move(active_partitions), std::move(active_queries));
-    // }
-
-    std::cout << "group_: " << group_ << std::endl;
-
-    // return std::make_tuple(
-    //     std::move(active_partitions), std::move(active_queries));
-    // std::cout << "group_->get_num_partitions() + 1: " << group_->get_num_partitions() + 1 << std::endl;
 
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
@@ -1339,19 +1319,13 @@ class ivf_pq_index {
    */
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
-    std::cout << "[ivf_pq_index@query_infinite_ram]" << std::endl;
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
-    // std::cout << "::num_vectors(flat_ivf_centroids_)" << ::num_vectors(flat_ivf_centroids_) << std::endl;
-    // std::cout << "::num_vectors(*partitioned_pq_vectors_" << ::num_vectors(*partitioned_pq_vectors_) << std::endl;
-    // std::cout << "partitioned_pq_vectors_->num_vectors()" << partitioned_pq_vectors_->num_vectors() << std::endl;
-    // std::cout << "partitioned_pq_vectors_->total_num_vectors()" << partitioned_pq_vectors_->total_num_vectors() << std::endl;
     if (!partitioned_pq_vectors_ || partitioned_pq_vectors_->num_vectors() == 0 || partitioned_pq_vectors_->num_vectors() != partitioned_pq_vectors_->total_num_vectors()) {
-      std::cout << "[ivf_pq_index@query_infinite_ram] Will call read_index_infinite()" << std::endl;
       read_index_infinite();
     }
-    debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@query_infinite_ram] partitioned_pq_vectors_");
+
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
@@ -1401,19 +1375,11 @@ class ivf_pq_index {
       size_t k_nn,
       size_t nprobe,
       size_t upper_bound = 0) {
-    std::cout << "[ivf_pq_index@query_finite_ram]" << std::endl;
-    // if (partitioned_pq_vectors_ && ::num_vectors(*partitioned_pq_vectors_) != 0) {
-    //   throw std::runtime_error(
-    //       "Vectors are already loaded. Cannot load twice. "
-    //       "Cannot do finite query on in-memory index.");
-    // }
-    std::cout << "[ivf_pq_index@query_finite_ram] group_: " << group_ << std::endl;
     if (!group_) {
       throw std::runtime_error("[ivf_pq_index@query_finite_ram] Query with finite RAM can only be run if you're loading the index by URI. Please open it by URI and try again. If you just wrote the index, open it up again by URI.");
     }
-    std::cout << "[ivf_pq_index@query_finite_ram] partitioned_pq_vectors_: " << partitioned_pq_vectors_ << std::endl;
     if (partitioned_pq_vectors_) {
-      // We did an infinite query before this. Reset the data we loaded.
+      // We did an infinite query before this. Reset so we can load again..
       partitioned_pq_vectors_.reset();
     }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
@@ -1422,17 +1388,11 @@ class ivf_pq_index {
 
     auto&& [active_partitions, active_queries] =
         read_index_finite(query_vectors, nprobe, upper_bound);
-    debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@query_finite_ram] partitioned_pq_vectors_");
-    // std::cout << "partitioned_pq_vectors_" << partitioned_pq_vectors_ << std::endl;
 
     auto query_to_pq_centroid_distance_tables =
         std::move(*generate_query_to_pq_centroid_distance_tables<
                   Q,
                   ColMajorMatrix<float>>(query_vectors));
-    // debug_partitioned_matrix(*partitioned_pq_vectors_, "partitioned_pq_vectors_");
-    // ColMajorMatrix<uint64_t> top_k(k_nn, num_vectors(query_vectors));
-    // ColMajorMatrix<float> top_scores(k_nn, num_vectors(query_vectors));
-    // return std::make_tuple(std::move(top_scores), std::move(top_k));
 
     return detail::ivf::query_finite_ram(
         *partitioned_pq_vectors_,
@@ -1444,21 +1404,6 @@ class ivf_pq_index {
         make_pq_distance_query_to_pq_centroid_distance_tables<
             std::span<float>,
             decltype(pq_storage_type{}[0])>());
-          
-    // auto &&[scores, ids] = detail::ivf::query_finite_ram(
-    //     *partitioned_pq_vectors_,
-    //     query_to_pq_centroid_distance_tables,
-    //     active_queries,
-    //     k_nn,
-    //     upper_bound,
-    //     num_threads_,
-    //     make_pq_distance_query_to_pq_centroid_distance_tables<
-    //         std::span<float>,
-    //         decltype(pq_storage_type{}[0])>());
-    
-    // partitioned_pq_vectors_.reset();
-    
-    // return std::make_tuple(std::move(scores), std::move(ids));
   }
 
   /***************************************************************************

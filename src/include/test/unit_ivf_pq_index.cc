@@ -692,10 +692,6 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
-
-//      auto&& [scores_from_finite, ids_from_finite] = index.query_finite_ram(queries, k_nn, nprobe, 1);
-//      CHECK(scores_from_finite(0, 0) == 0);
-//      CHECK(ids_from_finite(0, 0) == i * 11);
     }
 
     if (vfs.is_dir(ivf_index_uri)) {
@@ -705,21 +701,17 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   }
 
   // We can load and query the index.
-  std::cout << "----------------------------------------" << std::endl;
   {
     auto index2 = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
     size_t k_nn = 1;
     size_t nprobe = nlist;
     for (int i = 1; i <= 4; ++i) {
-      std::cout << "-----" << std::endl;
       auto value = static_cast<feature_type>(i);
       auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
       
       auto&& [scores_from_finite, ids_from_finite] = index2.query_finite_ram(queries, k_nn, nprobe, 5);
       CHECK(scores_from_finite(0, 0) == 0);
       CHECK(ids_from_finite(0, 0) == i * 11);
-      
-      return;
       
       auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
