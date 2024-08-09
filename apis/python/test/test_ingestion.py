@@ -211,6 +211,53 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
+def test_ivf_pq_ingestion_u8(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    k = 10
+    size = 10000
+    partitions = 100
+    dimensions = 128
+    nqueries = 100
+    nprobe = 20
+    create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    dtype = np.uint8
+
+    queries = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+    index = ingest(
+        index_type="IVF_PQ",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
+        num_subspaces=32,
+    )
+    _, result = index.query(queries, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = IVFPQIndex(uri=index_uri, memory_budget=int(size / 10))
+    _, result = index_ram.query(queries, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    _, result = index_ram.query(
+        queries,
+        k=k,
+        nprobe=nprobe,
+        use_nuv_implementation=True,
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    _, result = index_ram.query(
+        queries,
+        k=k,
+        nprobe=nprobe,
+        mode=Mode.LOCAL,
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
 def test_ivf_flat_ingestion_f32(tmp_path):
     dataset_dir = os.path.join(tmp_path, "dataset")
     k = 10
