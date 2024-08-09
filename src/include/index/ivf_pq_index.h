@@ -1041,10 +1041,11 @@ class ivf_pq_index {
   template <feature_vector_array Q>
   auto read_index_finite(
       const Q& query_vectors, size_t nprobe, size_t upper_bound) {
-    if (partitioned_pq_vectors_ &&
-        (::num_vectors(*partitioned_pq_vectors_) != 0 ||
-         ::num_vectors(partitioned_pq_vectors_->ids()) != 0)) {
-      throw std::runtime_error("Index already loaded");
+    if (!group_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@read_index_finite] group_ is not initialized. This "
+          "happens if you do not load an index by URI. Please close the index "
+          "and re-open it by URI.");
     }
 
     auto&& [active_partitions, active_queries] =
@@ -1089,6 +1090,12 @@ class ivf_pq_index {
       const std::string& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& storage_version = "") {
+    if (!partitioned_pq_vectors_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] partitioned_pq_vectors_ is not "
+          "initialized. This happens if you train the index, query with finite "
+          "RAM, and then try to write. Make sure to write before the query.");
+    }
     if (temporal_policy.has_value()) {
       temporal_policy_ = *temporal_policy;
     }
@@ -1285,12 +1292,16 @@ class ivf_pq_index {
 
   template <feature_vector_array Q>
   auto query(
-      QueryType queryType, const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      QueryType queryType,
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
     switch (queryType) {
       case QueryType::InfiniteRAM:
         return query_infinite_ram(query_vectors, k_nn, nprobe);
       case QueryType::FiniteRAM:
-        return query_finite_ram(query_vectors, k_nn, nprobe);
+        return query_finite_ram(query_vectors, k_nn, nprobe, upper_bound);
       default:
         throw std::runtime_error("Invalid query type");
     }
@@ -1321,9 +1332,12 @@ class ivf_pq_index {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
     if (!partitioned_pq_vectors_ ||
-        ::num_vectors(*partitioned_pq_vectors_) == 0) {
+        partitioned_pq_vectors_->num_vectors() == 0 ||
+        partitioned_pq_vectors_->num_vectors() !=
+            partitioned_pq_vectors_->total_num_vectors()) {
       read_index_infinite();
     }
+
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
@@ -1373,11 +1387,15 @@ class ivf_pq_index {
       size_t k_nn,
       size_t nprobe,
       size_t upper_bound = 0) {
-    if (partitioned_pq_vectors_ &&
-        ::num_vectors(*partitioned_pq_vectors_) != 0) {
+    if (!group_) {
       throw std::runtime_error(
-          "Vectors are already loaded. Cannot load twice. "
-          "Cannot do finite query on in-memory index.");
+          "[ivf_pq_index@query_finite_ram] Query with finite RAM can only be "
+          "run if you're loading the index by URI. Please open it by URI and "
+          "try again. If you just wrote the index, open it up again by URI.");
+    }
+    if (partitioned_pq_vectors_) {
+      // We did an infinite query before this. Reset so we can load again.
+      partitioned_pq_vectors_.reset();
     }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);

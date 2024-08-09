@@ -494,19 +494,33 @@ void init_type_erased_module(py::module_& m) {
           },
           py::arg("vectors"))
       .def(
-          "query",
+          "query_infinite_ram",
           [](IndexIVFPQ& index,
-             QueryType queryType,
              const FeatureVectorArray& vectors,
              size_t top_k,
              size_t nprobe) {
-            auto r = index.query(queryType, vectors, top_k, nprobe);
+            auto r =
+                index.query(QueryType::InfiniteRAM, vectors, top_k, nprobe);
             return make_python_pair(std::move(r));
           },
-          py::arg("queryType"),
           py::arg("vectors"),
           py::arg("top_k"),
           py::arg("nprobe"))
+      .def(
+          "query_finite_ram",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             size_t top_k,
+             size_t nprobe,
+             size_t memory_budget) {
+            auto r = index.query(
+                QueryType::FiniteRAM, vectors, top_k, nprobe, memory_budget);
+            return make_python_pair(std::move(r));
+          },
+          py::arg("vectors"),
+          py::arg("top_k"),
+          py::arg("nprobe"),
+          py::arg("memory_budget"))
       .def(
           "write_index",
           [](IndexIVFPQ& index,

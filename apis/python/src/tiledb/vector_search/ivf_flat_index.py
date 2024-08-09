@@ -188,7 +188,7 @@ class IVFFlatIndex(index.Index):
         nprobe: int = 1,
         nthreads: int = -1,
         use_nuv_implementation: bool = False,
-        mode: Mode = None,
+        mode: Optional[Mode] = None,
         resource_class: Optional[str] = None,
         resources: Optional[Mapping[str, Any]] = None,
         num_partitions: int = -1,
