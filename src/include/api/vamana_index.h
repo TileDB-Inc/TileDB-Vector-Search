@@ -64,13 +64,13 @@
  *   - id_type: uint32 or uint64
  *   - adjacency_row_index_type: uint32 or uint64
  */
+
 class IndexVamana {
  public:
   IndexVamana(const IndexVamana&) = delete;
   IndexVamana(IndexVamana&&) = default;
   IndexVamana& operator=(const IndexVamana&) = delete;
   IndexVamana& operator=(IndexVamana&&) = default;
-
   /**
    * @brief Create an index with the given configuration. The index in this
    * state must next be trained. The sequence for creating an index in this

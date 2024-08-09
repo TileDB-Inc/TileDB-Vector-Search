@@ -104,3 +104,38 @@ def write_ivecs(uri, data, ctx_or_config=None):
 
 def write_fvecs(uri, data, ctx_or_config=None):
     _write_vecs_t(uri, data, np.float32, ctx_or_config)
+
+
+def normalize_vector(vector: np.array) -> np.array:
+    """
+    Normalize a single vector to unit length.
+
+    Args:
+    vector (np.array): Input vector to be normalized.
+
+    Returns:
+    np.array: Normalized vector.
+    """
+    if vector.dtype == object:
+        return np.array([normalize_vector(v) for v in vector])
+
+    norm = np.linalg.norm(vector)
+    if norm == 0:
+        return vector
+    return vector / norm
+
+
+def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
+    """
+    Normalize an array of vectors to unit length while preserving the original array structure.
+
+    Args:
+    vectors (np.ndarray): Input array of vectors to be normalized.
+
+    Returns:
+    np.ndarray: Array of normalized vectors with the same structure as the input.
+    """
+    normalized = np.empty_like(vectors)
+    for i, v in enumerate(vectors):
+        normalized[i] = normalize_vector(v)
+    return normalized

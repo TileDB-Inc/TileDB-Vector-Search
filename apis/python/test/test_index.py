@@ -35,12 +35,6 @@ def query_and_check_distances(
         assert np.array_equal(distances, expected_distances)
 
 
-def query_and_check(index, queries, k, expected, **kwargs):
-    for _ in range(3):
-        result_d, result_i = index.query(queries, k=k, **kwargs)
-        assert expected.issubset(set(result_i[0]))
-
-
 def check_default_metadata(
     uri, expected_vector_type, expected_storage_version, expected_index_type
 ):
