@@ -248,7 +248,7 @@ class ivf_pq_index {
   uint64_t num_threads_{std::thread::hardware_concurrency()};
   uint64_t seed_{std::random_device{}()};
 
-  DistanceMetric distance_metric_{DistanceMetric::L2};
+  DistanceMetric distance_metric_{DistanceMetric::SUM_OF_SQUARES};
 
  public:
   using value_type = feature_type;
@@ -297,7 +297,7 @@ class ivf_pq_index {
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      DistanceMetric distance_metric = DistanceMetric::L2,
+      DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES,
       uint64_t seed = std::random_device{}()
       )
       : temporal_policy_{

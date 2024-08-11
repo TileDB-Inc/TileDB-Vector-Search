@@ -151,7 +151,7 @@ def create(
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     **kwargs,
 ) -> FlatIndex:
     """

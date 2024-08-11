@@ -660,7 +660,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       convergence_tolerance,
       reassign_ratio,
       temporal_policy,
-      DistanceMetric::L2,
+      DistanceMetric::SUM_OF_SQUARES,
       num_clusters);
   auto ivf_index_uri =
       (std::filesystem::temp_directory_path() / "ivf_index").string();

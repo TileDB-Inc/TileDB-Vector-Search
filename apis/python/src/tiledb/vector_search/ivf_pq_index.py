@@ -125,7 +125,7 @@ def create(
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
     partitions: Optional[int] = None,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     **kwargs,
 ) -> IVFPQIndex:
     """
@@ -168,7 +168,7 @@ def create(
         raise ValueError(
             f"Number of dimensions ({dimensions}) must be divisible by num_subspaces ({num_subspaces})."
         )
-    if distance_metric != vspy.DistanceMetric.L2:
+    if distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES and distance_metric != vspy.DistanceMetric.L2:
         raise ValueError(
             f"Distance metric {distance_metric} is not supported in IVF_PQ"
         )

@@ -261,7 +261,7 @@ def test_vamana_cosine_simple(tmp_path):
         index_type="VAMANA",
         index_uri=index_uri,
         input_vectors=input_vectors,
-        distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
+        distance_metric=vspy.DistanceMetric.COSINE,
     )
 
     # Create a query vector
@@ -281,7 +281,6 @@ def test_vamana_cosine_simple(tmp_path):
     distances, ids = index.query(
         queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
     )
-    print(distances, ids)
 
     assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
     sorted_distances = np.sort(distances)
@@ -469,8 +468,8 @@ def test_inner_product_distances(tmp_path):
         ), "Inner product distances do not match"
 
 
-def test_l2_distance(tmp_path):
-    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+def test_sum_of_squares_distance(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_sum_of_squares")
     index = ingest(
         index_type="FLAT",
         index_uri=index_uri,
@@ -481,14 +480,14 @@ def test_l2_distance(tmp_path):
     dataset_vectors = load_fvecs(siftsmall_inputs_file)
     query_vectors = load_fvecs(siftsmall_query_file)
 
-    nn_l2 = NearestNeighbors(n_neighbors=5, metric="euclidean")
-    nn_l2.fit(dataset_vectors)
-    distances_l2, ids_l2 = nn_l2.kneighbors(query_vectors)
+    nn_sum_of_squares = NearestNeighbors(n_neighbors=5, metric="euclidean")
+    nn_sum_of_squares.fit(dataset_vectors)
+    distances_sum_of_squares, ids_sum_of_squares = nn_sum_of_squares.kneighbors(query_vectors)
 
     distances, ids = index.query(query_vectors, k=5)
     distances = np.sqrt(distances)
-    assert np.allclose(distances_l2, distances, 1e-4), "L2 distances do not match"
-    assert np.array_equal(ids_l2, ids), "L2 ids do not match"
+    assert np.allclose(distances_sum_of_squares, distances, 1e-4), "L2 distances do not match"
+    assert np.array_equal(ids_sum_of_squares, ids), "L2 ids do not match"
 
 
 def test_wrong_distance_metric(tmp_path):
@@ -515,14 +514,14 @@ def test_wrong_type_with_distance_metric(tmp_path):
         )
 
 
-def test_vamana_create_l2(tmp_path):
-    index_uri = os.path.join(tmp_path, "sift10k_flat_L22")
+def test_vamana_create_sum_of_squares(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_sum_of_squares2")
     ingest(
         index_type="VAMANA",
         index_uri=index_uri,
         source_uri=siftsmall_inputs_file,
         source_type="FVEC",
-        distance_metric=vspy.DistanceMetric.L2,
+        distance_metric=vspy.DistanceMetric.SUM_OF_SQUARES,
     )
 
 
@@ -541,7 +540,7 @@ def cosine_distance(a, b):
     return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
-def l2_distance(a, b):
+def sum_of_squares_distance(a, b):
     return np.sum((a - b) ** 2)
 
 
@@ -583,44 +582,44 @@ def test_ivf_flat_create_cosine_numpy(tmp_path):
     ), "Distances are not sorted in ascending order"
 
     # Create index with L2 distance for comparison
-    index_uri_l2 = os.path.join(tmp_path, "sift10k_flat_L2")
-    index_l2 = ingest(
+    index_uri_sum_of_squares = os.path.join(tmp_path, "sift10k_flat_sum_of_squares")
+    index_sum_of_squares = ingest(
         index_type="IVF_FLAT",
-        index_uri=index_uri_l2,
+        index_uri=index_uri_sum_of_squares,
         input_vectors=input_vectors,
-        distance_metric=vspy.DistanceMetric.L2,
+        distance_metric=vspy.DistanceMetric.SUM_OF_SQUARES,
     )
 
-    distances_l2, ids_l2 = index_l2.query(query_vectors, k=k)
+    distances_sum_of_squares, ids_sum_of_squares = index_sum_of_squares.query(query_vectors, k=k)
 
     # Verify that L2 results are different from cosine results
     assert not np.array_equal(
-        ids, ids_l2
+        ids, ids_sum_of_squares
     ), "Cosine and L2 queries returned the same indices"
 
     for i, query in enumerate(query_vectors):
-        for j, idx in enumerate(ids_l2[i]):
-            manual_distance = l2_distance(query, input_vectors[idx])
+        for j, idx in enumerate(ids_sum_of_squares[i]):
+            manual_distance = sum_of_squares_distance(query, input_vectors[idx])
             np.testing.assert_allclose(
                 manual_distance,
-                distances_l2[i][j],
+                distances_sum_of_squares[i][j],
                 rtol=1e-5,
                 atol=1e-8,
                 err_msg=f"L2 distance mismatch for query {i}, neighbor {j}",
             )
 
     Index.delete_index(uri=index_uri, config={})
-    Index.delete_index(uri=index_uri_l2, config={})
+    Index.delete_index(uri=index_uri_sum_of_squares, config={})
 
 
-def test_ivfpq_create_l2(tmp_path):
-    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+def test_ivfpq_create_sum_of_squares(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_sum_of_squares")
     ingest(
         index_type="IVF_PQ",
         index_uri=index_uri,
         source_uri=siftsmall_inputs_file,
         source_type="FVEC",
-        distance_metric=vspy.DistanceMetric.L2,
+        distance_metric=vspy.DistanceMetric.SUM_OF_SQUARES,
         num_subspaces=2,
     )
 
@@ -636,3 +635,87 @@ def test_ivfpq_create_cosine(tmp_path):
             distance_metric=vspy.DistanceMetric.COSINE,
             num_subspaces=2,
         )
+
+def l2_distance(a, b):
+    return np.sqrt(np.sum((a - b) ** 2))
+
+def test_flat_l2_distance(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+    index = ingest(
+        index_type="FLAT",
+        index_uri=index_uri,
+        source_uri=siftsmall_inputs_file,
+        source_type="FVEC",
+        distance_metric=vspy.DistanceMetric.L2,
+    )
+
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
+
+    nn_l2 = NearestNeighbors(n_neighbors=5, metric="euclidean")
+    nn_l2.fit(dataset_vectors)
+    distances_l2_sklearn, ids_l2_sklearn = nn_l2.kneighbors(query_vectors)
+
+    distances, ids = index.query(query_vectors, k=5)
+
+    assert np.allclose(distances_l2_sklearn, distances, rtol=1e-5, atol=1e-8), "L2 distances do not match"
+    assert np.array_equal(ids_l2_sklearn, ids), "L2 ids do not match"
+
+def test_ivf_flat_l2_distance(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_ivf_flat_L2")
+    index = ingest(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        source_uri=siftsmall_inputs_file,
+        source_type="FVEC",
+        distance_metric=vspy.DistanceMetric.L2,
+        partitions=10,
+    )
+
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
+
+    k = 5
+    distances, ids = index.query(query_vectors, k=k, nprobe=10)
+
+    for i, query in enumerate(query_vectors):
+        for j, idx in enumerate(ids[i]):
+            manual_distance = l2_distance(query, dataset_vectors[idx])
+            np.testing.assert_allclose(
+                manual_distance,
+                distances[i][j],
+                rtol=1e-5,
+                atol=1e-8,
+                err_msg=f"L2 distance mismatch for query {i}, neighbor {j}",
+            )
+
+    assert np.all(np.diff(distances, axis=1) >= 0), "Distances are not sorted in ascending order"
+
+def test_vamana_l2_distance(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_vamana_L2")
+    index = ingest(
+        index_type="VAMANA",
+        index_uri=index_uri,
+        source_uri=siftsmall_inputs_file,
+        source_type="FVEC",
+        distance_metric=vspy.DistanceMetric.L2,
+    )
+
+    dataset_vectors = load_fvecs(siftsmall_inputs_file)
+    query_vectors = load_fvecs(siftsmall_query_file)
+
+    k = 5
+    distances, ids = index.query(query_vectors, k=k)
+
+    for i, query in enumerate(query_vectors):
+        for j, idx in enumerate(ids[i]):
+            manual_distance = l2_distance(query, dataset_vectors[idx])
+            np.testing.assert_allclose(
+                manual_distance,
+                distances[i][j],
+                rtol=1e-5,
+                atol=1e-8,
+                err_msg=f"L2 distance mismatch for query {i}, neighbor {j}",
+            )
+
+    assert np.all(np.diff(distances, axis=1) >= 0), "Distances are not sorted in ascending order"

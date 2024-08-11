@@ -136,7 +136,7 @@ def create(
     r_max_degree: int = R_MAX_DEGREE_DEFAULT,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     **kwargs,
 ) -> VamanaIndex:
     """
