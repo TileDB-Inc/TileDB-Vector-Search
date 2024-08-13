@@ -8,6 +8,7 @@ import numpy as np
 
 import tiledb
 from tiledb.cloud import groups
+from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.ivf_pq_index import IVFPQIndex
@@ -333,6 +334,12 @@ def check_equals(result_d, result_i, expected_result_d, expected_result_i):
     assert np.array_equal(
         result_d, expected_result_d
     ), f"result_d: {result_d} != expected_result_d: {expected_result_d}"
+
+
+def recall(ids, groundtruth_set, k_nn):
+    intersections = vspy.count_intersections(ids, groundtruth_set, k_nn)
+    total_possible_intersections = np.double(ids.num_vectors()) * np.double(k_nn)
+    return intersections / total_possible_intersections
 
 
 def random_name(name: str) -> str:
