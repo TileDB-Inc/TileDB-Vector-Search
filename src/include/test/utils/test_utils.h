@@ -34,9 +34,10 @@
 
 #include <catch2/catch_all.hpp>
 #include <ranges>
-
 #include <tiledb/tiledb>
+#include "api/feature_vector_array.h"
 #include "detail/linalg/tdb_io.h"
+#include "index/index_defs.h"
 
 template <class id_type>
 std::string write_ids_to_uri(
@@ -190,6 +191,64 @@ void validate_metadata(
 
   check_expected_arithmetic<size_t>(read_group, expected_arithmetic);
   check_expected_arithmetic<float>(read_group, expected_arithmetic_float);
+}
+
+template <class Index>
+void query_and_check_equals(
+    Index& index,
+    const FeatureVectorArray& queries,
+    size_t k,
+    const ColMajorMatrix<uint32_t>& expected_ids,
+    const ColMajorMatrix<float>& expected_scores,
+    size_t n_list = 1,
+    bool print_results = false) {
+  auto&& [scores_vector_array, ids_vector_array] =
+      index.query(QueryType::InfiniteRAM, queries, k, n_list);
+
+  auto ids = MatrixView<uint32_t, stdx::layout_left>{
+      (uint32_t*)ids_vector_array.data(),
+      extents(ids_vector_array)[0],
+      extents(ids_vector_array)[1]};
+  auto scores = MatrixView<float, stdx::layout_left>{
+      (float*)scores_vector_array.data(),
+      extents(scores_vector_array)[0],
+      extents(scores_vector_array)[1]};
+
+  CHECK(scores.num_rows() == k);
+  CHECK(ids.num_rows() == k);
+  CHECK(ids.num_cols() == scores.num_cols());
+
+  bool ids_did_not_match = false;
+  bool scores_did_not_match = false;
+  for (size_t i = 0; i < scores.num_rows(); ++i) {
+    for (size_t j = 0; j < scores.num_cols(); j++) {
+      if (ids(i, j) != expected_ids(i, j)) {
+        ids_did_not_match = true;
+        break;
+      }
+      if (scores(i, j) != expected_scores(i, j)) {
+        scores_did_not_match = true;
+        break;
+      }
+    }
+  }
+
+  if (print_results || scores_did_not_match || ids_did_not_match) {
+    debug_matrix(expected_ids, "expected_ids");
+    debug_matrix(expected_scores, "expected_scores");
+
+    debug_matrix(ids, "ids");
+    debug_matrix(scores, "scores");
+
+    if (ids_did_not_match) {
+      CHECK_THROWS_WITH(
+          false, "[test_utils@query_and_check_equals] Ids did not match");
+    }
+    if (scores_did_not_match) {
+      CHECK_THROWS_WITH(
+          false, "[test_utils@query_and_check_equals] Scores did not match");
+    }
+  }
 }
 
 #endif  // TILEDB_TEST_UTILS_H

@@ -526,6 +526,70 @@ def test_ingestion_external_ids_numpy(tmp_path):
         assert vfs.dir_size(index_uri) == 0
 
 
+# TODO(paris): Fix consolidate_updates() if it's called immediately after an ingest().
+
+
+def test_ivf_pq_consolidation(tmp_path):
+    index_uri = os.path.join(tmp_path, "array_IVF_PQ")
+    if shutil.os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+    data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
+    print(
+        "[test_ingestion] ingest() ====================================================================="
+    )
+    ingest(
+        # index_type="FLAT",
+        index_type="IVF_PQ",
+        index_uri=index_uri,
+        input_vectors=data,
+        index_timestamp=10,
+        num_subspaces=2,
+    )
+
+    data = np.array(
+        [[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3], [3.0, 3.1, 3.2, 3.3]],
+        dtype=np.float32,
+    )
+    print(
+        "[test_ingestion] IVFPQIndex() ====================================================================="
+    )
+    # index = FlatIndex(uri=index_uri)
+    index = IVFPQIndex(uri=index_uri)
+
+    print(
+        "[test_ingestion] index.update() ====================================================================="
+    )
+    index.update(
+        vector=data[1],
+        external_id=11,
+        timestamp=20,
+    )
+
+    print(
+        "[test_ingestion] index.update() ====================================================================="
+    )
+    index.update(
+        vector=data[2],
+        external_id=22,
+        timestamp=20,
+    )
+
+    # print('[test_ingestion] index.delete() =====================================================================')
+    # index.delete(external_id=1, timestamp=20)
+
+    print(
+        "[test_ingestion] index.consolidate_updates() ====================================================================="
+    )
+    index = index.consolidate_updates()
+
+    print(
+        "[test_ingestion] index.query() ====================================================================="
+    )
+    result_d, result_i = index.query(data, k=1)
+    print("[test_ingestion] scores", result_d)
+    print("[test_ingestion] ids", result_i)
+
+
 def test_ingestion_timetravel(tmp_path):
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
@@ -617,7 +681,7 @@ def test_ingestion_timetravel(tmp_path):
             timestamp=20,
         )
 
-        index = index.consolidate_updates()
+        index = index.consolidate_updates(retrain_index=True)
 
         # We still have no results before timestamp 10.
         query_and_check_equals(

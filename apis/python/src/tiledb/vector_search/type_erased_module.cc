@@ -494,6 +494,15 @@ void init_type_erased_module(py::module_& m) {
           },
           py::arg("vectors"))
       .def(
+          "update",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors_to_add,
+             const FeatureVector& vector_ids_to_remove) {
+            index.update(vectors_to_add, vector_ids_to_remove);
+          },
+          py::arg("vectors_to_add"),
+          py::arg("vector_ids_to_remove"))
+      .def(
           "query",
           [](IndexIVFPQ& index,
              QueryType queryType,

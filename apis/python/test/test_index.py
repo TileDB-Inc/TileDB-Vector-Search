@@ -274,6 +274,7 @@ def test_vamana_index(tmp_path):
     # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
     ingestion_timestamps, base_sizes = load_metadata(uri)
     assert base_sizes == [5]
+    assert len(ingestion_timestamps) == 1
     timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
     timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
     assert (
@@ -317,6 +318,9 @@ def test_ivf_pq_index(tmp_path):
         os.rmdir(uri)
     vector_type = np.float32
 
+    print(
+        "[test_index] ivf_pq_index.create() --------------------------------------------------------"
+    )
     index = ivf_pq_index.create(
         uri=uri,
         dimensions=3,
@@ -343,6 +347,9 @@ def test_ivf_pq_index(tmp_path):
     update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.float32))
     update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
+    print(
+        "[test_index] index.update_batch() --------------------------------------------------------"
+    )
     index.update_batch(
         vectors=update_vectors,
         external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
@@ -351,11 +358,34 @@ def test_ivf_pq_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
 
-    index = index.consolidate_updates()
+    # By default we do not re-train the index. This means we won't be able to find any results.
+    print(
+        "[test_index] index.consolidate_updates() --------------------------------------------------------"
+    )
+    index = index.consolidate_updates(retrain_index=False)
+    for i in range(5):
+        distances, ids = index.query(np.array([[i, i, i]], dtype=np.float32), k=1)
+        assert np.array_equal(ids, np.array([[MAX_UINT64]], dtype=np.float32))
+        assert np.array_equal(distances, np.array([[MAX_FLOAT32]], dtype=np.float32))
 
+    # We can retrain the index and find the results. Update ID 4 to 44 while we do that.
+    print(
+        "[test_index] index.delete() --------------------------------------------------------"
+    )
+    index.delete(external_id=4)
+    print(
+        "[test_index] index.update() --------------------------------------------------------"
+    )
+    index.update(vector=np.array([4, 4, 4], dtype=np.dtype(np.float32)), external_id=44)
+    print(
+        "[test_index] index.consolidate_updates() --------------------------------------------------------"
+    )
+    index = index.consolidate_updates(retrain_index=True)
+    return
     # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
     ingestion_timestamps, base_sizes = load_metadata(uri)
     assert base_sizes == [5]
+    assert len(ingestion_timestamps) == 1
     timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
     timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
     assert (

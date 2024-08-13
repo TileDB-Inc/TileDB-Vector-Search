@@ -68,7 +68,8 @@ class IndexFlatL2 {
             ctx, index_uri, config);
         break;
       default:
-        throw std::runtime_error("Unsupported attribute type");
+        throw std::runtime_error(
+            "[flat_l2_index@IndexFlatL2] Unsupported attribute type");
     }
   };
 
@@ -246,7 +247,8 @@ class IndexFlatL2 {
           return {std::move(x), std::move(y)};
         }
         default:
-          throw std::runtime_error("Unsupported attribute type");
+          throw std::runtime_error(
+              "[flat_l2_index@query] Unsupported attribute type");
       }
     }
 

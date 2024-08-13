@@ -229,6 +229,25 @@ def ingest(
     if source_type and input_vectors:
         raise ValueError("source_type should not be provided alongside input_vectors")
 
+    for variable in [
+        "training_input_vectors",
+        "training_source_uri",
+        "training_source_type",
+    ]:
+        if index_type != "IVF_FLAT" and locals().get(variable) is not None:
+            raise ValueError(
+                f"{variable} should only be provided with index_type IVF_FLAT"
+            )
+
+    if (
+        index_type != "IVF_FLAT"
+        and index_type != "IVF_PQ"
+        and locals().get("copy_centroids_uri") is not None
+    ):
+        raise ValueError(
+            "copy_centroids_uri should only be provided with index_type IVF_FLAT"
+        )
+
     if training_source_uri and training_sample_size != -1:
         raise ValueError(
             "training_source_uri and training_sample_size should not both be provided"
@@ -261,7 +280,7 @@ def ingest(
         raise ValueError(
             "training_sample_size should not be provided alongside copy_centroids_uri"
         )
-    if copy_centroids_uri is not None and partitions == -1:
+    if index_type == "IVF_FLAT" and copy_centroids_uri is not None and partitions == -1:
         raise ValueError(
             "partitions should be provided if copy_centroids_uri is provided (set partitions to the number of centroids in copy_centroids_uri)"
         )
@@ -270,16 +289,6 @@ def ingest(
         raise ValueError(
             "training_sample_size should only be provided with index_type IVF_FLAT"
         )
-    for variable in [
-        "copy_centroids_uri",
-        "training_input_vectors",
-        "training_source_uri",
-        "training_source_type",
-    ]:
-        if index_type != "IVF_FLAT" and locals().get(variable) is not None:
-            raise ValueError(
-                f"{variable} should only be provided with index_type IVF_FLAT"
-            )
 
     for variable in [
         "copy_centroids_uri",
@@ -1513,23 +1522,49 @@ def ingest(
         dimensions: int,
         size: int,
         batch: int,
+        retrain_index: bool,
         partitions: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
+        print("[ingestion@ingest_type_erased] retrain_index", retrain_index)
+        print("[ingestion@ingest_type_erased] size", size)
+        print("[ingestion@ingest_type_erased] batch", batch)
+        print("[ingestion@ingest_type_erased] dimensions", dimensions)
         import numpy as np
 
         import tiledb.cloud
+        from tiledb.vector_search import _tiledbvspy as vspy
         from tiledb.vector_search.storage_formats import storage_formats
 
         logger = setup(config, verbose)
         with tiledb.scope_ctx(ctx_or_config=config):
+            # These are the vector IDs which have been updated. We will remove them from the index data.
             updated_ids = read_updated_ids(
                 updates_uri=updates_uri,
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,
+            )
+            print("[ingestion@ingest_type_erased] updated_ids:", updated_ids)
+
+            # These are the updated vectors which we need to add to the index. Note that
+            # `additions_external_ids` is a subset of `updated_ids` which only includes vectors
+            # which were not deleted.
+            additions_vectors, additions_external_ids = read_additions(
+                updates_uri=updates_uri,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+            print(
+                "[ingestion@ingest_type_erased] additions_vectors:",
+                additions_vectors,
+            )
+            print(
+                "[ingestion@ingest_type_erased] additions_external_ids:",
+                additions_external_ids,
             )
 
             temp_data_group_uri = f"{index_group_uri}/{PARTIAL_WRITE_ARRAY_DIR}"
@@ -1557,7 +1592,14 @@ def ingest(
                 part_end = part + batch
                 if part_end > size:
                     part_end = size
+
                 # First we get each vector and it's external id from the input data.
+                print("[ingestion@ingest_type_erased] source_uri:", source_uri)
+                print("[ingestion@ingest_type_erased] source_type:", source_type)
+                print("[ingestion@ingest_type_erased] vector_type:", vector_type)
+                print("[ingestion@ingest_type_erased] dimensions:", dimensions)
+                print("[ingestion@ingest_type_erased] part:", part)
+                print("[ingestion@ingest_type_erased] part_end:", part_end)
                 in_vectors = read_input_vectors(
                     source_uri=source_uri,
                     source_type=source_type,
@@ -1569,6 +1611,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                print("[ingestion@ingest_type_erased] in_vectors:", in_vectors)
                 external_ids = read_external_ids(
                     external_ids_uri=external_ids_uri,
                     external_ids_type=external_ids_type,
@@ -1578,6 +1621,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                print("[ingestion@ingest_type_erased] external_ids:", external_ids)
 
                 # Then check if the external id is in the updated ids.
                 updates_filter = np.in1d(
@@ -1586,6 +1630,14 @@ def ingest(
                 # We only keep the vectors and external ids that are not in the updated ids.
                 in_vectors = in_vectors[updates_filter]
                 external_ids = external_ids[updates_filter]
+                print(
+                    "[ingestion@ingest_type_erased] in_vectors after filter:",
+                    in_vectors,
+                )
+                print(
+                    "[ingestion@ingest_type_erased] external_ids after filter:",
+                    external_ids,
+                )
                 vector_len = len(in_vectors)
                 if vector_len > 0:
                     end_offset = write_offset + vector_len
@@ -1600,13 +1652,8 @@ def ingest(
                     ids_array[write_offset:end_offset] = external_ids
                     write_offset = end_offset
 
+            # NOTE(paris): These are the vectors which we need to add to the index.
             # Ingest additions
-            additions_vectors, additions_external_ids = read_additions(
-                updates_uri=updates_uri,
-                config=config,
-                verbose=verbose,
-                trace_id=trace_id,
-            )
             end = write_offset
             if additions_vectors is not None:
                 end += len(additions_external_ids)
@@ -1624,8 +1671,30 @@ def ingest(
             parts_array.close()
             ids_array.close()
 
-        # Now that we've ingested the vectors and their IDs, train the index with the data.
+        if index_type == "IVF_PQ" and not retrain_index:
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexIVFPQ(ctx, index_group_uri)
+            if (
+                additions_vectors is not None
+                or additions_external_ids is not None
+                or updated_ids is not None
+            ):
+                vectors_to_add = vspy.FeatureVectorArray(
+                    np.transpose(additions_vectors)
+                    if additions_vectors is not None
+                    else np.array([[]], dtype=vector_type),
+                    np.transpose(additions_external_ids)
+                    if additions_external_ids is not None
+                    else np.array([], dtype=np.uint64),
+                )
+                vector_ids_to_remove = vspy.FeatureVector(
+                    updated_ids if updated_ids is not None else np.array([], np.uint64)
+                )
+                index.update(vectors_to_add, vector_ids_to_remove)
+            index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
+            return
 
+        # Now that we've ingested the vectors and their IDs, train the index with the data.
         ctx = vspy.Ctx(config)
         data = vspy.FeatureVectorArray(
             ctx, parts_array_uri, ids_array_uri, 0, to_temporal_policy(index_timestamp)
@@ -2306,6 +2375,7 @@ def ingest(
                 dimensions=dimensions,
                 size=size,
                 batch=input_vectors_batch_size,
+                retrain_index=copy_centroids_uri is None,
                 partitions=partitions,
                 config=config,
                 verbose=verbose,
@@ -2745,6 +2815,7 @@ def ingest(
                     logger.debug(f"Group '{index_group_uri}' already exists")
                 else:
                     raise err
+        print("[ingestion] arrays_created: ", arrays_created)
         group = tiledb.Group(index_group_uri, "r")
         ingestion_timestamps = list(
             json.loads(group.meta.get("ingestion_timestamps", "[]"))

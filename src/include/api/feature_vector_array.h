@@ -405,7 +405,8 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
         return validate_top_k(aview, bview);
       }
       default:
-        throw std::runtime_error("Unsupported attribute type");
+        throw std::runtime_error(
+            "[feature_vector_array@validate_top_k] Unsupported attribute type");
     }
   };
 
@@ -446,7 +447,8 @@ bool validate_top_k(const FeatureVectorArray& a, const FeatureVectorArray& b) {
       return proc_b(aview);
     }
     default:
-      throw std::runtime_error("Unsupported attribute type");
+      throw std::runtime_error(
+          "[feature_vector_array@validate_top_k] Unsupported attribute type");
   }
 }
 
@@ -498,7 +500,9 @@ auto count_intersections(
         return count_intersections(aview, bview, k_nn);
       }
       default:
-        throw std::runtime_error("Unsupported attribute type");
+        throw std::runtime_error(
+            "[feature_vector_array@count_intersections] Unsupported attribute "
+            "type");
     }
   };
 
@@ -539,7 +543,9 @@ auto count_intersections(
       return proc_b(aview);
     }
     default:
-      throw std::runtime_error("Unsupported attribute type");
+      throw std::runtime_error(
+          "[feature_vector_array@count_intersections] Unsupported attribute "
+          "type");
   }
 }
 
