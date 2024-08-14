@@ -263,15 +263,13 @@ class Index:
             # Modify results in-place, replacing each element with its reciprocal (1 / result)
             # This is called for inner product results, as the internal query functions return 1 / inner product
             # We need to handle potential division by zero
-            with np.errstate(divide='ignore', invalid='ignore'):
+            with np.errstate(divide="ignore", invalid="ignore"):
                 np.reciprocal(results, out=results)
             # Replace inf (result of 1/0) with a large finite number
             results[np.isinf(results)] = np.finfo(results.dtype).max
             # Replace NaN (0/0) with 0
             results[np.isnan(results)] = 0
-            
-            
-        
+
         if queries.ndim != 2:
             raise TypeError(
                 f"Expected queries to have 2 dimensions (i.e. [[...], etc.]), but it had {queries.ndim} dimensions"
@@ -383,7 +381,7 @@ class Index:
 
         if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
             flip_results(addition_results_d)
-            
+
         results_d = np.hstack((internal_results_d, addition_results_d))
         results_i = np.hstack((internal_results_i, addition_results_i))
         sort_index = np.argsort(results_d, axis=1)

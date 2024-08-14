@@ -1888,7 +1888,11 @@ def ingest(
         if additions_vectors is None:
             return
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
+        if (
+            index_type == "IVF_FLAT"
+            and distance_metric == vspy.DistanceMetric.COSINE
+            and not normalized
+        ):
             additions_vectors = normalize_vectors(additions_vectors)
 
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
@@ -3031,7 +3035,11 @@ def ingest(
             storage_version=storage_version,
         )
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
+        if (
+            index_type == "IVF_FLAT"
+            and distance_metric == vspy.DistanceMetric.COSINE
+            and not normalized
+        ):
             if input_vectors is not None:
                 input_vectors = normalize_vectors(input_vectors)
             if training_input_vectors is not None:
