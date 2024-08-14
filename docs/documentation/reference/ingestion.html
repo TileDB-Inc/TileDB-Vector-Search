@@ -330,13 +330,13 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><code>partitions</code></td>
 <td>int</td>
-<td>For IVF indexes, the number of partitions to load the data with, if not provided, is auto-configured based on the dataset size.</td>
+<td>For IVF_FLAT and IVF_PQ indexes, the number of partitions to generate from the data during k-means clustering. If not provided, is auto-configured based on the dataset size.</td>
 <td><code>-1</code></td>
 </tr>
 <tr class="odd">
 <td><code>num_subspaces</code></td>
 <td>int</td>
-<td>For PQ encoded indexes, the number of subspaces to use in the PQ encoding. We will divide the dimensions into num_subspaces parts, and PQ encode each part separately. This means dimensions must be divisible by num_subspaces.</td>
+<td>For IVF_PQ encoded indexes, the number of subspaces to use in the PQ encoding. We will divide the dimensions into num_subspaces parts, and PQ encode each part separately. This means dimensions must be divisible by num_subspaces.</td>
 <td><code>-1</code></td>
 </tr>
 <tr class="even">

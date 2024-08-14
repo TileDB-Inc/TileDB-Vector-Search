@@ -355,7 +355,7 @@ ul.task-list li input[type="checkbox"] {
 <tr class="odd">
 <td><code>nprobe</code></td>
 <td>int</td>
-<td>Number of partitions to check per query. Use this parameter to trade-off accuracy for latency and cost.</td>
+<td>Number of partitions to check per query. Use this parameter to trade-off accuracy for latency and cost. As a rule of thumb, configuring <code>nprobe</code> to be the square root of <code>partitions</code> should result in accuracy close to 100%.</td>
 <td><code>1</code></td>
 </tr>
 <tr class="even">
