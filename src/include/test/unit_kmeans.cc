@@ -141,4 +141,45 @@ TEST_CASE("test kmeans random initialization edge cases", "[kmeans][init][edge]"
     CHECK(centroids.num_cols() == 0);
     CHECK(centroids.num_rows() == 0);
   }
+
+  {
+    // Invalid Case: num_partitions is greater than number of vectors in the training set
+    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
+                               0, 5, 1, 2, 9, 9, 5, 9, 2, 0, 2, 7, 
+                               7, 9, 8, 6, 7, 9, 6, 6};
+    ColMajorMatrix<float> training_data(4, 8);
+    std::copy(begin(data), end(data), training_data.data());
+    size_t num_partitions = 10;  // More partitions than available vectors
+    ColMajorMatrix<float> centroids(4, num_partitions);  // Centroids matrix
+
+    CHECK_THROWS_AS(
+        kmeans_random_init(training_data, centroids, num_partitions),
+        std::runtime_error);
+  }
+
+  {
+    // Invalid Case: num_partitions does not match the number of centroids
+    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
+                               0, 5, 1, 2, 9, 9, 5, 9, 2, 0, 2, 7, 
+                               7, 9, 8, 6, 7, 9, 6, 6};
+    ColMajorMatrix<float> training_data(4, 8);
+    std::copy(begin(data), end(data), training_data.data());
+    size_t num_partitions = 3;
+    ColMajorMatrix<float> centroids(4, 2);  // Mismatch: 2 centroids for 3 partitions
+
+    CHECK_THROWS_AS(
+        kmeans_random_init(training_data, centroids, num_partitions),
+        std::runtime_error);
+  }
+
+  {
+    // Invalid Case: Empty training data with non-zero partitions
+    ColMajorMatrix<float> training_data(0, 0);  // No rows, no columns
+    size_t num_partitions = 3;
+    ColMajorMatrix<float> centroids(4, num_partitions);
+
+    CHECK_THROWS_AS(
+        kmeans_random_init(training_data, centroids, num_partitions),
+        std::runtime_error);
+  }
 }
