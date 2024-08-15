@@ -248,7 +248,7 @@ TEST_CASE(
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
-  size_t num_subspaces = 1;
+  uint32_t num_subspaces = 1;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -558,9 +558,9 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
   size_t n_list = 1;
-  size_t num_subspaces = 1;
+  uint32_t num_subspaces = 1;
   float convergence_tolerance = 0.00003f;
-  size_t max_iterations = 3;
+  uint32_t max_iterations = 3;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -609,8 +609,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
   size_t n_list = 1;
-  size_t num_subspaces = 1;
-  size_t max_iterations = 3;
+  uint32_t num_subspaces = 1;
+  uint32_t max_iterations = 3;
   float convergence_tolerance = 0.00003f;
   float reassign_ratio = 0.08f;
 

@@ -209,6 +209,7 @@ class IVFFlatIndex(index.Index):
         nprobe: int
             Number of partitions to check per query.
             Use this parameter to trade-off accuracy for latency and cost.
+            As a rule of thumb, configuring `nprobe` to be the square root of `partitions` should result in accuracy close to 100%.
         nthreads: int
             Number of threads to use for local query execution.
         use_nuv_implementation: bool

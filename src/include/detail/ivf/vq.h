@@ -146,8 +146,8 @@ auto vq_apply_query(
       for (auto j = active_queries[partno].begin(); j < end; j += 2) {
         auto j0 = j[0];
         auto j1 = j[1];
-        auto q_vec_0 = query[j0];
-        auto q_vec_1 = query[j1];
+        const auto& q_vec_0 = query[j0];
+        const auto& q_vec_1 = query[j1];
 
         auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
         auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);
@@ -165,7 +165,7 @@ auto vq_apply_query(
        */
       for (auto j = end; j < active_queries[partno].end(); ++j) {
         auto j0 = j[0];
-        auto q_vec_0 = query[j0];
+        const auto& q_vec_0 = query[j0];
 
         auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
         auto score_01 = L2(q_vec_0, partitioned_db[kp + 1]);
@@ -181,8 +181,8 @@ auto vq_apply_query(
       for (auto j = active_queries[partno].begin(); j != end; j += 2) {
         auto j0 = j[0];
         auto j1 = j[1];
-        auto q_vec_0 = query[j0];
-        auto q_vec_1 = query[j1];
+        const auto& q_vec_0 = query[j0];
+        const auto& q_vec_1 = query[j1];
 
         auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
         auto score_10 = L2(q_vec_1, partitioned_db[kp + 0]);
@@ -196,7 +196,7 @@ auto vq_apply_query(
        */
       for (auto j = end; j < active_queries[partno].end(); ++j) {
         auto j0 = j[0];
-        auto q_vec_0 = query[j0];
+        const auto& q_vec_0 = query[j0];
 
         auto score_00 = L2(q_vec_0, partitioned_db[kp + 0]);
         min_scores[j0].insert(score_00, ids[kp + 0]);

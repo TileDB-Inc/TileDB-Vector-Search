@@ -121,9 +121,10 @@ def ingest(
         Number of input vectors, if not provided use the full size of the input dataset.
         If provided, we filter the first vectors from the input source.
     partitions: int
-        For IVF indexes, the number of partitions to load the data with, if not provided, is auto-configured based on the dataset size.
+        For IVF_FLAT and IVF_PQ indexes, the number of partitions to generate from the data during k-means clustering.
+        If not provided, is auto-configured based on the dataset size.
     num_subspaces: int
-        For PQ encoded indexes, the number of subspaces to use in the PQ encoding. We will divide the dimensions into
+        For IVF_PQ encoded indexes, the number of subspaces to use in the PQ encoding. We will divide the dimensions into
         num_subspaces parts, and PQ encode each part separately. This means dimensions must
         be divisible by num_subspaces.
     l_build: int
@@ -1888,7 +1889,11 @@ def ingest(
         if additions_vectors is None:
             return
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
+        if (
+            index_type == "IVF_FLAT"
+            and distance_metric == vspy.DistanceMetric.COSINE
+            and not normalized
+        ):
             additions_vectors = normalize_vectors(additions_vectors)
 
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
@@ -2152,7 +2157,7 @@ def ingest(
         size: int,
         partitions: int,
         dimensions: int,
-        copy_centroids_uri: str,
+        copy_centroids_uri: Optional[str],
         training_sample_size: int,
         training_source_uri: Optional[str],
         training_source_type: Optional[str],
@@ -3031,7 +3036,11 @@ def ingest(
             storage_version=storage_version,
         )
 
-        if index_type == "IVF_FLAT" and distance_metric == vspy.DistanceMetric.COSINE and not normalized:
+        if (
+            index_type == "IVF_FLAT"
+            and distance_metric == vspy.DistanceMetric.COSINE
+            and not normalized
+        ):
             if input_vectors is not None:
                 input_vectors = normalize_vectors(input_vectors)
             if training_input_vectors is not None:

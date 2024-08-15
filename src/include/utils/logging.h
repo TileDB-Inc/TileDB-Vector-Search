@@ -94,7 +94,7 @@ individually
  * @code{.cpp}
 // Print totals for all timers
 auto timers = _timing_data.get_timer_names();
-for (auto& timer : timers) {
+for (const auto& timer : timers) {
    std::cout << timer << ":  " <<
 _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 }
@@ -105,8 +105,10 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #define TDB_LOGGING_H
 
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
@@ -142,12 +144,11 @@ class timing_data_class {
   using time_type = std::chrono::time_point<clock_type>;
   using duration_type =
       std::chrono::duration<clock_type::rep, clock_type::period>;
-  using name_time = std::multimap<std::string, duration_type>;
 
  private:
-  name_time interval_times_;
+  std::multimap<std::string, duration_type> interval_times_;
+  mutable std::mutex mtx_;
   bool verbose_{false};
-  bool debug_{false};
 
   /**
    * Private constructor and destructor for singleton.
@@ -167,8 +168,11 @@ class timing_data_class {
    * @return The singleton instance.
    */
   static timing_data_class& get_instance() {
-    static timing_data_class instance;
-    return instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static timing_data_class* instance;
+    std::call_once(flag, []() { instance = new timing_data_class(); });
+    return *instance;
   }
 
   /**
@@ -180,6 +184,7 @@ class timing_data_class {
    * in chrono::duration format.
    */
   void insert_entry(const std::string& name, const duration_type& time) {
+    std::lock_guard<std::mutex> lock(mtx_);
     interval_times_.insert(std::make_pair(name, time));
   }
 
@@ -192,6 +197,7 @@ class timing_data_class {
    */
   template <class D = std::chrono::milliseconds>
   auto get_entries_separately(const std::string& string) const {
+    std::lock_guard<std::mutex> lock(mtx_);
     std::vector<double> intervals;
 
     auto range = interval_times_.equal_range(string);
@@ -210,7 +216,8 @@ class timing_data_class {
    * name.
    */
   template <class D = std::chrono::milliseconds>
-  auto get_entries_summed(const std::string& string) const {
+  double get_entries_summed(const std::string& string) const {
+    std::lock_guard<std::mutex> lock(mtx_);
     double sum = 0.0;
     auto range = interval_times_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
@@ -224,15 +231,16 @@ class timing_data_class {
    * @return Vector of the names of all timers that have logged data.
    */
   auto get_timer_names() const {
+    std::lock_guard<std::mutex> lock(mtx_);
     std::set<std::string> multinames;
 
     std::vector<std::string> names;
 
-    for (auto& i : interval_times_) {
+    for (const auto& i : interval_times_) {
       multinames.insert(i.first);
     }
     names.reserve(multinames.size());
-    for (auto& i : multinames) {
+    for (const auto& i : multinames) {
       names.push_back(i);
     }
     return names;
@@ -246,12 +254,41 @@ class timing_data_class {
     return verbose_;
   }
 
-  void set_debug(bool debug) {
-    debug_ = debug;
+  std::string dump() const {
+    std::ostringstream oss;
+    auto timer_names = get_timer_names();
+    for (const auto& name : timer_names) {
+      auto intervals = get_entries_separately<std::chrono::nanoseconds>(name);
+      double sum_ns = get_entries_summed<std::chrono::nanoseconds>(name);
+      double average_ns = sum_ns / intervals.size();
+
+      oss << name << ":";
+      oss << " count: " << intervals.size() << ",";
+      oss << " sum: " << format_duration_ns(sum_ns) << ",";
+      oss << " avg: " << format_duration_ns(average_ns);
+      oss << "\n";
+    }
+    return oss.str();
   }
 
-  bool get_debug() const {
-    return debug_;
+ private:
+  std::string format_duration_ns(double duration_ns) const {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2);
+
+    if (duration_ns < 1000) {
+      oss << duration_ns;
+      return oss.str() + " ns";
+    } else if (duration_ns < 1000000) {
+      oss << (duration_ns / 1000.0);
+      return oss.str() + " µs";
+    } else if (duration_ns < 1000000000) {
+      oss << (duration_ns / 1000000.0);
+      return oss.str() + " ms";
+    } else {
+      oss << (duration_ns / 1000000000.0);
+      return oss.str() + " s";
+    }
   }
 };
 
@@ -364,12 +401,11 @@ class scoped_timer : public log_timer {
 class memory_data {
  public:
   using memory_type = size_t;
-  using name_memory = std::multimap<std::string, memory_type>;
 
  private:
-  name_memory memory_usages_;
+  std::multimap<std::string, memory_type> memory_usages_;
+  mutable std::mutex mtx_;
   bool verbose_{false};
-  bool debug_{false};
 
   /**
    * Constructor.  Private to enforce singleton pattern.
@@ -389,8 +425,11 @@ class memory_data {
    * @return Reference to the singleton instance of the class.
    */
   static memory_data& get_instance() {
-    static memory_data instance;
-    return instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static memory_data* instance;
+    std::call_once(flag, []() { instance = new memory_data(); });
+    return *instance;
   }
 
   /**
@@ -399,6 +438,7 @@ class memory_data {
    * @param use The memory consumption to be recorded (in bytes).
    */
   void insert_entry(const std::string& name, const memory_type& use) {
+    std::lock_guard<std::mutex> lock(mtx_);
     memory_usages_.insert(std::make_pair(name, use));
   }
 
@@ -408,6 +448,7 @@ class memory_data {
    * @return Vector of memory consumption values associated with the name.
    */
   auto get_entries_separately(const std::string& string) const {
+    std::lock_guard<std::mutex> lock(mtx_);
     std::vector<double> usages;
 
     auto range = memory_usages_.equal_range(string);
@@ -423,6 +464,7 @@ class memory_data {
    * @return Vector of memory consumption values associated with the name.
    */
   auto get_entries_summed(const std::string& string) const {
+    std::lock_guard<std::mutex> lock(mtx_);
     double sum = 0.0;
     auto range = memory_usages_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
@@ -436,14 +478,15 @@ class memory_data {
    * @return Vector of names associated with the memory consumption entries.
    */
   auto get_usage_names() const {
+    std::lock_guard<std::mutex> lock(mtx_);
     std::set<std::string> multinames;
 
     std::vector<std::string> names;
 
-    for (auto& i : memory_usages_) {
+    for (const auto& i : memory_usages_) {
       multinames.insert(i.first);
     }
-    for (auto& i : multinames) {
+    for (const auto& i : multinames) {
       names.push_back(i);
     }
     return names;
@@ -457,12 +500,38 @@ class memory_data {
     return verbose_;
   }
 
-  void set_debug(bool debug) {
-    debug_ = debug;
+  std::string dump() const {
+    std::ostringstream oss;
+    auto usage_names = get_usage_names();
+    for (const auto& name : usage_names) {
+      auto usages = get_entries_separately(name);
+      double sum_mib = get_entries_summed(name);
+      double average_mib = sum_mib / usages.size();
+
+      oss << name << ":";
+      oss << " count: " << usages.size() << ",";
+      oss << " sum: " << format_memory_mib(sum_mib) << ",";
+      oss << " avg: " << format_memory_mib(average_mib);
+      oss << "\n";
+    }
+    return oss.str();
   }
 
-  bool get_debug() const {
-    return debug_;
+ private:
+  std::string format_memory_mib(double memory_mib) const {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2);
+
+    if (memory_mib < 1) {
+      oss << (memory_mib * 1024);
+      return oss.str() + " KiB";
+    } else if (memory_mib < 1024) {
+      oss << memory_mib;
+      return oss.str() + " MiB";
+    } else {
+      oss << (memory_mib / 1024);
+      return oss.str() + " GiB";
+    }
   }
 };
 
@@ -484,12 +553,11 @@ static memory_data& _memory_data{get_memory_data_instance()};
 class count_data {
  public:
   using count_type = size_t;
-  using name_count = std::multimap<std::string, count_type>;
 
  private:
-  name_count count_usages_;
+  std::multimap<std::string, count_type> count_usages_;
+  mutable std::mutex mtx_;
   bool verbose_{false};
-  bool debug_{false};
 
   /**
    * Constructor.  Private to enforce singleton pattern.
@@ -509,8 +577,11 @@ class count_data {
    * @return Reference to the singleton instance of the class.
    */
   static count_data& get_instance() {
-    static count_data instance;
-    return instance;
+    static std::once_flag flag;
+    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
+    static count_data* instance;
+    std::call_once(flag, []() { instance = new count_data(); });
+    return *instance;
   }
 
   /**
@@ -519,6 +590,7 @@ class count_data {
    * @param use The count to be recorded (in bytes).
    */
   void insert_entry(const std::string& name, const count_type& use) {
+    std::lock_guard<std::mutex> lock(mtx_);
     count_usages_.insert(std::make_pair(name, use));
   }
 
@@ -528,6 +600,7 @@ class count_data {
    * @return Vector of count values associated with the name.
    */
   auto get_entries_separately(const std::string& string) const {
+    std::lock_guard<std::mutex> lock(mtx_);
     std::vector<double> usages;
 
     auto range = count_usages_.equal_range(string);
@@ -543,6 +616,7 @@ class count_data {
    * @return Vector of count values associated with the name.
    */
   auto get_entries_summed(const std::string& string) const {
+    std::lock_guard<std::mutex> lock(mtx_);
     double sum = 0.0;
     auto range = count_usages_.equal_range(string);
     for (auto i = range.first; i != range.second; ++i) {
@@ -556,14 +630,15 @@ class count_data {
    * @return Vector of names associated with the count entries.
    */
   std::vector<std::string> get_usage_names() const {
+    std::lock_guard<std::mutex> lock(mtx_);
     std::set<std::string> multinames;
 
     std::vector<std::string> names;
 
-    for (auto& i : count_usages_) {
+    for (const auto& i : count_usages_) {
       multinames.insert(i.first);
     }
-    for (auto& i : multinames) {
+    for (const auto& i : multinames) {
       names.push_back(i);
     }
     return names;
@@ -577,12 +652,21 @@ class count_data {
     return verbose_;
   }
 
-  void set_debug(bool debug) {
-    debug_ = debug;
-  }
+  std::string dump() const {
+    std::ostringstream oss;
+    auto usage_names = get_usage_names();
+    for (const auto& name : usage_names) {
+      auto usages = get_entries_separately(name);
+      double sum = get_entries_summed(name);
+      double average = sum / usages.size();
 
-  bool get_debug() const {
-    return debug_;
+      oss << name << ":";
+      oss << " count: " << usages.size() << ",";
+      oss << " sum: " << sum << ",";
+      oss << " avg: " << average;
+      oss << "\n";
+    }
+    return oss.str();
   }
 };
 
@@ -609,7 +693,6 @@ class stats_data {
 
     stats_map stats_;
     bool verbose_{false};
-    bool debug_{false};
 
     /**
      * Constructor.  Private to enforce singleton pattern.

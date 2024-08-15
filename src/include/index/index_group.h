@@ -78,7 +78,7 @@ class base_index_group {
  protected:
   tiledb::Context cached_ctx_;
   std::string group_uri_;
-  size_t base_array_timestamp_{0};
+  uint64_t base_array_timestamp_{0};
   size_t history_index_{0};
   bool should_skip_query_{false};
 
@@ -360,7 +360,6 @@ class base_index_group {
           "Cannot clear history because group does not exist.");
     }
 
-    metadata_.clear_history(timestamp);
     try {
       tiledb::Array::delete_fragments(cached_ctx_, ids_uri(), 0, timestamp);
       static_cast<group_type*>(this)->clear_history_impl(timestamp);
@@ -374,90 +373,93 @@ class base_index_group {
       }
       throw e;
     }
+
+    metadata_.clear_history(timestamp);
+    store_metadata();
   }
 
-  /**
-   * @brief Destructor.  If opened for write, update the metadata.
-   *
-   * @todo Don't use default Config
-   */
-  ~base_index_group() {
-    if (opened_for_ == TILEDB_WRITE && exists()) {
-      auto write_group = tiledb::Group(
-          cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
-      metadata_.store_metadata(write_group);
+  void store_metadata() {
+    if (opened_for_ == TILEDB_READ) {
+      throw std::runtime_error(
+          "[index_group@write] Cannot write in read mode.");
     }
+    if (!exists()) {
+      throw std::runtime_error(
+          "[index_group@write] Cannot write because group does not exist.");
+    }
+    auto write_group = tiledb::Group(
+        cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
+    metadata_.store_metadata(write_group);
   }
 
   /**
    * @brief Self-destruct the group.  Use with caution.
    *
    * @param ctx
-   * @return void
    */
-  auto remove(const tiledb::Context& ctx) {
-    return tiledb::Object::remove(ctx, group_uri_);
+  void remove(const tiledb::Context& ctx) {
+    tiledb::Object::remove(ctx, group_uri_);
   }
 
   /** Temporary until time traveling is implemented */
-  auto get_previous_ingestion_timestamp() const {
+  uint64_t get_previous_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_.back();
   }
-  auto get_ingestion_timestamp() const {
+  uint64_t get_ingestion_timestamp() const {
     return metadata_.ingestion_timestamps_[history_index_];
   }
-  auto append_ingestion_timestamp(size_t timestamp) {
+  void append_ingestion_timestamp(uint64_t timestamp) {
     metadata_.ingestion_timestamps_.push_back(timestamp);
   }
-  auto get_all_ingestion_timestamps() const {
+  const std::vector<uint64_t>& get_all_ingestion_timestamps() const {
     return metadata_.ingestion_timestamps_;
   }
 
-  auto get_previous_base_size() const {
+  uint64_t get_previous_base_size() const {
     return metadata_.base_sizes_.back();
   }
-  auto get_base_size() const {
+  uint64_t get_base_size() const {
     return metadata_.base_sizes_[history_index_];
   }
-  auto append_base_size(size_t size) {
+  void append_base_size(uint64_t size) {
     metadata_.base_sizes_.push_back(size);
   }
-  auto get_all_base_sizes() const {
+  const std::vector<uint64_t>& get_all_base_sizes() const {
     return metadata_.base_sizes_;
   }
 
-  auto get_temp_size() const {
+  int64_t get_temp_size() const {
     return metadata_.temp_size_;
   }
-  auto set_temp_size(size_t size) {
+  void set_temp_size(int64_t size) {
     metadata_.temp_size_ = size;
   }
 
-  auto get_dimensions() const {
+  uint64_t get_dimensions() const {
     return metadata_.dimensions_;
   }
-  auto set_dimensions(uint64_t dimensions) {
+  void set_dimensions(uint64_t dimensions) {
     metadata_.dimensions_ = dimensions;
   }
 
-  auto get_history_index() const {
+  size_t get_history_index() const {
     return history_index_;
   }
 
-  auto should_skip_query() const {
+  bool should_skip_query() const {
     return should_skip_query_;
   }
 
-  [[nodiscard]] auto ids_uri() const {
+  [[nodiscard]] std::string ids_uri() const {
     return array_key_to_uri("ids_array_name");
   }
-  [[nodiscard]] auto ids_array_name() const {
+  [[nodiscard]] std::string ids_array_name() const {
     return array_key_to_array_name("ids_array_name");
   }
-  [[nodiscard]] auto feature_vectors_uri() const {
+  [[nodiscard]] std::string feature_vectors_uri() const {
     return array_key_to_uri("parts_array_name");
   }
-  [[nodiscard]] auto feature_vectors_array_name() const {
+  [[nodiscard]] std::string feature_vectors_array_name() const {
     return array_key_to_array_name("parts_array_name");
   }
 
@@ -473,17 +475,17 @@ class base_index_group {
    * Helpful functions for debugging, testing, etc
    **************************************************************************/
 
-  auto set_ingestion_timestamp(size_t timestamp) {
+  void set_ingestion_timestamp(uint64_t timestamp) {
     metadata_.ingestion_timestamps_[history_index_] = timestamp;
   }
-  auto set_base_size(size_t size) {
+  void set_base_size(uint64_t size) {
     metadata_.base_sizes_[history_index_] = size;
   }
 
-  auto set_last_ingestion_timestamp(size_t timestamp) {
+  void set_last_ingestion_timestamp(uint64_t timestamp) {
     metadata_.ingestion_timestamps_.back() = timestamp;
   }
-  auto set_last_base_size(size_t size) {
+  void set_last_base_size(uint64_t size) {
     metadata_.base_sizes_.back() = size;
   }
 

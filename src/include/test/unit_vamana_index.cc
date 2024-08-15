@@ -357,10 +357,20 @@ TEST_CASE("small greedy search", "[vamana]") {
       CHECK(top_k_scores[i] == expected_scores[i]);
     }
   }
-  set_noisy(noisy);
   {
     auto&& [top_k_scores, top_k, visited] =
         greedy_search_O1(graph, x, med, x[query_id], k, L);
+    CHECK(size(top_k) == k);
+    CHECK(size(top_k_scores) == k);
+    CHECK(size(visited) == size(expected));
+    for (size_t i = 0; i < k; ++i) {
+      CHECK(top_k[i] == expected[i]);
+      CHECK(top_k_scores[i] == expected_scores[i]);
+    }
+  }
+  {
+    auto&& [top_k_scores, top_k, visited] =
+        greedy_search_O2(graph, x, med, x[query_id], k, L);
     CHECK(size(top_k) == k);
     CHECK(size(top_k_scores) == k);
     CHECK(size(visited) == size(expected));
@@ -874,24 +884,36 @@ TEST_CASE("fmnist compare greedy search", "[vamana]") {
       greedy_search_O0(g, db, 0UL, query, k_nn, L);
   auto&& [top_k_scores_O1, top_k_O1, V_O1] =
       greedy_search_O1(g, db, 0UL, query, k_nn, L);
+  auto&& [top_k_scores_O2, top_k_O2, V_O2] =
+      greedy_search_O2(g, db, 0UL, query, k_nn, L);
 
   CHECK(top_k_scores_O0 == top_k_scores_O1);
   CHECK(top_k_O0 == top_k_O1);
   CHECK(V_O0 == V_O1);
 
+  CHECK(top_k_scores_O0 == top_k_scores_O2);
+  CHECK(top_k_O0 == top_k_O2);
+  CHECK(V_O0 == V_O2);
+
   auto top_n_O0 = ColMajorMatrix<size_t>(k_nn, 1);
   auto top_n_O1 = ColMajorMatrix<size_t>(k_nn, 1);
+  auto top_n_O2 = ColMajorMatrix<size_t>(k_nn, 1);
   for (size_t i = 0; i < k_nn; ++i) {
     top_n_O0(i, 0) = top_k_O0[i];
     top_n_O1(i, 0) = top_k_O1[i];
+    top_n_O2(i, 0) = top_k_O2[i];
   }
   auto num_intersected_O0 = count_intersections(top_n_O0, qv_top_k, k_nn);
   auto num_intersected_O1 = count_intersections(top_n_O1, qv_top_k, k_nn);
+  auto num_intersected_O2 = count_intersections(top_n_O2, qv_top_k, k_nn);
   CHECK(num_intersected_O0 == num_intersected_O1);
+  CHECK(num_intersected_O0 == num_intersected_O2);
   if (debug) {
     std::cout << "num intersected_O0: " << num_intersected_O0 << " / " << L
               << std::endl;
     std::cout << "num intersected_O1: " << num_intersected_O1 << " / " << L
+              << std::endl;
+    std::cout << "num intersected_O2: " << num_intersected_O2 << " / " << L
               << std::endl;
   }
 }
@@ -1147,8 +1169,8 @@ TEST_CASE("vamana_index vector diskann_test_256bin", "[vamana]") {
   binary_file.read((char*)x.data(), npoints * ndim);
   binary_file.close();
 
-  size_t l_build = 50;
-  size_t r_max_degree = 4;
+  uint32_t l_build = 50;
+  uint32_t r_max_degree = 4;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(x), l_build, r_max_degree);
 
@@ -1178,8 +1200,8 @@ TEST_CASE("vamana by hand random index", "[vamana]") {
   float alpha_0 = 1.0;
   float alpha_1 = 1.2;
 
-  size_t l_build = 2;
-  size_t r_max_degree = 2;
+  uint32_t l_build = 2;
+  uint32_t r_max_degree = 2;
 
   auto training_set_ = random_geometric_2D(num_nodes);
   dump_coordinates("coords.txt", training_set_);
@@ -1259,8 +1281,8 @@ TEST_CASE("vamana_index geometric 2D graph", "[vamana]") {
   float alpha_0 = 1.0;
   float alpha_1 = 1.2;
 
-  size_t l_build = 15;
-  size_t r_max_degree = 15;
+  uint32_t l_build = 15;
+  uint32_t r_max_degree = 15;
 
   size_t k_nn = 5;
 
@@ -1312,8 +1334,8 @@ TEST_CASE("vamana_index siftsmall", "[vamana]") {
   float alpha_0 = 1.0;
   float alpha_1 = 1.2;
 
-  size_t l_build = 15;
-  size_t r_max_degree = 12;
+  uint32_t l_build = 15;
+  uint32_t r_max_degree = 12;
 
   size_t k_nn = 10;
 
@@ -1357,8 +1379,8 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 
   set_noisy(noisy);
 
-  size_t l_build{37};
-  size_t r_max_degree{41};
+  uint32_t l_build{37};
+  uint32_t r_max_degree{41};
   size_t k_nn{10};
 
   tiledb::Context ctx;
@@ -1432,8 +1454,8 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 }
 
 TEST_CASE("query empty index", "[vamana]") {
-  size_t l_build = 100;
-  size_t r_max_degree = 100;
+  uint32_t l_build = 100;
+  uint32_t r_max_degree = 100;
   size_t num_vectors = 0;
   uint64_t dimensions = 5;
   auto index = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
@@ -1442,8 +1464,6 @@ TEST_CASE("query empty index", "[vamana]") {
       ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
   index.train(data, data.raveled_ids());
 
-  auto queries = std::vector<std::vector<siftsmall_feature_type>>{
-      {1, 1, 1, 1, 1}, {2, 2, 2, 2, 2}};
   auto&& [scores, ids] = index.query(data, 1);
   CHECK(_cpo::num_vectors(scores) == 0);
   CHECK(_cpo::num_vectors(ids) == 0);
