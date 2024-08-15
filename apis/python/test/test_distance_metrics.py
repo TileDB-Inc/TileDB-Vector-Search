@@ -247,47 +247,6 @@ def test_vamana_cosine_simple(tmp_path):
     sorted_distances = np.sort(distances)
     assert np.allclose(distances, sorted_distances, 1e-4)
 
-def test_vamana_cosine_simple(tmp_path):
-    # Create 5 input vectors
-
-    input_vectors = np.array(
-        [[1, 0, 0, 0], [1, 1, 0, 0], [32, 41, 30, 0], [1, 5, 3, 0], [4, 4, 4, 0]],
-        dtype=np.float32,
-    )
-
-    # Create IVF_FLAT index with cosine distance
-    index_uri = os.path.join(tmp_path, "vamana_cosine_simple")
-    index = ingest(
-        index_type="VAMANA",
-        index_uri=index_uri,
-        input_vectors=input_vectors,
-        distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
-    )
-
-    # Create a query vector
-    np.array([[2, 2, 2, 2]], dtype=np.float32)
-
-    expected_distances = np.array([0.500000, 0.292893, 0.142262, 0.239361, 0.133975])
-
-    # query_and_check(
-    #     index,
-    #     np.array([[2, 2, 2, 2]], dtype=np.float32),
-    #     3,
-    #     {2, 3, 4},
-    #     expected_distances=expected_distances,
-    #     nprobe=2,
-    # )
-
-    distances, ids = index.query(
-        queries=np.array([[2, 2, 2, 2]], dtype=np.float32), k=5
-    )
-    print(distances, ids)
-
-    assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
-    sorted_distances = np.sort(distances)
-    assert np.allclose(distances, sorted_distances, 1e-4)
-
-
 def test_ivf_flat_index(capfd, tmp_path):
     partitions = 10
     uri = os.path.join(tmp_path, "array")
@@ -500,7 +459,7 @@ def test_ivf_flat_cosine_simple(tmp_path):
         index_uri=index_uri,
         input_vectors=input_vectors,
         distance_metric=vspy.DistanceMetric.COSINE,
-        partitions=1,  # Using 2 partitions for this small dataset
+        partitions=1, 
     )
 
     # Create a query vector
