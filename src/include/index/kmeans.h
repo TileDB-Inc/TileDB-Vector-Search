@@ -81,16 +81,18 @@ void kmeans_pp(
     Distance distancex = Distance{}) {
   scoped_timer _{__FUNCTION__};
   if (::num_vectors(centroids_) != num_partitions_) {
-    throw std::runtime_error("[kmeans@kmeans_random_init] Number of partitions (" +
-                             std::to_string(num_partitions_) +
-                             ") does not match number of centroids (" +
-                             std::to_string(::num_vectors(centroids_)) + ")");
+    throw std::runtime_error(
+        "[kmeans@kmeans_random_init] Number of partitions (" +
+        std::to_string(num_partitions_) +
+        ") does not match number of centroids (" +
+        std::to_string(::num_vectors(centroids_)) + ")");
   }
   if (num_vectors(training_set) < num_partitions_) {
-    throw std::runtime_error("[kmeans@kmeans_random_init] Number of vectors (" +
-                             std::to_string(num_vectors(training_set)) +
-                             ") is less than number of partitions (" +
-                             std::to_string(num_partitions_) + ")");
+    throw std::runtime_error(
+        "[kmeans@kmeans_random_init] Number of vectors (" +
+        std::to_string(num_vectors(training_set)) +
+        ") is less than number of partitions (" +
+        std::to_string(num_partitions_) + ")");
   }
   if (::num_vectors(training_set) == 0) {
     return;
@@ -179,16 +181,18 @@ void kmeans_random_init(
     const V& training_set, C& centroids_, size_t num_partitions_) {
   scoped_timer _{__FUNCTION__};
   if (::num_vectors(centroids_) != num_partitions_) {
-    throw std::runtime_error("[kmeans@kmeans_random_init] Number of partitions (" +
-                             std::to_string(num_partitions_) +
-                             ") does not match number of centroids (" +
-                             std::to_string(::num_vectors(centroids_)) + ")");
+    throw std::runtime_error(
+        "[kmeans@kmeans_random_init] Number of partitions (" +
+        std::to_string(num_partitions_) +
+        ") does not match number of centroids (" +
+        std::to_string(::num_vectors(centroids_)) + ")");
   }
   if (num_vectors(training_set) < num_partitions_) {
-    throw std::runtime_error("[kmeans@kmeans_random_init] Number of vectors (" +
-                             std::to_string(num_vectors(training_set)) +
-                             ") is less than number of partitions (" +
-                             std::to_string(num_partitions_) + ")");
+    throw std::runtime_error(
+        "[kmeans@kmeans_random_init] Number of vectors (" +
+        std::to_string(num_vectors(training_set)) +
+        ") is less than number of partitions (" +
+        std::to_string(num_partitions_) + ")");
   }
   if (::num_vectors(training_set) == 0) {
     return;

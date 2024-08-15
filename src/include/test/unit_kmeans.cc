@@ -40,13 +40,12 @@
 #include "test/utils/gen_graphs.h"
 #include "test/utils/query_common.h"
 
-TEST_CASE("test kmeans random initialization", "[kmeans][init]") {
+TEST_CASE("test kmeans random initialization", "[kmeans]") {
   const bool debug = false;
 
   // Sample data: 4-dimensional data points, 8 data points total
-  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
-                             0, 5, 1, 2, 9, 9, 5, 9, 2, 0, 2, 7, 
-                             7, 9, 8, 6, 7, 9, 6, 6};
+  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                             9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
   ColMajorMatrix<float> training_data(4, 8);  // 4 rows, 8 columns
   std::copy(begin(data), end(data), training_data.data());
@@ -54,7 +53,8 @@ TEST_CASE("test kmeans random initialization", "[kmeans][init]") {
   // Number of partitions (centroids) to initialize
   size_t num_partitions = 3;
 
-  // Create an empty matrix for centroids with dimensions matching the number of partitions
+  // Create an empty matrix for centroids with dimensions matching the number of
+  // partitions
   ColMajorMatrix<float> centroids(4, num_partitions);
 
   // Perform random initialization of centroids
@@ -71,8 +71,7 @@ TEST_CASE("test kmeans random initialization", "[kmeans][init]") {
     for (size_t i = 0; i < centroids.num_cols() - 1; ++i) {
       for (size_t j = i + 1; j < centroids.num_cols(); ++j) {
         CHECK_FALSE(std::equal(
-          centroids[i].begin(), centroids[i].end(),
-          centroids[j].begin()));
+            centroids[i].begin(), centroids[i].end(), centroids[j].begin()));
       }
     }
   }
@@ -84,28 +83,78 @@ TEST_CASE("test kmeans random initialization", "[kmeans][init]") {
       size_t inner_counts = 0;
       for (size_t j = 0; j < training_data.num_cols(); ++j) {
         inner_counts += std::equal(
-          centroids[i].begin(), centroids[i].end(),
-          training_data[j].begin());
+            centroids[i].begin(), centroids[i].end(), training_data[j].begin());
       }
-      CHECK(inner_counts == 1); // Each centroid should match exactly one training data point
+      CHECK(
+          inner_counts ==
+          1);  // Each centroid should match exactly one training data point
       outer_counts += inner_counts;
     }
-    CHECK(outer_counts == centroids.num_cols()); // Total matches should equal the number of centroids
+    CHECK(outer_counts == centroids.num_cols());  // Total matches should equal
+                                                  // the number of centroids
   }
 }
 
-TEST_CASE("test kmeans random initialization edge cases", "[kmeans][init][edge]") {
+TEST_CASE("test kmeans++ initialization", "[kmeans]") {
+  const bool debug = false;
+
+  // Sample data: 4-dimensional data points, 8 data points total
+  std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                             9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
+
+  ColMajorMatrix<float> training_data(4, 8);  // 4 rows, 8 columns
+  std::copy(begin(data), end(data), training_data.data());
+
+  // Number of partitions (centroids) to initialize
+  size_t num_partitions = 3;
+  size_t num_threads = 2;
+
+  // Create an empty matrix for centroids with dimensions matching the number of
+  // partitions
+  ColMajorMatrix<float> centroids(4, num_partitions);
+
+  // Perform kmeans++ initialization of centroids
+  kmeans_pp(training_data, centroids, num_partitions, num_threads);
+
+  {
+    // Verify Centroid Dimensions
+    CHECK(centroids.num_cols() == num_partitions);
+    CHECK(centroids.num_rows() == 4);
+  }
+
+  {
+    // Centroids Match Training Data Points
+    size_t outer_counts = 0;
+    for (size_t i = 0; i < centroids.num_cols(); ++i) {
+      size_t inner_counts = 0;
+      for (size_t j = 0; j < training_data.num_cols(); ++j) {
+        inner_counts += std::equal(
+            centroids[i].begin(), centroids[i].end(), training_data[j].begin());
+      }
+      CHECK(
+          inner_counts ==
+          1);  // Each centroid should match exactly one training data point
+      outer_counts += inner_counts;
+    }
+    // Total matches should equal the number of centroids
+    CHECK(outer_counts == centroids.num_cols());
+  }
+}
+
+TEST_CASE("test kmeans and kmeans++ edge cases and exceptions", "[kmeans]") {
   {
     // Case: num_partitions is 0
-    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
-                               0, 5, 1, 2, 9, 9, 5, 9, 2, 0, 2, 7, 
-                               7, 9, 8, 6, 7, 9, 6, 6};
+    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                               9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
     ColMajorMatrix<float> training_data(4, 8);
     std::copy(begin(data), end(data), training_data.data());
     size_t num_partitions = 0;
-    ColMajorMatrix<float> centroids(4, num_partitions);  // Centroids matrix with zero partitions
+    size_t num_threads = 2;
+    // Centroids matrix with zero partitions
+    ColMajorMatrix<float> centroids(4, num_partitions);
 
     kmeans_random_init(training_data, centroids, num_partitions);
+    kmeans_pp(training_data, centroids, num_partitions, num_threads);
 
     // Expect centroids to have zero columns
     CHECK(centroids.num_cols() == 0);
@@ -114,15 +163,17 @@ TEST_CASE("test kmeans random initialization edge cases", "[kmeans][init][edge]"
 
   {
     // Case: Empty centroids and num_partitions is 0
-    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
-                               0, 5, 1, 2, 9, 9, 5, 9, 2, 0, 2, 7, 
-                               7, 9, 8, 6, 7, 9, 6, 6};
+    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                               9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
     ColMajorMatrix<float> training_data(4, 8);
     std::copy(begin(data), end(data), training_data.data());
     size_t num_partitions = 0;
-    ColMajorMatrix<float> centroids(0, 0);  // Empty centroids matrix
+    size_t num_threads = 2;
+    // Empty centroids matrix
+    ColMajorMatrix<float> centroids(0, 0);
 
     kmeans_random_init(training_data, centroids, num_partitions);
+    kmeans_pp(training_data, centroids, num_partitions, num_threads);
 
     // Expect centroids to remain empty
     CHECK(centroids.num_cols() == 0);
@@ -131,11 +182,15 @@ TEST_CASE("test kmeans random initialization edge cases", "[kmeans][init][edge]"
 
   {
     // Case: All empty
-    ColMajorMatrix<float> training_data(0, 0);  // No rows, no columns
+    // No rows, no columns
+    ColMajorMatrix<float> training_data(0, 0);
     size_t num_partitions = 0;
-    ColMajorMatrix<float> centroids(0, 0);  // Empty centroids matrix
+    size_t num_threads = 2;
+    // Empty centroids matrix
+    ColMajorMatrix<float> centroids(0, 0);
 
     kmeans_random_init(training_data, centroids, num_partitions);
+    kmeans_pp(training_data, centroids, num_partitions, num_threads);
 
     // Expect centroids to remain empty
     CHECK(centroids.num_cols() == 0);
@@ -143,43 +198,57 @@ TEST_CASE("test kmeans random initialization edge cases", "[kmeans][init][edge]"
   }
 
   {
-    // Invalid Case: num_partitions is greater than number of vectors in the training set
-    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
-                               0, 5, 1, 2, 9, 9, 5, 9, 2, 0, 2, 7, 
-                               7, 9, 8, 6, 7, 9, 6, 6};
+    // Invalid Case: num_partitions is greater than number of vectors in the
+    // training set
+    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                               9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
     ColMajorMatrix<float> training_data(4, 8);
     std::copy(begin(data), end(data), training_data.data());
-    size_t num_partitions = 10;  // More partitions than available vectors
-    ColMajorMatrix<float> centroids(4, num_partitions);  // Centroids matrix
+    // More partitions than available vectors
+    size_t num_partitions = 10;
+    size_t num_threads = 2;
+    ColMajorMatrix<float> centroids(4, num_partitions);
 
     CHECK_THROWS_AS(
         kmeans_random_init(training_data, centroids, num_partitions),
+        std::runtime_error);
+    CHECK_THROWS_AS(
+        kmeans_pp(training_data, centroids, num_partitions, num_threads),
         std::runtime_error);
   }
 
   {
     // Invalid Case: num_partitions does not match the number of centroids
-    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
-                               0, 5, 1, 2, 9, 9, 5, 9, 2, 0, 2, 7, 
-                               7, 9, 8, 6, 7, 9, 6, 6};
+    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
+                               9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
     ColMajorMatrix<float> training_data(4, 8);
     std::copy(begin(data), end(data), training_data.data());
     size_t num_partitions = 3;
-    ColMajorMatrix<float> centroids(4, 2);  // Mismatch: 2 centroids for 3 partitions
+    size_t num_threads = 2;
+    // Mismatch: 2 centroids for 3 partitions
+    ColMajorMatrix<float> centroids(4, 2);
 
     CHECK_THROWS_AS(
         kmeans_random_init(training_data, centroids, num_partitions),
+        std::runtime_error);
+    CHECK_THROWS_AS(
+        kmeans_pp(training_data, centroids, num_partitions, num_threads),
         std::runtime_error);
   }
 
   {
     // Invalid Case: Empty training data with non-zero partitions
-    ColMajorMatrix<float> training_data(0, 0);  // No rows, no columns
+    // No rows, no columns
+    ColMajorMatrix<float> training_data(0, 0);
     size_t num_partitions = 3;
+    size_t num_threads = 2;
     ColMajorMatrix<float> centroids(4, num_partitions);
 
     CHECK_THROWS_AS(
         kmeans_random_init(training_data, centroids, num_partitions),
+        std::runtime_error);
+    CHECK_THROWS_AS(
+        kmeans_pp(training_data, centroids, num_partitions, num_threads),
         std::runtime_error);
   }
 }
