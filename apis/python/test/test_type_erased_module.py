@@ -386,7 +386,7 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
         r_max_degree=r_max_degree,
     )
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
-    a.train(empty_vector)
+    a.add(empty_vector)
     a.write_index(ctx, index_uri)
 
     # Then load it again, retrain, and query.
@@ -400,7 +400,7 @@ def test_construct_IndexVamana_with_empty_vector(tmp_path):
     assert a.l_build() == l_build
     assert a.r_max_degree() == r_max_degree
 
-    a.train(training_set)
+    a.add(training_set)
 
     s, t = a.query(query_set, k_nn, l_search)
 
@@ -423,7 +423,7 @@ def test_inplace_build_query_IndexVamana():
     groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert groundtruth_set.feature_type_string() == "uint64"
 
-    a.train(training_set)
+    a.add(training_set)
     s, t = a.query(query_set, k_nn, l_search)
 
     intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
@@ -482,7 +482,6 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
         num_subspaces=dimensions / 2,
     )
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
-    a.train(empty_vector)
     a.add(empty_vector)
     a.write_index(ctx, index_uri)
 
@@ -495,7 +494,6 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert groundtruth_set.feature_type_string() == "uint64"
 
-    a.train(training_set)
     a.add(training_set)
 
     s, t = a.query(vspy.QueryType.InfiniteRAM, query_set, k_nn, nprobe)
@@ -524,7 +522,6 @@ def test_inplace_build_query_IndexIVFPQ():
     groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert groundtruth_set.feature_type_string() == "uint64"
 
-    a.train(training_set)
     a.add(training_set)
     s, t = a.query(vspy.QueryType.InfiniteRAM, query_set, k_nn, nprobe)
 

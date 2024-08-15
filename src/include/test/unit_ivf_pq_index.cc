@@ -531,7 +531,6 @@ TEST_CASE("ivf_pq_index write and read", "[ivf_pq_index]") {
 
   auto idx = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
       10, siftsmall_dimensions / 2);
-  idx.train(training_set, ids);
   idx.add(training_set, ids);
   uint64_t write_timestamp = 1000;
   idx.write_index(
@@ -597,7 +596,6 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
     auto data =
         ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
     debug_matrix_with_ids(data, "data");
-    index.train(data, data.raveled_ids());
     index.add(data, data.raveled_ids());
   }
 
@@ -670,7 +668,6 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     auto training = ColMajorMatrixWithIds<feature_type>{
         {{1, 1, 1, 1}, {2, 2, 2, 2}, {3, 3, 3, 3}, {4, 4, 4, 4}},
         {11, 22, 33, 44}};
-    index.train(training, training.raveled_ids());
     index.add(training, training.raveled_ids());
 
     size_t k_nn = 1;
@@ -738,7 +735,6 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
         partitioning_index_type_type>(n_list, dimensions / 2);
     auto data =
         ColMajorMatrixWithIds<feature_type_type, id_type_type>(dimensions, 0);
-    index.train(data, data.raveled_ids());
     index.add(data, data.raveled_ids());
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
   }
@@ -751,7 +747,6 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
         partitioning_index_type_type>(ctx, index_uri);
     auto data = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
-    index.train(data, data.raveled_ids());
     index.add(data, data.raveled_ids());
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
   }

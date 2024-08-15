@@ -1636,13 +1636,12 @@ def ingest(
         )
         if index_type == "VAMANA":
             index = vspy.IndexVamana(ctx, index_group_uri)
-            index.train(data)
+            index.add(data)
         elif index_type == "IVF_PQ":
             index = vspy.IndexIVFPQ(ctx, index_group_uri)
-            index.train(data, partitions)
+            index.add(data, partitions)
         else:
             raise ValueError(f"Unsupported index type: {index_type}")
-        index.add(data)
         index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
 
     def write_centroids(

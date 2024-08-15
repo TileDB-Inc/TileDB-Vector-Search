@@ -407,12 +407,6 @@ void init_type_erased_module(py::module_& m) {
             new (&instance) IndexVamana(args);
           })
       .def(
-          "train",
-          [](IndexVamana& index, const FeatureVectorArray& vectors) {
-            index.train(vectors);
-          },
-          py::arg("vectors"))
-      .def(
           "add",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {
             index.add(vectors);
@@ -481,18 +475,12 @@ void init_type_erased_module(py::module_& m) {
             new (&instance) IndexIVFPQ(args);
           })
       .def(
-          "train",
+          "add",
           [](IndexIVFPQ& index,
              const FeatureVectorArray& vectors,
-             std::optional<size_t> nlist) { index.train(vectors, nlist); },
+             std::optional<size_t> nlist) { index.add(vectors, nlist); },
           py::arg("vectors"),
           py::arg("nlist") = std::nullopt)
-      .def(
-          "add",
-          [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
-            index.add(vectors);
-          },
-          py::arg("vectors"))
       .def(
           "query",
           [](IndexIVFPQ& index,

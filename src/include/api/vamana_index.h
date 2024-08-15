@@ -54,7 +54,6 @@
  * An index class is provides
  *   - URI-based constructor
  *   - Array-based constructor
- *   - A train method
  *   - An add method
  *   - A query method
  *
@@ -71,15 +70,13 @@ class IndexVamana {
   IndexVamana(IndexVamana&&) = default;
   IndexVamana& operator=(const IndexVamana&) = delete;
   IndexVamana& operator=(IndexVamana&&) = default;
+
   /**
    * @brief Create an index with the given configuration. The index in this
-   * state must next be trained. The sequence for creating an index in this
-   * fashion is:
+   * state must next be trained. The sequence for creating an index:
    *  - Create an IndexVamana object with the desired configuration (using this
    *  constructor
-   *  - Call train() with the training data
-   *  - Call add() to add a set of vectors to the index (often the same as the
-   *  training data)
+   *  - Call add() to add a set of vectors to the index.
    *  Either (or both)
    *    - Perform a query
    *    - Call write_index() to write the index to disk
@@ -152,19 +149,19 @@ class IndexVamana {
   }
 
   /**
-   * @brief Train the index based on the given training set.
-   * @param training_set
-   * @param init
+   * @brief Train the index and add vectors to it.
+   *
+   * @param vectors The input vectors.
+   * @todo -- infer feature type from input
    */
-  // @todo -- infer feature type from input
-  void train(const FeatureVectorArray& training_set) {
+  void add(const FeatureVectorArray& vectors) {
     if (feature_datatype_ == TILEDB_ANY) {
-      feature_datatype_ = training_set.feature_type();
-    } else if (feature_datatype_ != training_set.feature_type()) {
+      feature_datatype_ = vectors.feature_type();
+    } else if (feature_datatype_ != vectors.feature_type()) {
       throw std::runtime_error(
           "Feature datatype mismatch: " +
           datatype_to_string(feature_datatype_) +
-          " != " + datatype_to_string(training_set.feature_type()));
+          " != " + datatype_to_string(vectors.feature_type()));
     }
 
     auto type = std::tuple{
@@ -178,13 +175,13 @@ class IndexVamana {
     // l_build_, r_max_degree_), but we should also use the
     // timestamp from that already loaded index.
     index_ = dispatch_table.at(type)(
-        training_set.num_vectors(),
+        vectors.num_vectors(),
         l_build_,
         r_max_degree_,
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
                  std::nullopt,
         distance_metric_);
-    index_->train(training_set);
+    index_->add(vectors);
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -192,23 +189,6 @@ class IndexVamana {
           " != " + std::to_string(index_->dimensions()));
     }
     dimensions_ = index_->dimensions();
-  }
-
-  /**
-   * @brief Add a set of vectors to a trained index.
-   * @param data_set
-   */
-  void add(const FeatureVectorArray& data_set) {
-    if (feature_datatype_ != data_set.feature_type()) {
-      throw std::runtime_error(
-          "Feature datatype mismatch: " +
-          datatype_to_string(feature_datatype_) +
-          " != " + datatype_to_string(data_set.feature_type()));
-    }
-    if (!index_) {
-      throw std::runtime_error("Cannot add() because there is no index.");
-    }
-    index_->add(data_set);
   }
 
   // todo query() or search() -- or both?
@@ -323,9 +303,7 @@ class IndexVamana {
   struct index_base {
     virtual ~index_base() = default;
 
-    virtual void train(const FeatureVectorArray& training_set) = 0;
-
-    virtual void add(const FeatureVectorArray& data_set) = 0;
+    virtual void add(const FeatureVectorArray& vectors) = 0;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query(
@@ -377,32 +355,23 @@ class IndexVamana {
         : impl_index_(ctx, index_uri, temporal_policy) {
     }
 
-    void train(const FeatureVectorArray& training_set) override {
+    void add(const FeatureVectorArray& vectors) override {
       using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
-          (feature_type*)training_set.data(),
-          extents(training_set)[0],
-          extents(training_set)[1]};
+          (feature_type*)vectors.data(),
+          extents(vectors)[0],
+          extents(vectors)[1]};
 
       using id_type = typename T::id_type;
-      if (num_ids(training_set) > 0) {
-        auto ids = std::span<id_type>(
-            (id_type*)training_set.ids(), training_set.num_vectors());
-        impl_index_.train(fspan, ids);
+      if (num_ids(vectors) > 0) {
+        auto ids =
+            std::span<id_type>((id_type*)vectors.ids(), vectors.num_vectors());
+        impl_index_.add(fspan, ids);
       } else {
-        auto ids = std::vector<id_type>(::num_vectors(training_set));
+        auto ids = std::vector<id_type>(::num_vectors(vectors));
         std::iota(ids.begin(), ids.end(), 0);
-        impl_index_.train(fspan, ids);
+        impl_index_.add(fspan, ids);
       }
-    }
-
-    void add(const FeatureVectorArray& data_set) override {
-      using feature_type = typename T::feature_type;
-      auto fspan = MatrixView<feature_type, stdx::layout_left>{
-          (feature_type*)data_set.data(),
-          extents(data_set)[0],
-          extents(data_set)[1]};
-      impl_index_.add(fspan);
     }
 
     /**

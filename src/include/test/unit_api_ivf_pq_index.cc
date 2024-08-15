@@ -194,7 +194,6 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     size_t num_vectors = 0;
     auto empty_training_vector_array =
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-    index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri);
 
@@ -213,7 +212,6 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     auto training = ColMajorMatrix<feature_type_type>{
         {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
     auto training_vector_array = FeatureVectorArray(training);
-    index.train(training_vector_array);
     index.add(training_vector_array);
     index.write_index(ctx, index_uri);
 
@@ -269,7 +267,6 @@ TEST_CASE(
     size_t num_vectors = 0;
     auto empty_training_vector_array =
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-    index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri);
 
@@ -292,7 +289,6 @@ TEST_CASE(
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
     auto training_vector_array = FeatureVectorArray(training);
-    index.train(training_vector_array);
     index.add(training_vector_array);
     index.write_index(ctx, index_uri);
 
@@ -343,7 +339,6 @@ TEST_CASE(
     size_t num_vectors = 0;
     auto empty_training_vector_array = FeatureVectorArray(
         siftsmall_dimensions, num_vectors, feature_type, id_type);
-    index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri);
 
@@ -360,7 +355,6 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-    index.train(training_set);
     index.add(training_set);
     index.write_index(ctx, index_uri);
 
@@ -384,7 +378,7 @@ TEST_CASE("infer feature type", "[api_ivf_pq_index]") {
       {{"id_type", "uint32"}, {"partitioning_index_type", "uint32"}}));
   auto ctx = tiledb::Context{};
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-  a.train(training_set);
+  a.add(training_set);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
@@ -396,7 +390,7 @@ TEST_CASE("infer dimension", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   CHECK(dimensions(a) == 0);
-  a.train(training_set);
+  a.add(training_set);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
@@ -418,7 +412,6 @@ TEST_CASE("write and read", "[api_ivf_pq_index]") {
        {"partitioning_index_type", "uint32"},
        {"num_subspaces", "1"}}));
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-  a.train(training_set);
   a.add(training_set);
   a.write_index(ctx, api_ivf_pq_index_uri);
 
@@ -440,7 +433,6 @@ TEST_CASE("build index and query", "[api_ivf_pq_index]") {
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-  a.train(training_set);
   a.add(training_set);
 
   auto&& [s, t] = a.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
@@ -470,7 +462,6 @@ TEST_CASE("read index and query", "[api_ivf_pq_index]") {
        {"num_subspaces", std::to_string(sift_dimensions / 4)}}));
 
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-  a.train(training_set);
   a.add(training_set);
   a.write_index(ctx, api_ivf_pq_index_uri);
   auto b = IndexIVFPQ(ctx, api_ivf_pq_index_uri);
@@ -518,7 +509,6 @@ TEST_CASE("storage_version", "[api_ivf_pq_index]") {
     size_t num_vectors = 0;
     auto empty_training_vector_array =
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-    index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri, std::nullopt, "0.3");
 
@@ -535,7 +525,6 @@ TEST_CASE("storage_version", "[api_ivf_pq_index]") {
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
     auto training_vector_array = FeatureVectorArray(training);
-    index.train(training_vector_array);
     index.add(training_vector_array);
 
     // Throw with the wrong version.
@@ -581,7 +570,6 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
       {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
   auto training_vector_array = FeatureVectorArray(training);
-  index.train(training_vector_array);
   index.add(training_vector_array);
   index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
 
@@ -638,7 +626,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     size_t num_vectors = 0;
     auto empty_training_vector_array =
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-    index.train(empty_training_vector_array);
     index.add(empty_training_vector_array);
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 0));
 
@@ -697,7 +684,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
 
     auto training_vector_array = FeatureVectorArray(training);
-    index.train(training_vector_array);
     index.add(training_vector_array);
     // We then write the index at timestamp 99.
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
@@ -762,7 +748,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {11, 22, 33, 44, 55}};
 
     auto training_vector_array = FeatureVectorArray(training);
-    index.train(training_vector_array);
     index.add(training_vector_array);
     // We then write the index at timestamp 100.
     index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 100));

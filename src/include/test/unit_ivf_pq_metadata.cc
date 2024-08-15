@@ -90,7 +90,6 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     auto training_vectors =
         ColMajorMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(
             128, 0);
-    idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 0));
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
@@ -131,7 +130,6 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         siftsmall_feature_type,
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
 
-    idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 2), "");
 
@@ -165,7 +163,6 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         siftsmall_feature_type,
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 333);
 
-    idx.train(training_vectors, training_vectors.raveled_ids());
     idx.add(training_vectors, training_vectors.raveled_ids());
     idx.write_index(ctx, uri, TemporalPolicy(TimeTravel, 3));
 

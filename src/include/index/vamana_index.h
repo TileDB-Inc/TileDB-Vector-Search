@@ -312,12 +312,18 @@ class vamana_index {
    * out-neighbors of σ(i). foreach " j∈N_"out "  (σ(i))" do " Update N_"out "
    * (j)←N_"out " (j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune
    * (j,N_"out " (j),α,R) to update out-neighbors of j.
+   *
+   * @tparam Array Type of the array of vectors to be added.
+   * @tparam Vector Type of the array of vector ids to be added.
+   * @tparam Distance Type of distance metric to use.
+   * @param training_set The vectors to be added.
+   * @param training_set_ids The ids of the vectors to be added.
    */
   template <
       feature_vector_array Array,
       feature_vector Vector,
       class Distance = sum_of_squares_distance>
-  void train(
+  void add(
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
@@ -349,7 +355,7 @@ class vamana_index {
     //    for (float alpha : {alpha_min_, alpha_max_}) {
     // Just use one value of alpha
     for (float alpha : {alpha_max_}) {
-      scoped_timer _("train " + std::to_string(counter));
+      scoped_timer _("add " + std::to_string(counter));
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
@@ -406,17 +412,6 @@ class vamana_index {
       }
       // debug_index();
     }
-  }
-
-  /**
-   * @brief Add a set of vectors to the index (the vectors that will be
-   * searched over in subsequent queries).  This is a no-op for vamana.
-   *
-   * @tparam A Type of the array of vectors to be added
-   * @param database The vectors to be added
-   */
-  template <feature_vector_array A>
-  void add(const A& database) {
   }
 
   /*

@@ -185,7 +185,6 @@ def create(
     empty_vector = vspy.FeatureVectorArray(
         dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name
     )
-    index.train(empty_vector)
     index.add(empty_vector)
     index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
     return VamanaIndex(uri=uri, config=config)

@@ -1180,7 +1180,7 @@ TEST_CASE("vamana_index vector diskann_test_256bin", "[vamana]") {
   std::vector<siftsmall_ids_type> ids(num_vectors(x));
   std::iota(begin(ids), end(ids), 0);
 
-  index.train(x, ids);
+  index.add(x, ids);
 
   // x, 5, 7, 7, 1.0, 1, 1);
   // 0
@@ -1293,7 +1293,7 @@ TEST_CASE("vamana_index geometric 2D graph", "[vamana]") {
   std::vector<siftsmall_ids_type> ids(num_nodes);
   auto ids_start = 10;
   std::iota(begin(ids), end(ids), ids_start);
-  idx.train(training_set, ids);
+  idx.add(training_set, ids);
 
   auto query = training_set[17];
   auto&& [scores, top_k] = idx.query(query, k_nn);
@@ -1352,7 +1352,7 @@ TEST_CASE("vamana_index siftsmall", "[vamana]") {
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), l_build, r_max_degree);
-  idx.train(training_set, ids);
+  idx.add(training_set, ids);
 
   auto&& [mat_scores, mat_top_k] = idx.query(queries, k_nn);
 
@@ -1397,7 +1397,7 @@ TEST_CASE("vamana_index write and read", "[vamana]") {
 
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), l_build, r_max_degree);
-  idx.train(training_set, ids);
+  idx.add(training_set, ids);
   uint64_t write_timestamp = 1000;
   idx.write_index(
       ctx, vamana_index_uri, TemporalPolicy(TimeTravel, write_timestamp));
@@ -1462,7 +1462,7 @@ TEST_CASE("query empty index", "[vamana]") {
       num_vectors, l_build, r_max_degree);
   auto data =
       ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
-  index.train(data, data.raveled_ids());
+  index.add(data, data.raveled_ids());
 
   auto&& [scores, ids] = index.query(data, 1);
   CHECK(_cpo::num_vectors(scores) == 0);

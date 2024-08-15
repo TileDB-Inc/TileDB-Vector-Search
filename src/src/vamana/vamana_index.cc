@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
 
     auto idx =
         vamana_index<feature_type, id_type>(num_vectors(X), Lbuild, max_degree);
-    idx.train(X);
+    idx.add(X);
     idx.write_index(ctx, index_uri, overwrite);
 
     if (args["--log"]) {

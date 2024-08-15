@@ -196,11 +196,9 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
       idx.train(training_set);
-    } else if constexpr (std::is_same_v<
+    } else if constexpr (!std::is_same_v<
                              IndexType,
                              ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx.train_ivf(training_set);
-    } else {
       std::cout << "Unsupported index type" << std::endl;
     }
     idx.add(training_set, ids);

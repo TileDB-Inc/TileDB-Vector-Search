@@ -266,7 +266,7 @@ class ivf_pq_index {
   /**
    * @brief Construct a new `ivf_pq_index` object, setting a number of
    * parameters to be used subsequently in training. To fully create an index
-   * we will need to call `train()` and `add()`.
+   * we will need to call `add()`.
    *
    * @param nlist Number of centroids / partitions to compute.
    * @param num_subspaces Number of subspaces to use for pq compression. This is
@@ -725,23 +725,6 @@ class ivf_pq_index {
   }
 
   /**
-   * @brief Trains the index.
-   *
-   * @param training_set Array of vectors to partition.
-   * @param training_set_ids IDs for each vector.
-   */
-  template <
-      feature_vector_array Array,
-      feature_vector Vector,
-      class Distance = sum_of_squares_distance>
-  void train(
-      const Array& training_set,
-      const Vector& training_set_ids,
-      Distance distance = Distance{}) {
-    train_ivf(training_set);
-  }
-
-  /**
    * @brief Build the index from a training set, given the centroids. This
    * will partition the training set into a contiguous array, with one
    * partition per centroid. It will also create an array to record the
@@ -762,6 +745,7 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
+    dimensions_ = ::dimensions(training_set);
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimensions(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -773,8 +757,6 @@ class ivf_pq_index {
         training_set_ids.begin(),
         training_set_ids.end(),
         feature_vectors_.ids());
-
-    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
 
     train_pq(training_set);   // cluster_centroids_, distance_tables_
     train_ivf(training_set);  // flat_ivf_centroids_
@@ -802,6 +784,7 @@ class ivf_pq_index {
         flat_ivf_centroids_, training_set, num_threads_, distance);
 
     // This just reorders based on partition_labels
+    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
     partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(
         *unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
   }

@@ -210,16 +210,6 @@ concept partition_index =
     subscriptable_range<P>;
 
 // ----------------------------------------------------------------------------
-// vector_search_index concept (WIP)
-// ----------------------------------------------------------------------------
-template <typename I>
-concept vector_search_index = requires(I i) {
-  { i.train() };
-  { i.add() };
-  { i.search() };
-};
-
-// ----------------------------------------------------------------------------
 // distance function concepts (for function objects)
 // - A distance function takes two feature vectors and returns a distance.
 // - A sub_distance function takes two feature vectors, a start and a stop, and
