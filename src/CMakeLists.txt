@@ -135,6 +135,13 @@ if (NOT $ENV{CIBUILDWHEEL} EQUAL 1 AND NOT $ENV{CONDA_BUILD} EQUAL 1)
   endif()
 endif()
 
+# AVX2 flag
+include(CheckAVX2Support)
+CheckAVX2Support()
+if (COMPILER_SUPPORTS_AVX2)
+    add_compile_options(${COMPILER_AVX2_FLAG})
+endif()
+
 # Default to Release build
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "No build type selected, default to Release")
