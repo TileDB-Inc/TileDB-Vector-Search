@@ -20,8 +20,10 @@ def normalize_vectors(vectors):
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     return vectors / norms
 
+
 def normalize_vector(vector):
     return vector / np.linalg.norm(vector)
+
 
 MINIMUM_ACCURACY = 0.85
 MINIMUM_ACCURACY_IVF_PQ = 0.75
@@ -247,6 +249,7 @@ def test_vamana_cosine_simple(tmp_path):
     sorted_distances = np.sort(distances)
     assert np.allclose(distances, sorted_distances, 1e-4)
 
+
 def test_ivf_flat_index(capfd, tmp_path):
     partitions = 10
     uri = os.path.join(tmp_path, "array")
@@ -341,13 +344,16 @@ def test_ivf_flat_index(capfd, tmp_path):
 
 def test_ivf_flat_cosine_simple_normalized(tmp_path):
     # Create 5 input vectors and normalize them
-    input_vectors = np.array([
-        normalize_vector([1, 0, 0, 0]),
-        normalize_vector([1, 1, 0, 0]),
-        normalize_vector([32, 41, 30, 0]),
-        normalize_vector([1, 5, 3, 0]),
-        normalize_vector([4, 4, 4, 0])
-    ], dtype=np.float32)
+    input_vectors = np.array(
+        [
+            normalize_vector([1, 0, 0, 0]),
+            normalize_vector([1, 1, 0, 0]),
+            normalize_vector([32, 41, 30, 0]),
+            normalize_vector([1, 5, 3, 0]),
+            normalize_vector([4, 4, 4, 0]),
+        ],
+        dtype=np.float32,
+    )
 
     index_uri = os.path.join(tmp_path, "ivf_flat_cosine")
     index = ingest(
@@ -356,7 +362,7 @@ def test_ivf_flat_cosine_simple_normalized(tmp_path):
         input_vectors=input_vectors,
         distance_metric=vspy.DistanceMetric.COSINE,
         partitions=1,
-        normalized=True
+        normalized=True,
     )
 
     query_vector = normalize_vector(np.array([2, 2, 2, 2], dtype=np.float32))
@@ -376,6 +382,7 @@ def test_ivf_flat_cosine_simple_normalized(tmp_path):
     assert np.array_equal(ids, np.array([[4, 2, 3, 1, 0]], dtype=np.uint64))
     sorted_distances = np.sort(distances)
     assert np.allclose(distances, sorted_distances, atol=1e-4)
+
 
 def normalize_vector(vector):
     return vector / np.linalg.norm(vector)
@@ -459,7 +466,7 @@ def test_ivf_flat_cosine_simple(tmp_path):
         index_uri=index_uri,
         input_vectors=input_vectors,
         distance_metric=vspy.DistanceMetric.COSINE,
-        partitions=1, 
+        partitions=1,
     )
 
     # Create a query vector
