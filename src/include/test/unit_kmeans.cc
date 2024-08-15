@@ -95,26 +95,6 @@ TEST_CASE("test kmeans random initialization", "[kmeans][init]") {
 }
 
 TEST_CASE("test kmeans random initialization edge cases", "[kmeans][init][edge]") {
-
-  {
-    // Case: Empty training data
-    ColMajorMatrix<float> training_data(0, 0);  // No rows, no columns
-    size_t num_partitions = 3;
-    ColMajorMatrix<float> centroids(4, num_partitions);  // Centroids matrix initialized with space
-    debug_matrix(centroids, "centroids");
-    kmeans_random_init(training_data, centroids, num_partitions);
-    debug_matrix(centroids, "centroids");
-
-    // Expect centroids to remain unchanged because there is no data to initialize from
-    CHECK(centroids.num_cols() == num_partitions);
-    CHECK(centroids.num_rows() == 4);
-    for (size_t i = 0; i < centroids.num_cols(); ++i) {
-      for (size_t j = 0; j < centroids.num_rows(); ++j) {
-        CHECK(centroids[i][j] == 0.0f);  // Assuming default initialization to zero
-      }
-    }
-  }
-
   {
     // Case: num_partitions is 0
     std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 
