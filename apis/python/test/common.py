@@ -134,7 +134,7 @@ def create_manual_dataset_f32_only_data(data, path, dataset_name="data.f32bin"):
         data.astype("float32").tofile(f)
 
 
-def create_random_dataset_f32(nb, d, nq, k, path):
+def create_random_dataset_f32(nb, d, nq, k, path, distance_metric="euclidean"):
     """
     Creates a random float32 dataset containing both a dataset and queries against it, and then writes those to disk.
 
@@ -173,9 +173,9 @@ def create_random_dataset_f32(nb, d, nq, k, path):
 
     # print("Computing groundtruth")
 
-    nbrs = NearestNeighbors(n_neighbors=k, metric="euclidean", algorithm="brute").fit(
-        data
-    )
+    nbrs = NearestNeighbors(
+        n_neighbors=k, metric=distance_metric, algorithm="brute"
+    ).fit(data)
     D, I = nbrs.kneighbors(queries)
     with open(os.path.join(path, "gt"), "wb") as f:
         np.array([nq, k], dtype="uint32").tofile(f)
@@ -416,3 +416,30 @@ def load_metadata(index_uri):
     base_sizes = [int(x) for x in list(json.loads(group.meta.get("base_sizes", "[]")))]
     group.close()
     return ingestion_timestamps, base_sizes
+
+
+def query_and_check(index, queries, k, expected, expected_distances=None, **kwargs):
+    for _ in range(3):
+        result_d, result_i = index.query(queries, k=k, **kwargs)
+
+        # Check if the expected IDs are a subset of the result
+        assert expected.issubset(
+            set(result_i[0])
+        ), f"Expected IDs {expected} are not a subset of result IDs {set(result_i[0])}"
+
+        # If expected_distances is provided, check the distances
+        if expected_distances is not None:
+            expected_dict = dict(
+                zip(range(len(expected_distances)), expected_distances)
+            )
+
+            result_dict = dict(zip(result_i[0], result_d[0]))
+
+            for id in expected.intersection(set(result_i[0])):
+                np.testing.assert_allclose(
+                    result_dict[id],
+                    expected_dict[id],
+                    rtol=1e-5,
+                    atol=1e-5,
+                    err_msg=f"Distance mismatch for ID {id}",
+                )
