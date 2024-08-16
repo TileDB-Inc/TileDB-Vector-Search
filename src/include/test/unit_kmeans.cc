@@ -198,26 +198,6 @@ TEST_CASE("test kmeans and kmeans++ edge cases and exceptions", "[kmeans]") {
   }
 
   {
-    // Invalid Case: num_partitions is greater than number of vectors in the
-    // training set
-    std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
-                               9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
-    ColMajorMatrix<float> training_data(4, 8);
-    std::copy(begin(data), end(data), training_data.data());
-    // More partitions than available vectors
-    size_t num_partitions = 10;
-    size_t num_threads = 2;
-    ColMajorMatrix<float> centroids(4, num_partitions);
-
-    CHECK_THROWS_AS(
-        kmeans_random_init(training_data, centroids, num_partitions),
-        std::runtime_error);
-    CHECK_THROWS_AS(
-        kmeans_pp(training_data, centroids, num_partitions, num_threads),
-        std::runtime_error);
-  }
-
-  {
     // Invalid Case: num_partitions does not match the number of centroids
     std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                                9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
@@ -235,20 +215,76 @@ TEST_CASE("test kmeans and kmeans++ edge cases and exceptions", "[kmeans]") {
         kmeans_pp(training_data, centroids, num_partitions, num_threads),
         std::runtime_error);
   }
+}
 
-  {
-    // Invalid Case: Empty training data with non-zero partitions
-    // No rows, no columns
-    ColMajorMatrix<float> training_data(0, 0);
-    size_t num_partitions = 3;
-    size_t num_threads = 2;
-    ColMajorMatrix<float> centroids(4, num_partitions);
+TEST_CASE(
+    "test kmeans initialization with more partitions than data points",
+    "[kmeans]") {
+  const bool debug = false;
 
-    CHECK_THROWS_AS(
-        kmeans_random_init(training_data, centroids, num_partitions),
-        std::runtime_error);
-    CHECK_THROWS_AS(
-        kmeans_pp(training_data, centroids, num_partitions, num_threads),
-        std::runtime_error);
-  }
+  // Sample data: 4-dimensional data points, 3 data points total
+  std::vector<float> data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+
+  ColMajorMatrix<float> training_data(4, 3);  // 4 rows, 3 columns
+  std::copy(begin(data), end(data), training_data.data());
+
+  // Number of partitions (centroids) to initialize, which is more than the
+  // number of data points
+  size_t num_partitions = 5;
+  size_t num_threads = 2;
+
+  // Create an empty matrix for centroids with dimensions matching the number of
+  // partitions
+  ColMajorMatrix<float> centroids_random(4, num_partitions);
+  ColMajorMatrix<float> centroids_pp(4, num_partitions);
+
+  // Perform random initialization of centroids
+  kmeans_random_init(training_data, centroids_random, num_partitions);
+
+  // Perform kmeans++ initialization of centroids
+  kmeans_pp(training_data, centroids_pp, num_partitions, num_threads);
+
+  auto verify_centroids = [&](const ColMajorMatrix<float>& centroids) {
+    // Verify Centroid Dimensions
+    CHECK(centroids.num_cols() == num_partitions);
+    CHECK(centroids.num_rows() == 4);
+
+    // Centroids Match Training Data Points or are Zero
+    size_t matched_vectors = 0;
+    size_t zero_vectors = 0;
+    for (size_t i = 0; i < centroids.num_cols(); ++i) {
+      bool matched = false;
+      for (size_t j = 0; j < training_data.num_cols(); ++j) {
+        if (std::equal(
+                centroids[i].begin(),
+                centroids[i].end(),
+                training_data[j].begin())) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) {
+        matched_vectors++;
+      } else {
+        // Check if this centroid is all zeros
+        bool is_zero = std::all_of(
+            centroids[i].begin(), centroids[i].end(), [](float val) {
+              return val == 0.0f;
+            });
+        if (is_zero) {
+          zero_vectors++;
+        }
+      }
+    }
+    // Check that all training data points are used as centroids
+    CHECK(matched_vectors == training_data.num_cols());
+    // Check that the remaining centroids are zero-filled
+    CHECK(zero_vectors == num_partitions - training_data.num_cols());
+  };
+
+  // Verify results for kmeans_random_init
+  verify_centroids(centroids_random);
+
+  // Verify results for kmeans_pp
+  verify_centroids(centroids_pp);
 }
