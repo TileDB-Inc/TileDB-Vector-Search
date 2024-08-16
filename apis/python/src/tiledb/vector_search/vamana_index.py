@@ -173,7 +173,7 @@ def create(
         and distance_metric != vspy.DistanceMetric.COSINE
     ):
         raise ValueError(
-            f"Distance metric {distance_metric} is not supported in IVF_PQ"
+            f"Distance metric {distance_metric} is not supported in VAMANA"
         )
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
