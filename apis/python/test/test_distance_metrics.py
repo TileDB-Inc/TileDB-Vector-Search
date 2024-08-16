@@ -451,6 +451,18 @@ def test_ivf_flat_create_cosine_numpy(tmp_path):
     Index.delete_index(uri=index_uri_l2, config={})
 
 
+def test_vamana_create_inner_product(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+    with pytest.raises(ValueError):
+        ingest(
+            index_type="VAMAAN",
+            index_uri=index_uri,
+            source_uri=siftsmall_inputs_file,
+            source_type="FVEC",
+            distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
+        )
+
+
 def test_ivfpq_create_l2(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
     ingest(

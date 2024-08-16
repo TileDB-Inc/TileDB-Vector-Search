@@ -168,6 +168,13 @@ def create(
         raise ValueError(
             f"Storage version {storage_version} is not supported for VamanaIndex. VamanaIndex requires storage version 0.3 or higher."
         )
+    if (
+        distance_metric != vspy.DistanceMetric.L2
+        and distance_metric != vspy.DistanceMetric.COSINE
+    ):
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in IVF_PQ"
+        )
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,

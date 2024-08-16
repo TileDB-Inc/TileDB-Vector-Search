@@ -956,4 +956,29 @@ TEST_CASE("vamana cosine distance", "[api_vamana_index]") {
   for (size_t i = 1; i < 5; ++i) {
     CHECK(scores[i] >= scores[i - 1]);
   }
+
+  // Open a new index by URI and verify Cosine distance is still used
+  auto new_index = IndexVamana(ctx, index_uri);
+
+  // Query the new index
+  auto&& [new_scores_vector_array, new_ids_vector_array] =
+      new_index.query(query_vector_array, 5);
+
+  auto new_scores = std::span<float>(
+      (float*)new_scores_vector_array.data(),
+      new_scores_vector_array.num_vectors() * 5);
+  auto new_ids = std::span<uint32_t>(
+      (uint32_t*)new_ids_vector_array.data(),
+      new_ids_vector_array.num_vectors() * 5);
+
+  // Verify that the scores and IDs are the same as before
+  for (size_t i = 0; i < 5; ++i) {
+    CHECK(std::abs(new_scores[i] - expected_distances[i]) < 1e-5f);
+    CHECK(new_ids[i] == expected_ids[i]);
+  }
+
+  // Verify that distances are still in ascending order
+  for (size_t i = 1; i < 5; ++i) {
+    CHECK(new_scores[i] >= new_scores[i - 1]);
+  }
 }
