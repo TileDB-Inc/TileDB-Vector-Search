@@ -122,7 +122,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
    * The initializer list is assumed to be in row-major order.
    */
   MatrixWithIds(
-      std::initializer_list<std::initializer_list<T>> matrix,
+      const std::vector<std::vector<T>>& matrix,
       const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(matrix)
@@ -141,7 +141,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
    * The initializer list is assumed to be in column-major order.
    */
   MatrixWithIds(
-      std::initializer_list<std::initializer_list<T>> matrix,
+      const std::vector<std::vector<T>>& matrix,
       const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(matrix)

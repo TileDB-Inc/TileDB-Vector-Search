@@ -35,7 +35,7 @@
 #include "test/utils/query_common.h"
 
 TEST_CASE("top_centroids", "[partition]") {
-  auto parts = ColMajorMatrix<float>{
+  auto parts = ColMajorMatrix<float>{{
       {
           1,
           1,
@@ -56,8 +56,8 @@ TEST_CASE("top_centroids", "[partition]") {
           3,
           3,
       },
-  };
-  auto centroids = ColMajorMatrix<float>{
+  }};
+  auto centroids = ColMajorMatrix<float>{{
       {
           1,
           1,
@@ -65,7 +65,7 @@ TEST_CASE("top_centroids", "[partition]") {
           1,
       },
       {2, 2, 2, 2},
-  };
+  }};
   auto top_centroids = detail::ivf::ivf_top_centroids(centroids, parts, 1, 1);
 
   CHECK(top_centroids.num_cols() == 5);

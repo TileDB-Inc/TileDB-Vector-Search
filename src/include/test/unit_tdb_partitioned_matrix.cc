@@ -105,7 +105,7 @@ TEST_CASE("can load correctly", "[tdb_partitioned_matrix]") {
     }
 
     auto partitioned_vectors =
-        ColMajorMatrix<feature_type>{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
+        ColMajorMatrix<feature_type>{{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}}};
     write_matrix(ctx, partitioned_vectors, partitioned_vectors_uri);
     std::vector<id_type> ids = {1, 2, 3, 4, 5};
     write_vector(ctx, ids, ids_uri);
@@ -418,7 +418,7 @@ TEST_CASE("single vector and single partition", "[tdb_partitioned_matrix]") {
       vfs.remove_dir(ids_uri);
     }
 
-    auto partitioned_vectors = ColMajorMatrix<feature_type>{{1}};
+    auto partitioned_vectors = ColMajorMatrix<feature_type>{{{1}}};
     write_matrix(ctx, partitioned_vectors, partitioned_vectors_uri);
     std::vector<id_type> ids = {1};
     write_vector(ctx, ids, ids_uri);
