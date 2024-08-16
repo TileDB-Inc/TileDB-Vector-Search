@@ -713,7 +713,6 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   tiledb::VFS vfs(ctx);
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
-  std::cout << "index_uri: " << index_uri << std::endl;
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);
   }
@@ -727,7 +726,6 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   uint64_t dimensions = 3;
   size_t n_list = 1;
   uint32_t num_subspaces = 1;
-  float convergence_convergence_toleranceerance = 0.00003f;
   uint32_t max_iterations = 3;
 
   // Write the empty index.
@@ -771,5 +769,42 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
         std::vector<float>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(
         ids.data(), ids.data() + 4, std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+  }
+}
+
+TEST_CASE("pq encoding has no error with <= 256 vectors", "[ivf_pq_index]") {
+  using feature_type = float;
+  using id_type = uint32_t;
+  using partitioning_index_type = uint32_t;
+
+  size_t n_list = 16;
+  size_t dimensions = 300;
+  uint32_t num_subspaces = dimensions;
+  for (auto num_vectors : std::vector<size_t>{255, 256, 257}) {
+    auto index = ivf_pq_index<feature_type, id_type, partitioning_index_type>(
+        n_list, num_subspaces);
+    std::vector<std::vector<feature_type>> vectors(num_vectors);
+    std::vector<id_type> vector_ids(num_vectors);
+    for (int i = 0; i < num_vectors; ++i) {
+      for (int j = 0; j < dimensions; ++j) {
+        feature_type value = (feature_type)rand() / RAND_MAX;
+        vectors[i].push_back(value);
+      }
+    }
+    auto data =
+        ColMajorMatrixWithIds<feature_type, id_type>{vectors, vector_ids};
+    index.train(data, data.raveled_ids());
+    index.add(data, data.raveled_ids());
+
+    // With less than 256 vectors, the PQ encoding should be perfect. This is
+    // because for each subspace, we compute 256 centroids, so we have one for
+    // each vector. After that, we just make sure the error is low.
+    auto error = index.verify_pq_encoding(data);
+    if (num_vectors <= 256) {
+      CHECK(error == 0.f);
+    } else {
+      CHECK(error >= 0.0f);
+      CHECK(error <= 1e-4f);
+    }
   }
 }
