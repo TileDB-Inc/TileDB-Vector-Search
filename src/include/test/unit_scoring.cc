@@ -112,7 +112,7 @@ TEMPLATE_LIST_TEST_CASE(
   using index_type = std::tuple_element_t<1, TestType>;
   using groundtruth_type = std::tuple_element_t<2, TestType>;
 
-  ColMajorMatrix<score_type> scores{
+  ColMajorMatrix<score_type> scores{{
       //  0  1  2  3  4  5  6  7  8
       {8, 6, 7, 5, 3, 0, 9, 1, 2},
       {3, 1, 4, 1, 5, 9, 2, 6, 7},
@@ -121,7 +121,7 @@ TEMPLATE_LIST_TEST_CASE(
       {9, 8, 7, 2, 5, 4, 3, 2, 9},
       {9, 8, 3, 6, 5, 4, 3, 9, 1},
       {7, 5, 3, 0, 9, 1, 2, 8, 1},
-  };
+  }};
 
   CHECK(scores.num_rows() == 9);
   CHECK(scores.num_cols() == 7);
@@ -405,14 +405,14 @@ TEMPLATE_LIST_TEST_CASE("get_top_k", "[scoring]", scoring_typelist) {
           })};
 
   // Matrix not used
-  ColMajorMatrix<groundtruth_type> gt_neighbors_mat{
+  ColMajorMatrix<groundtruth_type> gt_neighbors_mat{{
       {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
       {9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
-  };
-  ColMajorMatrix<score_type> gt_scores_mat{
+  }};
+  ColMajorMatrix<score_type> gt_scores_mat{{
       {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
       {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9},
-  };
+  }};
 
   SECTION("std::vector get_top_k") {
     CHECK((size_t)size(scores00[0]) == (size_t)(asize));
@@ -572,14 +572,14 @@ TEMPLATE_LIST_TEST_CASE(
   };
 
   // Matrix not used
-  ColMajorMatrix<groundtruth_type> gt_neighbors_mat{
+  ColMajorMatrix<groundtruth_type> gt_neighbors_mat{{
       {9, 8, 7, 6, 5},
       {9, 4, 0, 5, 1},
-  };
-  ColMajorMatrix<score_type> gt_scores_mat{
+  }};
+  ColMajorMatrix<score_type> gt_scores_mat{{
       {1, 2, 3, 4, 5},
       {0, 1, 2, 3, 4},
-  };
+  }};
   std::vector<fixed_min_pair_heap<score_type, index_type>> scores{a, b};
   SECTION("std::vector") {
     auto top_k = get_top_k(scores, 5);
