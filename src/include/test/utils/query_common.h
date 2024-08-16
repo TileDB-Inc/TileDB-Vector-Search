@@ -43,7 +43,7 @@
 // clang-format off
 
   auto centroids = ColMajorMatrix<float> {
-      {
+      {{
           {8, 6, 7},
           {5, 3, 0},
           {9, 1, 2},
@@ -66,23 +66,23 @@
           {1, 5, 9},
           {9, 0, 3,},
           {5, 7, 6},
-      }
+      }}
   };
   auto query = ColMajorMatrix<float> {
-      {
+      {{
           {3, 4, 5},
           {2, 300, 8},
           {3, 1, 3.5},
           {3, 1, 3},
           {4, 5, 6},
-      }
+      }}
   };
 
   /**
    * Taken from [0:5,9:12] of sift_base
    */
   auto sift_base = ColMajorMatrix<float>
-      {
+      {{
           { 21.,  13.,  17.},
           { 13.,  60.,  10.},
           { 18.,  15.,   6.},
@@ -115,16 +115,16 @@
           { 21.,  35.,  30.},
           { 20.,  10.,  12.},
           { 13.,   2.,  10.},
-      };
+      }};
 
   auto sift_query = ColMajorMatrix<float>
-      {
+      {{
           { 0.,  7., 50.},
           {11.,  4., 43.},
           {77.,  5.,  9.},
           {24., 11.,  1.},
           { 3.,  2.,  0.}
-      };
+      }};
 
 // clang-format on
 
