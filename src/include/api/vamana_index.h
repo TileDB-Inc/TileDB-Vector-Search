@@ -91,6 +91,7 @@ class IndexVamana {
       const std::optional<IndexOptions>& config = std::nullopt) {
     feature_datatype_ = TILEDB_ANY;
     id_datatype_ = TILEDB_UINT32;
+
     if (config) {
       for (auto&& c : *config) {
         auto key = c.first;
@@ -397,7 +398,6 @@ class IndexVamana {
           extents(training_set)[1]};
 
       using id_type = typename T::id_type;
-
       if (num_ids(training_set) > 0) {
         auto ids = std::span<id_type>(
             (id_type*)training_set.ids(), training_set.num_vectors());
