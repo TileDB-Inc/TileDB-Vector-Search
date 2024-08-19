@@ -340,261 +340,201 @@ void simulate_work(std::chrono::milliseconds duration) {
   std::this_thread::sleep_for(duration);
 }
 
-// TEST_CASE("Basic Timing Functionality", "[timing_data_class]") {
-//   timing_data_class& timing_data = get_timing_data_instance();
+TEST_CASE("Basic Timing Functionality", "[timing_data_class]") {
+  timing_data_class& timing_data = get_timing_data_instance();
 
-//   SECTION("Single Timer Test") {
-//     {
-//       scoped_timer timer("TestTimer");
-//       simulate_work(std::chrono::milliseconds(100));
-//     }
+  SECTION("Single Timer Test") {
+    {
+      scoped_timer timer("TestTimer");
+      simulate_work(std::chrono::milliseconds(100));
+    }
 
-//     std::string dump = timing_data.dump();
-//     REQUIRE(dump.find("TestTimer") != std::string::npos);
-//   }
+    std::string dump = timing_data.dump();
+    REQUIRE(dump.find("TestTimer") != std::string::npos);
+  }
 
-//   SECTION("Nested Timer Test") {
-//     {
-//       scoped_timer parent_timer("ParentTimer");
-//       simulate_work(std::chrono::milliseconds(50));
+  SECTION("Nested Timer Test") {
+    {
+      scoped_timer parent_timer("ParentTimer");
+      simulate_work(std::chrono::milliseconds(50));
 
-//       {
-//         scoped_timer child_timer("ChildTimer");
-//         simulate_work(std::chrono::milliseconds(30));
-//       }
-//     }
+      {
+        scoped_timer child_timer("ChildTimer");
+        simulate_work(std::chrono::milliseconds(30));
+      }
+    }
 
-//     std::string dump = timing_data.dump();
-//     REQUIRE(dump.find("ParentTimer") != std::string::npos);
-//     REQUIRE(dump.find("ChildTimer") != std::string::npos);
-//   }
-// }
+    std::string dump = timing_data.dump();
+    REQUIRE(dump.find("ParentTimer") != std::string::npos);
+    REQUIRE(dump.find("ChildTimer") != std::string::npos);
+  }
+}
 
-// TEST_CASE("Timing Data Structure", "[timing_data_class]") {
-//   timing_data_class& timing_data = get_timing_data_instance();
+TEST_CASE("Timing Data Structure", "[timing_data_class]") {
+  timing_data_class& timing_data = get_timing_data_instance();
 
-//   SECTION("Tree Structure Test") {
-//     {
-//       scoped_timer root_timer("RootTimer");
-//       simulate_work(std::chrono::milliseconds(20));
+  SECTION("Tree Structure Test") {
+    {
+      scoped_timer root_timer("RootTimer");
+      simulate_work(std::chrono::milliseconds(20));
 
-//       {
-//         scoped_timer child_timer_1("ChildTimer1");
-//         simulate_work(std::chrono::milliseconds(10));
+      {
+        scoped_timer child_timer_1("ChildTimer1");
+        simulate_work(std::chrono::milliseconds(10));
 
-//         {
-//           scoped_timer grandchild_timer("GrandchildTimer");
-//           simulate_work(std::chrono::milliseconds(5));
-//         }
-//       }
+        {
+          scoped_timer grandchild_timer("GrandchildTimer");
+          simulate_work(std::chrono::milliseconds(5));
+        }
+      }
 
-//       {
-//         scoped_timer child_timer_2("ChildTimer2");
-//         simulate_work(std::chrono::milliseconds(15));
-//       }
-//     }
+      {
+        scoped_timer child_timer_2("ChildTimer2");
+        simulate_work(std::chrono::milliseconds(15));
+      }
+    }
 
-//     std::string dump = timing_data.dump();
-//     REQUIRE(dump.find("RootTimer") != std::string::npos);
-//     REQUIRE(dump.find("ChildTimer1") != std::string::npos);
-//     REQUIRE(dump.find("GrandchildTimer") != std::string::npos);
-//     REQUIRE(dump.find("ChildTimer2") != std::string::npos);
+    std::string dump = timing_data.dump();
+    REQUIRE(dump.find("RootTimer") != std::string::npos);
+    REQUIRE(dump.find("ChildTimer1") != std::string::npos);
+    REQUIRE(dump.find("GrandchildTimer") != std::string::npos);
+    REQUIRE(dump.find("ChildTimer2") != std::string::npos);
 
-//     // Check indentation levels to ensure the tree structure is preserved
-//     REQUIRE(dump.find("  ChildTimer1") != std::string::npos);  // Indented
-//     child REQUIRE(
-//         dump.find("    GrandchildTimer") !=
-//         std::string::npos);  // Further indented grandchild
-//     REQUIRE(
-//         dump.find("  ChildTimer2") !=
-//         std::string::npos);  // Another child at the same level as
-//         ChildTimer1
-//   }
-// }
+    // Check indentation levels to ensure the tree structure is preserved
+    REQUIRE(dump.find("  ChildTimer1") != std::string::npos);  // Indented
+    REQUIRE(
+        dump.find("    GrandchildTimer") !=
+        std::string::npos);  // Further indented grandchild
+    REQUIRE(
+        dump.find("  ChildTimer2") !=
+        std::string::npos);  // Another child at the same level as
+  }
+}
 
-// TEST_CASE("Verbose Mode Test", "[timing_data_class]") {
-//   timing_data_class& timing_data = get_timing_data_instance();
+TEST_CASE("Multiple Instances Test", "[timing_data_class]") {
+  timing_data_class& timing_data = get_timing_data_instance();
 
-//   SECTION("Check Verbose Output") {
-//     timing_data.set_verbose(true);
-//     std::ostringstream output;
-//     std::streambuf* old_cout = std::cout.rdbuf(output.rdbuf());
+  SECTION("Multiple Timers in Different Scopes") {
+    {
+      scoped_timer timer1("Timer1");
+      simulate_work(std::chrono::milliseconds(10));
+    }
 
-//     {
-//       scoped_timer timer("VerboseTimer");
-//       simulate_work(std::chrono::milliseconds(10));
-//     }
+    {
+      scoped_timer timer2("Timer2");
+      simulate_work(std::chrono::milliseconds(20));
+    }
 
-//     std::cout.rdbuf(old_cout);  // Restore original std::cout buffer
+    std::string dump = timing_data.dump();
+    REQUIRE(dump.find("Timer1") != std::string::npos);
+    REQUIRE(dump.find("Timer2") != std::string::npos);
+  }
+}
 
-//     std::string verbose_output = output.str();
-//     REQUIRE(
-//         verbose_output.find("Starting timer VerboseTimer") !=
-//         std::string::npos);
-//     REQUIRE(
-//         verbose_output.find("Stopping timer VerboseTimer") !=
-//         std::string::npos);
+TEST_CASE("Single-threaded timing") {
+  {
+    // Start a simple timer
+    scoped_timer timer("single_thread_test");
 
-//     timing_data.set_verbose(false);
-//   }
-// }
+    // Simulate some work
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
-// TEST_CASE("Multiple Instances Test", "[timing_data_class]") {
-//   timing_data_class& timing_data = get_timing_data_instance();
+  // Dump and verify the results
+  std::string result = _timing_data.dump();
+  REQUIRE(result.find("single_thread_test") != std::string::npos);
+  REQUIRE(result.find("avg =") != std::string::npos);
+}
 
-//   SECTION("Multiple Timers in Different Scopes") {
-//     {
-//       scoped_timer timer1("Timer1");
-//       simulate_work(std::chrono::milliseconds(10));
-//     }
+TEST_CASE("Nested timers") {
+  {
+    scoped_timer outer("outer_timer");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-//     {
-//       scoped_timer timer2("Timer2");
-//       simulate_work(std::chrono::milliseconds(20));
-//     }
+    {
+      scoped_timer inner("inner_timer");
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
 
-//     std::string dump = timing_data.dump();
-//     REQUIRE(dump.find("Timer1") != std::string::npos);
-//     REQUIRE(dump.find("Timer2") != std::string::npos);
-//   }
-// }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
 
-// TEST_CASE("Single-threaded timing") {
-//   {
-//     // Start a simple timer
-//     scoped_timer timer("single_thread_test");
+  // Dump and verify the results
+  std::string result = _timing_data.dump();
+  REQUIRE(result.find("outer_timer") != std::string::npos);
+  REQUIRE(result.find("inner_timer") != std::string::npos);
+  REQUIRE(result.find("avg =") != std::string::npos);
+}
 
-//     // Simulate some work
-//     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-//   }
-
-//   // Dump and verify the results
-//   std::string result = _timing_data.dump();
-//   REQUIRE(result.find("single_thread_test") != std::string::npos);
-//   REQUIRE(result.find("avg =") != std::string::npos);
-// }
-
-// TEST_CASE("Nested timers") {
-//   {
-//     scoped_timer outer("outer_timer");
-//     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-//     {
-//       scoped_timer inner("inner_timer");
-//       std::this_thread::sleep_for(std::chrono::milliseconds(50));
-//     }
-
-//     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-//   }
-
-//   // Dump and verify the results
-//   std::string result = _timing_data.dump();
-//   REQUIRE(result.find("outer_timer") != std::string::npos);
-//   REQUIRE(result.find("inner_timer") != std::string::npos);
-//   REQUIRE(result.find("avg =") != std::string::npos);
-// }
-
-// Multithreaded test with different timers in each thread
-TEST_CASE("Multithreaded timing test with different timers") {
+TEST_CASE("Different timers in each thread", "[logging][multithreading]") {
   auto thread_func = [](const std::string& timer_name, int sleep_time) {
-    scoped_timer timer(timer_name, true);
+    scoped_timer timer(timer_name);
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
   };
 
-  std::thread t1(thread_func, "thread_1_timer", 150);
-  std::thread t2(thread_func, "thread_2_timer", 250);
+  std::thread t1(thread_func, "thread_1_timer", 50);
+  std::thread t2(thread_func, "thread_2_timer", 75);
+  std::thread t3(thread_func, "thread_3_timer", 100);
 
   t1.join();
   t2.join();
-  return;
+  t3.join();
+
   std::string dump = _timing_data.dump();
-  REQUIRE(dump.find("thread_1_timer") != std::string::npos);
-  REQUIRE(dump.find("thread_2_timer") != std::string::npos);
+  REQUIRE(dump.find("thread_1_timer: count = 1") != std::string::npos);
+  REQUIRE(dump.find("thread_2_timer: count = 1") != std::string::npos);
+  REQUIRE(dump.find("thread_3_timer: count = 1") != std::string::npos);
   REQUIRE(dump.find("count = 0,") == std::string::npos);
   REQUIRE(dump.find("count = 1,") != std::string::npos);
   REQUIRE(dump.find("count = 2,") == std::string::npos);
-
-  std::cout << dump << std::endl;
+  REQUIRE(dump.find("count = 3,") == std::string::npos);
 }
 
-// // Multithreaded test with the same timer names in each thread
-// TEST_CASE("Multithreaded timing test with same timer names") {
-//   auto thread_func = [](const std::string& timer_name, int sleep_time) {
-//     scoped_timer timer(timer_name, true);
-//     std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-//   };
+TEST_CASE("Same timer name in each thread", "[logging][multithreading]") {
+  auto thread_func = [](const std::string& timer_name, int sleep_time) {
+    scoped_timer timer(timer_name);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+  };
 
-//   std::thread t1(thread_func, "shared_timer", 100);
-//   std::thread t2(thread_func, "shared_timer", 200);
+  std::thread t1(thread_func, "shared_timer", 100);
+  std::thread t2(thread_func, "shared_timer", 200);
 
-//   t1.join();
-//   t2.join();
+  t1.join();
+  t2.join();
 
-//   std::string dump = _timing_data.dump();
-//   size_t occurrence_count = 0;
-//   size_t pos = dump.find("shared_timer");
-//   while (pos != std::string::npos) {
-//     occurrence_count++;
-//     pos = dump.find("shared_timer", pos + 1);
-//   }
+  std::string dump = _timing_data.dump();
+  size_t occurrence_count = 0;
+  size_t pos = dump.find("shared_timer: count = 1,");
+  while (pos != std::string::npos) {
+    occurrence_count++;
+    pos = dump.find("shared_timer: count = 1,", pos + 1);
+  }
 
-//   REQUIRE(occurrence_count == 2); // One entry per thread
+  // One entry per thread, so two total.
+  REQUIRE(occurrence_count == 2);
+}
 
-//   std::cout << "Multithreaded timing data dump (same timers):\n" << dump <<
-//   std::endl;
-// }
+TEST_CASE("Nested timers per thread", "[logging][multithreading]") {
+    auto thread_func = [](const std::string& parent_timer_name, const std::string& child_timer_name, int sleep_time) {
+        {
+            scoped_timer parent_timer(parent_timer_name);
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+            {
+                scoped_timer child_timer(child_timer_name);
+                std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time / 2));
+            }
+        }
+    };
 
-// // Multithreaded test with nested timers
-// TEST_CASE("Multithreaded timing test with nested timers") {
-//     auto thread_func = [](const std::string& parent_timer_name, const
-//     std::string& child_timer_name, int sleep_time) {
-//         {
-//             scoped_timer parent_timer(parent_timer_name, true);
-//             std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-//             {
-//                 scoped_timer child_timer(child_timer_name, true);
-//                 std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time
-//                 / 2));
-//             }
-//         }
-//     };
+    std::thread t1(thread_func, "thread_1_parent", "thread_1_child", 200);
+    std::thread t2(thread_func, "thread_2_parent", "thread_2_child", 300);
 
-//     std::thread t1(thread_func, "thread_1_parent", "thread_1_child", 200);
-//     std::thread t2(thread_func, "thread_2_parent", "thread_2_child", 300);
+    t1.join();
+    t2.join();
 
-//     t1.join();
-//     t2.join();
-
-//     std::string dump = _timing_data.dump();
-//     REQUIRE(dump.find("thread_1_parent") != std::string::npos);
-//     REQUIRE(dump.find("thread_1_child") != std::string::npos);
-//     REQUIRE(dump.find("thread_2_parent") != std::string::npos);
-//     REQUIRE(dump.find("thread_2_child") != std::string::npos);
-
-//     std::cout << "Multithreaded timing data dump (nested timers):\n" << dump
-//     << std::endl;
-// }
-
-// // Test to verify timing data persistence across multiple threads
-// TEST_CASE("Multithreaded timing data persistence test") {
-//     std::thread t1([]() {
-//         scoped_timer timer("persistence_thread_1_timer", true);
-//         std::this_thread::sleep_for(std::chrono::milliseconds(120));
-//     });
-
-//     std::thread t2([]() {
-//         scoped_timer timer("persistence_thread_2_timer", true);
-//         std::this_thread::sleep_for(std::chrono::milliseconds(180));
-//     });
-
-//     t1.join();
-//     t2.join();
-
-//     // Dumping the data after all threads have finished
-//     std::string dump = _timing_data.dump();
-//     REQUIRE(dump.find("persistence_thread_1_timer") != std::string::npos);
-//     REQUIRE(dump.find("persistence_thread_2_timer") != std::string::npos);
-
-//     std::cout << "Multithreaded timing data dump (persistence):\n" << dump <<
-//     std::endl;
-// }
+    std::string dump = _timing_data.dump();
+    REQUIRE(dump.find("thread_1_parent: count = 1, avg = ") != std::string::npos);
+    REQUIRE(dump.find("thread_1_child: count = 1, avg = ") != std::string::npos);
+    REQUIRE(dump.find("thread_2_parent: count = 1, avg = ") != std::string::npos);
+    REQUIRE(dump.find("thread_2_child: count = 1, avg = ") != std::string::npos);
+}

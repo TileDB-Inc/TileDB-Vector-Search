@@ -89,16 +89,6 @@ code.
  * The associated singleton provides methods for getting memory usages
 individually
  * or cumulatively.
- *
- * @example
- * @code{.cpp}
-// Print totals for all timers
-auto timers = _timing_data.get_timer_names();
-for (const auto& timer : timers) {
-   std::cout << timer << ":  " <<
-_timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
-}
- * @endcode
  */
 
 #ifndef TDB_LOGGING_H
@@ -158,7 +148,7 @@ class timing_data_class {
     std::string dump() const {
       return "(name: " + name + ", count: " + std::to_string(count) +
              ", total_duration: " + std::to_string(total_duration.count()) +
-             ", address: " +
+             ", children: " + std::to_string(children.size()) + " address: " +
              std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ")";
     }
   };
@@ -169,8 +159,6 @@ class timing_data_class {
   std::unordered_map<std::thread::id, TimerNode*> threadToCurrentNode_;
 
   mutable std::mutex mutex_;
-
-  bool verbose_{false};
 
   /**
    * Private constructor and destructor for singleton.
@@ -194,7 +182,6 @@ class timing_data_class {
     // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
     static timing_data_class* instance;
     std::call_once(flag, []() {
-      std::cout << "[logging@get_instance] Creating instance" << std::endl;
       instance = new timing_data_class();
     });
     return *instance;
@@ -210,37 +197,22 @@ class timing_data_class {
     std::lock_guard<std::mutex> lock(mutex_);
     auto thread_id = std::this_thread::get_id();
     if (threadToRoot_.find(thread_id) == threadToRoot_.end()) {
-      std::cout << "[logging@start_timer] Creating root node with thread_id: "
-                << thread_id << std::endl;
       threadToRoot_[thread_id] = std::make_unique<TimerNode>("root");
-      return;
       threadToCurrentNode_[thread_id] = threadToRoot_[thread_id].get();
-      std::cout << "  threadToRoot_[thread_id] "
-                << threadToRoot_[thread_id]->dump()
-                << " threadToCurrentNode_[thread_id] "
-                << threadToCurrentNode_[thread_id]->dump() << std::endl;
     }
-    return;
     auto current_node = threadToCurrentNode_[thread_id];
-    std::cout << "[logging@start_timer] current_node: " << current_node->dump()
-              << std::endl;
     for (auto& child : current_node->children) {
       if (child->name == name) {
         threadToCurrentNode_[thread_id] = child.get();
-        std::cout << "[logging@start_timer] Existing child node "
-                     "threadToCurrentNode_[thread_id]: "
-                  << threadToCurrentNode_[thread_id]->dump() << std::endl;
         return;
       }
     }
 
-    std::cout << "[logging@start_timer] Creating child node" << std::endl;
     current_node->children.push_back(std::make_unique<TimerNode>(name));
     threadToCurrentNode_[thread_id] = current_node->children.back().get();
   }
 
   void stop_timer(const time_type& start_time) {
-    return;
     auto end_time = clock_type::now();
     std::lock_guard<std::mutex> lock(mutex_);
     auto thread_id = std::this_thread::get_id();
@@ -249,23 +221,12 @@ class timing_data_class {
     }
 
     auto current_node = threadToCurrentNode_[thread_id];
-    std::cout << "[logging@stop_timer] current_node: " << current_node->dump()
-              << std::endl;
     current_node->total_duration += (end_time - start_time);
     current_node->count += 1;
 
     if (current_node != threadToRoot_[thread_id].get()) {
-      threadToCurrentNode_[thread_id] =
-          find_parent(threadToRoot_[thread_id].get(), current_node);
+      threadToCurrentNode_[thread_id] = find_parent(threadToRoot_[thread_id].get(), current_node);
     }
-  }
-
-  void set_verbose(bool verbose) {
-    verbose_ = verbose;
-  }
-
-  bool get_verbose() const {
-    return verbose_;
   }
 
   /**
@@ -274,7 +235,6 @@ class timing_data_class {
    * @return String representation of the timing data.
    */
   std::string dump() const {
-    return "";
     std::lock_guard<std::mutex> lock(mutex_);
     std::ostringstream oss;
     for (const auto& [thread_id, root] : threadToRoot_) {
@@ -296,11 +256,11 @@ class timing_data_class {
     if (!root || !node) {
       throw std::runtime_error("Invalid input");
     }
-    std::cout << "[logging@find_parent] root " << root->dump() << " node "
-              << node->dump() << std::endl;
+    if (root == node) {
+      return root;
+    }
     for (const auto& child : root->children) {
       if (child.get() == node) {
-        std::cout << "  return root " << std::endl;
         return root;
       } else {
         TimerNode* result = find_parent(child.get(), node);
@@ -309,8 +269,7 @@ class timing_data_class {
         }
       }
     }
-    throw std::runtime_error("Could not find parent node");
-    // return nullptr;
+    return nullptr;
   }
 
   /**
@@ -375,23 +334,15 @@ class log_timer {
   using clock_t = timing_data_class::clock_type;
   time_t start_time;
   std::string msg_;
-  bool noisy_{false};
 
  public:
   /**
    * Constructor. Associates a name with the timer and records the start time.
-   * If the noisy flag is enabled, the timer will optionally print a message.
    * @param msg The name to be associated with the timer.
-   * @param noisy Flag to enable/disable printing of messages.
    */
-  explicit log_timer(const std::string& msg, bool noisy = false)
+  explicit log_timer(const std::string& msg)
       : start_time(clock_t::now())
-      , msg_(msg)
-      , noisy_(noisy) {
-    noisy_ |= _timing_data.get_verbose();
-    if (noisy_) {
-      std::cout << "# Starting timer " << msg_ << std::endl;
-    }
+      , msg_(msg){
     _timing_data.start_timer(msg_);
   }
 
@@ -399,10 +350,7 @@ class log_timer {
    * Start the timer.  Records the start time and optionally prints a message.
    * @return The start time.
    */
-  time_t start() {
-    if (noisy_) {
-      std::cout << "# Restarting timer " << msg_ << std::endl;
-    }
+  time_t restart() {
     return (start_time = clock_t::now());
   }
 
@@ -410,14 +358,7 @@ class log_timer {
    * Stop the timer.  Records the stop time and optionally prints a message.
    */
   void stop() {
-    // _timing_data.stop_timer(start_time);
-    if (noisy_) {
-      std::cout << "# Stopping timer " << msg_ << ": "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(
-                       clock_t::now() - start_time)
-                       .count()
-                << " ms" << std::endl;
-    }
+    _timing_data.stop_timer(start_time);
   }
 
   /**
@@ -437,8 +378,8 @@ class log_timer {
  */
 class scoped_timer : public log_timer {
  public:
-  explicit scoped_timer(const std::string& msg, bool noisy = false)
-      : log_timer(msg, noisy) {
+  explicit scoped_timer(const std::string& msg)
+      : log_timer(msg) {
   }
 
   /**
