@@ -124,7 +124,7 @@ auto dist_qv_finite_ram_part(
 
   size_t part_offset = 0;
   while (partitioned_vectors.load()) {
-    _i.start();
+    scoped_timer _inner{"dist_qv@dist_qv_finite_ram_part@inner_loop"};
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
@@ -173,7 +173,6 @@ auto dist_qv_finite_ram_part(
     }
 
     part_offset += current_part_size;
-    _i.stop();
   }
   return min_scores;
 }

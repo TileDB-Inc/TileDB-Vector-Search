@@ -48,6 +48,8 @@
 #include <tiledb/tiledb>
 
 #include "utils/logging.h"
+#include "utils/logging_count.h"
+#include "utils/logging_memory.h"
 
 #include "config.h"
 
@@ -148,25 +150,25 @@ static auto dump_logs = [](const std::string& filename,
   char tag = 'A';
 
   // A bit of a hack -- first set units to seconds
-  auto units = std::string(" (s)");
-  for (const auto& timers :
-       {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
-    for (const auto& timer : timers) {
-      std::string text;
-      if (size(timer) < 3) {
-        text = timer;
-      } else {
-        std::string key =
-            std::string("[") + std::string(1, tag) + std::string("]");
-        toc[key] = timer + units;
-        ++tag;
-        text = key;
-      }
-      output << std::setw(12) << text;
-    }
-    // hack, continued -- set units to MiB at bottom of loop
-    units = std::string(" (MiB)");  // copilot scares me
-  }
+  //  auto units = std::string(" (s)");
+  //  for (const auto& timers :
+  //       {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
+  //    for (const auto& timer : timers) {
+  //      std::string text;
+  //      if (size(timer) < 3) {
+  //        text = timer;
+  //      } else {
+  //        std::string key =
+  //            std::string("[") + std::string(1, tag) + std::string("]");
+  //        toc[key] = timer + units;
+  //        ++tag;
+  //        text = key;
+  //      }
+  //      output << std::setw(12) << text;
+  //    }
+  //    // hack, continued -- set units to MiB at bottom of loop
+  //    units = std::string(" (MiB)");  // copilot scares me
+  //  }
 
   output << std::endl;
 
@@ -181,24 +183,25 @@ static auto dump_logs = [](const std::string& filename,
   output << std::fixed << std::setprecision(3);
   output << std::setw(8) << recall;
 
-  output.precision(original_precision);
-  output << std::fixed << std::setprecision(3);
-  auto timers = _timing_data.get_timer_names();
-  for (const auto& timer : timers) {
-    auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
-    if (ms < 1000) {
-      output << std::fixed << std::setprecision(6);
-    } else if (ms < 10000) {
-      output << std::fixed << std::setprecision(5);
-    } else if (ms < 100000) {
-      output << std::fixed << std::setprecision(4);
-    } else {
-      output << std::fixed << std::setprecision(3);
-    }
-    output << std::setw(12) << ms / 1000000.0;
-  }
-
-  output << std::fixed << std::setprecision(0);
+  //  output.precision(original_precision);
+  //  output << std::fixed << std::setprecision(3);
+  //  auto timers = _timing_data.get_timer_names();
+  //  for (const auto& timer : timers) {
+  //    auto ms =
+  //    _timing_data.get_entries_summed<std::chrono::microseconds>(timer); if
+  //    (ms < 1000) {
+  //      output << std::fixed << std::setprecision(6);
+  //    } else if (ms < 10000) {
+  //      output << std::fixed << std::setprecision(5);
+  //    } else if (ms < 100000) {
+  //      output << std::fixed << std::setprecision(4);
+  //    } else {
+  //      output << std::fixed << std::setprecision(3);
+  //    }
+  //    output << std::setw(12) << ms / 1000000.0;
+  //  }
+  //
+  //  output << std::fixed << std::setprecision(0);
 
   auto usages = _memory_data.get_usage_names();
   for (const auto& usage : usages) {

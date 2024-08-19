@@ -136,15 +136,6 @@ static constexpr const char* ROOT_NAME = "root";
 #endif
 #endif
 
-/**
- * Singleton class for storing timing data in a tree structure.
- *
- * As a singleton, the object from this class can be used from anywhere in the
- * code. Timing data is stored in a tree structure, where each node represents a
- * timer, storing only the total duration and the count of occurrences.
- * Each thread maintains its own separate tree to avoid conflicts in
- * multithreaded scenarios.
- */
 class timing_data_class {
  public:
   using clock_type = std::chrono::high_resolution_clock;
@@ -165,18 +156,18 @@ class timing_data_class {
     }
 
     std::string dump() const {
-      return "(name: " + name + ", count: " + std::to_string(count) + ", total_duration: " + std::to_string(total_duration.count()) + ", address: " + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ")";
+      return "(name: " + name + ", count: " + std::to_string(count) +
+             ", total_duration: " + std::to_string(total_duration.count()) +
+             ", address: " +
+             std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ")";
     }
   };
 
  private:
-  // Thread-local storage for maintaining a separate timing tree per thread.
-  static thread_local std::unique_ptr<TimerNode> root_;
-  static thread_local TimerNode* current_node_;
+  // Map for maintaining a separate timing tree per thread.
+  std::unordered_map<std::thread::id, std::unique_ptr<TimerNode>> threadToRoot_;
+  std::unordered_map<std::thread::id, TimerNode*> threadToCurrentNode_;
 
-  // Global storage for all thread trees. Used to dump() the timing data from
-  // all threads.
-  std::vector<TimerNode*> all_roots_;
   mutable std::mutex mutex_;
 
   bool verbose_{false};
@@ -202,7 +193,10 @@ class timing_data_class {
     static std::once_flag flag;
     // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
     static timing_data_class* instance;
-    std::call_once(flag, []() { instance = new timing_data_class(); });
+    std::call_once(flag, []() {
+      std::cout << "[logging@get_instance] Creating instance" << std::endl;
+      instance = new timing_data_class();
+    });
     return *instance;
   }
 
@@ -213,53 +207,56 @@ class timing_data_class {
    * @return Pointer to the newly created or existing timer node.
    */
   void start_timer(const std::string& name) {
-    if (!root_) {
-      std::cout << "[logging@start_timer] Creating root node" << std::endl;
-      root_ = std::make_unique<TimerNode>("root");
-      std::cout << "[logging@start_timer] root_: " << root_->dump() << std::endl;
-      current_node_ = root_.get();
-      std::cout << "[logging@start_timer] current_node_: " << current_node_->dump() << std::endl;
-
-      // Save the root so we can dump its timing data later.
-      std::lock_guard<std::mutex> lock(mutex_);
-      all_roots_.push_back(root_.get());
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto thread_id = std::this_thread::get_id();
+    if (threadToRoot_.find(thread_id) == threadToRoot_.end()) {
+      std::cout << "[logging@start_timer] Creating root node with thread_id: "
+                << thread_id << std::endl;
+      threadToRoot_[thread_id] = std::make_unique<TimerNode>("root");
+      return;
+      threadToCurrentNode_[thread_id] = threadToRoot_[thread_id].get();
+      std::cout << "  threadToRoot_[thread_id] "
+                << threadToRoot_[thread_id]->dump()
+                << " threadToCurrentNode_[thread_id] "
+                << threadToCurrentNode_[thread_id]->dump() << std::endl;
     }
-
-    // Check if a child with the same name already exists
-    for (auto& child : current_node_->children) {
+    return;
+    auto current_node = threadToCurrentNode_[thread_id];
+    std::cout << "[logging@start_timer] current_node: " << current_node->dump()
+              << std::endl;
+    for (auto& child : current_node->children) {
       if (child->name == name) {
-        current_node_ = child.get();
-        std::cout << "[logging@start_timer] Existing child node" << std::endl;
+        threadToCurrentNode_[thread_id] = child.get();
+        std::cout << "[logging@start_timer] Existing child node "
+                     "threadToCurrentNode_[thread_id]: "
+                  << threadToCurrentNode_[thread_id]->dump() << std::endl;
         return;
       }
     }
 
-    // If no existing child, create a new one
     std::cout << "[logging@start_timer] Creating child node" << std::endl;
-    auto new_node = std::make_unique<TimerNode>(name);
-    TimerNode* node_ptr = new_node.get();
-    current_node_->children.push_back(std::move(new_node));
-    current_node_ = node_ptr;
+    current_node->children.push_back(std::make_unique<TimerNode>(name));
+    threadToCurrentNode_[thread_id] = current_node->children.back().get();
   }
 
-  /**
-   * Stop the current timer and move back to the parent node.
-   * @param start_time The start time of the timer to be stopped.
-   */
   void stop_timer(const time_type& start_time) {
-    if (!current_node_ || !root_) {
+    return;
+    auto end_time = clock_type::now();
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto thread_id = std::this_thread::get_id();
+    if (threadToCurrentNode_.find(thread_id) == threadToCurrentNode_.end()) {
       return;
     }
-    std::cout << "[logging@stop_timer] root_: " << root_->dump() << std::endl;
-    auto end_time = clock_type::now();
 
-    // std::cout << "[logging@stop_timer] current_node_: " << (current_node_ == nullptr ? "null" : "okay") << std::endl;
-    current_node_->total_duration += (end_time - start_time);
-    current_node_->count += 1;
-    std::cout << "[logging@stop_timer] current_node_: " << current_node_->dump() << std::endl;
+    auto current_node = threadToCurrentNode_[thread_id];
+    std::cout << "[logging@stop_timer] current_node: " << current_node->dump()
+              << std::endl;
+    current_node->total_duration += (end_time - start_time);
+    current_node->count += 1;
 
-    if (current_node_ != root_.get()) {
-      current_node_ = find_parent(root_.get(), current_node_);
+    if (current_node != threadToRoot_[thread_id].get()) {
+      threadToCurrentNode_[thread_id] =
+          find_parent(threadToRoot_[thread_id].get(), current_node);
     }
   }
 
@@ -277,14 +274,12 @@ class timing_data_class {
    * @return String representation of the timing data.
    */
   std::string dump() const {
+    return "";
     std::lock_guard<std::mutex> lock(mutex_);
     std::ostringstream oss;
-    std::cout << "[logging@dump] all_roots_.size(): " << all_roots_.size() << std::endl;
-    for (size_t i = 0; i < all_roots_.size(); ++i) {
-      oss << "Thread " << i + 1 << " Timing Data:\n";
-      std::cout << "[logging@dump] all_roots_[i]" << all_roots_[i]->dump() << std::endl;
-      dump_recursive(oss, all_roots_[i], 0);
-      oss << "\n";
+    for (const auto& [thread_id, root] : threadToRoot_) {
+      oss << "Thread " << thread_id << ":\n";
+      dump_recursive(oss, root.get(), 0);
     }
 
     return oss.str();
@@ -298,19 +293,24 @@ class timing_data_class {
    * @return Pointer to the parent node.
    */
   TimerNode* find_parent(TimerNode* root, TimerNode* node) {
+    if (!root || !node) {
+      throw std::runtime_error("Invalid input");
+    }
+    std::cout << "[logging@find_parent] root " << root->dump() << " node "
+              << node->dump() << std::endl;
     for (const auto& child : root->children) {
       if (child.get() == node) {
-        std::cout << "[logging@find_parent] Returning root" << root->dump() << std::endl;
+        std::cout << "  return root " << std::endl;
         return root;
       } else {
         TimerNode* result = find_parent(child.get(), node);
-        if (result)
-        std::cout << "[logging@find_parent] Returning result" << result->dump() << std::endl;
+        if (result) {
           return result;
+        }
       }
     }
-    std::cout << "[logging@find_parent] Returning nullptr" << std::endl;
-    return nullptr;
+    throw std::runtime_error("Could not find parent node");
+    // return nullptr;
   }
 
   /**
@@ -321,7 +321,6 @@ class timing_data_class {
    */
   void dump_recursive(
       std::ostringstream& oss, const TimerNode* node, int depth) const {
-    std::cout << "[logging@dump_recursive] node: " << (node == nullptr ? "null" : node->name) << std::endl;
     std::string indent(depth * 2, ' ');
     double average_duration =
         (node->count > 0) ?
@@ -330,7 +329,7 @@ class timing_data_class {
                     .count() /
                 static_cast<double>(node->count) :
             0.0;
-    if (node->name != ROOT_NAME) {
+    if (node->name != "root") {
       oss << indent << node->name << ": count = " << node->count
           << ", avg = " << format_duration_ns(average_duration) << "\n";
     }
@@ -358,13 +357,6 @@ class timing_data_class {
     }
   }
 };
-
-// Define thread-local storage for the timing tree. thread_local static members
-// of a class must be defined outside the class definition
-thread_local std::unique_ptr<timing_data_class::TimerNode>
-    timing_data_class::root_ = nullptr;
-thread_local timing_data_class::TimerNode* timing_data_class::current_node_ =
-    nullptr;
 
 inline timing_data_class& get_timing_data_instance() {
   return timing_data_class::get_instance();
@@ -418,7 +410,7 @@ class log_timer {
    * Stop the timer.  Records the stop time and optionally prints a message.
    */
   void stop() {
-    _timing_data.stop_timer(start_time);
+    // _timing_data.stop_timer(start_time);
     if (noisy_) {
       std::cout << "# Stopping timer " << msg_ << ": "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -456,359 +448,5 @@ class scoped_timer : public log_timer {
     this->stop();
   }
 };
-
-/**
- * Singleton class for recording memory consumption.  Internally maintains a
- * multimap of names and memory consumption values.  The `insert_entry()` method
- * is used to record memory consumption.  The `get_entries_*()` methods are used
- * to query the recorded memory consumption.
- *
- * Data are stored as bytes.  The `get_entries_*()` methods return values
- * as MiB (2^10 bytes).
- */
-class memory_data {
- public:
-  using memory_type = size_t;
-
- private:
-  std::multimap<std::string, memory_type> memory_usages_;
-  mutable std::mutex mtx_;
-  bool verbose_{false};
-
-  /**
-   * Constructor.  Private to enforce singleton pattern.
-   */
-  memory_data() = default;
-  ~memory_data() = default;
-
- public:
-  /**
-   * Copy constructor.  Deleted to enforce singleton pattern.
-   */
-  memory_data(const memory_data&) = delete;
-  memory_data& operator=(const memory_data&) = delete;
-
-  /**
-   * Get a reference to the singleton instance of the class.
-   * @return Reference to the singleton instance of the class.
-   */
-  static memory_data& get_instance() {
-    static std::once_flag flag;
-    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
-    static memory_data* instance;
-    std::call_once(flag, []() { instance = new memory_data(); });
-    return *instance;
-  }
-
-  /**
-   * Insert a memory consumption entry into the multimap.
-   * @param name The name to be associated with the memory consumption.
-   * @param use The memory consumption to be recorded (in bytes).
-   */
-  void insert_entry(const std::string& name, const memory_type& use) {
-    std::lock_guard<std::mutex> lock(mtx_);
-    memory_usages_.insert(std::make_pair(name, use));
-  }
-
-  /**
-   * Get the memory consumption entries associated with a name.
-   * @param string Name to be queried.
-   * @return Vector of memory consumption values associated with the name.
-   */
-  auto get_entries_separately(const std::string& string) const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    std::vector<double> usages;
-
-    auto range = memory_usages_.equal_range(string);
-    for (auto i = range.first; i != range.second; ++i) {
-      usages.push_back(i->second / (1024 * 1024));
-    }
-    return usages;
-  }
-
-  /**
-   * Get the sum of the memory consumption entries associated with a name.
-   * @param string Name to be queried.
-   * @return Vector of memory consumption values associated with the name.
-   */
-  auto get_entries_summed(const std::string& string) const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    double sum = 0.0;
-    auto range = memory_usages_.equal_range(string);
-    for (auto i = range.first; i != range.second; ++i) {
-      sum += i->second;
-    }
-    return sum / (1024 * 1024);
-  }
-
-  /**
-   * Get the names associated with the memory consumption entries.
-   * @return Vector of names associated with the memory consumption entries.
-   */
-  auto get_usage_names() const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    std::set<std::string> multinames;
-
-    std::vector<std::string> names;
-
-    for (const auto& i : memory_usages_) {
-      multinames.insert(i.first);
-    }
-    for (const auto& i : multinames) {
-      names.push_back(i);
-    }
-    return names;
-  }
-
-  void set_verbose(bool verbose) {
-    verbose_ = verbose;
-  }
-
-  bool get_verbose() const {
-    return verbose_;
-  }
-
-  std::string dump() const {
-    std::ostringstream oss;
-    auto usage_names = get_usage_names();
-    for (const auto& name : usage_names) {
-      auto usages = get_entries_separately(name);
-      double sum_mib = get_entries_summed(name);
-      double average_mib = sum_mib / usages.size();
-
-      oss << name << ":";
-      oss << " count: " << usages.size() << ",";
-      oss << " sum: " << format_memory_mib(sum_mib) << ",";
-      oss << " avg: " << format_memory_mib(average_mib);
-      oss << "\n";
-    }
-    return oss.str();
-  }
-
- private:
-  std::string format_memory_mib(double memory_mib) const {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2);
-
-    if (memory_mib < 1) {
-      oss << (memory_mib * 1024);
-      return oss.str() + " KiB";
-    } else if (memory_mib < 1024) {
-      oss << memory_mib;
-      return oss.str() + " MiB";
-    } else {
-      oss << (memory_mib / 1024);
-      return oss.str() + " GiB";
-    }
-  }
-};
-
-inline memory_data& get_memory_data_instance() {
-  return memory_data::get_instance();
-}
-
-static memory_data& _memory_data{get_memory_data_instance()};
-
-/**
- * Singleton class for recording miscellaneous counts.  Internally maintains a
- * multimap of names and count values.  The `insert_entry()` method
- * is used to record the count.  The `get_entries_*()` methods are used
- * to query the recorded counts.
- *
- * Data are stored as integral values.  The `get_entries_*()` methods return
- * integral values.
- */
-class count_data {
- public:
-  using count_type = size_t;
-
- private:
-  std::multimap<std::string, count_type> count_usages_;
-  mutable std::mutex mtx_;
-  bool verbose_{false};
-
-  /**
-   * Constructor.  Private to enforce singleton pattern.
-   */
-  count_data() = default;
-  ~count_data() = default;
-
- public:
-  /**
-   * Copy constructor.  Deleted to enforce singleton pattern.
-   */
-  count_data(const count_data&) = delete;
-  count_data& operator=(const count_data&) = delete;
-
-  /**
-   * Get a reference to the singleton instance of the class.
-   * @return Reference to the singleton instance of the class.
-   */
-  static count_data& get_instance() {
-    static std::once_flag flag;
-    // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
-    static count_data* instance;
-    std::call_once(flag, []() { instance = new count_data(); });
-    return *instance;
-  }
-
-  /**
-   * Insert a count entry into the multimap.
-   * @param name The name to be associated with the count.
-   * @param use The count to be recorded (in bytes).
-   */
-  void insert_entry(const std::string& name, const count_type& use) {
-    std::lock_guard<std::mutex> lock(mtx_);
-    count_usages_.insert(std::make_pair(name, use));
-  }
-
-  /**
-   * Get the count entries associated with a name.
-   * @param string Name to be queried.
-   * @return Vector of count values associated with the name.
-   */
-  auto get_entries_separately(const std::string& string) const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    std::vector<double> usages;
-
-    auto range = count_usages_.equal_range(string);
-    for (auto i = range.first; i != range.second; ++i) {
-      usages.push_back(i->second);
-    }
-    return usages;
-  }
-
-  /**
-   * Get the sum of the count entries associated with a name.
-   * @param string Name to be queried.
-   * @return Vector of count values associated with the name.
-   */
-  auto get_entries_summed(const std::string& string) const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    double sum = 0.0;
-    auto range = count_usages_.equal_range(string);
-    for (auto i = range.first; i != range.second; ++i) {
-      sum += i->second;
-    }
-    return sum;
-  }
-
-  /**
-   * Get the names associated with the count entries.
-   * @return Vector of names associated with the count entries.
-   */
-  std::vector<std::string> get_usage_names() const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    std::set<std::string> multinames;
-
-    std::vector<std::string> names;
-
-    for (const auto& i : count_usages_) {
-      multinames.insert(i.first);
-    }
-    for (const auto& i : multinames) {
-      names.push_back(i);
-    }
-    return names;
-  }
-
-  void set_verbose(bool verbose) {
-    verbose_ = verbose;
-  }
-
-  bool get_verbose() const {
-    return verbose_;
-  }
-
-  std::string dump() const {
-    std::ostringstream oss;
-    auto usage_names = get_usage_names();
-    for (const auto& name : usage_names) {
-      auto usages = get_entries_separately(name);
-      double sum = get_entries_summed(name);
-      double average = sum / usages.size();
-
-      oss << name << ":";
-      oss << " count: " << usages.size() << ",";
-      oss << " sum: " << sum << ",";
-      oss << " avg: " << average;
-      oss << "\n";
-    }
-    return oss.str();
-  }
-};
-
-inline count_data& get_count_data_instance() {
-  return count_data::get_instance();
-}
-
-static count_data& _count_data{get_count_data_instance()};
-
-#if 0
-class stats_data {
-  public:
-    enum operation_type {open_array, submit_query};
-
-    struct stats_type {
-      operation_type operation;
-      std::string uri;
-      std::string location;
-    };
-
-    using stats_map = std::multimap<stats_type, std::string>;
-
-  private:
-
-    stats_map stats_;
-    bool verbose_{false};
-
-    /**
-     * Constructor.  Private to enforce singleton pattern.
-     */
-    stats_data() = default;
-    ~stats_data() = default;
-
-  public:
-
-    /**
-     * Copy constructor.  Deleted to enforce singleton pattern.
-     */
-    stats_data(const stats_data&) = delete;
-    stats_data& operator=(const stats_data&) = delete;
-
-    /**
-     * Get a reference to the singleton instance of the class.
-     * @return Reference to the singleton instance of the class.
-     */
-    static stats_data& get_instance() {
-      static stats_data instance;
-      return instance;
-    }
-
-    /**
-     * Insert a memory consumption entry into the multimap.
-     * @param name The name to be associated with the memory consumption.
-     * @param use The memory consumption to be recorded (in bytes).
-     */
-    void insert_entry(const stats_type& key, const std::string& stats) {
-      stats_.insert({key, stats});
-    }
-
-    /**
-     * Get the memory consumption entries associated with a name.
-     * @param string Name to be queried.
-     * @return Vector of memory consumption values associated with the name.
-     */
-    auto get_entries_separately(const std::string& string) const {
-      std::vector<double> usages;
-
-      auto range = stats_.equal_range(string);
-      for (auto i = range.first; i != range.second; ++i) {
-        usages.push_back(i->second / (1024*1024));
-      }
-      return usages;
-    }
-};
-#endif
 
 #endif  // TDB_LOGGING_H
