@@ -116,6 +116,8 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #include <thread>
 #include <vector>
 
+static constexpr const char* ROOT_NAME = "root";
+
 /**
  *  Macro holding the name of the function in which it is called.
  */
@@ -140,6 +142,8 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
  * As a singleton, the object from this class can be used from anywhere in the
  * code. Timing data is stored in a tree structure, where each node represents a
  * timer, storing only the total duration and the count of occurrences.
+ * Each thread maintains its own separate tree to avoid conflicts in
+ * multithreaded scenarios.
  */
 class timing_data_class {
  public:
@@ -159,21 +163,28 @@ class timing_data_class {
         , total_duration(duration_type::zero())
         , count(0) {
     }
+
+    std::string dump() const {
+      return "(name: " + name + ", count: " + std::to_string(count) + ", total_duration: " + std::to_string(total_duration.count()) + ", address: " + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ")";
+    }
   };
 
  private:
-  std::unique_ptr<TimerNode> root_;
-  TimerNode* current_node_{nullptr};
-  mutable std::mutex mtx_;
+  // Thread-local storage for maintaining a separate timing tree per thread.
+  static thread_local std::unique_ptr<TimerNode> root_;
+  static thread_local TimerNode* current_node_;
+
+  // Global storage for all thread trees. Used to dump() the timing data from
+  // all threads.
+  std::vector<TimerNode*> all_roots_;
+  mutable std::mutex mutex_;
+
   bool verbose_{false};
 
   /**
    * Private constructor and destructor for singleton.
    */
-  timing_data_class() {
-    root_ = std::make_unique<TimerNode>("root");
-    current_node_ = root_.get();
-  }
+  timing_data_class() = default;
   ~timing_data_class() = default;
 
  public:
@@ -201,22 +212,34 @@ class timing_data_class {
    * @param name The name of the timer.
    * @return Pointer to the newly created or existing timer node.
    */
-  TimerNode* start_timer(const std::string& name) {
-    std::lock_guard<std::mutex> lock(mtx_);
+  void start_timer(const std::string& name) {
+    if (!root_) {
+      std::cout << "[logging@start_timer] Creating root node" << std::endl;
+      root_ = std::make_unique<TimerNode>("root");
+      std::cout << "[logging@start_timer] root_: " << root_->dump() << std::endl;
+      current_node_ = root_.get();
+      std::cout << "[logging@start_timer] current_node_: " << current_node_->dump() << std::endl;
+
+      // Save the root so we can dump its timing data later.
+      std::lock_guard<std::mutex> lock(mutex_);
+      all_roots_.push_back(root_.get());
+    }
+
     // Check if a child with the same name already exists
     for (auto& child : current_node_->children) {
       if (child->name == name) {
         current_node_ = child.get();
-        return current_node_;
+        std::cout << "[logging@start_timer] Existing child node" << std::endl;
+        return;
       }
     }
 
     // If no existing child, create a new one
+    std::cout << "[logging@start_timer] Creating child node" << std::endl;
     auto new_node = std::make_unique<TimerNode>(name);
     TimerNode* node_ptr = new_node.get();
     current_node_->children.push_back(std::move(new_node));
     current_node_ = node_ptr;
-    return node_ptr;
   }
 
   /**
@@ -224,15 +247,50 @@ class timing_data_class {
    * @param start_time The start time of the timer to be stopped.
    */
   void stop_timer(const time_type& start_time) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    if (!current_node_ || !root_) {
+      return;
+    }
+    std::cout << "[logging@stop_timer] root_: " << root_->dump() << std::endl;
     auto end_time = clock_type::now();
+
+    // std::cout << "[logging@stop_timer] current_node_: " << (current_node_ == nullptr ? "null" : "okay") << std::endl;
     current_node_->total_duration += (end_time - start_time);
     current_node_->count += 1;
+    std::cout << "[logging@stop_timer] current_node_: " << current_node_->dump() << std::endl;
+
     if (current_node_ != root_.get()) {
       current_node_ = find_parent(root_.get(), current_node_);
     }
   }
 
+  void set_verbose(bool verbose) {
+    verbose_ = verbose;
+  }
+
+  bool get_verbose() const {
+    return verbose_;
+  }
+
+  /**
+   * Dump the timing data for all threads in a hierarchical format, printing the
+   * average duration.
+   * @return String representation of the timing data.
+   */
+  std::string dump() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::ostringstream oss;
+    std::cout << "[logging@dump] all_roots_.size(): " << all_roots_.size() << std::endl;
+    for (size_t i = 0; i < all_roots_.size(); ++i) {
+      oss << "Thread " << i + 1 << " Timing Data:\n";
+      std::cout << "[logging@dump] all_roots_[i]" << all_roots_[i]->dump() << std::endl;
+      dump_recursive(oss, all_roots_[i], 0);
+      oss << "\n";
+    }
+
+    return oss.str();
+  }
+
+ private:
   /**
    * Recursively find the parent of the given node.
    * @param root The current node in the search.
@@ -242,36 +300,19 @@ class timing_data_class {
   TimerNode* find_parent(TimerNode* root, TimerNode* node) {
     for (const auto& child : root->children) {
       if (child.get() == node) {
+        std::cout << "[logging@find_parent] Returning root" << root->dump() << std::endl;
         return root;
       } else {
         TimerNode* result = find_parent(child.get(), node);
         if (result)
+        std::cout << "[logging@find_parent] Returning result" << result->dump() << std::endl;
           return result;
       }
     }
+    std::cout << "[logging@find_parent] Returning nullptr" << std::endl;
     return nullptr;
   }
 
-  /**
-   * Dump the timing data in a hierarchical format, printing the average
-   * duration.
-   * @return String representation of the timing data.
-   */
-  void set_verbose(bool verbose) {
-    verbose_ = verbose;
-  }
-
-  bool get_verbose() const {
-    return verbose_;
-  }
-
-  std::string dump() const {
-    std::ostringstream oss;
-    dump_recursive(oss, root_.get(), 0);
-    return oss.str();
-  }
-
- private:
   /**
    * Helper function to recursively dump the timing data.
    * @param oss Output stream to write to.
@@ -280,6 +321,7 @@ class timing_data_class {
    */
   void dump_recursive(
       std::ostringstream& oss, const TimerNode* node, int depth) const {
+    std::cout << "[logging@dump_recursive] node: " << (node == nullptr ? "null" : node->name) << std::endl;
     std::string indent(depth * 2, ' ');
     double average_duration =
         (node->count > 0) ?
@@ -288,8 +330,10 @@ class timing_data_class {
                     .count() /
                 static_cast<double>(node->count) :
             0.0;
-    oss << indent << node->name << ": count = " << node->count
-        << ", avg = " << format_duration_ns(average_duration) << "\n";
+    if (node->name != ROOT_NAME) {
+      oss << indent << node->name << ": count = " << node->count
+          << ", avg = " << format_duration_ns(average_duration) << "\n";
+    }
     for (const auto& child : node->children) {
       dump_recursive(oss, child.get(), depth + 1);
     }
@@ -315,6 +359,13 @@ class timing_data_class {
   }
 };
 
+// Define thread-local storage for the timing tree. thread_local static members
+// of a class must be defined outside the class definition
+thread_local std::unique_ptr<timing_data_class::TimerNode>
+    timing_data_class::root_ = nullptr;
+thread_local timing_data_class::TimerNode* timing_data_class::current_node_ =
+    nullptr;
+
 inline timing_data_class& get_timing_data_instance() {
   return timing_data_class::get_instance();
 }
@@ -331,7 +382,6 @@ class log_timer {
   using time_t = timing_data_class::time_type;
   using clock_t = timing_data_class::clock_type;
   time_t start_time;
-  timing_data_class::TimerNode* node_;
   std::string msg_;
   bool noisy_{false};
 
@@ -350,7 +400,7 @@ class log_timer {
     if (noisy_) {
       std::cout << "# Starting timer " << msg_ << std::endl;
     }
-    node_ = _timing_data.start_timer(msg_);
+    _timing_data.start_timer(msg_);
   }
 
   /**
@@ -359,7 +409,7 @@ class log_timer {
    */
   time_t start() {
     if (noisy_) {
-      std::cout << "# Starting timer " << msg_ << std::endl;
+      std::cout << "# Restarting timer " << msg_ << std::endl;
     }
     return (start_time = clock_t::now());
   }
@@ -395,7 +445,7 @@ class log_timer {
  */
 class scoped_timer : public log_timer {
  public:
-  explicit scoped_timer(const std::string& msg = "", bool noisy = false)
+  explicit scoped_timer(const std::string& msg, bool noisy = false)
       : log_timer(msg, noisy) {
   }
 
