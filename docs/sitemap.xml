@@ -2,42 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Benchmarks.html</loc>
-    <lastmod>2024-08-16T13:58:34.905Z</lastmod>
+    <lastmod>2024-08-19T10:00:42.237Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/storage-format-spec.html</loc>
-    <lastmod>2024-08-16T13:58:34.905Z</lastmod>
+    <lastmod>2024-08-19T10:00:42.237Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.html</loc>
-    <lastmod>2024-08-16T14:09:48.396Z</lastmod>
+    <lastmod>2024-08-19T10:11:38.669Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.Index.html</loc>
-    <lastmod>2024-08-16T14:09:48.416Z</lastmod>
+    <lastmod>2024-08-19T10:11:38.689Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ingestion.html</loc>
-    <lastmod>2024-08-16T14:09:48.448Z</lastmod>
+    <lastmod>2024-08-19T10:11:38.721Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/index.html</loc>
-    <lastmod>2024-08-16T13:58:34.905Z</lastmod>
+    <lastmod>2024-08-19T10:00:42.237Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/vamana_index.html</loc>
-    <lastmod>2024-08-16T14:09:48.432Z</lastmod>
+    <lastmod>2024-08-19T10:11:38.705Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ivf_flat_index.html</loc>
-    <lastmod>2024-08-16T14:09:48.428Z</lastmod>
+    <lastmod>2024-08-19T10:11:38.701Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/flat_index.html</loc>
-    <lastmod>2024-08-16T14:09:48.424Z</lastmod>
+    <lastmod>2024-08-19T10:11:38.693Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html</loc>
-    <lastmod>2024-08-16T13:58:34.905Z</lastmod>
+    <lastmod>2024-08-19T10:00:42.237Z</lastmod>
   </url>
 </urlset>
