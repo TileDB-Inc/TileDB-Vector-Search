@@ -16,11 +16,6 @@ from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import load_fvecs
 
 
-def normalize_vectors(vectors):
-    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
-    return vectors / norms
-
-
 def normalize_vector(vector):
     return vector / np.linalg.norm(vector)
 
@@ -103,7 +98,7 @@ def test_ivf_flat_cosine_simple(tmp_path):
         index_uri=index_uri,
         input_vectors=input_vectors,
         distance_metric=vspy.DistanceMetric.COSINE,
-        partitions=1,  # Using 2 partitions for this small dataset
+        partitions=1,
     )
 
     # Create a query vector
@@ -371,14 +366,13 @@ def test_vamana_create_l2(tmp_path):
 
 def test_vamana_create_cosine(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
-    with pytest.raises(ValueError):
-        ingest(
-            index_type="VAMANA",
-            index_uri=index_uri,
-            source_uri=siftsmall_inputs_file,
-            source_type="FVEC",
-            distance_metric=vspy.DistanceMetric.COSINE,
-        )
+    ingest(
+        index_type="VAMANA",
+        index_uri=index_uri,
+        source_uri=siftsmall_inputs_file,
+        source_type="FVEC",
+        distance_metric=vspy.DistanceMetric.COSINE,
+    )
 
 
 def cosine_distance(a, b):
@@ -455,6 +449,18 @@ def test_ivf_flat_create_cosine_numpy(tmp_path):
 
     Index.delete_index(uri=index_uri, config={})
     Index.delete_index(uri=index_uri_l2, config={})
+
+
+def test_vamana_create_inner_product(tmp_path):
+    index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
+    with pytest.raises(ValueError):
+        ingest(
+            index_type="VAMAAN",
+            index_uri=index_uri,
+            source_uri=siftsmall_inputs_file,
+            source_type="FVEC",
+            distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
+        )
 
 
 def test_ivfpq_create_l2(tmp_path):
