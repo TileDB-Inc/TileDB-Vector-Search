@@ -39,7 +39,7 @@
 
 using namespace std::literals::chrono_literals;
 
-TEST_CASE("multithreaded count test", "[logging][count_data]") {
+TEST_CASE("multithreaded count test", "[logging_count]") {
   auto thread_func = [](const std::string& count_name, size_t count) {
     for (int i = 0; i < 10; ++i) {
       _count_data.insert_entry(count_name, count);
@@ -60,7 +60,7 @@ TEST_CASE("multithreaded count test", "[logging][count_data]") {
   CHECK(c2 == 20);
 }
 
-TEST_CASE("highly concurrent count test", "[logging][count_data]") {
+TEST_CASE("highly concurrent count test", "[logging_count]") {
   constexpr auto timer_name = "highly_concurrent_count_test";
   constexpr int num_iterations = 100;
   auto thread_func = []() {
@@ -85,7 +85,7 @@ TEST_CASE("highly concurrent count test", "[logging][count_data]") {
   CHECK(f >= num_threads * num_iterations);
 }
 
-TEST_CASE("dump", "[logging]") {
+TEST_CASE("dump", "[logging_count]") {
   _count_data.insert_entry("b", 1);
   _memory_data.insert_entry("c", 2);
   std::cout << _count_data.dump();

@@ -38,11 +38,11 @@
 
 using namespace std::literals::chrono_literals;
 
-TEST_CASE("memory", "[logging]") {
+TEST_CASE("memory", "[logging_memory]") {
   _memory_data.insert_entry(tdb_func__, 8675309);
 }
 
-TEST_CASE("multithreaded memory test", "[logging][memory_data]") {
+TEST_CASE("multithreaded memory test", "[logging_memory]") {
   auto thread_func = [](const std::string& mem_name, size_t mem_use) {
     for (int i = 0; i < 10; ++i) {
       _memory_data.insert_entry(mem_name, mem_use);
@@ -63,7 +63,7 @@ TEST_CASE("multithreaded memory test", "[logging][memory_data]") {
   CHECK(m2 >= 10 * 2048 / (1024 * 1024));
 }
 
-TEST_CASE("highly concurrent memory test", "[logging][memory_data]") {
+TEST_CASE("highly concurrent memory test", "[logging_memory]") {
   constexpr auto timer_name = "highly_concurrent_memory_test";
   constexpr int num_iterations = 100;
   auto thread_func = []() {
