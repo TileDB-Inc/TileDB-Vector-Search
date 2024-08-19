@@ -31,6 +31,8 @@
  */
 #include <catch2/catch_all.hpp>
 #include "detail/scoring/inner_product.h"
+#include "detail/scoring/inner_product_avx.h"
+
 
 TEST_CASE("simple vectors", "[inner_product_distance]") {
   auto u = std::vector<uint8_t>{1, 2, 3, 4};
@@ -148,7 +150,7 @@ TEST_CASE(
 
 #ifdef __AVX2__
   {
-    auto a = avxs_inner_product(x, y);
+    auto a = avx2_inner_product(x, y);
     CHECK(std::abs(a - 785444.4375) < 0.01);
 
     auto ax = avx2_inner_product(y, x);

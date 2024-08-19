@@ -139,7 +139,8 @@ endif()
 include(CheckAVX2Support)
 CheckAVX2Support()
 if (COMPILER_SUPPORTS_AVX2)
-    add_compile_options(${COMPILER_AVX2_FLAG})
+    add_compile_options(${COMPILER_AVX2_FLAG} -mfma)
+    add_definitions(-DAVX2_ENABLED)
 endif()
 
 # Default to Release build

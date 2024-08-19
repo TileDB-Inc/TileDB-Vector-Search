@@ -26,7 +26,7 @@ from tiledb.vector_search.utils import load_fvecs
 # Use headless mode for matplotlib.
 matplotlib.use("Agg")
 
-USE_SIFT_SMALL = True
+USE_SIFT_SMALL = False
 
 SIFT_URI = (
     "ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz"
@@ -347,8 +347,8 @@ def main():
     download_and_extract(SIFT_URI, SIFT_DOWNLOAD_PATH, TEMP_DIR)
 
     # benchmark_ivf_flat()
-    benchmark_vamana()
-    # benchmark_ivf_pq()
+    # benchmark_vamana()
+    benchmark_ivf_pq()
 
 
 main()

@@ -51,8 +51,8 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const float* a_ptr = a.data();
-  const float* b_ptr = b.data();
+  const auto* a_ptr = a.data();
+  const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -88,15 +88,15 @@ inline float avx2_inner_product(const V& a, const W& b) {
 
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           std::same_as<typename W::value_type, uint8_t>
+           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const float* a_ptr = a.data();
-  const uint8_t* b_ptr = b.data();
+  const auto* a_ptr = a.data();
+  const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -139,7 +139,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
+  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
            std::same_as<typename W::value_type, float>
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
@@ -147,8 +147,8 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const uint8_t* a_ptr = a.data();
-  const float* b_ptr = b.data();
+  const auto* a_ptr = a.data();
+  const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -191,16 +191,16 @@ inline float avx2_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, uint8_t>
+  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const uint8_t* a_ptr = a.data();
-  const uint8_t* b_ptr = b.data();
+  const auto* a_ptr = a.data();
+  const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
