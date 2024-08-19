@@ -307,8 +307,8 @@ TEST_CASE(
     size_t top_k = 1;
     size_t nprobe = 1;
 
-    auto queries = ColMajorMatrix<feature_type_type>{{
-        {8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
     for (auto upper_bound : {3, 4, 5, 100, 0}) {
       auto&& [scores_vector_array, ids_vector_array] = index.query(
           QueryType::FiniteRAM,
@@ -792,8 +792,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     // Check that we can do finite and infinite queries and then train + write
     // the index.
     {
-      auto queries = ColMajorMatrix<feature_type_type>{{
-          {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
+      auto queries = ColMajorMatrix<feature_type_type>{
+          {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
       auto&& [scores_vector_array, ids_vector_array] = index.query(
           QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
       check_single_vector_equals(
