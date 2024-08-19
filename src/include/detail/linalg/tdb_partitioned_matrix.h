@@ -76,7 +76,6 @@
 
 #include "tdb_helpers.h"
 
-
 namespace stdx {
 using namespace Kokkos;
 // using namespace Kokkos::Experimental;

@@ -142,6 +142,8 @@ kmeans_add_test(unit_logging_memory)
 
 kmeans_add_test(unit_logging_time)
 
+kmeans_add_test(unit_logging_scoped_time)
+
 kmeans_add_test(unit_l2_distance)
 
 kmeans_add_test(unit_matrix)

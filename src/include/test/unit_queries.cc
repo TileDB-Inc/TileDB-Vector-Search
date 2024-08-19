@@ -34,7 +34,6 @@
 #include <catch2/catch_all.hpp>
 #include <thread>
 
-
 #include "linalg.h"
 
 #include "detail/flat/qv.h"

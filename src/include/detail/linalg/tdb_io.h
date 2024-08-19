@@ -42,7 +42,6 @@
 #include "utils/logging_time.h"
 #include "utils/print_types.h"
 
-
 namespace {
 
 template <class T>

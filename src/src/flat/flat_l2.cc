@@ -88,7 +88,6 @@
 #include "stats.h"
 #include "utils/print_types.h"
 
-
 bool verbose = false;
 bool debug = false;
 

@@ -38,7 +38,6 @@
 #include "linalg.h"
 #include "scoring.h"
 
-
 namespace detail::flat {
 
 template <class DB, class Q>

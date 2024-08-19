@@ -51,7 +51,6 @@
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
 
-
 namespace detail::flat {
 
 /**

@@ -36,7 +36,6 @@
 
 #include <iostream>
 
-
 template <class V>
 float l2_float(const V& u, const V& v) {
   float sum = 0;

@@ -34,8 +34,8 @@
 #include <catch2/catch_all.hpp>
 #include <thread>
 #include "utils/logging_count.h"
-#include "utils/logging_time.h"
 #include "utils/logging_memory.h"
+#include "utils/logging_time.h"
 
 using namespace std::literals::chrono_literals;
 
@@ -88,7 +88,7 @@ TEST_CASE("highly concurrent count test", "[logging][count_data]") {
 TEST_CASE("dump", "[logging]") {
   _count_data.insert_entry("b", 1);
   _memory_data.insert_entry("c", 2);
-  std::cout << _timing_data.dump();
+  std::cout << _scoped_timing_data.dump();
   std::cout << _count_data.dump();
   std::cout << _memory_data.dump();
 }
