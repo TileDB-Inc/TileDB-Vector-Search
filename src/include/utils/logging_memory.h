@@ -29,8 +29,8 @@
  *
  */
 
-#ifndef TDB_LOGGING_H
-#define TDB_LOGGING_H
+#ifndef TDB_LOGGING_MEMORY_H
+#define TDB_LOGGING_MEMORY_H
 
 #include <chrono>
 #include <iomanip>
@@ -193,4 +193,4 @@ inline memory_data& get_memory_data_instance() {
 
 static memory_data& _memory_data{get_memory_data_instance()};
 
-#endif  // TDB_LOGGING_H
+#endif  // TDB_LOGGING_MEMORY_H

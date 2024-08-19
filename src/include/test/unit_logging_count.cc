@@ -88,7 +88,6 @@ TEST_CASE("highly concurrent count test", "[logging][count_data]") {
 TEST_CASE("dump", "[logging]") {
   _count_data.insert_entry("b", 1);
   _memory_data.insert_entry("c", 2);
-  std::cout << _scoped_timing_data.dump();
   std::cout << _count_data.dump();
   std::cout << _memory_data.dump();
 }

@@ -101,8 +101,8 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
  * @endcode
  */
 
-#ifndef TDB_LOGGING_H
-#define TDB_LOGGING_H
+#ifndef TDB_LOGGING_TIME_H
+#define TDB_LOGGING_TIME_H
 
 #include <chrono>
 #include <iomanip>
@@ -367,4 +367,4 @@ class log_timer {
   }
 };
 
-#endif  // TDB_LOGGING_H
+#endif  // TDB_LOGGING_TIME_H

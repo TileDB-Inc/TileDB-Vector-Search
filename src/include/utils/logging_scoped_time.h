@@ -29,8 +29,8 @@
  *
  */
 
-#ifndef TDB_LOGGING_H
-#define TDB_LOGGING_H
+#ifndef TDB_LOGGING_SCOPED_TIME_H
+#define TDB_LOGGING_SCOPED_TIME_H
 
 #include <chrono>
 #include <iomanip>
@@ -64,4 +64,4 @@ class scoped_timer : public log_timer {
   }
 };
 
-#endif  // TDB_LOGGING_H
+#endif  // TDB_LOGGING_SCOPED_TIME_H
