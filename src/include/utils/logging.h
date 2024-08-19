@@ -108,9 +108,12 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 /**
@@ -132,11 +135,11 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #endif
 
 /**
- * Singleton class for storing timing data.
+ * Singleton class for storing timing data in a tree structure.
  *
  * As a singleton, the object from this class can be used from anywhere in the
- * code. Timing data is stored in a multimap, where the key string is the name
- * of the timer and the value is a duration.
+ * code. Timing data is stored in a tree structure, where each node represents a
+ * timer, storing only the total duration and the count of occurrences.
  */
 class timing_data_class {
  public:
@@ -145,15 +148,32 @@ class timing_data_class {
   using duration_type =
       std::chrono::duration<clock_type::rep, clock_type::period>;
 
+  struct TimerNode {
+    std::string name;
+    duration_type total_duration;
+    int count;
+    std::vector<std::unique_ptr<TimerNode>> children;
+
+    TimerNode(const std::string& name)
+        : name(name)
+        , total_duration(duration_type::zero())
+        , count(0) {
+    }
+  };
+
  private:
-  std::multimap<std::string, duration_type> interval_times_;
+  std::unique_ptr<TimerNode> root_;
+  TimerNode* current_node_{nullptr};
   mutable std::mutex mtx_;
   bool verbose_{false};
 
   /**
    * Private constructor and destructor for singleton.
    */
-  timing_data_class() = default;
+  timing_data_class() {
+    root_ = std::make_unique<TimerNode>("root");
+    current_node_ = root_.get();
+  }
   ~timing_data_class() = default;
 
  public:
@@ -176,76 +196,67 @@ class timing_data_class {
   }
 
   /**
-   * Add a new entry to the timing data.
-   * @param name The name to be associated with the entry.  When called by a
-   * timer this should be the name of the timer.
-   * @param time Duration to be associated with the entry.  When called by a
-   * timer this should be the elapsed time since the timer was started,
-   * in chrono::duration format.
+   * Start a new timer node as a child of the current node, or reuse an existing
+   * one.
+   * @param name The name of the timer.
+   * @return Pointer to the newly created or existing timer node.
    */
-  void insert_entry(const std::string& name, const duration_type& time) {
+  TimerNode* start_timer(const std::string& name) {
     std::lock_guard<std::mutex> lock(mtx_);
-    interval_times_.insert(std::make_pair(name, time));
+    // Check if a child with the same name already exists
+    for (auto& child : current_node_->children) {
+      if (child->name == name) {
+        current_node_ = child.get();
+        return current_node_;
+      }
+    }
+
+    // If no existing child, create a new one
+    auto new_node = std::make_unique<TimerNode>(name);
+    TimerNode* node_ptr = new_node.get();
+    current_node_->children.push_back(std::move(new_node));
+    current_node_ = node_ptr;
+    return node_ptr;
   }
 
   /**
-   * Return a vector of the individual times logged with a given name.
-   * @tparam D Duration type specifying the units associated with the returned
-   * values.
-   * @param string Name of the timer to be queried.
-   * @return Vector of the individual times logged with the given name.
+   * Stop the current timer and move back to the parent node.
+   * @param start_time The start time of the timer to be stopped.
    */
-  template <class D = std::chrono::milliseconds>
-  auto get_entries_separately(const std::string& string) const {
+  void stop_timer(const time_type& start_time) {
     std::lock_guard<std::mutex> lock(mtx_);
-    std::vector<double> intervals;
-
-    auto range = interval_times_.equal_range(string);
-    for (auto i = range.first; i != range.second; ++i) {
-      intervals.push_back((std::chrono::duration_cast<D>(i->second)).count());
+    auto end_time = clock_type::now();
+    current_node_->total_duration += (end_time - start_time);
+    current_node_->count += 1;
+    if (current_node_ != root_.get()) {
+      current_node_ = find_parent(root_.get(), current_node_);
     }
-    return intervals;
   }
 
   /**
-   * Return the sum of the individual times logged with a given name.
-   * @tparam D Duration type specifying the units associated with the returned
-   * values.
-   * @param string Name of the timer to be queried.
-   * @return Cumulative duration of all the durations logged with the given
-   * name.
+   * Recursively find the parent of the given node.
+   * @param root The current node in the search.
+   * @param node The node for which to find the parent.
+   * @return Pointer to the parent node.
    */
-  template <class D = std::chrono::milliseconds>
-  double get_entries_summed(const std::string& string) const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    double sum = 0.0;
-    auto range = interval_times_.equal_range(string);
-    for (auto i = range.first; i != range.second; ++i) {
-      sum += (std::chrono::duration_cast<D>(i->second)).count();
+  TimerNode* find_parent(TimerNode* root, TimerNode* node) {
+    for (const auto& child : root->children) {
+      if (child.get() == node) {
+        return root;
+      } else {
+        TimerNode* result = find_parent(child.get(), node);
+        if (result)
+          return result;
+      }
     }
-    return sum;
+    return nullptr;
   }
 
   /**
-   * Return a vector of the names of all timers that have logged data.
-   * @return Vector of the names of all timers that have logged data.
+   * Dump the timing data in a hierarchical format, printing the average
+   * duration.
+   * @return String representation of the timing data.
    */
-  auto get_timer_names() const {
-    std::lock_guard<std::mutex> lock(mtx_);
-    std::set<std::string> multinames;
-
-    std::vector<std::string> names;
-
-    for (const auto& i : interval_times_) {
-      multinames.insert(i.first);
-    }
-    names.reserve(multinames.size());
-    for (const auto& i : multinames) {
-      names.push_back(i);
-    }
-    return names;
-  }
-
   void set_verbose(bool verbose) {
     verbose_ = verbose;
   }
@@ -256,22 +267,34 @@ class timing_data_class {
 
   std::string dump() const {
     std::ostringstream oss;
-    auto timer_names = get_timer_names();
-    for (const auto& name : timer_names) {
-      auto intervals = get_entries_separately<std::chrono::nanoseconds>(name);
-      double sum_ns = get_entries_summed<std::chrono::nanoseconds>(name);
-      double average_ns = sum_ns / intervals.size();
-
-      oss << name << ":";
-      oss << " count: " << intervals.size() << ",";
-      oss << " sum: " << format_duration_ns(sum_ns) << ",";
-      oss << " avg: " << format_duration_ns(average_ns);
-      oss << "\n";
-    }
+    dump_recursive(oss, root_.get(), 0);
     return oss.str();
   }
 
  private:
+  /**
+   * Helper function to recursively dump the timing data.
+   * @param oss Output stream to write to.
+   * @param node The current node being processed.
+   * @param depth The depth of the current node in the tree.
+   */
+  void dump_recursive(
+      std::ostringstream& oss, const TimerNode* node, int depth) const {
+    std::string indent(depth * 2, ' ');
+    double average_duration =
+        (node->count > 0) ?
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                node->total_duration)
+                    .count() /
+                static_cast<double>(node->count) :
+            0.0;
+    oss << indent << node->name << ": count = " << node->count
+        << ", avg = " << format_duration_ns(average_duration) << "\n";
+    for (const auto& child : node->children) {
+      dump_recursive(oss, child.get(), depth + 1);
+    }
+  }
+
   std::string format_duration_ns(double duration_ns) const {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(2);
@@ -299,34 +322,35 @@ inline timing_data_class& get_timing_data_instance() {
 static timing_data_class& _timing_data{get_timing_data_instance()};
 
 /**
- * Timer class for logging timing data.  Internnally aintains a start time and a
- * stop time (which are std::chrono::time_points).  The constructor, `start()`,
- * and `stop()` methods control operation and logging of the timer.
+ * Timer class for logging timing data. Maintains a start time and a stop time.
+ * The constructor, `start()`, and `stop()` methods control operation and
+ * logging of the timer.
  */
 class log_timer {
  private:
   using time_t = timing_data_class::time_type;
   using clock_t = timing_data_class::clock_type;
-  time_t start_time, stop_time;
+  time_t start_time;
+  timing_data_class::TimerNode* node_;
   std::string msg_;
   bool noisy_{false};
 
  public:
   /**
-   * Constructor.  Associates a name with the timer and records the start time.
-   * If the noisy flag is enabled, the timer will optionally prints a message.
+   * Constructor. Associates a name with the timer and records the start time.
+   * If the noisy flag is enabled, the timer will optionally print a message.
    * @param msg The name to be associated with the timer.
    * @param noisy Flag to enable/disable printing of messages.
    */
-  explicit log_timer(const std::string& msg = "unknown", bool noisy = false)
+  explicit log_timer(const std::string& msg, bool noisy = false)
       : start_time(clock_t::now())
-      , stop_time(start_time)
       , msg_(msg)
       , noisy_(noisy) {
     noisy_ |= _timing_data.get_verbose();
     if (noisy_) {
       std::cout << "# Starting timer " << msg_ << std::endl;
     }
+    node_ = _timing_data.start_timer(msg_);
   }
 
   /**
@@ -342,20 +366,16 @@ class log_timer {
 
   /**
    * Stop the timer.  Records the stop time and optionally prints a message.
-   * @return The stop time.
    */
-  time_t stop() {
-    stop_time = clock_t::now();
-    _timing_data.insert_entry(msg_, stop_time - start_time);
-
+  void stop() {
+    _timing_data.stop_timer(start_time);
     if (noisy_) {
       std::cout << "# Stopping timer " << msg_ << ": "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(
-                       stop_time - start_time)
+                       clock_t::now() - start_time)
                        .count()
                 << " ms" << std::endl;
     }
-    return stop_time;
   }
 
   /**
@@ -368,12 +388,10 @@ class log_timer {
 };
 
 /**
- * Scoped timer class for logging timing data.  Internnally maintains a start
- * time and a stop time (which are std::chrono::time_points).  The constructor
- * and destructor control operation and logging of the timer. It inherits from
- * `log_timer` but invokes `stop()` in its destructor. It is intended to measure
- * the lifetime of a scope.  It begins timing when it is constructed and stops
- * timing when it is destructed.
+ * Scoped timer class for logging timing data. Maintains a start time and a stop
+ * time. The constructor and destructor control operation and logging of the
+ * timer. It inherits from `log_timer` but invokes `stop()` in its destructor.
+ * It is intended to measure the lifetime of a scope.
  */
 class scoped_timer : public log_timer {
  public:
