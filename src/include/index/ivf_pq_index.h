@@ -1503,46 +1503,55 @@ class ivf_pq_index {
    * @brief Verify that the pq encoding is correct by comparing every feature
    * vector against the corresponding pq encoded value
    * @param feature_vectors
-   * @return
+   * @return the average error
    */
   double verify_pq_encoding(
-      const ColMajorMatrix<feature_type>& feature_vectors) const {
+      const ColMajorMatrix<feature_type>& feature_vectors,
+      bool debug = false) const {
     double total_distance = 0.0;
     double total_normalizer = 0.0;
 
-    auto debug_vectors =
-        ColMajorMatrix<float>(dimensions_, num_vectors(feature_vectors));
-
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      auto re = std::vector<float>(dimensions_);
+      if (debug) {
+        std::cout << "-------------------" << std::endl;
+      }
+      auto reconstructed_vector = std::vector<feature_type>(dimensions_);
       for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
         auto sub_begin = sub_dimensions_ * subspace;
         auto sub_end = sub_dimensions_ * (subspace + 1);
         auto centroid =
             cluster_centroids_[(*unpartitioned_pq_vectors_)(subspace, i)];
 
-        std::vector<float> x(
-            begin(feature_vectors[i]), end(feature_vectors[i]));
-
         // Reconstruct the encoded vector
         for (size_t j = sub_begin; j < sub_end; ++j) {
-          re[j] = centroid[j];
+          reconstructed_vector[j] = centroid[j];
         }
       }
-      // std::copy(begin(re), end(re), begin(debug_vectors[i]));
 
       // Measure the distance between the original vector and the reconstructed
       // vector and accumulate into the total distance as well as the total
       // weight of the feature vector
-      auto distance = l2_distance(feature_vectors[i], re);
+      auto distance = l2_distance(feature_vectors[i], reconstructed_vector);
       total_distance += distance;
       total_normalizer += l2_distance(feature_vectors[i]);
+
+      if (debug) {
+        debug_vector(feature_vectors[i], "original vector     ", 100);
+        debug_vector(reconstructed_vector, "reconstructed vector", 100);
+        std::cout << "distance: " << distance << std::endl;
+      }
     }
-    // debug_slice(debug_vectors, "verify pq encoding re");
 
     // Return the total accumulated distance between the encoded and original
     // vectors, divided by the total weight of the original feature vectors
-    return total_distance / total_normalizer;
+    auto error =
+        total_normalizer == 0. ? 0.f : total_distance / total_normalizer;
+    if (debug) {
+      std::cout << "total_distance: " << total_distance
+                << ", total_normalizer: " << total_normalizer
+                << ", error: " << error << std::endl;
+    }
+    return error;
   }
 
   /**
