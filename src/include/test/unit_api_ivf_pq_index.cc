@@ -212,7 +212,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     auto training = ColMajorMatrix<feature_type_type>{
-        {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
+        {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
     auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
     index.add(training_vector_array);
@@ -223,7 +223,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
+        {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
@@ -294,7 +294,7 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}};
+        {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
 
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
@@ -307,8 +307,8 @@ TEST_CASE(
     size_t top_k = 1;
     size_t nprobe = 1;
 
-    auto queries = ColMajorMatrix<feature_type_type>{
-        {8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}};
+    auto queries = ColMajorMatrix<feature_type_type>{{
+        {8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
     for (auto upper_bound : {3, 4, 5, 100, 0}) {
       auto&& [scores_vector_array, ids_vector_array] = index.query(
           QueryType::FiniteRAM,
@@ -760,7 +760,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
@@ -792,8 +792,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     // Check that we can do finite and infinite queries and then train + write
     // the index.
     {
-      auto queries = ColMajorMatrix<feature_type_type>{
-          {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+      auto queries = ColMajorMatrix<feature_type_type>{{
+          {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
       auto&& [scores_vector_array, ids_vector_array] = index.query(
           QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
       check_single_vector_equals(
@@ -838,7 +838,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}};
+        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}}};
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
@@ -891,7 +891,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.reassign_ratio() == reassign_ratio);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
     auto&& [scores_vector_array_finite, ids_vector_array_finite] =
         index.query(QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
@@ -949,7 +949,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.convergence_tolerance() == convergence_tolerance);
     CHECK(index.reassign_ratio() == reassign_ratio);
 
-    auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
+    auto queries = ColMajorMatrix<feature_type_type>{{{1, 1, 1}}};
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
@@ -1015,7 +1015,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
 
     auto default_score = std::numeric_limits<float>::max();
     auto default_id = std::numeric_limits<uint32_t>::max();

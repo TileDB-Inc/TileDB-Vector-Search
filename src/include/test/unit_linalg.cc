@@ -208,7 +208,7 @@ TEMPLATE_LIST_TEST_CASE(
     "test Matrix initializer_list constructor, row oriented",
     "[linalg][matrix][create][row]",
     TestTypes) {
-  auto a = Matrix<TestType, Kokkos::layout_right>{{1, 2}, {3, 4}, {5, 6}};
+  auto a = Matrix<TestType, Kokkos::layout_right>{{{1, 2}, {3, 4}, {5, 6}}};
   auto v = a.data();
   std::iota(v, v + 6, 1);
 
@@ -244,7 +244,7 @@ TEMPLATE_LIST_TEST_CASE(
     "test Matrix initializer list constructor, column oriented",
     "[linalg][matrixx][create][column]",
     TestTypes) {
-  auto a = Matrix<TestType, Kokkos::layout_left>{{1, 2, 3}, {4, 5, 6}};
+  auto a = Matrix<TestType, Kokkos::layout_left>{{{1, 2, 3}, {4, 5, 6}}};
   auto v = a.data();
   std::iota(v, v + 6, 1);
 

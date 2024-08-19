@@ -77,8 +77,8 @@ TEST_CASE("partitioned_matrix: vectors constructor", "[partitioned_matrix]") {
   using id_type = float;
   using part_index_type = float;
 
-  auto parts =
-      ColMajorMatrix<feature_type>{{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+  auto parts = ColMajorMatrix<feature_type>{
+      {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
   std::vector<id_type> ids = {1, 2, 3, 4};
   std::vector<part_index_type> part_index = {0, 1, 4};
 
@@ -118,7 +118,7 @@ TEST_CASE("partitioned_matrix: training constructor", "[partitioned_matrix]") {
   using part_index_type = uint64_t;
 
   auto training_set =
-      ColMajorMatrix<feature_type>{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
+      ColMajorMatrix<feature_type>{{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}}};
   std::vector<id_type> part_labels = {1, 0, 1, 0, 1};
   size_t num_parts = 2;
 

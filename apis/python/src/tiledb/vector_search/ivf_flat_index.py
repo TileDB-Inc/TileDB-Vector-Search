@@ -39,6 +39,8 @@ from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_INT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import normalize_vector
+from tiledb.vector_search.utils import normalize_vectors
 
 TILE_SIZE_BYTES = 64000000  # 64MB
 INDEX_TYPE = "IVF_FLAT"
@@ -207,6 +209,7 @@ class IVFFlatIndex(index.Index):
         nprobe: int
             Number of partitions to check per query.
             Use this parameter to trade-off accuracy for latency and cost.
+            As a rule of thumb, configuring `nprobe` to be the square root of `partitions` should result in accuracy close to 100%.
         nthreads: int
             Number of threads to use for local query execution.
         use_nuv_implementation: bool
@@ -245,6 +248,9 @@ class IVFFlatIndex(index.Index):
         if queries.ndim == 1:
             queries = np.array([queries])
 
+        if self.distance_metric == vspy.DistanceMetric.COSINE:
+            queries = normalize_vectors(queries)
+
         if nthreads == -1:
             nthreads = multiprocessing.cpu_count()
 
@@ -264,6 +270,7 @@ class IVFFlatIndex(index.Index):
                     nthreads=nthreads,
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
+                    distance_metric=self.distance_metric,
                 )
             else:
                 d, i = ivf_query(
@@ -280,6 +287,7 @@ class IVFFlatIndex(index.Index):
                     ctx=self.ctx,
                     use_nuv_implementation=use_nuv_implementation,
                     timestamp=self.base_array_timestamp,
+                    distance_metric=self.distance_metric,
                 )
 
             return np.transpose(np.array(d)), np.transpose(np.array(i))
@@ -295,7 +303,40 @@ class IVFFlatIndex(index.Index):
                 num_partitions=num_partitions,
                 num_workers=num_workers,
                 config=self.config,
+                distance_metric=self.distance_metric,
             )
+
+    def update(self, vector: np.array, external_id: np.uint64, timestamp: int = None):
+        if self.distance_metric == vspy.DistanceMetric.COSINE:
+            vector = normalize_vector(vector)
+        super().update(vector, external_id, timestamp)
+
+    def update_batch(
+        self, vectors: np.ndarray, external_ids: np.array, timestamp: int = None
+    ):
+        if self.distance_metric == vspy.DistanceMetric.COSINE:
+            vectors = normalize_vectors(vectors)
+        super().update_batch(vectors, external_ids, timestamp)
+
+    def query(
+        self,
+        queries: np.ndarray,
+        k: int,
+        driver_mode: Mode = None,
+        driver_resources: Optional[str] = None,
+        driver_access_credentials_name: Optional[str] = None,
+        **kwargs,
+    ):
+        if self.distance_metric == vspy.DistanceMetric.COSINE:
+            queries = normalize_vectors(queries)
+        return super().query(
+            queries,
+            k,
+            driver_mode,
+            driver_resources,
+            driver_access_credentials_name,
+            **kwargs,
+        )
 
     def _taskgraph_query(
         self,
@@ -309,6 +350,7 @@ class IVFFlatIndex(index.Index):
         num_partitions: int = -1,
         num_workers: int = -1,
         config: Optional[Mapping[str, Any]] = None,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
     ):
         """
         Query an IVF_FLAT index using TileDB cloud taskgraphs
@@ -519,8 +561,10 @@ def create(
         If not provided, use the latest stable storage version.
     """
     validate_storage_version(storage_version)
-
-    if distance_metric != vspy.DistanceMetric.L2:
+    if (
+        distance_metric != vspy.DistanceMetric.L2
+        and distance_metric != vspy.DistanceMetric.COSINE
+    ):
         raise ValueError(
             f"Distance metric {distance_metric} is not supported in IVF_FLAT"
         )

@@ -165,7 +165,7 @@ TEST_CASE("create empty index and then train and query", "[api_vamana_index]") {
     CHECK(index.id_type_string() == id_type);
 
     auto training = ColMajorMatrix<feature_type_type>{
-        {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
+        {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
     auto training_vector_array = FeatureVectorArray(training);
     index.train(training_vector_array);
     index.add(training_vector_array);
@@ -175,7 +175,7 @@ TEST_CASE("create empty index and then train and query", "[api_vamana_index]") {
     CHECK(index.id_type_string() == id_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}};
+        {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
@@ -242,7 +242,7 @@ TEST_CASE(
     CHECK(index.id_type_string() == id_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}};
+        {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
@@ -607,7 +607,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(index.id_type_string() == id_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
@@ -670,7 +670,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(index.id_type_string() == id_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}};
+        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
@@ -726,7 +726,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(index.id_type_string() == id_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
@@ -783,7 +783,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{{1, 1, 1}};
+    auto queries = ColMajorMatrix<feature_type_type>{{{1, 1, 1}}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
@@ -847,7 +847,7 @@ TEST_CASE("write and load index with timestamps", "[api_vamana_index]") {
     CHECK(index.id_type_string() == id_type);
 
     auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
     auto query_vector_array = FeatureVectorArray(queries);
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(query_vector_array, 1);
