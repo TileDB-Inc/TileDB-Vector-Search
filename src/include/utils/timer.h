@@ -34,7 +34,7 @@
 
 #include <chrono>
 #include <iostream>
-#include "logging.h"
+#include "logging_time.h"
 
 /**
  * @brief A simple timer class for measuring elapsed wall clock time.
