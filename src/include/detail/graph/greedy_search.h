@@ -292,6 +292,7 @@ auto greedy_search_O1(
     uint32_t L,
     Distance&& distance = Distance{},
     bool convert_to_db_ids = false) {
+  scoped_timer _{"greedy_search@greedy_search_O1"};
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -313,8 +314,6 @@ auto greedy_search_O1(
   // auto result = std::set<id_type>{};
   auto q1 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
   auto q2 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
-
-  scoped_timer __{tdb_func__};
 
   // 𝓛 <- {s} and 𝓥 <- ∅
   result.insert(distance(db[source], query), source);

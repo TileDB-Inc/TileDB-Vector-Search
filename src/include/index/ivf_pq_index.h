@@ -444,6 +444,7 @@ class ivf_pq_index {
         typename ColMajorMatrix<feature_type>::span_type,
         typename ColMajorMatrix<flat_vector_feature_type>::span_type>
   auto train_pq(const V& training_set, kmeans_init init = kmeans_init::random) {
+    scoped_timer _{"ivf_pq_index@train_pq"};
     dimensions_ = ::dimensions(training_set);
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
@@ -690,6 +691,7 @@ class ivf_pq_index {
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void train_ivf(
       const V& training_set, kmeans_init init = kmeans_init::random) {
+    scoped_timer _{"ivf_pq_index@train_ivf"};
     dimensions_ = ::dimensions(training_set);
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(num_vectors(training_set));
@@ -762,6 +764,7 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
+    scoped_timer _{"ivf_pq_index@add"};
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimensions(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -837,6 +840,7 @@ class ivf_pq_index {
       class Matrix,
       class Distance = uncached_sub_sum_of_squares_distance>
   auto pq_encode(const U& training_set, Distance distance = Distance{}) const {
+    scoped_timer _{"ivf_pq_index@pq_encode"};
     auto pq_vectors =
         std::make_unique<Matrix>(num_subspaces_, num_vectors(training_set));
     auto& pqv = *pq_vectors;
@@ -1317,6 +1321,7 @@ class ivf_pq_index {
    */
   template <feature_vector_array Q>
   auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
+    scoped_timer _{"ivf_pq_index@query_infinite_ram"};
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
@@ -1373,6 +1378,7 @@ class ivf_pq_index {
       size_t k_nn,
       size_t nprobe,
       size_t upper_bound = 0) {
+    scoped_timer _{"ivf_pq_index@query_finite_ram"};
     if (partitioned_pq_vectors_ &&
         ::num_vectors(*partitioned_pq_vectors_) != 0) {
       throw std::runtime_error(

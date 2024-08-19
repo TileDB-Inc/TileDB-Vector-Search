@@ -87,7 +87,7 @@ auto partition_ivf_flat_index(
     size_t nprobe,
     size_t nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"partition@partition_ivf_flat_index"};
 
   if (::num_vectors(centroids) < nprobe) {
     throw std::invalid_argument(

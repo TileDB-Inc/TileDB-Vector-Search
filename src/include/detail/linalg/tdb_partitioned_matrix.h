@@ -297,7 +297,7 @@ class tdbPartitionedMatrix
       , relevant_parts_(relevant_parts)
       , squashed_indices_(size(relevant_parts_) + 1)
       , last_resident_part_{0} {
-    scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
+    scoped_timer _{"tdb_partitioned_matrix@ctor@" + partitioned_vectors_uri_};
     if (relevant_parts_.size() >= indices.size()) {
       throw std::runtime_error(
           "Invalid partitioning, relevant_parts_ size (" +
@@ -434,7 +434,7 @@ class tdbPartitionedMatrix
    *
    */
   bool load() override {
-    scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
+    scoped_timer _{"tdb_partitioned_matrix@load@" + partitioned_vectors_uri_};
 
     if (this->part_index_.size() != max_resident_parts_ + 1) {
       throw std::runtime_error(

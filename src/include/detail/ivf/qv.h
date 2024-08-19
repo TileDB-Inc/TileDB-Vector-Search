@@ -109,10 +109,10 @@ auto qv_query_heap_infinite_ram(
     size_t k_nn,
     size_t nthreads,
     Distance distance = Distance{}) {
+  scoped_timer _{"qv@qv_query_heap_infinite_ram"};
   if (num_loads(partitioned_vectors) == 0) {
     load(partitioned_vectors);
   }
-  scoped_timer _{tdb_func__};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -182,10 +182,10 @@ auto nuv_query_heap_infinite_ram(
     size_t k_nn,
     size_t nthreads,
     Distance distance = Distance{}) {
+  scoped_timer _{"qv@nuv_query_heap_infinite_ram"};
   if (num_loads(partitioned_vectors) == 0) {
     load(partitioned_vectors);
   }
-  scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -289,10 +289,10 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
     size_t k_nn,
     size_t nthreads,
     Distance distance = Distance{}) {
+  scoped_timer _{"qv@nuv_query_heap_infinite_ram_reg_blocked"};
   if (num_loads(partitioned_vectors) == 0) {
     load(partitioned_vectors);
   }
-  scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -464,7 +464,7 @@ auto nuv_query_heap_finite_ram(
     size_t upper_bound,
     size_t nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@nuv_query_heap_finite_ram"};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -592,7 +592,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
     size_t upper_bound,
     size_t nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@nuv_query_heap_finite_ram_reg_blocked"};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -799,7 +799,7 @@ auto qv_query_heap_finite_ram(
     size_t nthreads,
     uint64_t timestamp = 0,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_query_heap_finite_ram"};
   auto temporal_policy = (timestamp == 0) ?
                              TemporalPolicy() :
                              TemporalPolicy(TimeTravel, timestamp);
@@ -1029,7 +1029,7 @@ auto query_finite_ram(
     size_t upper_bound,
     size_t nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@query_finite_ram"};
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -1131,7 +1131,7 @@ auto query_infinite_ram(
     size_t k_nn,
     size_t nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
+  scoped_timer _{"qv@query_infinite_ram"};
 
   using id_type = typename F::id_type;
   using score_type = float;

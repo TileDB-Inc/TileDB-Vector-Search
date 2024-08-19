@@ -358,7 +358,7 @@ auto vq_partition(
     const Q& q,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"vq@vq_partition"};
 
   auto num_queries = num_vectors(q);
   auto top_k = Vector<size_t>(num_queries);

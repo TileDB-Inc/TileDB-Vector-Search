@@ -165,7 +165,7 @@ class tdbBlockedMatrixWithIds
 
   // @todo Allow specification of how many columns to advance by
   bool load() {
-    scoped_timer _{tdb_func__ + " " + this->ids_uri_};
+    scoped_timer _{"tdb_matrix_with_ids@load@" + this->ids_uri_};
     if (!Base::load()) {
       ids_array_->close();
       return false;

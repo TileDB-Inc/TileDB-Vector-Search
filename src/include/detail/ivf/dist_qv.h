@@ -84,6 +84,7 @@ auto dist_qv_finite_ram_part(
     size_t upper_bound = 200000,
     size_t nthreads = std::thread::hardware_concurrency(),
     Distance&& distance = Distance{}) {
+  scoped_timer _{"dist_qv@dist_qv_finite_ram_part"};
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -115,8 +116,6 @@ auto dist_qv_finite_ram_part(
       dist_active_partitions,
       upper_bound,
       temporal_policy);
-
-  scoped_timer _i{tdb_func__ + " in RAM"};
 
   auto min_scores =
       std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>>(
@@ -270,7 +269,7 @@ auto dist_qv_finite_ram(
     size_t num_nodes,
     uint64_t timestamp = 0,
     Distance&& distance = Distance{}) {
-  scoped_timer _{tdb_func__ + " " + part_uri};
+  scoped_timer _{"dist_qv@dist_qv_finite_ram@" + part_uri};
 
   // Check that the size of the indices vector is correct
   if (size(indices) != centroids.num_cols() + 1) {

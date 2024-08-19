@@ -97,6 +97,7 @@ std::unordered_set<typename std::decay_t<Graph>::id_type> best_first_O1(
     typename std::decay_t<Graph>::id_type source,
     const V& query,
     Distance&& distance = Distance{}) {
+  scoped_timer _{"best_first@best_first_O1"};
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
   using node_type = std::tuple<score_type, id_type>;
@@ -139,7 +140,7 @@ auto best_first_O2(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-  scoped_timer __{tdb_func__};
+  scoped_timer _{"best_first@best_first_O2"};
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
@@ -357,7 +358,7 @@ auto best_first_O3(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-  scoped_timer __{tdb_func__};
+  scoped_timer _{"best_first@best_first_O3"};
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
@@ -538,6 +539,7 @@ auto best_first_O4(
     uint32_t Lmax,
     bool skip_top_k = false,
     Distance&& distance = Distance{}) {
+  scoped_timer _{"best_first@best_first_O4"};
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
 
@@ -558,8 +560,6 @@ auto best_first_O4(
   // Set to keep track of which vertices have been visited
   // Will be returned from this function
   std::unordered_set<id_type> visited;
-
-  scoped_timer __{tdb_func__};
 
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
@@ -668,7 +668,7 @@ auto best_first_O5(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-  scoped_timer __{tdb_func__};
+  scoped_timer _{"best_first@best_first_O5"};
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;

@@ -75,7 +75,7 @@ class tdbBlockedMatrix : public MatrixBase {
  protected:
   using col_domain_type = int32_t;
 
-  log_timer constructor_timer{"tdbBlockedMatrix constructor"};
+  log_timer constructor_timer{"tdb_matrix@ctor"};
 
   tiledb::Context ctx_;
   std::string uri_;
@@ -223,7 +223,7 @@ class tdbBlockedMatrix : public MatrixBase {
       , first_row_{first_row}
       , first_col_{first_col} {
     constructor_timer.stop();
-    scoped_timer _{tdb_func__ + " " + uri};
+    scoped_timer _{"tdb_matrix@ctor@" + uri};
 
     if (last_row && *last_row < first_row_) {
       throw std::runtime_error("last_row < first_row");
@@ -311,7 +311,7 @@ class tdbBlockedMatrix : public MatrixBase {
 
   // @todo Allow specification of how many columns to advance by
   virtual bool load() {
-    scoped_timer _{tdb_func__ + " " + uri_};
+    scoped_timer _{"tdb_matrix@load@" + uri_};
 
     const size_t attr_idx{0};
     auto attr = schema_.attribute(attr_idx);
