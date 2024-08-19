@@ -333,7 +333,6 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   CHECK(idx.compare_ivf_index(idx2));
   CHECK(idx.compare_ivf_ids(idx2));
   CHECK(idx.compare_pq_ivf_vectors(idx2));
-  CHECK(idx.compare_distance_tables(idx2));
 }
 
 TEST_CASE(
@@ -356,18 +355,13 @@ TEST_CASE(
     auto avg_error = pq_idx.verify_pq_encoding(training_set);
     CHECK(avg_error < 0.081);
   }
-  SECTION("pq_distances") {
-    auto avg_error = pq_idx.verify_pq_distances(training_set);
-    CHECK(avg_error < 0.15);
-  }
   SECTION("asymmetric_pq_distances") {
     auto [max_error, avg_error] =
         pq_idx.verify_asymmetric_pq_distances(training_set);
     CHECK(avg_error < 0.081);
   }
   SECTION("symmetric_pq_distances") {
-    auto [max_error, avg_error] =
-        pq_idx.verify_symmetric_pq_distances(training_set);
+    auto avg_error = pq_idx.verify_symmetric_pq_distances(training_set);
     CHECK(avg_error < 0.15);
   }
 }

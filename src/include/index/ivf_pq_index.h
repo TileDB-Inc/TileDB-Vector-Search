@@ -234,11 +234,6 @@ class ivf_pq_index {
   // centroid for the second subspace.
   cluster_centroid_storage_type cluster_centroids_;
 
-  // Lookup table for the distance between centroids of each subspace.
-  // distance_tables_[i](j, k) is the distance between the jth and kth centroids
-  // in the ith subspace.
-  std::vector<ColMajorMatrix<score_type>> distance_tables_;
-
   std::unique_ptr<pq_storage_type> partitioned_pq_vectors_;
 
   // These are the original training vectors encoded using the
@@ -386,25 +381,12 @@ class ivf_pq_index {
             std::nullopt,
             num_clusters_,
             temporal_policy_);
-
-    distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
-    for (size_t i = 0; i < num_subspaces_; ++i) {
-      std::string local_uri =
-          group_->distance_tables_uri() + "_" + std::to_string(i);
-      distance_tables_[i] = tdbPreLoadMatrix<score_type, stdx::layout_left>(
-          group_->cached_ctx(),
-          local_uri,
-          std::nullopt,
-          std::nullopt,
-          num_clusters_,
-          temporal_policy_);
-    }
   }
 
   /****************************************************************************
    * Methods for building, writing, and reading the complete index. Includes:
    *   - Method for encoding the training set using pq compression to create
-   *     the cluster_centroids_ and distance_tables_.
+   *     the cluster_centroids_.
    *   - Method to initialize the centroids that we will use for building the
    *IVF index.
    *   - Method to partition the pq_vectors_ into a partitioned_matrix of pq
@@ -420,8 +402,7 @@ class ivf_pq_index {
    ****************************************************************************/
 
   /**
-   * @brief Create the `cluster_centroids_` (encoded from the training set) and
-   * create `distance_tables_`.
+   * @brief Create the `cluster_centroids_` (encoded from the training set).
    *
    * @tparam V type of the training vectors
    * @tparam SubDistance type of the distance function to use for encoding.
@@ -494,32 +475,6 @@ class ivf_pq_index {
           max_iterations_,
           num_threads_);
     }
-
-    // Create tables of distances storing distance between encoding keys,
-    // one table for each subspace. That is, distance_tables_[i](j, k) is
-    // the distance between the jth and kth centroids in the ith subspace.
-    // The distance between two encoded vectors is looked up using the
-    // keys of the vectors in each subspace (summing up the results obtained
-    // from each subspace).
-    // @todo SIMDize with subspace iteration in inner loop
-    distance_tables_ = std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
-    for (size_t i = 0; i < num_subspaces_; ++i) {
-      distance_tables_[i] =
-          ColMajorMatrix<score_type>(num_clusters_, num_clusters_);
-    }
-    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto sub_begin = subspace * sub_dimensions_;
-      auto sub_end = (subspace + 1) * sub_dimensions_;
-      auto local_sub_distance = SubDistance{sub_begin, sub_end};
-
-      for (size_t i = 0; i < num_clusters_; ++i) {
-        for (size_t j = 0; j < num_clusters_; ++j) {
-          auto sub_distance =
-              local_sub_distance(cluster_centroids_[i], cluster_centroids_[j]);
-          distance_tables_[subspace](i, j) = sub_distance;
-        }
-      }
-    }
   }
 
   /***************************************************************************
@@ -527,34 +482,6 @@ class ivf_pq_index {
    * Distance functions for pq encoded vectors
    *
    ***************************************************************************/
-
-  // @todo IMPORTANT: We need to do some abstraction penalty tests to make sure
-  // that the distance functions are inlined.
-  // @todo Make this SIMD friendly -- do multiple subspaces at a time
-  // For each (i, j), distances should be stored contiguously
-  float sub_distance_symmetric(auto&& a, auto&& b) const {
-    float pq_distance = 0.0;
-    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-      auto i = a[subspace];
-      auto j = b[subspace];
-
-      auto sub_distance = distance_tables_[subspace](i, j);
-      pq_distance += sub_distance;
-    }
-    return pq_distance;
-  }
-
-  auto make_pq_distance_symmetric() const {
-    using A = decltype(pq_storage_type{}[0]);
-    using B = decltype(pq_storage_type{}[0]);
-    struct pq_distance {
-      const ivf_pq_index* outer_;
-      inline float operator()(const A& a, const B& b) {
-        return outer_->sub_distance_symmetric(a, b);
-      }
-    };
-    return pq_distance{this};
-  }
   /**
    * @brief Computes the distance between a query and and a pq_encoded_vector
    * given the distance table of the query to the pq_centroids
@@ -763,10 +690,9 @@ class ivf_pq_index {
         training_set_ids.end(),
         feature_vectors_.ids());
 
-    // 2. Fill in cluster_centroids_ and distance_tables_.
+    // 2. Fill in cluster_centroids_.
     // cluster_centroids_ holds the num_clusters_ (256) centroids for each
-    // subspace. distance_tables_ holds the distance between each pair of
-    // centroids.
+    // subspace.
     train_pq(training_set);
 
     // 3. Fill in flat_ivf_centroids_.
@@ -1089,7 +1015,7 @@ class ivf_pq_index {
       return true;
     }
 
-    // flat_ivf_centroids_, cluster_centroids_, distance_tables_,
+    // flat_ivf_centroids_, cluster_centroids_,
     // partitioned_pq_vectors_, unpartitioned_pq_vectors_
 
     write_matrix(
@@ -1144,13 +1070,6 @@ class ivf_pq_index {
         0,
         false,
         temporal_policy_);
-
-    for (size_t i = 0; i < size(distance_tables_); ++i) {
-      std::string this_table_uri =
-          write_group.distance_tables_uri() + "_" + std::to_string(i);
-      write_matrix(
-          ctx, distance_tables_[i], this_table_uri, 0, false, temporal_policy_);
-    }
 
     return true;
   }
@@ -1446,34 +1365,66 @@ class ivf_pq_index {
    * @brief Verify that recorded distances between centroids are correct by
    * comparing the distance between every pair of pq vectors against the
    * distance between every pair of the original feature vectors.
+   *
+   * Currently only supports sum of squares distance.
+   *
    * @param feature_vectors
    * @return
    */
-  auto verify_pq_distances(
+  auto verify_symmetric_pq_distances(
       const ColMajorMatrix<feature_type>& feature_vectors) const {
-    double total_diff = 0.0;
+    double total_diff_symmetric = 0.0;
     double total_normalizer = 0.0;
+
+    // Lookup table for the distance between centroids of each subspace.
+    // distance_tables_[i](j, k) is the distance between the jth and kth
+    // centroids in the ith subspace. Create tables of distances storing
+    // distance between encoding keys, one table for each subspace. That is,
+    // distance_tables_[i](j, k) is the distance between the jth and kth
+    // centroids in the ith subspace. The distance between two encoded vectors
+    // is looked up using the keys of the vectors in each subspace (summing up
+    // the results obtained from each subspace).
+    // @todo SIMDize with subspace iteration in inner loop
+    auto distance_tables =
+        std::vector<ColMajorMatrix<score_type>>(num_subspaces_);
+    for (size_t i = 0; i < num_subspaces_; ++i) {
+      distance_tables[i] =
+          ColMajorMatrix<score_type>(num_clusters_, num_clusters_);
+    }
+    for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
+      auto sub_begin = subspace * sub_dimensions_;
+      auto sub_end = (subspace + 1) * sub_dimensions_;
+      auto local_sub_distance =
+          cached_sub_sum_of_squares_distance{sub_begin, sub_end};
+
+      for (size_t i = 0; i < num_clusters_; ++i) {
+        for (size_t j = 0; j < num_clusters_; ++j) {
+          auto sub_distance =
+              local_sub_distance(cluster_centroids_[i], cluster_centroids_[j]);
+          distance_tables[subspace](i, j) = sub_distance;
+        }
+      }
+    }
 
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
       for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
         auto real_distance =
             l2_distance(feature_vectors[i], feature_vectors[j]);
         total_normalizer += real_distance;
-        auto pq_distance = 0.0;
 
+        auto pq_distance_symmetric = 0.0;
         for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
-          auto sub_distance = distance_tables_[subspace](
+          auto sub_distance = distance_tables[subspace](
               (*unpartitioned_pq_vectors_)(subspace, i),
               (*unpartitioned_pq_vectors_)(subspace, j));
-          pq_distance += sub_distance;
+          pq_distance_symmetric += sub_distance;
         }
 
-        auto diff = std::abs(real_distance - pq_distance);
-        total_diff += diff;
+        total_diff_symmetric += std::abs(real_distance - pq_distance_symmetric);
       }
     }
 
-    return total_diff / total_normalizer;
+    return total_diff_symmetric / total_normalizer;
   }
 
   auto verify_asymmetric_pq_distances(
@@ -1497,40 +1448,6 @@ class ivf_pq_index {
         total_diff += diff;
       }
       vec_max = std::max(vec_max, l2_distance(feature_vectors[i]));
-    }
-
-    return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
-  }
-
-  template <class SubDistance = cached_sub_sum_of_squares_distance>
-    requires cached_sub_distance_function<
-        SubDistance,
-        typename ColMajorMatrix<feature_type>::span_type,
-        typename ColMajorMatrix<feature_type>::span_type>
-  auto verify_symmetric_pq_distances(
-      const ColMajorMatrix<feature_type>& feature_vectors) {
-    double total_diff = 0.0;
-    double total_normalizer = 0.0;
-    auto local_sub_distance = SubDistance{0, dimensions_};
-
-    score_type diff_max = 0.0;
-    score_type vec_max = 0.0;
-    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
-        auto real_distance =
-            local_sub_distance(feature_vectors[i], feature_vectors[j]);
-        total_normalizer += real_distance;
-
-        auto pq_distance = this->sub_distance_symmetric(
-            (*unpartitioned_pq_vectors_)[i], (*unpartitioned_pq_vectors_)[j]);
-
-        auto diff = std::abs(real_distance - pq_distance);
-        diff_max = std::max(diff_max, diff);
-        total_diff += diff;
-      }
-      auto zeros = std::vector<feature_type>(dimensions_);
-      vec_max =
-          std::max(vec_max, local_sub_distance(feature_vectors[i], zeros));
     }
 
     return std::make_tuple(diff_max / vec_max, total_diff / total_normalizer);
@@ -1725,16 +1642,6 @@ class ivf_pq_index {
         *partitioned_pq_vectors_, *(rhs.partitioned_pq_vectors_));
   }
 
-  auto compare_distance_tables(const ivf_pq_index& rhs) const {
-    for (size_t i = 0; i < size(distance_tables_); ++i) {
-      if (!compare_feature_vector_arrays(
-              distance_tables_[i], rhs.distance_tables_[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   template <class Other>
   bool operator==(const Other& rhs) const {
     if (this == &rhs) {
@@ -1771,9 +1678,6 @@ class ivf_pq_index {
     if (compare_pq_ivf_vectors(rhs) == false) {
       return false;
     }
-    if (compare_distance_tables(rhs) == false) {
-      return false;
-    }
     return true;
   }
 
@@ -1788,30 +1692,6 @@ class ivf_pq_index {
 
   const auto& get_flat_ivf_centroids() const {
     return flat_ivf_centroids_;
-  }
-
-  /**
-   * @brief Used for evaluating quality of partitioning
-   * @param centroids
-   * @param vectors
-   * @return
-   */
-  static std::vector<indices_type> predict(
-      const ColMajorMatrix<feature_type>& centroids,
-      const ColMajorMatrix<feature_type>& vectors) {
-    // Return a vector of indices of the nearest centroid for each vector in
-    // the matrix. Write the code below:
-    auto nClusters = centroids.num_cols();
-    std::vector<indices_type> indices(vectors.num_cols());
-    std::vector<score_type> distances(nClusters);
-    for (size_t i = 0; i < vectors.num_cols(); ++i) {
-      for (size_t j = 0; j < nClusters; ++j) {
-        distances[j] = l2_distance(vectors[i], centroids[j]);
-      }
-      indices[i] =
-          std::min_element(begin(distances), end(distances)) - begin(distances);
-    }
-    return indices;
   }
 
   void dump(const std::string& msg) const {
