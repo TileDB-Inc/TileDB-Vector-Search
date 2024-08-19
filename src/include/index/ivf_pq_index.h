@@ -896,10 +896,11 @@ class ivf_pq_index {
   template <feature_vector_array Q>
   auto read_index_finite(
       const Q& query_vectors, size_t nprobe, size_t upper_bound) {
-    if (partitioned_pq_vectors_ &&
-        (::num_vectors(*partitioned_pq_vectors_) != 0 ||
-         ::num_vectors(partitioned_pq_vectors_->ids()) != 0)) {
-      throw std::runtime_error("Index already loaded");
+    if (!group_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@read_index_finite] group_ is not initialized. This "
+          "happens if you do not load an index by URI. Please close the index "
+          "and re-open it by URI.");
     }
 
     auto&& [active_partitions, active_queries] =
@@ -944,6 +945,12 @@ class ivf_pq_index {
       const std::string& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& storage_version = "") {
+    if (!partitioned_pq_vectors_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] partitioned_pq_vectors_ is not "
+          "initialized. This happens if you train the index, query with finite "
+          "RAM, and then try to write. Make sure to write before the query.");
+    }
     if (temporal_policy.has_value()) {
       temporal_policy_ = *temporal_policy;
     }
@@ -1125,12 +1132,16 @@ class ivf_pq_index {
 
   template <feature_vector_array Q>
   auto query(
-      QueryType queryType, const Q& query_vectors, size_t k_nn, size_t nprobe) {
+      QueryType queryType,
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0) {
     switch (queryType) {
       case QueryType::InfiniteRAM:
         return query_infinite_ram(query_vectors, k_nn, nprobe);
       case QueryType::FiniteRAM:
-        return query_finite_ram(query_vectors, k_nn, nprobe);
+        return query_finite_ram(query_vectors, k_nn, nprobe, upper_bound);
       default:
         throw std::runtime_error("Invalid query type");
     }
@@ -1161,9 +1172,12 @@ class ivf_pq_index {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
     if (!partitioned_pq_vectors_ ||
-        ::num_vectors(*partitioned_pq_vectors_) == 0) {
+        partitioned_pq_vectors_->num_vectors() == 0 ||
+        partitioned_pq_vectors_->num_vectors() !=
+            partitioned_pq_vectors_->total_num_vectors()) {
       read_index_infinite();
     }
+
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
@@ -1213,11 +1227,15 @@ class ivf_pq_index {
       size_t k_nn,
       size_t nprobe,
       size_t upper_bound = 0) {
-    if (partitioned_pq_vectors_ &&
-        ::num_vectors(*partitioned_pq_vectors_) != 0) {
+    if (!group_) {
       throw std::runtime_error(
-          "Vectors are already loaded. Cannot load twice. "
-          "Cannot do finite query on in-memory index.");
+          "[ivf_pq_index@query_finite_ram] Query with finite RAM can only be "
+          "run if you're loading the index by URI. Please open it by URI and "
+          "try again. If you just wrote the index, open it up again by URI.");
+    }
+    if (partitioned_pq_vectors_) {
+      // We did an infinite query before this. Reset so we can load again.
+      partitioned_pq_vectors_.reset();
     }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
@@ -1319,46 +1337,55 @@ class ivf_pq_index {
    * @brief Verify that the pq encoding is correct by comparing every feature
    * vector against the corresponding pq encoded value
    * @param feature_vectors
-   * @return
+   * @return the average error
    */
   double verify_pq_encoding(
-      const ColMajorMatrix<feature_type>& feature_vectors) const {
+      const ColMajorMatrix<feature_type>& feature_vectors,
+      bool debug = false) const {
     double total_distance = 0.0;
     double total_normalizer = 0.0;
 
-    auto debug_vectors =
-        ColMajorMatrix<float>(dimensions_, num_vectors(feature_vectors));
-
     for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      auto re = std::vector<float>(dimensions_);
+      if (debug) {
+        std::cout << "-------------------" << std::endl;
+      }
+      auto reconstructed_vector = std::vector<feature_type>(dimensions_);
       for (uint32_t subspace = 0; subspace < num_subspaces_; ++subspace) {
         auto sub_begin = sub_dimensions_ * subspace;
         auto sub_end = sub_dimensions_ * (subspace + 1);
         auto centroid =
             cluster_centroids_[(*unpartitioned_pq_vectors_)(subspace, i)];
 
-        std::vector<float> x(
-            begin(feature_vectors[i]), end(feature_vectors[i]));
-
         // Reconstruct the encoded vector
         for (size_t j = sub_begin; j < sub_end; ++j) {
-          re[j] = centroid[j];
+          reconstructed_vector[j] = centroid[j];
         }
       }
-      // std::copy(begin(re), end(re), begin(debug_vectors[i]));
 
       // Measure the distance between the original vector and the reconstructed
       // vector and accumulate into the total distance as well as the total
       // weight of the feature vector
-      auto distance = l2_distance(feature_vectors[i], re);
+      auto distance = l2_distance(feature_vectors[i], reconstructed_vector);
       total_distance += distance;
       total_normalizer += l2_distance(feature_vectors[i]);
+
+      if (debug) {
+        debug_vector(feature_vectors[i], "original vector     ", 100);
+        debug_vector(reconstructed_vector, "reconstructed vector", 100);
+        std::cout << "distance: " << distance << std::endl;
+      }
     }
-    // debug_slice(debug_vectors, "verify pq encoding re");
 
     // Return the total accumulated distance between the encoded and original
     // vectors, divided by the total weight of the original feature vectors
-    return total_distance / total_normalizer;
+    auto error =
+        total_normalizer == 0. ? 0.f : total_distance / total_normalizer;
+    if (debug) {
+      std::cout << "total_distance: " << total_distance
+                << ", total_normalizer: " << total_normalizer
+                << ", error: " << error << std::endl;
+    }
+    return error;
   }
 
   /**

@@ -185,17 +185,19 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
   const bool debug = false;
 
   ColMajorMatrix<float> training_data{
-      {1.0573647, 5.082087},
-      {-6.229642, -1.3590931},
-      {0.7446737, 6.3828287},
-      {-7.698864, -3.0493321},
-      {2.1362762, -4.4448104},
-      {1.04019, -4.0389647},
-      {0.38996044, 5.7235265},
-      {1.7470839, -4.717076}};
-  ColMajorMatrix<float> queries{{-7.3712273, -1.1178735}};
+      {{1.0573647, 5.082087},
+       {-6.229642, -1.3590931},
+       {0.7446737, 6.3828287},
+       {-7.698864, -3.0493321},
+       {2.1362762, -4.4448104},
+       {1.04019, -4.0389647},
+       {0.38996044, 5.7235265},
+       {1.7470839, -4.717076}}};
+  ColMajorMatrix<float> queries{{{-7.3712273, -1.1178735}}};
   ColMajorMatrix<float> sklearn_centroids{
-      {-6.964253, -2.2042127}, {1.6411834, -4.400284}, {0.7306664, 5.7294807}};
+      {{-6.964253, -2.2042127},
+       {1.6411834, -4.400284},
+       {0.7306664, 5.7294807}}};
 
   SECTION("one iteration") {
     if (debug) {
@@ -468,7 +470,7 @@ TEMPLATE_TEST_CASE(
 }
 #endif
 
-TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
+TEST_CASE("build index and query in place", "[ivf_pq_index]") {
   tiledb::Context ctx;
   // size_t nlist = GENERATE(1, 100);
   size_t nlist = 20;
@@ -492,13 +494,11 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
 
   SECTION("infinite") {
-    INFO("infinite");
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
   SECTION("finite") {
-    INFO("finite");
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_finite_ram(query_set, k_nn, nprobe);
   }
@@ -584,7 +584,7 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
   auto index = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
       nlist, dimensions / 2);
   auto queries =
-      ColMajorMatrix<siftsmall_feature_type>{{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
+      ColMajorMatrix<siftsmall_feature_type>{{{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}};
 
   // We can train and add to an empty index.
   {
@@ -623,6 +623,18 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
         ctx, ivf_index_uri);
     size_t k_nn = 1;
     auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nlist);
+    CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
+    CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
+    CHECK(_cpo::dimensions(scores) == k_nn);
+    CHECK(_cpo::dimensions(ids) == k_nn);
+    CHECK(scores(0, 0) == std::numeric_limits<float>::max());
+    CHECK(ids(0, 0) == std::numeric_limits<uint64_t>::max());
+  }
+  {
+    auto index2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_index_uri);
+    size_t k_nn = 1;
+    auto&& [scores, ids] = index2.query_finite_ram(queries, k_nn, nlist, 9);
     CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
     CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
     CHECK(_cpo::dimensions(scores) == k_nn);
@@ -671,10 +683,9 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     size_t nprobe = nlist;
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
-      auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
+      auto queries =
+          ColMajorMatrix<feature_type>{{{value, value, value, value}}};
       auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
-      debug_matrix(scores, "scores");
-      debug_matrix(ids, "ids");
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
     }
@@ -692,10 +703,13 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     size_t nprobe = nlist;
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
-      auto queries = ColMajorMatrix<feature_type>{{value, value, value, value}};
-      auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
-      debug_matrix(scores, "scores");
-      debug_matrix(ids, "ids");
+      auto queries =
+          ColMajorMatrix<feature_type>{{{value, value, value, value}}};
+      auto&& [scores_from_finite, ids_from_finite] =
+          index2.query_finite_ram(queries, k_nn, nprobe, 5);
+      CHECK(scores_from_finite(0, 0) == 0);
+      CHECK(ids_from_finite(0, 0) == i * 11);
+      auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
     }
@@ -707,7 +721,6 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   tiledb::VFS vfs(ctx);
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
-  std::cout << "index_uri: " << index_uri << std::endl;
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);
   }
@@ -721,7 +734,6 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   uint64_t dimensions = 3;
   size_t n_list = 1;
   uint32_t num_subspaces = 1;
-  float convergence_convergence_toleranceerance = 0.00003f;
   uint32_t max_iterations = 3;
 
   // Write the empty index.
@@ -757,13 +769,60 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
         id_type_type,
         partitioning_index_type_type>(ctx, index_uri);
     auto queries = ColMajorMatrix<feature_type_type>{
-        {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
+
+    auto&& [scores_from_finite, ids_from_finite] =
+        index.query_finite_ram(queries, 1, n_list, 5);
+    CHECK(std::equal(
+        scores_from_finite.data(),
+        scores_from_finite.data() + 4,
+        std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids_from_finite.data(),
+        ids_from_finite.data() + 4,
+        std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+
     auto&& [scores, ids] = index.query_infinite_ram(queries, 1, n_list);
     CHECK(std::equal(
         scores.data(),
         scores.data() + 4,
         std::vector<float>{0, 0, 0, 0}.begin()));
-    CHECK(std::equal(
-        ids.data(), ids.data() + 4, std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+  }
+}
+
+TEST_CASE("pq encoding has no error with <= 256 vectors", "[ivf_pq_index]") {
+  using feature_type = float;
+  using id_type = uint32_t;
+  using partitioning_index_type = uint32_t;
+
+  size_t n_list = 16;
+  size_t dimensions = 300;
+  uint32_t num_subspaces = dimensions;
+  for (auto num_vectors : std::vector<size_t>{255, 256, 257}) {
+    auto index = ivf_pq_index<feature_type, id_type, partitioning_index_type>(
+        n_list, num_subspaces);
+    std::vector<std::vector<feature_type>> vectors(num_vectors);
+    std::vector<id_type> vector_ids(num_vectors);
+    for (int i = 0; i < num_vectors; ++i) {
+      for (int j = 0; j < dimensions; ++j) {
+        feature_type value = (feature_type)rand() / RAND_MAX;
+        vectors[i].push_back(value);
+      }
+    }
+    auto data =
+        ColMajorMatrixWithIds<feature_type, id_type>{vectors, vector_ids};
+    index.train(data, data.raveled_ids());
+    index.add(data, data.raveled_ids());
+
+    // With less than 256 vectors, the PQ encoding should be perfect. This is
+    // because for each subspace, we compute 256 centroids, so we have one for
+    // each vector. After that, we just make sure the error is low.
+    auto error = index.verify_pq_encoding(data);
+    if (num_vectors <= 256) {
+      CHECK(error == 0.f);
+    } else {
+      CHECK(error >= 0.0f);
+      CHECK(error <= 1e-4f);
+    }
   }
 }
