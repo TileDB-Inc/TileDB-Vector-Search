@@ -476,7 +476,7 @@ TEMPLATE_TEST_CASE(
 }
 #endif
 
-TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
+TEST_CASE("build index and query in place", "[ivf_pq_index]") {
   tiledb::Context ctx;
   // size_t nlist = GENERATE(1, 100);
   size_t nlist = 20;
@@ -500,13 +500,11 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_pq_index]") {
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
 
   SECTION("infinite") {
-    INFO("infinite");
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
   SECTION("finite") {
-    INFO("finite");
     std::tie(top_k_ivf_scores, top_k_ivf) =
         idx.query_finite_ram(query_set, k_nn, nprobe);
   }
@@ -638,6 +636,18 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
     CHECK(scores(0, 0) == std::numeric_limits<float>::max());
     CHECK(ids(0, 0) == std::numeric_limits<uint64_t>::max());
   }
+  {
+    auto index2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+        ctx, ivf_index_uri);
+    size_t k_nn = 1;
+    auto&& [scores, ids] = index2.query_finite_ram(queries, k_nn, nlist, 9);
+    CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
+    CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
+    CHECK(_cpo::dimensions(scores) == k_nn);
+    CHECK(_cpo::dimensions(ids) == k_nn);
+    CHECK(scores(0, 0) == std::numeric_limits<float>::max());
+    CHECK(ids(0, 0) == std::numeric_limits<uint64_t>::max());
+  }
 }
 
 TEST_CASE("query simple", "[ivf_pq_index]") {
@@ -682,8 +692,6 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       auto queries =
           ColMajorMatrix<feature_type>{{{value, value, value, value}}};
       auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
-      debug_matrix(scores, "scores");
-      debug_matrix(ids, "ids");
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
     }
@@ -703,9 +711,11 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       auto value = static_cast<feature_type>(i);
       auto queries =
           ColMajorMatrix<feature_type>{{{value, value, value, value}}};
-      auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
-      debug_matrix(scores, "scores");
-      debug_matrix(ids, "ids");
+      auto&& [scores_from_finite, ids_from_finite] =
+          index2.query_finite_ram(queries, k_nn, nprobe, 5);
+      CHECK(scores_from_finite(0, 0) == 0);
+      CHECK(ids_from_finite(0, 0) == i * 11);
+      auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
     }
@@ -766,13 +776,23 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
         partitioning_index_type_type>(ctx, index_uri);
     auto queries = ColMajorMatrix<feature_type_type>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
+
+    auto&& [scores_from_finite, ids_from_finite] =
+        index.query_finite_ram(queries, 1, n_list, 5);
+    CHECK(std::equal(
+        scores_from_finite.data(),
+        scores_from_finite.data() + 4,
+        std::vector<float>{0, 0, 0, 0}.begin()));
+    CHECK(std::equal(
+        ids_from_finite.data(),
+        ids_from_finite.data() + 4,
+        std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+
     auto&& [scores, ids] = index.query_infinite_ram(queries, 1, n_list);
     CHECK(std::equal(
         scores.data(),
         scores.data() + 4,
         std::vector<float>{0, 0, 0, 0}.begin()));
-    CHECK(std::equal(
-        ids.data(), ids.data() + 4, std::vector<uint32_t>{1, 2, 3, 4}.begin()));
   }
 }
 

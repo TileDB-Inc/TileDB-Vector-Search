@@ -931,7 +931,7 @@ TEST_CASE("vamana cosine distance", "[api_vamana_index]") {
   index.add(training_vector_array);
   index.write_index(ctx, index_uri);
 
-  auto queries = ColMajorMatrix<feature_type_type>{{2, 2, 2, 2}};
+  auto queries = ColMajorMatrix<feature_type_type>{{{2, 2, 2, 2}}};
   auto query_vector_array = FeatureVectorArray(queries);
   auto&& [scores_vector_array, ids_vector_array] =
       index.query(query_vector_array, 5);
