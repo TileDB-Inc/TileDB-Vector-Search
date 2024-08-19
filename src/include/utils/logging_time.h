@@ -350,7 +350,7 @@ class log_timer {
    * Start the timer.  Records the start time and optionally prints a message.
    * @return The start time.
    */
-  time_t restart() {
+  time_t start() {
     return (start_time = clock_t::now());
   }
 

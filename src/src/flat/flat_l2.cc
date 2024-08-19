@@ -87,7 +87,7 @@
 
 #include "stats.h"
 #include "utils/print_types.h"
-#include "utils/timer.h"
+
 
 bool verbose = false;
 bool debug = false;

@@ -70,7 +70,7 @@
 #include "linalg.h"
 #include "stats.h"
 #include "utils/logging_time.h"
-#include "utils/timer.h"
+
 #include "utils/utils.h"
 
 bool enable_stats = false;

@@ -42,7 +42,7 @@
 #include "mdspan/mdspan.hpp"
 #include "tdb_defs.h"
 
-#include "utils/timer.h"
+
 
 #include <version>
 #include "detail/linalg/linalg_defs.h"

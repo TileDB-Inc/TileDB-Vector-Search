@@ -50,7 +50,7 @@
 #include "linalg.h"
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
-#include "utils/timer.h"
+
 
 namespace detail::flat {
 

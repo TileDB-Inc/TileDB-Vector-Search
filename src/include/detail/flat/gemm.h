@@ -37,7 +37,7 @@
 #include "detail/linalg/choose_blas.h"
 #include "linalg.h"
 #include "scoring.h"
-#include "utils/timer.h"
+
 
 namespace detail::flat {
 

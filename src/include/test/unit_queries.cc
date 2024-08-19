@@ -33,7 +33,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <thread>
-#include "utils/timer.h"
+
 
 #include "linalg.h"
 

@@ -34,6 +34,7 @@
 #include <catch2/catch_all.hpp>
 #include <thread>
 #include "utils/logging_memory.h"
+#include "utils/logging_time.h"
 
 using namespace std::literals::chrono_literals;
 
@@ -87,6 +88,5 @@ TEST_CASE("highly concurrent memory test", "[logging][memory_data]") {
   auto f = _memory_data.get_entries_summed(timer_name);
   CHECK(
       f >=
-      num_threads * num_iterations * 1024 / (1024 * 1024));  // Convert to
-      MiB
+      num_threads * num_iterations * 1024 / (1024 * 1024));  // Convert to MiB
 }

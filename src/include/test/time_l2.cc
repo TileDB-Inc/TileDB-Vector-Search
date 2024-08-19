@@ -35,7 +35,7 @@
 #include <type_traits>
 
 #include <iostream>
-#include "utils/timer.h"
+
 
 template <class V>
 float l2_float(const V& u, const V& v) {
