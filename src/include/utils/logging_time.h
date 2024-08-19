@@ -1,5 +1,5 @@
 /**
- * @file   logging.h
+ * @file logging_time.h
  *
  * @section LICENSE
  *

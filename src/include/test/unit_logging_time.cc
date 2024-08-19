@@ -1,5 +1,5 @@
 /**
- * @file   unit_logging.cc
+ * @file unit_logging_time.cc
  *
  * @section LICENSE
  *
@@ -33,7 +33,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <thread>
-#include "utils/logging.h"
+#include "utils/logging_time.h"
 
 bool debug = false;
 

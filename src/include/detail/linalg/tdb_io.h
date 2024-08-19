@@ -39,7 +39,7 @@
 #include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_helpers.h"
-#include "utils/logging.h"
+#include "utils/logging_time.h"
 #include "utils/print_types.h"
 #include "utils/timer.h"
 

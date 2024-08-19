@@ -35,7 +35,7 @@
 #include <random>
 
 #include "detail/flat/qv.h"
-#include "utils/logging.h"
+#include "utils/logging_time.h"
 #include "utils/prng.h"
 
 enum class kmeans_init { none, kmeanspp, random };
