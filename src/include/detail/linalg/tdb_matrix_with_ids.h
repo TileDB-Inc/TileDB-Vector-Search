@@ -71,7 +71,7 @@ class tdbBlockedMatrixWithIds
   using ids_type = typename Base::ids_type;
 
  private:
-  log_timer constructor_timer{"tdbBlockedMatrixWithIds constructor"};
+  log_timer constructor_timer{"tdb_matrix_with_ids@ctor"};
 
   std::string ids_uri_;
   std::unique_ptr<tiledb::Array> ids_array_;
@@ -209,7 +209,7 @@ class tdbBlockedMatrixWithIds
         .set_data_buffer(attr_name, this->ids(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
     _memory_data.insert_entry(
-        tdb_func__, elements_to_load * dimension * sizeof(T));
+        "tdb_matrix_with_ids@load", elements_to_load * dimension * sizeof(T));
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status for IDs is not complete");

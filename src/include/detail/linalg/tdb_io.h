@@ -97,7 +97,7 @@ std::vector<T> read_vector_helper(
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
-  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
+  _memory_data.insert_entry("tdb_io@read_vector_helper", vec_rows_ * sizeof(T));
 
   array_->close();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());

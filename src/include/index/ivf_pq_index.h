@@ -654,6 +654,7 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
+    scoped_timer _{"ivf_pq_index@train"};
     dimensions_ = ::dimensions(training_set);
   }
 

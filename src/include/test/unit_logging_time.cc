@@ -42,24 +42,19 @@ using namespace std::literals::chrono_literals;
 auto duration = 500ms;
 
 TEST_CASE("test", "[logging_time]") {
-  std::cout << "log_timer a(test); -------------------" << std::endl;
   log_timer a("test");
 
   std::this_thread::sleep_for(500ms);
 
-  std::cout << "a.stop() -------------------" << std::endl;
   a.stop();
 
   auto f = _timing_data.get_entries_summed("test");
   std::cout << f << std::endl;
   CHECK((f <= 520 && f >= 500));
-  std::cout << "a.start() -------------------" << std::endl;
   a.start();
   std::this_thread::sleep_for(500ms);
-  std::cout << "a.stop() -------------------" << std::endl;
   a.stop();
 
-  std::cout << "-------------------" << std::endl;
   f = _timing_data.get_entries_summed("test");
   std::cout << f << std::endl;
   CHECK((f <= 1040 && f >= 1000));
@@ -167,8 +162,6 @@ TEST_CASE("ordering", "[logging_time]") {
   CHECK((h_t > 499 && h_t < 560));
   CHECK((g_t > 499 && g_t < 560));
   CHECK((f_t > 499 && f_t < 560));
-
-  std::cout << _timing_data.dump();
 }
 
 TEST_CASE("multithreaded timing test", "[logging_time]") {

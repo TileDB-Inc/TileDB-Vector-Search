@@ -563,7 +563,7 @@ class tdbPartitionedMatrix
           .set_data_buffer(attr_name, ptr, col_count * dimensions_);
       tiledb_helpers::submit_query(tdb_func__, partitioned_vectors_uri_, query);
       _memory_data.insert_entry(
-          tdb_func__, col_count * dimensions_ * sizeof(T));
+          "tdb_partitioned_matrix@load", col_count * dimensions_ * sizeof(T));
 
       // @todo Handle incomplete queries.
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -578,7 +578,8 @@ class tdbPartitionedMatrix
       ids_query.set_subarray(ids_subarray)
           .set_data_buffer(ids_attr_name, ids_ptr, col_count);
       tiledb_helpers::submit_query(tdb_func__, partitioned_ids_uri_, ids_query);
-      _memory_data.insert_entry(tdb_func__, col_count * sizeof(T));
+      _memory_data.insert_entry(
+          "tdb_partitioned_matrix@load", col_count * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != ids_query.query_status()) {

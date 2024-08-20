@@ -45,13 +45,13 @@
 #include <vector>
 
 /**
- * Singleton class for recording miscellaneous counts.  Internally
- * maintains a multimap of names and count values.  The `insert_entry()`
- * method is used to record the count.  The `get_entries_*()` methods
- * are used to query the recorded counts.
+ * Singleton class for recording miscellaneous counts.  Internally maintains a
+ * multimap of names and count values.  The `insert_entry()` method
+ * is used to record the count.  The `get_entries_*()` methods are used
+ * to query the recorded counts.
  *
- * Data are stored as integral values.  The `get_entries_*()` methods
- * return integral values.
+ * Data are stored as integral values.  The `get_entries_*()` methods return
+ * integral values.
  */
 class count_data {
  public:

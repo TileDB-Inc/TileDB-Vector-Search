@@ -83,7 +83,7 @@ auto vq_query_heap(
   unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"flat@vq@vq_query_heap@loop"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
 
@@ -209,7 +209,7 @@ auto vq_query_heap_tiled(
   unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"flat@vq@vq_query_heap_tiled@loop"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
   do {
@@ -307,7 +307,7 @@ auto vq_query_heap_2(
   unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"flat@vq@vq_query_heap_2@loop"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
   do {

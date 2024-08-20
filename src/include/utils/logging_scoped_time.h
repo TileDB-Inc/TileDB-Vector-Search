@@ -43,26 +43,9 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "utils/utils.h"
 
 static constexpr const char* ROOT_NAME = "root";
-
-/**
- *  Macro holding the name of the function in which it is called.
- */
-#ifndef tdb_func__
-#ifdef __cpp_lib_source_location
-#include <source_location>
-#define tdb_func__                                  \
-  std::string {                                     \
-    std::source_location::current().function_name() \
-  }
-#else
-#define tdb_func__ \
-  std::string {    \
-    (__func__)     \
-  }
-#endif
-#endif
 
 class scoped_timing_data_class {
  public:
@@ -133,28 +116,19 @@ class scoped_timing_data_class {
     std::lock_guard<std::mutex> lock(mutex_);
     auto thread_id = std::this_thread::get_id();
     if (threadToRoot_.find(thread_id) == threadToRoot_.end()) {
-      threadToRoot_[thread_id] = std::make_unique<TimerNode>("root");
+      threadToRoot_[thread_id] = std::make_unique<TimerNode>(ROOT_NAME);
       threadToCurrentNode_[thread_id] = threadToRoot_[thread_id].get();
-      std::cout << "[start_timer] Creating root" << std::endl;
     }
     auto current_node = threadToCurrentNode_[thread_id];
-    std::cout << "[start_timer] current_node: " << current_node->dump()
-              << std::endl;
     for (auto& child : current_node->children) {
-      std::cout << "[start_timer] considering child node: " << child->dump()
-                << std::endl;
       if (child->name == name) {
         threadToCurrentNode_[thread_id] = child.get();
-        std::cout << "[start_timer] setting current node to existing node: "
-                  << threadToCurrentNode_[thread_id]->dump() << std::endl;
         return;
       }
     }
 
     current_node->children.push_back(std::make_unique<TimerNode>(name));
     threadToCurrentNode_[thread_id] = current_node->children.back().get();
-    std::cout << "[start_timer] created current node - it is: "
-              << threadToCurrentNode_[thread_id]->dump() << std::endl;
   }
 
   void stop_timer(const time_type& start_time) {
@@ -162,14 +136,12 @@ class scoped_timing_data_class {
     std::lock_guard<std::mutex> lock(mutex_);
     auto thread_id = std::this_thread::get_id();
     if (threadToCurrentNode_.find(thread_id) == threadToCurrentNode_.end()) {
-      std::cout << "No timer started for this thread" << std::endl;
       return;
     }
 
     auto current_node = threadToCurrentNode_[thread_id];
     current_node->total_duration += (end_time - start_time);
     current_node->count += 1;
-    std::cout << "current_node: " << current_node->dump() << std::endl;
 
     if (current_node != threadToRoot_[thread_id].get()) {
       threadToCurrentNode_[thread_id] =
@@ -255,7 +227,7 @@ class scoped_timing_data_class {
                     .count() /
                 static_cast<double>(node->count) :
             0.0;
-    if (node->name != "root") {
+    if (node->name != ROOT_NAME) {
       oss << indent << node->name << ": count = " << node->count
           << ", avg = " << format_duration_ns(average_duration) << "\n";
     }
@@ -279,25 +251,6 @@ class scoped_timing_data_class {
     }
 
     return duration_sum;
-  }
-
-  std::string format_duration_ns(double duration_ns) const {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2);
-
-    if (duration_ns < 1000) {
-      oss << duration_ns;
-      return oss.str() + " ns";
-    } else if (duration_ns < 1000000) {
-      oss << (duration_ns / 1000.0);
-      return oss.str() + " µs";
-    } else if (duration_ns < 1000000000) {
-      oss << (duration_ns / 1000000.0);
-      return oss.str() + " ms";
-    } else {
-      oss << (duration_ns / 1000000000.0);
-      return oss.str() + " s";
-    }
   }
 };
 

@@ -477,7 +477,7 @@ auto nuv_query_heap_finite_ram(
           std::vector<fixed_min_pair_heap<score_type, id_type>>(
               num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"qv@nuv_query_heap_finite_ram@loop"};
 
   size_t part_offset = 0;
   while (partitioned_vectors.load()) {
@@ -604,7 +604,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
       std::vector<fixed_min_pair_heap<score_type, id_type>>(
           num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn)));
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"qv@nuv_query_heap_finite_ram_reg_blocked@loop"};
 
   size_t part_offset = 0;
   while (partitioned_vectors.load()) {
@@ -1039,7 +1039,7 @@ auto query_finite_ram(
   auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
       num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"qv@query_finite_ram@loop"};
 
   size_t part_offset = 0;
   while (partitioned_vectors.load()) {

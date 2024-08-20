@@ -541,7 +541,7 @@ auto vq_query_finite_ram(
       ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
   load(partitioned_db);
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"ivf@vq@vq_query_finite_ram@loop"};
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;
@@ -557,11 +557,11 @@ auto vq_query_finite_ram(
       auto partition_size = new_indices[i + 1] - new_indices[i];
       max_partition_size = std::max<size_t>(max_partition_size, partition_size);
       _memory_data.insert_entry(
-          tdb_func__ + " (predicted)",
+          "ivf@vq@vq_query_finite_ram@loop (predicted)",
           partition_size * sizeof(feature_type) * partitioned_db.num_rows());
     }
     _memory_data.insert_entry(
-        tdb_func__ + " (upper bound)",
+        "ivf@vq@vq_query_finite_ram@loop (upper bound)",
         nprobe * num_queries * sizeof(feature_type) * max_partition_size);
   }
 
@@ -666,7 +666,7 @@ auto vq_query_finite_ram_2(
       parts_type>(
       ctx, part_uri, indices, active_partitions, id_uri, upper_bound);
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"ivf@vq@vq_query_finite_ram_2@loop"};
 
   std::vector<parts_type> new_indices(size(active_partitions) + 1);
   new_indices[0] = 0;

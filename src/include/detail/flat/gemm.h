@@ -60,7 +60,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
   std::vector<fixed_min_pair_heap<float, unsigned>> min_scores(
       size(q), fixed_min_pair_heap<float, unsigned>(k));
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"gemm@blocked_gemm_query@loop"};
 
   while (db.load()) {
     _i.start();

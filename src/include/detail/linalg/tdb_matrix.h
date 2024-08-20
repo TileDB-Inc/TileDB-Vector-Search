@@ -357,7 +357,7 @@ class tdbBlockedMatrix : public MatrixBase {
         .set_data_buffer(attr_name, this->data(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, uri_, query);
     _memory_data.insert_entry(
-        tdb_func__, elements_to_load * dimension * sizeof(T));
+        "tdb_matrix@load", elements_to_load * dimension * sizeof(T));
 
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {

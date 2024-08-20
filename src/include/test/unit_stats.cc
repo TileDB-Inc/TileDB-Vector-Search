@@ -37,3 +37,16 @@ TEST_CASE("test build_config", "[stats]") {
   auto config = build_config();
   CHECK(!config.empty());
 }
+
+TEST_CASE("test dump_logs", "[stats]") {
+  { scoped_timer _("scoped_timer_1"); }
+  log_timer _1{"log_timer_1"};
+  _1.stop();
+  log_timer _2{"log_timer_2"};
+  _2.stop();
+
+  std::string path =
+      (std::filesystem::temp_directory_path() / "dump_logs_file.txt").string();
+  std::cout << path << std::endl;
+  dump_logs(path, "IVF_PQ", 1, 2, 3, 4, 5.5f);
+}
