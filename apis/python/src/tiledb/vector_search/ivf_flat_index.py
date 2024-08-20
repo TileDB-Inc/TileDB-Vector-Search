@@ -562,7 +562,7 @@ def create(
     """
     validate_storage_version(storage_version)
     if (
-        distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES 
+        distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES
         and distance_metric != vspy.DistanceMetric.L2
         and distance_metric != vspy.DistanceMetric.COSINE
     ):

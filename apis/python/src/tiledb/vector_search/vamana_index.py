@@ -169,7 +169,8 @@ def create(
             f"Storage version {storage_version} is not supported for VamanaIndex. VamanaIndex requires storage version 0.3 or higher."
         )
     if (
-        distance_metric != vspy.DistanceMetric.L2 and distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES
+        distance_metric != vspy.DistanceMetric.L2
+        and distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES
         and distance_metric != vspy.DistanceMetric.COSINE
     ):
         raise ValueError(

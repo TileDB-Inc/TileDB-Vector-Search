@@ -167,7 +167,8 @@ static void declare_qv_query_heap_infinite_ram(
          size_t nprobe,
          size_t k_nn,
          size_t nthreads,
-         DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES) -> py::tuple {
+         DistanceMetric distance_metric =
+             DistanceMetric::SUM_OF_SQUARES) -> py::tuple {
         auto mat = ColMajorPartitionedMatrixWrapper<T, Id_Type, Id_Type>(
             parts, ids, indices);
 
@@ -203,7 +204,7 @@ static void declare_qv_query_heap_infinite_ram(
               nthreads,
               cosine_distance_normalized{});
           return make_python_pair(std::move(r));
-        } else if (distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::ivf::qv_query_heap_infinite_ram(
               top_centroids,
               mat,
@@ -213,8 +214,7 @@ static void declare_qv_query_heap_infinite_ram(
               nthreads,
               sqrt_sum_of_squares_distance{});
           return make_python_pair(std::move(r));
-        }
-        else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       },
@@ -287,7 +287,7 @@ static void declare_qv_query_heap_finite_ram(
               timestamp,
               cosine_distance_normalized{});
           return make_python_pair(std::move(r));
-        } else if (distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::ivf::qv_query_heap_finite_ram<T, Id_Type>(
               ctx,
               parts_uri,
@@ -302,8 +302,7 @@ static void declare_qv_query_heap_finite_ram(
               timestamp,
               sqrt_sum_of_squares_distance{});
           return make_python_pair(std::move(r));
-        }
-        else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       },
@@ -364,7 +363,7 @@ static void declare_nuv_query_heap_infinite_ram(
               nthreads,
               cosine_distance_normalized{});
           return r;
-        } else if(distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::ivf::nuv_query_heap_infinite_ram(
               mat,
               active_partitions,
@@ -374,8 +373,7 @@ static void declare_nuv_query_heap_infinite_ram(
               nthreads,
               sqrt_sum_of_squares_distance{});
           return r;
-        }
-         else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       },
@@ -449,7 +447,7 @@ static void declare_nuv_query_heap_finite_ram(
               nthreads,
               cosine_distance_normalized{});
           return r;
-        } else if (distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::ivf::nuv_query_heap_finite_ram_reg_blocked(
               mat,
               query_vectors,
@@ -459,8 +457,7 @@ static void declare_nuv_query_heap_finite_ram(
               nthreads,
               sqrt_sum_of_squares_distance{});
           return r;
-        }
-        else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       },
@@ -765,12 +762,16 @@ static void declare_vq_query_heap(py::module& m, const std::string& suffix) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, cosine_distance{});
           return r;
-        } else if(distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::flat::vq_query_heap(
-              data, query_vectors, ids, k, nthreads, sqrt_sum_of_squares_distance{});
+              data,
+              query_vectors,
+              ids,
+              k,
+              nthreads,
+              sqrt_sum_of_squares_distance{});
           return r;
-        }
-          else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       });
@@ -800,12 +801,16 @@ static void declare_vq_query_heap_pyarray(
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, ids, k, nthreads, cosine_distance{});
           return r;
-        } else if (distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::flat::vq_query_heap(
-              data, query_vectors, ids, k, nthreads, sqrt_sum_of_squares_distance{});
+              data,
+              query_vectors,
+              ids,
+              k,
+              nthreads,
+              sqrt_sum_of_squares_distance{});
           return r;
-        }
-        else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       });
@@ -942,12 +947,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, cosine_distance{});
           return r;
-        } else if (distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, sqrt_sum_of_squares_distance{});
           return r;
-        }
-         else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       });
@@ -972,12 +976,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, cosine_distance{});
           return r;
-        } else if (distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, sqrt_sum_of_squares_distance{});
           return r;
-        }
-        else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       });
@@ -1002,12 +1005,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, cosine_distance{});
           return r;
-        } else if (distance_metric == DistanceMetric::L2){
+        } else if (distance_metric == DistanceMetric::L2) {
           auto r = detail::flat::vq_query_heap(
               data, query_vectors, k, nthreads, sqrt_sum_of_squares_distance{});
           return r;
-        }
-        else {
+        } else {
           throw std::runtime_error("Invalid distance metric");
         }
       });

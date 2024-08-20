@@ -4,15 +4,11 @@ import numpy as np
 import pytest
 from array_paths import *
 from common import *
-from common import load_metadata
 from sklearn.neighbors import NearestNeighbors
 
-from tiledb.cloud.dag import Mode
 from tiledb.vector_search import Index
 from tiledb.vector_search import _tiledbvspy as vspy
-from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import load_fvecs
 
 
@@ -86,10 +82,14 @@ def test_sum_of_squares_distance(tmp_path):
 
     nn_sum_of_squares = NearestNeighbors(n_neighbors=5, metric="euclidean")
     nn_sum_of_squares.fit(dataset_vectors)
-    distances_sum_of_squares, ids_sum_of_squares = nn_sum_of_squares.kneighbors(query_vectors)
+    distances_sum_of_squares, ids_sum_of_squares = nn_sum_of_squares.kneighbors(
+        query_vectors
+    )
 
     distances, ids = index.query(query_vectors, k=5)
-    assert np.allclose(distances_sum_of_squares, distances, 1e-4), "L2 distances do not match"
+    assert np.allclose(
+        distances_sum_of_squares, distances, 1e-4
+    ), "L2 distances do not match"
     assert np.array_equal(ids_sum_of_squares, ids), "L2 ids do not match"
 
 
@@ -226,8 +226,10 @@ def test_vamana_create_inner_product(tmp_path):
             distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
         )
 
+
 def sum_of_squares_distance(a, b):
     return np.sum((a - b) ** 2)
+
 
 def test_ivfpq_create_sum_of_squares(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_sum_of_squares")
@@ -253,8 +255,10 @@ def test_ivfpq_create_cosine(tmp_path):
             num_subspaces=2,
         )
 
+
 def l2_distance(a, b):
     return np.sqrt(np.sum((a - b) ** 2))
+
 
 def test_flat_l2_distance(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
@@ -275,8 +279,11 @@ def test_flat_l2_distance(tmp_path):
 
     distances, ids = index.query(query_vectors, k=5)
 
-    assert np.allclose(distances_l2_sklearn, distances, rtol=1e-5, atol=1e-8), "L2 distances do not match"
+    assert np.allclose(
+        distances_l2_sklearn, distances, rtol=1e-5, atol=1e-8
+    ), "L2 distances do not match"
     assert np.array_equal(ids_l2_sklearn, ids), "L2 ids do not match"
+
 
 def test_ivf_flat_l2_distance(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_ivf_flat_L2")
@@ -306,7 +313,10 @@ def test_ivf_flat_l2_distance(tmp_path):
                 err_msg=f"L2 distance mismatch for query {i}, neighbor {j}",
             )
 
-    assert np.all(np.diff(distances, axis=1) >= 0), "Distances are not sorted in ascending order"
+    assert np.all(
+        np.diff(distances, axis=1) >= 0
+    ), "Distances are not sorted in ascending order"
+
 
 def test_vamana_l2_distance(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_vamana_L2")
@@ -335,4 +345,6 @@ def test_vamana_l2_distance(tmp_path):
                 err_msg=f"L2 distance mismatch for query {i}, neighbor {j}",
             )
 
-    assert np.all(np.diff(distances, axis=1) >= 0), "Distances are not sorted in ascending order"
+    assert np.all(
+        np.diff(distances, axis=1) >= 0
+    ), "Distances are not sorted in ascending order"

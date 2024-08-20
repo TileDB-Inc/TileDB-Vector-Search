@@ -626,7 +626,7 @@ const IndexVamana::uri_table_type IndexVamana::uri_dispatch_table = {
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64, DistanceMetric::SUM_OF_SQUARES}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t, sum_of_squares_distance>>>(ctx, uri, temporal_policy); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64, DistanceMetric::COSINE}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t, cosine_distance>>>(ctx, uri, temporal_policy); }},
   {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64, DistanceMetric::L2}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<vamana_index<float,   uint64_t, uint64_t, sqrt_sum_of_squares_distance>>>(ctx, uri, temporal_policy); }},
-  
+
 };
 
 const IndexVamana::clear_history_table_type IndexVamana::clear_history_dispatch_table = {

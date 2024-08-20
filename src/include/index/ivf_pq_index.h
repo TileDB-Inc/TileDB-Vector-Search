@@ -259,7 +259,6 @@ class ivf_pq_index {
   uint64_t num_threads_{std::thread::hardware_concurrency()};
   uint64_t seed_{std::random_device{}()};
 
-
  public:
   using value_type = feature_type;
   using index_type = partitioning_indices_type;  // @todo This isn't quite right

@@ -118,7 +118,9 @@ class IndexIVFPQ {
         } else if (key == "distance_metric") {
           distance_metric_ = parseAndValidateDistanceMetric(
               value,
-              [](DistanceMetric dm) { return dm == DistanceMetric::SUM_OF_SQUARES; },
+              [](DistanceMetric dm) {
+                return dm == DistanceMetric::SUM_OF_SQUARES;
+              },
               "Invalid distance metric for IVF_PQ");
         } else {
           throw std::runtime_error("Invalid index config key: " + key);

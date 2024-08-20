@@ -61,7 +61,9 @@ class Index:
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         try:
             self.distance_metric = vspy.DistanceMetric(
-                self.group.meta.get("distance_metric", vspy.DistanceMetric.SUM_OF_SQUARES)
+                self.group.meta.get(
+                    "distance_metric", vspy.DistanceMetric.SUM_OF_SQUARES
+                )
             )
         except ValueError:
             raise ValueError(

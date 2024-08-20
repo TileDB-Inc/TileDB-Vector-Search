@@ -342,7 +342,12 @@ struct cosine_distance_normalized {
 using cosine_distance = _cosine_distance::cosine_distance;
 using cosine_distance_normalized = _cosine_distance::cosine_distance_normalized;
 
-enum class DistanceMetric : uint32_t { SUM_OF_SQUARES = 0, INNER_PRODUCT = 1, COSINE = 2, L2 = 3};
+enum class DistanceMetric : uint32_t {
+  SUM_OF_SQUARES = 0,
+  INNER_PRODUCT = 1,
+  COSINE = 2,
+  L2 = 3
+};
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
