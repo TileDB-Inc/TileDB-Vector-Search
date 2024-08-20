@@ -256,8 +256,6 @@ def test_ivfpq_create_cosine(tmp_path):
         )
 
 
-
-
 def test_flat_l2_distance(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_L2")
     index = ingest(
