@@ -1092,7 +1092,7 @@ TEST_CASE("robust prune fmnist", "[vamana]") {
     }
   }
 
-  auto greedy_timer = log_timer{"greedy"};
+  auto greedy_timer = log_timer{"greedy", debug};
   auto&& [top_k_scores, top_k, V] = greedy_search(g, db, start, query, k_nn, L);
   greedy_timer.stop();
 

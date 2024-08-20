@@ -49,14 +49,12 @@ TEST_CASE("test", "[logging_time]") {
   a.stop();
 
   auto f = _timing_data.get_entries_summed("test");
-  std::cout << f << std::endl;
   CHECK((f <= 520 && f >= 500));
   a.start();
   std::this_thread::sleep_for(500ms);
   a.stop();
 
   f = _timing_data.get_entries_summed("test");
-  std::cout << f << std::endl;
   CHECK((f <= 1040 && f >= 1000));
 }
 

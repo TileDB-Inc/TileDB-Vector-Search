@@ -44,6 +44,7 @@
 #include "utils/logging_memory.h"
 #include "utils/logging_scoped_time.h"
 #include "utils/logging_time.h"
+
 // @todo Implement
 // #include "detail/scoring/cosine.h"
 // #include "detail/scoring/cosine_avx.h"

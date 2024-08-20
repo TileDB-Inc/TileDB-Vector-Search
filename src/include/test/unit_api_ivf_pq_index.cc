@@ -1066,5 +1066,4 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   std::string path =
       (std::filesystem::temp_directory_path() / "dump_logs_file.txt").string();
   dump_logs(path, "IVF_PQ", 1, 2, 3, 4, 5.5f);
-  std::cout << path << std::endl;
 }

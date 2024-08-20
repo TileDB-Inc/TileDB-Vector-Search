@@ -110,7 +110,6 @@ class scoped_timing_data_class {
    * Start a new timer node as a child of the current node, or reuse an existing
    * one.
    * @param name The name of the timer.
-   * @return Pointer to the newly created or existing timer node.
    */
   void start_timer(const std::string& name) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -131,6 +130,11 @@ class scoped_timing_data_class {
     threadToCurrentNode_[thread_id] = current_node->children.back().get();
   }
 
+  /**
+   * Start a new timer node as a child of the current node, or reuse an existing
+   * one.
+   * @param start_time The time that this timer was started.
+   */
   void stop_timer(const time_type& start_time) {
     auto end_time = clock_type::now();
     std::lock_guard<std::mutex> lock(mutex_);
