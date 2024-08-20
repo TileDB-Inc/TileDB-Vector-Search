@@ -625,4 +625,6 @@ void init_type_erased_module(py::module_& m) {
       .export_values();
 
   m.def("build_config_string", []() { return build_config().dump(); });
+
+  m.def("logging_string", []() { return logging_string(); });
 }

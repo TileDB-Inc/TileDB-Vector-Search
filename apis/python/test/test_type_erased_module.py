@@ -464,6 +464,13 @@ def test_construct_IndexIVFPQ():
     assert a.partitioning_index_type_string() == "uint64"
     assert a.dimensions() == 0
 
+    build_config_string = vspy.build_config_string()
+    assert build_config_string is not None
+    assert "tiledb_version" in build_config_string
+    logging_string = vspy.logging_string()
+    assert logging_string is not None
+    assert "Timers" in logging_string
+
 
 def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     nprobe = 100

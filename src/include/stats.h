@@ -46,6 +46,7 @@
 #include <string>
 #include <tiledb/tiledb>
 #include "config.h"
+#include "utils/logging_count.h"
 #include "utils/logging_memory.h"
 #include "utils/logging_scoped_time.h"
 #include "utils/logging_time.h"
@@ -103,6 +104,28 @@ class StatsCollectionScope final {
 #endif
 };
 
+[[maybe_unused]] static std::string logging_string() {
+  std::ostringstream output;
+
+  output << "Scoped Timers" << std::endl;
+  output << _scoped_timing_data.dump();
+  output << std::endl;
+
+  output << "Manual Timers" << std::endl;
+  output << _timing_data.dump();
+  output << std::endl;
+
+  output << "Memory data" << std::endl;
+  output << _memory_data.dump();
+  output << std::endl;
+
+  output << "Count data" << std::endl;
+  output << _count_data.dump();
+  output << std::endl;
+
+  return output.str();
+}
+
 static auto dump_logs = [](const std::string& filename,
                            const std::string& algorithm,
                            size_t nqueries,
@@ -110,19 +133,11 @@ static auto dump_logs = [](const std::string& filename,
                            size_t k_nn,
                            size_t nthreads,
                            double recall) {
-  // Quick and dirty way to get log info into a summarizable and useful form --
-  // fixed-width columns
-  // @todo encapsulate this as a function that can be customized
-
-  // I don't know why this has to be done in two steps like this but oh well
   auto c = !filename.empty() ? std::ofstream(filename) : std::ofstream();
-  std::cout << "filename: " << filename << std::endl;
   std::ostream& output{(filename == "-") ? std::cout : c};
 
-  // @todo print other information
   output << "Repo: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "
          << GIT_COMMIT_HASH << std::endl;
-
   output << "CMake source directory: " << CMAKE_SOURCE_DIR << std::endl;
   output << "CMake build type: " << BUILD_TYPE << std::endl;
   output << "Compiler: " << IVF_HACK_CXX_COMPILER << std::endl;
@@ -153,52 +168,7 @@ static auto dump_logs = [](const std::string& filename,
   output << std::endl;
   output << std::endl;
 
-  output << "Manual Timers" << std::endl;
-  output << _timing_data.dump();
-  output << std::endl;
-
-  output << "Scoped Timers" << std::endl;
-  output << _scoped_timing_data.dump();
-  output << std::endl;
-
-  output << "Memory Logging" << std::endl;
-  // Table of contents -- quantities with long identifiers are marked with a
-  // letter in their column and the key is printed out after the line is logged.
-  std::map<std::string, std::string> toc;
-  char tag = 'A';
-  auto units = std::string(" (MiB)");
-  for (const auto& timer : _memory_data.get_usage_names()) {
-    std::string text;
-    if (size(timer) < 3) {
-      text = timer;
-    } else {
-      std::string key =
-          std::string("[") + std::string(1, tag) + std::string("]");
-      toc[key] = timer + units;
-      ++tag;
-      text = key;
-    }
-    output << std::setw(12) << text;
-  }
-  for (const auto& t : toc) {
-    output << t.first << ": " << t.second << std::endl;
-  }
-  output << std::endl;
-
-  auto usages = _memory_data.get_usage_names();
-  for (const auto& usage : usages) {
-    auto mem = _memory_data.get_entries_summed(usage);
-    if (mem < 1) {
-      output << std::fixed << std::setprecision(3);
-    } else if (mem < 10) {
-      output << std::fixed << std::setprecision(2);
-    } else if (mem < 100) {
-      output << std::fixed << std::setprecision(1);
-    } else {
-      output << std::fixed << std::setprecision(0);
-    }
-    output << std::setw(12) << _memory_data.get_entries_summed(usage);
-  }
+  output << logging_string();
 };
 
 [[maybe_unused]] static auto build_config() {
