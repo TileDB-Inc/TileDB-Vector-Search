@@ -89,7 +89,6 @@ def test_sum_of_squares_distance(tmp_path):
     distances_sum_of_squares, ids_sum_of_squares = nn_sum_of_squares.kneighbors(query_vectors)
 
     distances, ids = index.query(query_vectors, k=5)
-    distances = np.sqrt(distances)
     assert np.allclose(distances_sum_of_squares, distances, 1e-4), "L2 distances do not match"
     assert np.array_equal(ids_sum_of_squares, ids), "L2 ids do not match"
 
