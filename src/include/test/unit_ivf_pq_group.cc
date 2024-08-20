@@ -74,8 +74,8 @@ TEST_CASE("write constructor - create and open", "[ivf_pq_group]") {
   }
 
   uint64_t dimensions = 92134;
-  size_t num_clusters = 34239;
-  size_t num_subspaces = 3343;
+  uint32_t num_clusters = 34239;
+  uint32_t num_subspaces = 3343;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,
@@ -131,11 +131,12 @@ TEST_CASE("write constructor - create and read", "[ivf_pq_group]") {
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
 
-    // We throw b/c the ivf_pq_group hasn't actually been written (the
-    // write happens in the destructor).
+    // We throw b/c the ivf_pq_group hasn't actually been stored yet.
     CHECK_THROWS_WITH(
         ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
+
+    x.store_metadata();
   }
 
   ivf_pq_group y = ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ);
@@ -168,8 +169,7 @@ TEST_CASE("write constructor - invalid create and read", "[ivf_pq_group]") {
     CHECK(x.get_dimensions() == dimensions);
     CHECK(x.get_num_clusters() == num_clusters);
     CHECK(x.get_num_subspaces() == num_subspaces);
-    // We throw b/c the ivf_pq_group hasn't actually been written (the
-    // write happens in the destructor).
+    // We throw b/c the ivf_pq_group hasn't actually been stored yet.
     CHECK_THROWS_WITH(
         ivf_pq_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
@@ -190,10 +190,10 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
   size_t expected_ingestion = 867;
   size_t expected_base = 5309;
   size_t expected_partitions = 42;
-  size_t expected_temp_size = 314159;
+  int64_t expected_temp_size = 314159;
   uint64_t dimensions = 128;
-  size_t num_clusters = 110;
-  size_t num_subspaces = 120;
+  uint32_t num_clusters = 110;
+  uint32_t num_subspaces = 120;
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -216,6 +216,7 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
     x.append_num_partitions(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
+    x.store_metadata();
   }
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
@@ -497,10 +498,10 @@ TEST_CASE("storage version", "[ivf_pq_group]") {
   size_t expected_ingestion = 23094;
   size_t expected_base = 9234;
   size_t expected_partitions = 200;
-  size_t expected_temp_size = 11;
+  int64_t expected_temp_size = 11;
   uint64_t dimensions = 19238;
-  size_t num_clusters = 110;
-  size_t num_subspaces = 120;
+  uint32_t num_clusters = 110;
+  uint32_t num_subspaces = 120;
   size_t offset = 2345;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
@@ -579,8 +580,8 @@ TEST_CASE("mismatched storage version", "[ivf_pq_group]") {
   }
 
   uint64_t dimensions = 4;
-  size_t num_clusters = 4;
-  size_t num_subspaces = 1;
+  uint32_t num_clusters = 4;
+  uint32_t num_subspaces = 1;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,
@@ -614,8 +615,8 @@ TEST_CASE("clear history", "[ivf_pq_group]") {
   }
 
   uint64_t dimensions = 19238;
-  size_t num_clusters = 110;
-  size_t num_subspaces = 120;
+  uint32_t num_clusters = 110;
+  uint32_t num_subspaces = 120;
 
   ivf_pq_group x = ivf_pq_group<dummy_index>(
       ctx,

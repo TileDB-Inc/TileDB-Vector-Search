@@ -233,7 +233,7 @@ auto nuv_query_heap_infinite_ram(
                * Get the queries associated with this partition.
                */
               for (auto j : active_queries[p]) {
-                auto q_vec = query[j];
+                const auto& q_vec = query[j];
 
                 // for (size_t k = start; k < stop; ++k) {
                 //   auto kp = k - partitioned_vectors.col_offset();
@@ -331,7 +331,6 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
             /*
              * For each partition, process the associated queries
              */
-            auto& mscores = min_scores[n];
             for (size_t partno = first_part; partno < last_part; ++partno) {
               auto quartno = active_partitions[partno];
               auto start = indices[quartno];
@@ -344,8 +343,8 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
               for (auto j = active_queries[partno].begin(); j != end; j += 2) {
                 auto j0 = j[0];
                 auto j1 = j[1];
-                auto q_vec_0 = query[j0];
-                auto q_vec_1 = query[j1];
+                const auto& q_vec_0 = query[j0];
+                const auto& q_vec_1 = query[j1];
 
                 for (size_t kp = start; kp < kstop; kp += 2) {
                   auto score_00 =
@@ -381,7 +380,7 @@ auto nuv_query_heap_infinite_ram_reg_blocked(
                */
               for (auto j = end; j < active_queries[partno].end(); ++j) {
                 auto j0 = j[0];
-                auto q_vec_0 = query[j0];
+                const auto& q_vec_0 = query[j0];
 
                 for (size_t kp = start; kp < kstop; kp += 2) {
                   auto score_00 =
@@ -525,7 +524,7 @@ auto nuv_query_heap_finite_ram(
                  */
                 //
                 for (auto j : active_queries[partno]) {
-                  auto q_vec = query[j];
+                  const auto& q_vec = query[j];
 
                   /*
                    * Apply the query to the partition.
@@ -670,8 +669,8 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                      j += 2) {
                   auto j0 = j[0];
                   auto j1 = j[1];
-                  auto q_vec_0 = query[j0];
-                  auto q_vec_1 = query[j1];
+                  const auto& q_vec_0 = query[j0];
+                  const auto& q_vec_1 = query[j1];
 
                   for (size_t kp = start; kp < kstop; kp += 2) {
                     auto score_00 =
@@ -713,7 +712,7 @@ auto nuv_query_heap_finite_ram_reg_blocked(
                  */
                 for (auto j = end; j < active_queries[partno].end(); ++j) {
                   auto j0 = j[0];
-                  auto q_vec_0 = query[j0];
+                  const auto& q_vec_0 = query[j0];
 
                   for (size_t kp = start; kp < kstop; kp += 2) {
                     auto score_00 =
@@ -888,8 +887,10 @@ auto apply_query(
   using id_type = typename P::id_type;
   using score_type = float;
 
-  auto partitioned_ids = partitioned_vectors.ids();  // These are global
-  auto indices = partitioned_vectors.indices();      // These are local to p_v
+  // These are global.
+  const auto& partitioned_ids = partitioned_vectors.ids();
+  // These are local to p_v.
+  const auto& indices = partitioned_vectors.indices();
 
   auto num_queries = num_vectors(query);
 
@@ -926,8 +927,8 @@ auto apply_query(
     for (auto j = active_queries[partno].begin(); j < end; j += 2) {
       auto j0 = j[0];
       auto j1 = j[1];
-      auto q_vec_0 = query[j0];
-      auto q_vec_1 = query[j1];
+      const auto& q_vec_0 = query[j0];
+      const auto& q_vec_1 = query[j1];
 
       for (size_t kp = start; kp < kstop; kp += 2) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
@@ -957,7 +958,7 @@ auto apply_query(
      */
     for (auto j = end; j < active_queries[partno].end(); ++j) {
       auto j0 = j[0];
-      auto q_vec_0 = query[j0];
+      const auto& q_vec_0 = query[j0];
 
       for (size_t kp = start; kp < kstop; kp += 2) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
@@ -1043,9 +1044,6 @@ auto query_finite_ram(
   size_t part_offset = 0;
   while (partitioned_vectors.load()) {
     _i.start();
-
-    auto indices = partitioned_vectors.indices();
-    auto partitioned_ids = partitioned_vectors.ids();
 
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
@@ -1137,9 +1135,6 @@ auto query_infinite_ram(
 
   using id_type = typename F::id_type;
   using score_type = float;
-
-  auto partitioned_ids = partitioned_vectors.ids();
-  auto indices = partitioned_vectors.indices();
 
   auto num_queries = num_vectors(query);
 

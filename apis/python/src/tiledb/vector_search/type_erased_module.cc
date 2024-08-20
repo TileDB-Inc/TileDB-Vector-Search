@@ -368,7 +368,9 @@ void init_type_erased_module(py::module_& m) {
       .def("dimensions", &IndexFlatL2::dimensions)
       .def(
           "query",
-          [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
+          [](IndexFlatL2& index,
+             const FeatureVectorArray& vectors,
+             size_t top_k) {
             auto r = index.query(vectors, top_k);
             return make_python_pair(std::move(r));
           });
@@ -419,9 +421,9 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "query",
           [](IndexVamana& index,
-             FeatureVectorArray& vectors,
+             const FeatureVectorArray& vectors,
              size_t top_k,
-             size_t l_search) {
+             uint32_t l_search) {
             auto r = index.query(vectors, top_k, l_search);
             return make_python_pair(std::move(r));
           },
@@ -492,19 +494,33 @@ void init_type_erased_module(py::module_& m) {
           },
           py::arg("vectors"))
       .def(
-          "query",
+          "query_infinite_ram",
           [](IndexIVFPQ& index,
-             QueryType queryType,
-             FeatureVectorArray& vectors,
+             const FeatureVectorArray& vectors,
              size_t top_k,
              size_t nprobe) {
-            auto r = index.query(queryType, vectors, top_k, nprobe);
+            auto r =
+                index.query(QueryType::InfiniteRAM, vectors, top_k, nprobe);
             return make_python_pair(std::move(r));
           },
-          py::arg("queryType"),
           py::arg("vectors"),
           py::arg("top_k"),
           py::arg("nprobe"))
+      .def(
+          "query_finite_ram",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             size_t top_k,
+             size_t nprobe,
+             size_t memory_budget) {
+            auto r = index.query(
+                QueryType::FiniteRAM, vectors, top_k, nprobe, memory_budget);
+            return make_python_pair(std::move(r));
+          },
+          py::arg("vectors"),
+          py::arg("top_k"),
+          py::arg("nprobe"),
+          py::arg("memory_budget"))
       .def(
           "write_index",
           [](IndexIVFPQ& index,

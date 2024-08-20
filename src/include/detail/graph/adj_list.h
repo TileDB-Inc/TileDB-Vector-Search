@@ -36,6 +36,7 @@
 #include <list>
 #include <vector>
 #include "scoring.h"
+#include "utils/prng.h"
 
 namespace detail::graph {
 template <class I>
@@ -52,7 +53,7 @@ class index_adj_list : public std::vector<std::list<I>> {
 
 #if 1
   index_adj_list(const std::vector<std::tuple<I, I>>& edge_list) {
-    for (auto& [src, dst] : edge_list) {
+    for (const auto& [src, dst] : edge_list) {
       Base::operator[](src).push_back(dst);
     }
   }
@@ -62,7 +63,7 @@ class index_adj_list : public std::vector<std::list<I>> {
   index_adj_list(AdjList&& l)
       : Base(size(l)) {
     for (size_t i = 0; i < size(l); ++i) {
-      for (auto& dst : l[i]) {
+      for (const auto& dst : l[i]) {
         add_edge(i, dst);
       }
     }
@@ -132,7 +133,7 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
 #if 0
   template <class EdgeList>
   index_adj_list(EdgeList&& edge_list) {
-    for (auto& [src, dst] : edge_list) {
+    for (const auto& [src, dst] : edge_list) {
       Base::operator[](src).push_back(dst);
     }
   }
@@ -177,6 +178,20 @@ class adj_list : public std::vector<std::list<std::tuple<SC, ID>>> {
   constexpr auto num_edges() const {
     return num_edges_;
   }
+
+  std::string dump(const std::string& msg = "adj_list") const {
+    std::string s;
+    s += msg + " (vertices: " + std::to_string(num_vertices()) +
+         ", edges: " + std::to_string(num_edges()) + ")\n";
+    for (size_t i = 0; i < num_vertices(); ++i) {
+      s += "  " + std::to_string(i) + ": ";
+      for (const auto& [val, dst] : out_edges(i)) {
+        s += std::to_string(dst) + "(" + std::to_string(val) + ") ";
+      }
+      s += "\n";
+    }
+    return s;
+  }
 };
 
 template <class T, std::integral I>
@@ -198,16 +213,14 @@ template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto init_random_adj_list(auto&& db, size_t R, Distance distance = Distance()) {
   auto num_vertices = num_vectors(db);
   adj_list<T, ID> g(num_vertices);
-  std::random_device rd;
-  std::mt19937 gen(rd());
 
   std::uniform_int_distribution<size_t> dis(0, num_vertices - 1);
 
   for (size_t i = 0; i < num_vertices; ++i) {
     for (size_t j = 0; j < R; ++j) {
-      auto nbr = dis(gen);
+      auto nbr = dis(PRNG::get().generator());
       while (nbr == i) {
-        nbr = dis(gen);
+        nbr = dis(PRNG::get().generator());
       }
       auto score = distance(db[i], db[nbr]);
       g.add_edge(i, nbr, score);

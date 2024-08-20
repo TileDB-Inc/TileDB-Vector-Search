@@ -34,9 +34,10 @@
 
 #include <catch2/catch_all.hpp>
 #include <ranges>
-
 #include <tiledb/tiledb>
+#include "api/feature_vector_array.h"
 #include "detail/linalg/tdb_io.h"
+#include "detail/linalg/vector.h"
 
 template <class id_type>
 std::string write_ids_to_uri(
@@ -114,7 +115,7 @@ template <typename T>
 void check_expected_arithmetic(
     tiledb::Group& read_group,
     const std::vector<std::tuple<std::string, T>>& expected_arithmetic) {
-  for (auto& [name, value] : expected_arithmetic) {
+  for (const auto& [name, value] : expected_arithmetic) {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
@@ -128,9 +129,11 @@ void check_expected_arithmetic(
     if (name == "temp_size") {
       CHECK((v_type == TILEDB_INT64 || v_type == TILEDB_FLOAT64));
       if (v_type == TILEDB_INT64) {
-        CHECK(value == *static_cast<const int64_t*>(v));
+        CHECK(static_cast<int64_t>(value) == *static_cast<const int64_t*>(v));
       } else if (v_type == TILEDB_FLOAT64) {
-        CHECK(value == (int64_t) * static_cast<const double*>(v));
+        CHECK(
+            static_cast<double>(value) ==
+            static_cast<int64_t>(*static_cast<const double*>(v)));
       }
     }
     CHECK(
@@ -140,19 +143,19 @@ void check_expected_arithmetic(
 
     switch (v_type) {
       case TILEDB_FLOAT64:
-        CHECK(value == *static_cast<const double*>(v));
+        CHECK(static_cast<double>(value) == *static_cast<const double*>(v));
         break;
       case TILEDB_FLOAT32:
-        CHECK(value == *static_cast<const float*>(v));
+        CHECK(static_cast<float>(value) == *static_cast<const float*>(v));
         break;
       case TILEDB_INT64:
-        CHECK(value == *static_cast<const int64_t*>(v));
+        CHECK(static_cast<int64_t>(value) == *static_cast<const int64_t*>(v));
         break;
       case TILEDB_UINT64:
-        CHECK(value == *static_cast<const uint64_t*>(v));
+        CHECK(static_cast<uint64_t>(value) == *static_cast<const uint64_t*>(v));
         break;
       case TILEDB_UINT32:
-        CHECK(value == *static_cast<const uint32_t*>(v));
+        CHECK(static_cast<uint32_t>(value) == *static_cast<const uint32_t*>(v));
         break;
       case TILEDB_STRING_UTF8:
         CHECK(false);
@@ -170,7 +173,7 @@ void validate_metadata(
     const std::vector<std::tuple<std::string, size_t>>& expected_arithmetic,
     const std::vector<std::tuple<std::string, float>>&
         expected_arithmetic_float = {}) {
-  for (auto& [name, value] : expected_str) {
+  for (const auto& [name, value] : expected_str) {
     tiledb_datatype_t v_type;
     uint32_t v_num;
     const void* v;
@@ -188,6 +191,29 @@ void validate_metadata(
 
   check_expected_arithmetic<size_t>(read_group, expected_arithmetic);
   check_expected_arithmetic<float>(read_group, expected_arithmetic_float);
+}
+
+void check_single_vector_equals(
+    const FeatureVectorArray& scores_vector_array,
+    const FeatureVectorArray& ids_vector_array,
+    const std::vector<float>& expected_scores,
+    const std::vector<uint32_t>& expected_ids) {
+  auto scores = std::span<float>(
+      (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  auto ids = std::span<uint32_t>(
+      (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+  CHECK(scores.size() == expected_scores.size());
+  CHECK(ids.size() == expected_ids.size());
+  if (!std::equal(scores.begin(), scores.end(), expected_scores.begin())) {
+    debug_vector(scores, "scores");
+    debug_vector(expected_scores, "expected_scores");
+    CHECK(false);
+  }
+  if (!std::equal(ids.begin(), ids.end(), expected_ids.begin())) {
+    debug_vector(ids, "ids");
+    debug_vector(expected_ids, "expected_ids");
+    CHECK(false);
+  }
 }
 
 #endif  // TILEDB_TEST_UTILS_H

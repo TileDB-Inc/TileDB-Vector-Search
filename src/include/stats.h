@@ -47,7 +47,9 @@
 
 #include <tiledb/tiledb>
 
-#include "utils/logging.h"
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
+#include "utils/logging_time.h"
 
 #include "config.h"
 
@@ -149,9 +151,9 @@ static auto dump_logs = [](const std::string& filename,
 
   // A bit of a hack -- first set units to seconds
   auto units = std::string(" (s)");
-  for (auto& timers :
+  for (const auto& timers :
        {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
-    for (auto& timer : timers) {
+    for (const auto& timer : timers) {
       std::string text;
       if (size(timer) < 3) {
         text = timer;
@@ -184,7 +186,7 @@ static auto dump_logs = [](const std::string& filename,
   output.precision(original_precision);
   output << std::fixed << std::setprecision(3);
   auto timers = _timing_data.get_timer_names();
-  for (auto& timer : timers) {
+  for (const auto& timer : timers) {
     auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
     if (ms < 1000) {
       output << std::fixed << std::setprecision(6);
@@ -201,7 +203,7 @@ static auto dump_logs = [](const std::string& filename,
   output << std::fixed << std::setprecision(0);
 
   auto usages = _memory_data.get_usage_names();
-  for (auto& usage : usages) {
+  for (const auto& usage : usages) {
     auto mem = _memory_data.get_entries_summed(usage);
     if (mem < 1) {
       output << std::fixed << std::setprecision(3);
@@ -217,7 +219,7 @@ static auto dump_logs = [](const std::string& filename,
   output << std::endl;
   output << std::setprecision(original_precision);
 
-  for (auto& t : toc) {
+  for (const auto& t : toc) {
     output << t.first << ": " << t.second << std::endl;
   }
 };

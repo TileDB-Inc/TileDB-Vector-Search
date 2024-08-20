@@ -39,10 +39,10 @@
 #include "detail/flat/qv.h"
 
 TEST_CASE("test array root uris", "[array_defs]") {
-  for (auto& uri : {siftsmall_root, bigann10k_root}) {
+  for (const auto& uri : {siftsmall_root, bigann10k_root}) {
     REQUIRE(std::filesystem::is_directory(uri));
   }
-  for (auto& uri : {siftsmall_files_root}) {
+  for (const auto& uri : {siftsmall_files_root}) {
     REQUIRE(std::filesystem::is_directory(uri));
   }
 }
@@ -78,12 +78,8 @@ std::vector<std::string> siftsmall_files{
 TEST_CASE("test array uris", "[array_defs]") {
   bool debug = false;
 
-  for (auto& test :
-       {siftsmall_array_uris,
-        // Not checked in to github
-        // siftsmall_uint8_array_uris,
-        bigann10k_array_uris}) {
-    for (auto& uri : test) {
+  for (const auto& test : {siftsmall_array_uris, bigann10k_array_uris}) {
+    for (const auto& uri : test) {
       if (debug) {
         std::cout << uri << " "
                   << (std::filesystem::exists(uri) ? "exists" :
@@ -98,7 +94,7 @@ TEST_CASE("test array uris", "[array_defs]") {
     }
   }
 
-  for (auto& file : siftsmall_files) {
+  for (const auto& file : siftsmall_files) {
     if (debug) {
       std::cout << file << " "
                 << (std::filesystem::exists(file) ? "exists" : "does not exist")

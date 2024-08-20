@@ -42,7 +42,7 @@
 
 // kmeans and kmeans indexing still WIP
 
-void debug_centroids(auto& index) {
+void debug_centroids(const auto& index) {
   std::cout << "\nDebug Centroids:\n" << std::endl;
   for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
     for (size_t i = 0; i < index.get_centroids().num_cols(); ++i) {
@@ -146,17 +146,19 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
   const bool debug = false;
 
   ColMajorMatrix<float> training_data{
-      {1.0573647, 5.082087},
-      {-6.229642, -1.3590931},
-      {0.7446737, 6.3828287},
-      {-7.698864, -3.0493321},
-      {2.1362762, -4.4448104},
-      {1.04019, -4.0389647},
-      {0.38996044, 5.7235265},
-      {1.7470839, -4.717076}};
-  ColMajorMatrix<float> queries{{-7.3712273, -1.1178735}};
+      {{1.0573647, 5.082087},
+       {-6.229642, -1.3590931},
+       {0.7446737, 6.3828287},
+       {-7.698864, -3.0493321},
+       {2.1362762, -4.4448104},
+       {1.04019, -4.0389647},
+       {0.38996044, 5.7235265},
+       {1.7470839, -4.717076}}};
+  ColMajorMatrix<float> queries{{{-7.3712273, -1.1178735}}};
   ColMajorMatrix<float> sklearn_centroids{
-      {-6.964253, -2.2042127}, {1.6411834, -4.400284}, {0.7306664, 5.7294807}};
+      {{-6.964253, -2.2042127},
+       {1.6411834, -4.400284},
+       {0.7306664, 5.7294807}}};
 
   SECTION("one iteration") {
     if (debug) {
@@ -315,30 +317,30 @@ TEMPLATE_TEST_CASE(
     auto query4 = ColMajorMatrix<TestType>();
 
     SECTION("query2/4 = 0...") {
-      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
-      query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+      query2 = ColMajorMatrix<TestType>{{{0, 0, 0, 0, 0, 0}}};
+      query4 = ColMajorMatrix<TestType>{{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}};
     }
     SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
+      query2 = ColMajorMatrix<TestType>{{{127, 127, 127, 127, 127, 127}}};
       query4 = ColMajorMatrix<TestType>{
-          {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
+          {{127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}}};
     }
     SECTION("query2/4 = 0...") {
-      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
+      query2 = ColMajorMatrix<TestType>{{{0, 0, 0, 127, 127, 127}}};
       query4 = ColMajorMatrix<TestType>{
-          {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
+          {{0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}}};
     }
     SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
+      query2 = ColMajorMatrix<TestType>{{{127, 127, 127, 0, 0, 0}}};
       query4 = ColMajorMatrix<TestType>{
-          {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
+          {{127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}}};
     }
     SECTION("query2/4 = 127...") {
       query2 = ColMajorMatrix<TestType>{
-          {127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}};
+          {{127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}}};
       query4 = ColMajorMatrix<TestType>{
-          {127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
-          {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
+          {{127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
+           {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}}};
     }
 
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(

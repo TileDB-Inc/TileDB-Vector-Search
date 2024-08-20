@@ -40,6 +40,12 @@ endmacro (kmeans_add_exe)
 macro (kmeans_add_test TESTNAME)
     add_executable(${TESTNAME} ${TESTNAME}.cc)
     target_link_libraries(${TESTNAME} PRIVATE kmeans_lib Catch2::Catch2WithMain)
+    # target_include_directories(${TESTNAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/include/test/utils)
+    # target_compile_definitions(${TESTNAME} PRIVATE TDB_INCLUDE_PRNG_HEADER)
+    # target_compile_definitions(${TESTNAME} PRIVATE TILEDB_TDB_CATCH_PRNG_H)
+    # target_precompile_headers(${TESTNAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/include/test/utils/tdb_catch_prng.h)
+    target_precompile_headers(${TESTNAME} PRIVATE ${CMAKE_SOURCE_DIR}/include/test/utils/set_seed_from_catch.h)
+
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_DIR="${CMAKE_SOURCE_DIR}/data/")
     # target_compile_definitions(${TESTNAME} PRIVATE DATA_FILE="${CMAKE_SOURCE_DIR}/data/karate.mtx")
     add_test(NAME ${TESTNAME}_test
@@ -55,6 +61,8 @@ endmacro (kmeans_add_test)
 # kmeans_add_exe(time_l2)
 
 kmeans_add_exe(time_scoring)
+
+kmeans_add_test(unit_best_first)
 
 kmeans_add_test(unit_vamana_index)
 
@@ -120,6 +128,8 @@ kmeans_add_test(unit_index_defs)
 
 kmeans_add_test(unit_ivf_qv)
 
+kmeans_add_test(unit_kmeans)
+
 # Needs to be updated to new partitioned matrix API
 # kmeans_add_test(unit_ivf_vq)
 
@@ -128,7 +138,13 @@ target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
 # Skip the tdbmatrix tests because the TileDB arrays do not exist in CI.
 add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
-kmeans_add_test(unit_logging)
+kmeans_add_test(unit_logging_count)
+
+kmeans_add_test(unit_logging_memory)
+
+kmeans_add_test(unit_logging_time)
+
+kmeans_add_test(unit_logging_scoped_time)
 
 kmeans_add_test(unit_l2_distance)
 
@@ -148,7 +164,11 @@ kmeans_add_test(unit_nn-graph)
 
 kmeans_add_test(unit_partition)
 
+kmeans_add_test(unit_prng)
+
 kmeans_add_test(unit_scoring)
+
+kmeans_add_test(unit_seeder)
 
 kmeans_add_test(unit_slicing)
 
