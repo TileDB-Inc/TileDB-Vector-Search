@@ -194,18 +194,15 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     part_index_[0] = 0;
   }
 
-  constexpr auto& num_vectors() {
+  size_t num_vectors() const {
     return num_vectors_;
   }
 
-  constexpr auto& num_vectors() const {
+  virtual unsigned long total_num_vectors() const {
     return num_vectors_;
   }
 
-  constexpr auto& num_partitions() const {
-    return num_parts_;
-  }
-  constexpr auto& num_partitions() {
+  constexpr size_t num_partitions() const {
     return num_parts_;
   }
 

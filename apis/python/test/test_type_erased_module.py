@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 from array_paths import *
+from common import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.utils import load_fvecs
@@ -498,15 +499,22 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     a.train(training_set)
     a.add(training_set)
 
-    s, t = a.query(vspy.QueryType.InfiniteRAM, query_set, k_nn, nprobe)
+    _, ids = a.query_infinite_ram(query_set, k_nn, nprobe)
+    assert recall(ids, groundtruth_set, k_nn) >= 0.88
 
-    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
-    nt = np.double(t.num_vectors()) * np.double(k_nn)
-    recall = intersections / nt
-    assert recall > 0.89
+    index_uri = os.path.join(tmp_path, "array")
+    a.write_index(ctx, index_uri)
+
+    b = vspy.IndexIVFPQ(ctx, index_uri)
+
+    _, ids = b.query_infinite_ram(query_set, k_nn, nprobe)
+    assert recall(ids, groundtruth_set, k_nn) >= 0.88
+
+    _, ids = b.query_finite_ram(query_set, k_nn, nprobe, 500)
+    assert recall(ids, groundtruth_set, k_nn) >= 0.88
 
 
-def test_inplace_build_query_IndexIVFPQ():
+def test_inplace_build_query_IndexIVFPQ(tmp_path):
     nprobe = 100
     k_nn = 10
 
@@ -526,14 +534,20 @@ def test_inplace_build_query_IndexIVFPQ():
 
     a.train(training_set)
     a.add(training_set)
-    s, t = a.query(vspy.QueryType.InfiniteRAM, query_set, k_nn, nprobe)
 
-    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+    _, ids = a.query_infinite_ram(query_set, k_nn, nprobe)
+    assert recall(ids, groundtruth_set, k_nn) >= 0.895
 
-    nt = np.double(t.num_vectors()) * np.double(k_nn)
-    recall = intersections / nt
+    index_uri = os.path.join(tmp_path, "array")
+    a.write_index(ctx, index_uri)
 
-    assert recall >= 0.895
+    b = vspy.IndexIVFPQ(ctx, index_uri)
+
+    _, ids = b.query_infinite_ram(query_set, k_nn, nprobe)
+    assert recall(ids, groundtruth_set, k_nn) >= 0.895
+
+    _, ids = b.query_finite_ram(query_set, k_nn, nprobe, 500)
+    assert recall(ids, groundtruth_set, k_nn) >= 0.895
 
 
 def test_construct_IndexIVFFlat():

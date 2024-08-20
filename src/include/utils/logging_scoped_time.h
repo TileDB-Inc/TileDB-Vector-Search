@@ -1,5 +1,5 @@
 /**
- * @file logging_time.h
+ * @file logging_scoped_time.h
  *
  * @section LICENSE
  *
@@ -27,68 +27,6 @@
  *
  * @section DESCRIPTION
  *
- * Very simple code for measuring details of program performance.  This file
-defines
- * as singleton class that is used to log timing data.
- *
- * There are two timer classes associated with timing singleton.
- *
- * `log_timer`: A log_timer internally maintains a start time and a stop time
-(which are
- * std::chrono::time_points).  It has three methods affecting timing: a
-constructor, start(), and stop().
- * The constructor takes a string identifier and sets the start time to the
-current time, using the
- * chrono high_resolution_clock.
- *
- * A new start time can be set by calling `start()`
- *
- * A call to `stop()` set the stop time to the current time and will record the
-elapsed time
- * (the difference between the stop time and  most recent start time) in the
-timing singleton,
- * using the string identifier passed to the constructor as the key.
- *
- * Thus start and stop should be used in pairs
- *
- * Each time stop() is called, a duration is separately recorded.  Thus the same
-timer
- * can have associated with it multiple timing intervals.
- *
- * `scoped_timer`: Like the `log_timer` a scoped_timer internally maintains a
-start time and a
- * stop time (which are std::chrono::time_points).  Unlike the `log_timer`,
-timing is
- * contolled by the constructor and destructor.
- *
- * The constructor takes a string identifier and sets the start time to the
-current time
- * The destructor records the time since the last start time in the timing
-singleton, using
- * the string identifier passed to the constructor as the key.
- *
- * @note `start()` and `stop()` are currently available methods, but should not
-be used with a scoped_timer
- *
- * The timing data is all available in the global singleton `_timing_data`.
- * * `get_timer_names()` returns a vector of the names of all timers that logged
-data
- * * `get_entries_separately(const std::string&) returns a vector of all
-intervals
- * recorded for that timer.  The units of the returned quantity are specified by
- * a template parameter (default is milliseconds).
- * * `get_intervals_summed(const std::string&)`
- * returns the cumulative time for all the intervals recorded for that timer.
- * The units of the returned quantity are specified by a template parameter
- * (default is milliseconds).
- *
- * This file also contains the definition of classes for logging memory
- * usage.  It does not automatically log memory usage, but provides a
- * mechanism to allow the user to log memory usage at particular points in the
-code.
- * The associated singleton provides methods for getting memory usages
-individually
- * or cumulatively.
  */
 
 #ifndef TDB_LOGGING_SCOPED_TIME_H
@@ -126,7 +64,7 @@ static constexpr const char* ROOT_NAME = "root";
 #endif
 #endif
 
-class timing_data_class {
+class scoped_timing_data_class {
  public:
   using clock_type = std::chrono::high_resolution_clock;
   using time_type = std::chrono::time_point<clock_type>;
@@ -163,27 +101,25 @@ class timing_data_class {
   /**
    * Private constructor and destructor for singleton.
    */
-  timing_data_class() = default;
-  ~timing_data_class() = default;
+  scoped_timing_data_class() = default;
+  ~scoped_timing_data_class() = default;
 
  public:
   /**
    * Delete copy constructor and assignment operator.
    */
-  timing_data_class(const timing_data_class&) = delete;
-  timing_data_class& operator=(const timing_data_class&) = delete;
+  scoped_timing_data_class(const scoped_timing_data_class&) = delete;
+  scoped_timing_data_class& operator=(const scoped_timing_data_class&) = delete;
 
   /**
    * Return a reference to the singleton instance.
    * @return The singleton instance.
    */
-  static timing_data_class& get_instance() {
+  static scoped_timing_data_class& get_instance() {
     static std::once_flag flag;
     // This will leak, but it's okay - it's the Trusty Leaky Singleton pattern.
-    static timing_data_class* instance;
-    std::call_once(flag, []() {
-      instance = new timing_data_class();
-    });
+    static scoped_timing_data_class* instance;
+    std::call_once(flag, []() { instance = new scoped_timing_data_class(); });
     return *instance;
   }
 
@@ -202,19 +138,23 @@ class timing_data_class {
       std::cout << "[start_timer] Creating root" << std::endl;
     }
     auto current_node = threadToCurrentNode_[thread_id];
-    std::cout << "[start_timer] current_node: " << current_node->dump() << std::endl;
+    std::cout << "[start_timer] current_node: " << current_node->dump()
+              << std::endl;
     for (auto& child : current_node->children) {
-      std::cout << "[start_timer] considering child node: " << child->dump() << std::endl;
+      std::cout << "[start_timer] considering child node: " << child->dump()
+                << std::endl;
       if (child->name == name) {
         threadToCurrentNode_[thread_id] = child.get();
-        std::cout << "[start_timer] setting current node to existing node: " << threadToCurrentNode_[thread_id]->dump() << std::endl;
+        std::cout << "[start_timer] setting current node to existing node: "
+                  << threadToCurrentNode_[thread_id]->dump() << std::endl;
         return;
       }
     }
 
     current_node->children.push_back(std::make_unique<TimerNode>(name));
     threadToCurrentNode_[thread_id] = current_node->children.back().get();
-    std::cout << "[start_timer] created current node - it is: " << threadToCurrentNode_[thread_id]->dump() << std::endl;
+    std::cout << "[start_timer] created current node - it is: "
+              << threadToCurrentNode_[thread_id]->dump() << std::endl;
   }
 
   void stop_timer(const time_type& start_time) {
@@ -232,7 +172,8 @@ class timing_data_class {
     std::cout << "current_node: " << current_node->dump() << std::endl;
 
     if (current_node != threadToRoot_[thread_id].get()) {
-      threadToCurrentNode_[thread_id] = find_parent(threadToRoot_[thread_id].get(), current_node);
+      threadToCurrentNode_[thread_id] =
+          find_parent(threadToRoot_[thread_id].get(), current_node);
     }
   }
 
@@ -253,7 +194,8 @@ class timing_data_class {
   }
 
   /**
-   * Get the cumulative duration for a timer with the given name across all threads.
+   * Get the cumulative duration for a timer with the given name across all
+   * threads.
    * @param name The name of the timer.
    * @return The summed duration in the specified units.
    */
@@ -263,7 +205,8 @@ class timing_data_class {
     double total_duration = 0.0;
 
     for (const auto& [thread_id, root] : threadToRoot_) {
-      total_duration += get_entries_summed_recursive<Duration>(root.get(), name);
+      total_duration +=
+          get_entries_summed_recursive<Duration>(root.get(), name);
     }
 
     return total_duration;
@@ -322,11 +265,13 @@ class timing_data_class {
   }
 
   template <typename Duration = std::chrono::milliseconds>
-  double get_entries_summed_recursive(const TimerNode* node, const std::string& name) const {
+  double get_entries_summed_recursive(
+      const TimerNode* node, const std::string& name) const {
     double duration_sum = 0.0;
 
     if (node->name == name) {
-      duration_sum += std::chrono::duration_cast<Duration>(node->total_duration).count();
+      duration_sum +=
+          std::chrono::duration_cast<Duration>(node->total_duration).count();
     }
 
     for (const auto& child : node->children) {
@@ -356,11 +301,12 @@ class timing_data_class {
   }
 };
 
-inline timing_data_class& get_scoped_timing_data_instance() {
-  return timing_data_class::get_instance();
+inline scoped_timing_data_class& get_scoped_timing_data_instance() {
+  return scoped_timing_data_class::get_instance();
 }
 
-static timing_data_class& _scoped_timing_data{get_scoped_timing_data_instance()};
+static scoped_timing_data_class& _scoped_timing_data{
+    get_scoped_timing_data_instance()};
 
 /**
  * Scoped timer class for logging timing data. Maintains a start time and a stop
@@ -369,16 +315,16 @@ static timing_data_class& _scoped_timing_data{get_scoped_timing_data_instance()}
  * It is intended to measure the lifetime of a scope.
  */
 class scoped_timer {
-  private:
-    using time_t = timing_data_class::time_type;
-    using clock_t = timing_data_class::clock_type;
-    time_t start_time_;
-    std::string msg_;
+ private:
+  using time_t = scoped_timing_data_class::time_type;
+  using clock_t = scoped_timing_data_class::clock_type;
+  time_t start_time_;
+  std::string msg_;
 
  public:
   explicit scoped_timer(const std::string& msg)
       : start_time_(clock_t::now())
-      , msg_(msg){
+      , msg_(msg) {
     _scoped_timing_data.start_timer(msg_);
   }
 

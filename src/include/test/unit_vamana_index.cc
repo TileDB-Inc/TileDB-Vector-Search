@@ -31,7 +31,8 @@
  */
 
 #include <catch2/catch_all.hpp>
-
+#include <filesystem>
+#include <tiledb/tiledb>
 #include "cpos.h"
 #include "detail/flat/qv.h"
 #include "detail/graph/adj_list.h"
@@ -44,13 +45,11 @@
 #include "test/utils/gen_graphs.h"
 #include "test/utils/test_utils.h"
 #include "test/utils/tiny_graphs.h"
+#include "utils/logging_scoped_time.h"
 #include "utils/logging_time.h"
 #include "utils/utils.h"
 
-#include <filesystem>
 namespace fs = std::filesystem;
-
-#include <tiledb/tiledb>
 
 TEST_CASE("diskann", "[vamana]") {
   const bool debug = false;

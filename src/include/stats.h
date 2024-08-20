@@ -44,14 +44,11 @@
 #include <iostream>
 #include <random>
 #include <string>
-
 #include <tiledb/tiledb>
-
-#include "utils/logging_count.h"
-#include "utils/logging_memory.h"
-#include "utils/logging_time.h"
-
 #include "config.h"
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
+#include "utils/logging_time.h"
 
 #ifdef __GNUC__
 // Disable the specific warning for the expression that causes the warning

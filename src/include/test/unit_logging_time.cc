@@ -41,7 +41,7 @@ using namespace std::literals::chrono_literals;
 
 auto duration = 500ms;
 
-TEST_CASE("test", "[logging][log_timer]") {
+TEST_CASE("test", "[logging_time]") {
   std::cout << "log_timer a(test); -------------------" << std::endl;
   log_timer a("test");
 
@@ -65,7 +65,7 @@ TEST_CASE("test", "[logging][log_timer]") {
   CHECK((f <= 1040 && f >= 1000));
 }
 
-TEST_CASE("noisy test", "[logging][log_timer]") {
+TEST_CASE("noisy test", "[logging_time]") {
   log_timer a("noisy_test");
 
   std::this_thread::sleep_for(500ms);
@@ -83,7 +83,7 @@ TEST_CASE("noisy test", "[logging][log_timer]") {
   CHECK((f <= 1040 && f >= 1000));
 }
 
-TEST_CASE("interval test", "[logging][log_timer]") {
+TEST_CASE("interval test", "[logging_time]") {
   log_timer a("interval_test");
 
   std::this_thread::sleep_for(500ms);
@@ -126,7 +126,7 @@ TEST_CASE("interval test", "[logging][log_timer]") {
   CHECK((f <= 1040 && f >= 1000));
 }
 
-TEST_CASE("ordering", "[logging][log_timer]") {
+TEST_CASE("ordering", "[logging_time]") {
   auto g = log_timer{"g"};
   auto f = log_timer{"f"};
   auto i = log_timer{"i"};
@@ -161,7 +161,6 @@ TEST_CASE("ordering", "[logging][log_timer]") {
   auto f_t = _timing_data.get_entries_summed("f");
 
   if (debug) {
-    std::cout << f_t << " " << g_t << " " << h_t << " " << i_t << std::endl;
   }
 
   CHECK((i_t > 799 && i_t < 890));
@@ -172,7 +171,7 @@ TEST_CASE("ordering", "[logging][log_timer]") {
   std::cout << _timing_data.dump();
 }
 
-TEST_CASE("multithreaded timing test", "[logging][log_timer]") {
+TEST_CASE("multithreaded timing test", "[logging_time]") {
   auto thread_func = [](const std::string& timer_name) {
     for (int i = 0; i < 10; ++i) {
       log_timer t(timer_name);
@@ -194,7 +193,7 @@ TEST_CASE("multithreaded timing test", "[logging][log_timer]") {
   CHECK(f2 >= 500);
 }
 
-TEST_CASE("highly concurrent timing test", "[logging][log_timer]") {
+TEST_CASE("highly concurrent timing test", "[logging_time]") {
   constexpr auto timer_name = "highly_concurrent_test";
   constexpr int num_iterations = 100;
   auto thread_func = []() {

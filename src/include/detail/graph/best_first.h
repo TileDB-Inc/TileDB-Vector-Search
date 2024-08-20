@@ -33,12 +33,13 @@
 #ifndef TILEDB_BEST_FIRST_H
 #define TILEDB_BEST_FIRST_H
 
-#include <iostream>
 #include <limits>
 #include <queue>
 #include <unordered_set>
 #include <vector>
-#include "detail/linalg/set.h"
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
+
 template <class Node>
 struct compare_node {
   bool operator()(const Node& lhs, const Node& rhs) const {

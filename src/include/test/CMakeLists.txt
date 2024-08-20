@@ -128,6 +128,8 @@ kmeans_add_test(unit_index_defs)
 
 kmeans_add_test(unit_ivf_qv)
 
+kmeans_add_test(unit_kmeans)
+
 # Needs to be updated to new partitioned matrix API
 # kmeans_add_test(unit_ivf_vq)
 

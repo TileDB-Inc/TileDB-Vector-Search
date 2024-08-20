@@ -1,5 +1,5 @@
 /**
- * @file   logging.h
+ * @file   logging_count.h
  *
  * @section LICENSE
  *
@@ -27,78 +27,6 @@
  *
  * @section DESCRIPTION
  *
- * Very simple code for measuring details of program performance.  This file
-defines
- * as singleton class that is used to log timing data.
- *
- * There are two timer classes associated with timing singleton.
- *
- * `log_timer`: A log_timer internally maintains a start time and a stop time
-(which are
- * std::chrono::time_points).  It has three methods affecting timing: a
-constructor, start(), and stop().
- * The constructor takes a string identifier and sets the start time to the
-current time, using the
- * chrono high_resolution_clock.
- *
- * A new start time can be set by calling `start()`
- *
- * A call to `stop()` set the stop time to the current time and will record the
-elapsed time
- * (the difference between the stop time and  most recent start time) in the
-timing singleton,
- * using the string identifier passed to the constructor as the key.
- *
- * Thus start and stop should be used in pairs
- *
- * Each time stop() is called, a duration is separately recorded.  Thus the same
-timer
- * can have associated with it multiple timing intervals.
- *
- * `scoped_timer`: Like the `log_timer` a scoped_timer internally maintains a
-start time and a
- * stop time (which are std::chrono::time_points).  Unlike the `log_timer`,
-timing is
- * contolled by the constructor and destructor.
- *
- * The constructor takes a string identifier and sets the start time to the
-current time
- * The destructor records the time since the last start time in the timing
-singleton, using
- * the string identifier passed to the constructor as the key.
- *
- * @note `start()` and `stop()` are currently available methods, but should not
-be used with a scoped_timer
- *
- * The timing data is all available in the global singleton `_timing_data`.
- * * `get_timer_names()` returns a vector of the names of all timers that logged
-data
- * * `get_entries_separately(const std::string&) returns a vector of all
-intervals
- * recorded for that timer.  The units of the returned quantity are specified by
- * a template parameter (default is milliseconds).
- * * `get_intervals_summed(const std::string&)`
- * returns the cumulative time for all the intervals recorded for that timer.
- * The units of the returned quantity are specified by a template parameter
- * (default is milliseconds).
- *
- * This file also contains the definition of classes for logging memory
- * usage.  It does not automatically log memory usage, but provides a
- * mechanism to allow the user to log memory usage at particular points in the
-code.
- * The associated singleton provides methods for getting memory usages
-individually
- * or cumulatively.
- *
- * @example
- * @code{.cpp}
-// Print totals for all timers
-auto timers = _timing_data.get_timer_names();
-for (const auto& timer : timers) {
-   std::cout << timer << ":  " <<
-_timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
-}
- * @endcode
  */
 
 #ifndef TDB_LOGGING_COUNT_H
@@ -117,13 +45,13 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #include <vector>
 
 /**
- * Singleton class for recording miscellaneous counts.  Internally maintains a
- * multimap of names and count values.  The `insert_entry()` method
- * is used to record the count.  The `get_entries_*()` methods are used
- * to query the recorded counts.
+ * Singleton class for recording miscellaneous counts.  Internally
+ * maintains a multimap of names and count values.  The `insert_entry()`
+ * method is used to record the count.  The `get_entries_*()` methods
+ * are used to query the recorded counts.
  *
- * Data are stored as integral values.  The `get_entries_*()` methods return
- * integral values.
+ * Data are stored as integral values.  The `get_entries_*()` methods
+ * return integral values.
  */
 class count_data {
  public:
