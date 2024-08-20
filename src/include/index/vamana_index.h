@@ -320,6 +320,7 @@ class vamana_index {
    */
   template <feature_vector_array Array, feature_vector Vector>
   void train(const Array& training_set, const Vector& training_set_ids) {
+    scoped_timer _{"vamana_index@train"};
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimensions(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -348,7 +349,7 @@ class vamana_index {
     //    for (float alpha : {alpha_min_, alpha_max_}) {
     // Just use one value of alpha
     for (float alpha : {alpha_max_}) {
-      scoped_timer _("train " + std::to_string(counter));
+      scoped_timer __("vamana_index@train@inner_loop");
       size_t total_visited{0};
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
@@ -373,7 +374,7 @@ class vamana_index {
             r_max_degree_,
             distance_function_);
         {
-          scoped_timer _{"post search prune"};
+          scoped_timer ___("vamana_index@train@inner_loop@post_search_prune");
           for (auto&& [i, j] : graph_.out_edges(p)) {
             // @todo Do this without copying -- prune should take vector of
             //  tuples and p (it copies anyway) maybe scan for p and then only
@@ -418,6 +419,7 @@ class vamana_index {
    */
   template <feature_vector_array A>
   void add(const A& database) {
+    scoped_timer _{"vamana_index@add"};
   }
 
   /*
@@ -586,7 +588,7 @@ class vamana_index {
       size_t k,
       std::optional<uint32_t> l_search = std::nullopt,
       Distance distance = Distance{}) {
-    scoped_timer __{tdb_func__ + std::string{" (outer)"}};
+    scoped_timer _("vamana_index@query");
 
     uint32_t L = l_search ? *l_search : l_build_;
     // L = std::min<size_t>(L, l_build_);
@@ -689,6 +691,7 @@ class vamana_index {
       const std::string& group_uri,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       const std::string& storage_version = "") {
+    scoped_timer _{"vamana_index@write_index"};
     if (temporal_policy.has_value()) {
       temporal_policy_ = *temporal_policy;
     }
