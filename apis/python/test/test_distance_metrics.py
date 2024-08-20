@@ -256,8 +256,6 @@ def test_ivfpq_create_cosine(tmp_path):
         )
 
 
-def l2_distance(a, b):
-    return np.sqrt(np.sum((a - b) ** 2))
 
 
 def test_flat_l2_distance(tmp_path):
