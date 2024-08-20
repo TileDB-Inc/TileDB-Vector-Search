@@ -47,7 +47,9 @@
 
 #include <tiledb/tiledb>
 
-#include "utils/logging.h"
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
+#include "utils/logging_time.h"
 
 #include "config.h"
 

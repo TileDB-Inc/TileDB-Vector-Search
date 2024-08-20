@@ -44,7 +44,7 @@
 #include "test/utils/gen_graphs.h"
 #include "test/utils/test_utils.h"
 #include "test/utils/tiny_graphs.h"
-#include "utils/logging.h"
+#include "utils/logging_scoped_time.h"
 #include "utils/utils.h"
 
 #include <filesystem>

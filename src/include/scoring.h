@@ -40,6 +40,10 @@
 #include "detail/scoring/inner_product_avx.h"
 #include "detail/scoring/l2_distance.h"
 #include "detail/scoring/l2_distance_avx.h"
+#include "utils/logging_count.h"
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
+#include "utils/logging_time.h"
 
 // @todo Implement
 // #include "detail/scoring/cosine.h"
