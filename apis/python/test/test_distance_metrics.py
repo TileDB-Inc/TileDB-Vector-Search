@@ -332,8 +332,8 @@ def test_sum_of_squares_distance(tmp_path):
     distances, ids = index.query(query_vectors, k=5)
     assert np.allclose(
         distances_sum_of_squares, distances, 1e-4
-    ), "L2 distances do not match"
-    assert np.array_equal(ids_sum_of_squares, ids), "L2 ids do not match"
+    ), "Sum of squares distances do not match"
+    assert np.array_equal(ids_sum_of_squares, ids), "Sum of squares ids do not match"
 
 
 def test_wrong_distance_metric(tmp_path):
