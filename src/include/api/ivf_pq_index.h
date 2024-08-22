@@ -119,7 +119,9 @@ class IndexIVFPQ {
           distance_metric_ = parseAndValidateDistanceMetric(
               value,
               [](DistanceMetric dm) {
-                return dm == DistanceMetric::SUM_OF_SQUARES;
+                return (
+                    dm == DistanceMetric::SUM_OF_SQUARES ||
+                    dm == DistanceMetric::L2);
               },
               "Invalid distance metric for IVF_PQ");
         } else {

@@ -84,7 +84,7 @@ def ingest(
     ] = None,
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     normalized: bool = False,
     **kwargs,
 ):
