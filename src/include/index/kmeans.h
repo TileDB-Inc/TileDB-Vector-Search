@@ -35,7 +35,7 @@
 #include <random>
 
 #include "detail/flat/qv.h"
-#include "utils/logging.h"
+#include "utils/logging_time.h"
 #include "utils/prng.h"
 
 enum class kmeans_init { none, kmeanspp, random };
@@ -80,9 +80,23 @@ void kmeans_pp(
     size_t num_threads_,
     Distance distancex = Distance{}) {
   scoped_timer _{__FUNCTION__};
-  if (::num_vectors(training_set) == 0) {
+
+  if (::num_vectors(centroids_) != num_partitions_) {
+    throw std::runtime_error(
+        "[kmeans@kmeans_pp] Number of partitions (" +
+        std::to_string(num_partitions_) +
+        ") does not match number of centroids (" +
+        std::to_string(::num_vectors(centroids_)) + ")");
+  }
+
+  size_t num_to_choose = std::min(num_partitions_, num_vectors(training_set));
+  if (num_to_choose == 0) {
+    for (size_t i = 0; i < ::num_vectors(centroids_); ++i) {
+      std::fill(begin(centroids_[i]), end(centroids_[i]), 0.0f);
+    }
     return;
   }
+
   using score_type = typename C::value_type;
 
   std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
@@ -103,7 +117,7 @@ void kmeans_pp(
 #endif
 
   // Calculate the remaining centroids using K-means++ algorithm
-  for (size_t i = 1; i < num_partitions_; ++i) {
+  for (size_t i = 1; i < num_to_choose; ++i) {
     stdx::execution::indexed_parallel_policy par{num_threads_};
     stdx::range_for_each(
         std::move(par),
@@ -156,6 +170,11 @@ void kmeans_pp(
     }
 #endif
   }
+
+  // Fill remaining centroids with zeros if num_partitions_ > num_to_choose
+  for (size_t i = num_to_choose; i < num_partitions_; ++i) {
+    std::fill(begin(centroids_[i]), end(centroids_[i]), 0.0f);
+  }
 }
 
 /**
@@ -166,15 +185,25 @@ template <feature_vector_array V, feature_vector_array C>
 void kmeans_random_init(
     const V& training_set, C& centroids_, size_t num_partitions_) {
   scoped_timer _{__FUNCTION__};
-  if (::num_vectors(training_set) == 0) {
+  if (::num_vectors(centroids_) != num_partitions_) {
+    throw std::runtime_error(
+        "[kmeans@kmeans_random_init] Number of partitions (" +
+        std::to_string(num_partitions_) +
+        ") does not match number of centroids (" +
+        std::to_string(::num_vectors(centroids_)) + ")");
+  }
+  size_t num_to_choose = std::min(num_partitions_, num_vectors(training_set));
+  if (num_to_choose == 0) {
+    for (size_t i = 0; i < ::num_vectors(centroids_); ++i) {
+      std::fill(begin(centroids_[i]), end(centroids_[i]), 0.0f);
+    }
     return;
   }
 
-  std::vector<size_t> indices(num_partitions_);
-
+  std::vector<size_t> indices(num_to_choose);
   std::vector<bool> visited(training_set.num_cols(), false);
   std::uniform_int_distribution<> dis(0, training_set.num_cols() - 1);
-  for (size_t i = 0; i < num_partitions_; ++i) {
+  for (size_t i = 0; i < num_to_choose; ++i) {
     size_t index;
     do {
       index = dis(PRNG::get().generator());
@@ -185,11 +214,14 @@ void kmeans_random_init(
 
   // std::iota(begin(indices), end(indices), 0);
   // std::shuffle(begin(indices), end(indices), gen_);
-  for (size_t i = 0; i < num_partitions_; ++i) {
+  for (size_t i = 0; i < num_to_choose; ++i) {
     std::copy(
         begin(training_set[indices[i]]),
         end(training_set[indices[i]]),
         begin(centroids_[i]));
+  }
+  for (size_t i = num_to_choose; i < num_partitions_; ++i) {
+    std::fill(begin(centroids_[i]), end(centroids_[i]), 0.0f);
   }
 }
 

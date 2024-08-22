@@ -40,6 +40,10 @@
 #include "detail/scoring/inner_product_avx.h"
 #include "detail/scoring/l2_distance.h"
 #include "detail/scoring/l2_distance_avx.h"
+#include "utils/logging_count.h"
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
+#include "utils/logging_time.h"
 
 // @todo Implement
 // #include "detail/scoring/cosine.h"
@@ -261,22 +265,22 @@ struct inner_product_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return -avx2_inner_product(a, b);
+    return 1.0 / avx2_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return -avx2_inner_product(a);
+    return 1.0 / avx2_inner_product(a);
   }
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
-    return -unroll4_inner_product(a, b);
+    return 1.0 / unroll4_inner_product(a, b);
   }
 
   template <feature_vector V>
   constexpr inline float operator()(const V& a) const {
-    return -unroll4_inner_product(a);
+    return 1.0 / unroll4_inner_product(a);
   }
 #endif
 };
@@ -297,12 +301,20 @@ struct cosine_distance {
   template <feature_vector V, feature_vector U>
   inline float operator()(const V& a, const U& b) const {
     float mag = sqrt(l2_distance(a) * l2_distance(b));
-    return 1 - (-inner_product(a, b)) / (mag == 0 ? 1 : mag);
+    return 1 - (1.0 / inner_product(a, b)) / (mag == 0 ? 1 : mag);
+  }
+};
+
+struct cosine_distance_normalized {
+  template <feature_vector V, feature_vector U>
+  inline float operator()(const V& a, const U& b) const {
+    return 1 - (1.0 / inner_product(a, b));
   }
 };
 
 }  // namespace _cosine_distance
 using cosine_distance = _cosine_distance::cosine_distance;
+using cosine_distance_normalized = _cosine_distance::cosine_distance_normalized;
 
 enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
 

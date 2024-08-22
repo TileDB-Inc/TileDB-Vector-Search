@@ -128,6 +128,8 @@ kmeans_add_test(unit_index_defs)
 
 kmeans_add_test(unit_ivf_qv)
 
+kmeans_add_test(unit_kmeans)
+
 # Needs to be updated to new partitioned matrix API
 # kmeans_add_test(unit_ivf_vq)
 
@@ -136,7 +138,13 @@ target_link_libraries(unit_linalg PRIVATE kmeans_lib Catch2::Catch2WithMain)
 # Skip the tdbmatrix tests because the TileDB arrays do not exist in CI.
 add_test(NAME unit_linalg_test COMMAND unit_linalg ~[tdbmatrix])
 
-kmeans_add_test(unit_logging)
+kmeans_add_test(unit_logging_count)
+
+kmeans_add_test(unit_logging_memory)
+
+kmeans_add_test(unit_logging_time)
+
+kmeans_add_test(unit_logging_scoped_time)
 
 kmeans_add_test(unit_l2_distance)
 

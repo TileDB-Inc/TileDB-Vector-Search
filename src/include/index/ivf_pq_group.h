@@ -39,9 +39,8 @@
 #include "index/index_group.h"
 #include "index/ivf_pq_metadata.h"
 
-// flat_ivf_centroids, pq_ivf_centroids,
-// partitioned_pq_vectors, partitioned_pq_index, partitioned_pq_ids
-// cluster_centroids, distance_tables,
+// flat_ivf_centroids, partitioned_pq_vectors, partitioned_pq_index,
+// partitioned_pq_ids, cluster_centroids.
 
 [[maybe_unused]] static StorageFormat ivf_pq_storage_formats = {
     {"0.3",
@@ -49,14 +48,11 @@
          // @todo Should these be kept consistent with ivf_flat?
          {"cluster_centroids_array_name", "pq_cluster_centroids"},
          {"flat_ivf_centroids_array_name", "uncompressed_centroids"},
-         {"pq_ivf_centroids_array_name", "partition_centroids"},
 
          // The partitioned, PQ-encoded vectors.
          {"pq_ivf_indices_array_name", "partitioned_pq_vector_indexes"},
          {"pq_ivf_ids_array_name", "partitioned_pq_vector_ids"},
          {"pq_ivf_vectors_array_name", "partitioned_pq_vectors"},
-
-         {"distance_tables_array_name", "pq_symmetric_distance_tables"},
      }}};
 
 template <class index_type>
@@ -107,16 +103,6 @@ class ivf_pq_group : public base_index_group<index_type> {
 
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : ivf_pq_storage_formats[version_]) {
-      if (array_key == "distance_tables_array_name") {
-        for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
-          valid_array_keys_.insert(array_key + "_" + std::to_string(i));
-          valid_array_names_.insert(array_name + "_" + std::to_string(i));
-          array_key_to_array_name_[array_key + "_" + std::to_string(i)] =
-              array_name + "_" + std::to_string(i);
-          array_name_to_uri_[array_name] =
-              array_name_to_uri(group_uri_, array_name);
-        }
-      }
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
@@ -136,21 +122,11 @@ class ivf_pq_group : public base_index_group<index_type> {
         cached_ctx_, flat_ivf_centroids_uri(), 0, timestamp);
 
     tiledb::Array::delete_fragments(
-        cached_ctx_, pq_ivf_centroids_uri(), 0, timestamp);
-
-    tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_indices_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_ids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
-
-    for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
-      std::string this_table_uri =
-          distance_tables_uri() + "_" + std::to_string(i);
-      tiledb::Array::delete_fragments(
-          cached_ctx_, this_table_uri, 0, timestamp);
-    }
   }
 
   /*****************************************************************************
@@ -192,9 +168,6 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto flat_ivf_centroids_uri() const {
     return this->array_key_to_uri("flat_ivf_centroids_array_name");
   }
-  [[nodiscard]] auto pq_ivf_centroids_uri() const {
-    return this->array_key_to_uri("pq_ivf_centroids_array_name");
-  }
   [[nodiscard]] auto pq_ivf_indices_uri() const {
     return this->array_key_to_uri("pq_ivf_indices_array_name");
   }
@@ -204,18 +177,12 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto pq_ivf_vectors_uri() const {
     return this->array_key_to_uri("pq_ivf_vectors_array_name");
   }
-  [[nodiscard]] auto distance_tables_uri() const {
-    return this->array_key_to_uri("distance_tables_array_name");
-  }
 
   [[nodiscard]] auto cluster_centroids_array_name() const {
     return this->array_key_to_array_name("cluster_centroids_array_name");
   }
   [[nodiscard]] auto flat_ivf_centroids_array_name() const {
     return this->array_key_to_array_name("flat_ivf_centroids_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_centroids_array_name() const {
-    return this->array_key_to_array_name("pq_ivf_centroids_array_name");
   }
   [[nodiscard]] auto pq_ivf_indices_array_name() const {
     return this->array_key_to_array_name("pq_ivf_indices_array_name");
@@ -225,9 +192,6 @@ class ivf_pq_group : public base_index_group<index_type> {
   }
   [[nodiscard]] auto pq_ivf_vectors_array_name() const {
     return this->array_key_to_array_name("pq_ivf_vectors_array_name");
-  }
-  [[nodiscard]] auto distance_tables_array_name() const {
-    return this->array_key_to_array_name("distance_tables_array_name");
   }
 
   /*****************************************************************************
@@ -326,9 +290,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     // re-ingestion where we want to re-train centroids)
     // - cluster_centroids
     // - flat_ivf_centroids
-    // - pq_ivf_centroids
     // - pq_ivf_vectors (i.e. the indices, IDs, and vectors)
-    // - distance_tables
     create_empty_for_matrix<
         typename index_type::feature_type,
         stdx::layout_left>(
@@ -379,19 +341,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, flat_ivf_centroids_uri(), flat_ivf_centroids_array_name());
 
-    create_empty_for_matrix<
-        typename index_type::pq_vector_feature_type,
-        stdx::layout_left>(
-        cached_ctx_,
-        pq_ivf_centroids_uri(),
-        this->get_num_subspaces(),
-        default_domain,
-        this->get_num_subspaces(),
-        default_tile_extent,
-        default_compression);
-    tiledb_helpers::add_to_group(
-        write_group, pq_ivf_centroids_uri(), pq_ivf_centroids_array_name());
-
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
         pq_ivf_indices_uri(),
@@ -420,25 +369,6 @@ class ivf_pq_group : public base_index_group<index_type> {
         default_compression);
     tiledb_helpers::add_to_group(
         write_group, pq_ivf_vectors_uri(), pq_ivf_vectors_array_name());
-
-    for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
-      std::string this_table_uri =
-          distance_tables_uri() + "_" + std::to_string(i);
-      std::string this_table_array_name =
-          distance_tables_array_name() + "_" + std::to_string(i);
-      create_empty_for_matrix<
-          typename index_type::score_type,
-          stdx::layout_left>(
-          cached_ctx_,
-          this_table_uri,
-          this->get_num_clusters(),
-          this->get_num_clusters(),
-          this->get_num_clusters(),
-          this->get_num_clusters(),
-          default_compression);
-      tiledb_helpers::add_to_group(
-          write_group, this_table_uri, this_table_array_name);
-    }
 
     // Store the metadata if all the arrays were created successfully
     metadata_.store_metadata(write_group);

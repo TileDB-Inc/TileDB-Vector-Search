@@ -106,7 +106,8 @@ auto medoid(auto&& P, Distance distance = Distance{}) {
 template <
     class FeatureType,
     class IdType,
-    class AdjacencyRowIndexType = uint64_t>
+    class AdjacencyRowIndexType = uint64_t,
+    class Distance = sum_of_squares_distance>
 class vamana_index {
  public:
   using feature_type = FeatureType;
@@ -159,6 +160,7 @@ class vamana_index {
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
   DistanceMetric distance_metric_{DistanceMetric::L2};
+  Distance distance_function_;
 
  public:
   /****************************************************************************
@@ -190,6 +192,7 @@ class vamana_index {
       , l_build_{l_build}
       , r_max_degree_{r_max_degree},
       distance_metric_{distance_metric} {
+    distance_function_ = Distance{};
   }
 
   /**
@@ -214,6 +217,8 @@ class vamana_index {
     alpha_max_ = group_->get_alpha_max();
     medoid_ = group_->get_medoid();
     distance_metric_ = group_->get_distance_metric();
+
+    distance_function_ = Distance{};
 
     if (group_->should_skip_query()) {
       num_vectors_ = 0;
@@ -313,14 +318,8 @@ class vamana_index {
    * (j)←N_"out " (j)∪{σ(i)} if |N_"out "  (j)|>R then Run FilteredRobustPrune
    * (j,N_"out " (j),α,R) to update out-neighbors of j.
    */
-  template <
-      feature_vector_array Array,
-      feature_vector Vector,
-      class Distance = sum_of_squares_distance>
-  void train(
-      const Array& training_set,
-      const Vector& training_set_ids,
-      Distance distance = Distance{}) {
+  template <feature_vector_array Array, feature_vector Vector>
+  void train(const Array& training_set, const Vector& training_set_ids) {
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
         ::dimensions(training_set), ::num_vectors(training_set)));
     std::copy(
@@ -341,7 +340,7 @@ class vamana_index {
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
-    medoid_ = medoid(feature_vectors_);
+    medoid_ = medoid(feature_vectors_, distance_function_);
 
     // debug_index();
 
@@ -362,7 +361,7 @@ class vamana_index {
             1,
             l_build_,
             true,
-            distance);
+            distance_function_);
         total_visited += visited.size();
 
         robust_prune(
@@ -372,7 +371,7 @@ class vamana_index {
             visited,
             alpha,
             r_max_degree_,
-            distance);
+            distance_function_);
         {
           scoped_timer _{"post search prune"};
           for (auto&& [i, j] : graph_.out_edges(p)) {
@@ -393,10 +392,12 @@ class vamana_index {
                   tmp,
                   alpha,
                   r_max_degree_,
-                  distance);
+                  distance_function_);
             } else {
               graph_.add_edge(
-                  j, p, distance(feature_vectors_[p], feature_vectors_[j]));
+                  j,
+                  p,
+                  distance_function_(feature_vectors_[p], feature_vectors_[j]));
             }
           }
         }
@@ -480,7 +481,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance_function_);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
@@ -507,7 +508,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance_function_);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
@@ -534,7 +535,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance_function_);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
@@ -561,7 +562,7 @@ class vamana_index {
           queries[i],
           k_nn,
           Lbuild,
-          sum_of_squares_distance{});
+          distance_function_);
       std::copy(
           tk_scores.data(), tk_scores.data() + k_nn, top_k_scores[i].data());
       std::copy(tk.data(), tk.data() + k_nn, top_k[i].data());
@@ -579,7 +580,7 @@ class vamana_index {
    * @param l_search How deep to search
    * @return Tuple of top k scores and top k ids
    */
-  template <query_vector_array Q, class Distance = sum_of_squares_distance>
+  template <query_vector_array Q>
   auto query(
       const Q& query_set,
       size_t k,
@@ -606,7 +607,7 @@ class vamana_index {
               query_vec,
               k,
               L,
-              distance,
+              distance_function_,
               true);
           std::copy(
               tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
@@ -625,7 +626,7 @@ class vamana_index {
    * @param l_search How deep to search
    * @return Top k scores and top k ids
    */
-  template <query_vector Q, class Distance = sum_of_squares_distance>
+  template <query_vector Q>
   auto query(
       const Q& query_vec,
       size_t k,
@@ -633,7 +634,14 @@ class vamana_index {
       Distance distance = Distance{}) {
     uint32_t L = l_search ? *l_search : l_build_;
     auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_, feature_vectors_, medoid_, query_vec, k, L, distance, true);
+        graph_,
+        feature_vectors_,
+        medoid_,
+        query_vec,
+        k,
+        L,
+        distance_function_,
+        true);
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
   }
@@ -1014,7 +1022,8 @@ class vamana_index {
  * @tparam feature_type Type of element of feature vectors
  * @tparam id_type Type of id of feature vectors
  */
-template <class feature_type, class id_type, class index_type>
-size_t vamana_index<feature_type, id_type, index_type>::num_comps_ = 0;
+template <class feature_type, class id_type, class index_type, class distance>
+size_t vamana_index<feature_type, id_type, index_type, distance>::num_comps_ =
+    0;
 
 #endif  // TDB_VAMANA_INDEX_H

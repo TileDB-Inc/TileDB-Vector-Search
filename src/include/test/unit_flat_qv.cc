@@ -36,7 +36,7 @@
 #include "test/utils/query_common.h"
 
 TEST_CASE("flat qv simple case", "[flat qv]") {
-  auto db = ColMajorMatrix<float>{
+  auto db = ColMajorMatrix<float>{{
       {
           1,
           1,
@@ -181,10 +181,10 @@ TEST_CASE("flat qv simple case", "[flat qv]") {
           1,
           0,
       },
-  };
+  }};
 
   auto centroids = ColMajorMatrix<float>{
-      {38.9571, 109.171, 155.557, 180.971, 149.514, 80.2286}};
+      {{38.9571, 109.171, 155.557, 180.971, 149.514, 80.2286}}};
 
   auto parts = detail::flat::qv_partition(centroids, db, 8);
   auto z = 0;
