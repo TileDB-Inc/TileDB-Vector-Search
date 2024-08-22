@@ -109,7 +109,8 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float avx2_sum_of_squares(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
@@ -167,8 +168,9 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
  * uint8_t - float
  */
 template <feature_vector V, feature_vector W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float avx2_sum_of_squares(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
@@ -226,8 +228,10 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
  * uint8_t - uint8_t
  */
 template <class V, class W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float avx2_sum_of_squares(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
@@ -346,7 +350,9 @@ inline float avx2_sum_of_squares(const V& a) {
  * uint8_t
  */
 template <class V>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>)
+  requires(
+      std::same_as<typename V::value_type, uint8_t> ||
+      std::same_as<typename V::value_type, int8_t>)
 inline float avx2_sum_of_squares(const V& a) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;

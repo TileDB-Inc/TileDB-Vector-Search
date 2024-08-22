@@ -33,7 +33,6 @@
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
 
-
 TEST_CASE("simple vectors", "[inner_product_distance]") {
   auto u = std::vector<uint8_t>{1, 2, 3, 4};
   auto v = std::vector<uint8_t>{5, 6, 7, 8};

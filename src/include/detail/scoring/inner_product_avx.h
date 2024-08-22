@@ -88,7 +88,8 @@ inline float avx2_inner_product(const V& a, const W& b) {
 
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
@@ -139,8 +140,9 @@ inline float avx2_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
@@ -191,8 +193,10 @@ inline float avx2_inner_product(const V& a, const W& b) {
 }
 
 template <feature_vector V, feature_vector W>
-  requires (std::same_as<typename V::value_type, uint8_t> || std::same_as<typename V::value_type, int8_t>) &&
-          (std::same_as<typename W::value_type, uint8_t> || std::same_as<typename W::value_type, int8_t>)
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
