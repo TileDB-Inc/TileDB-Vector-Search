@@ -896,7 +896,7 @@ auto apply_query(
   auto num_queries = num_vectors(query);
 
   auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(
-      num_queries, fixed_min_pair_heap<score_type, id_type, size_t>(k_nn));
+      num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 
   // Iterate through the active partitions -- for a finite query, this is
   // all of the partitions.  For an infinite query, this is a subset, given
@@ -937,10 +937,10 @@ auto apply_query(
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
         auto score_11 = distance(q_vec_1, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(score_00, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 0] : kp + 0);
-        min_scores[j0].insert(score_01, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 1] : kp + 1);
-        min_scores[j1].insert(score_10, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 0] : kp + 0);
-        min_scores[j1].insert(score_11, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 1] : kp + 1);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], kp + 1);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], kp + 0);
+        min_scores[j1].insert(score_11, partitioned_ids[kp + 1], kp + 1);
       }
 
       /*
@@ -949,8 +949,8 @@ auto apply_query(
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(score_00, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 0] : kp + 0);
-        min_scores[j1].insert(score_10, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 0] : kp + 0);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], kp + 0);
       }
     }
 
@@ -965,12 +965,12 @@ auto apply_query(
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_01 = distance(q_vec_0, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(score_00, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 0] : kp + 0);
-        min_scores[j0].insert(score_01, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 1] : kp + 1);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], kp + 1);
       }
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(score_00, query_return_type == QueryReturnType::Ids ? partitioned_ids[kp + 0] : kp + 0);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
       }
     }
   }
@@ -1037,8 +1037,7 @@ auto query_finite_ram(
 
   auto num_queries = num_vectors(query);
 
-  auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-      num_queries, fixed_min_pair_heap<score_type, id_type>(k_nn));
+  auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -1087,8 +1086,8 @@ auto query_finite_ram(
       auto min_n = futs[n].get();
 
       for (size_t j = 0; j < num_queries; ++j) {
-        for (auto&& [e, f] : min_n[j]) {
-          min_scores[j].insert(e, f);
+        for (auto&& e : min_n[j]) {
+          min_scores[j].insert(std::get<0>(e), std::get<1>(e), std::get<2>(e));
         }
       }
     }
@@ -1097,7 +1096,7 @@ auto query_finite_ram(
     _i.stop();
   }
 
-  return get_top_k_with_scores(min_scores, k_nn);
+  return get_top_k_with_scores_and_indices(min_scores, k_nn);
 }
 
 /**
@@ -1191,7 +1190,7 @@ auto query_infinite_ram(
     }
   }
 
-  return get_top_k_with_scores(min_scores, k_nn);
+  return get_top_k_with_scores_and_indices(min_scores, k_nn);
 }
 
 }  // namespace detail::ivf

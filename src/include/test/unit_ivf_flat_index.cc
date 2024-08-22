@@ -311,6 +311,7 @@ TEMPLATE_TEST_CASE(
 
     auto top_k_ivf_scores = ColMajorMatrix<float>();
     auto top_k_ivf = ColMajorMatrix<unsigned>();
+    auto top_k_ivf_indices = ColMajorMatrix<size_t>();
     auto top_k_scores = ColMajorMatrix<float>();
     auto top_k = ColMajorMatrix<uint64_t>();
     auto query2 = ColMajorMatrix<TestType>();
@@ -388,10 +389,11 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_index]") {
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("infinite") {
     INFO("infinite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
@@ -435,10 +437,11 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<typename decltype(init)::id_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("infinite") {
     INFO("infinite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
@@ -482,10 +485,11 @@ TEST_CASE("Build index, write, read and query, finite", "[ivf_index]") {
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("finite") {
     INFO("finite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_finite_ram(query_set, k_nn, nprobe);
   }
 
@@ -525,6 +529,7 @@ TEST_CASE(
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("nuv_finite") {
     INFO("nuv_finite");
@@ -541,7 +546,7 @@ TEST_CASE(
 
   SECTION("finite") {
     INFO("finite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_finite_ram(query_set, k_nn, nprobe, upper_bound);
   }
 
@@ -569,6 +574,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   auto init =
       siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(
@@ -605,7 +611,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
     INFO("infinite cli");
     auto idx = ivf_flat_index<feature_type, id_type, px_type>(
         ctx, siftsmall_flatIVF_index_uri_32_64);
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 #endif
@@ -614,7 +620,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
     INFO("infinite init");
     auto idx =
         ivf_flat_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 

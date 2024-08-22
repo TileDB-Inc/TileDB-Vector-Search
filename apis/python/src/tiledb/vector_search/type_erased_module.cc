@@ -501,11 +501,12 @@ void init_type_erased_module(py::module_& m) {
              float k_factor,
              size_t nprobe) {
             auto r = index.query(
-                QueryType::InfiniteRAM, vectors, top_k, k_factor, nprobe);
+                QueryType::InfiniteRAM, vectors, top_k, nprobe, 0, k_factor);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
           py::arg("top_k"),
+          py::arg("k_factor"),
           py::arg("nprobe"))
       .def(
           "query_finite_ram",
@@ -519,13 +520,14 @@ void init_type_erased_module(py::module_& m) {
                 QueryType::FiniteRAM,
                 vectors,
                 top_k,
-                k_factor,
                 nprobe,
-                memory_budget);
+                memory_budget,
+                k_factor);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
           py::arg("top_k"),
+          py::arg("k_factor"),
           py::arg("nprobe"),
           py::arg("memory_budget"))
       .def(

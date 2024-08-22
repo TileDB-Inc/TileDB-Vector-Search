@@ -243,9 +243,9 @@ class IndexIVFPQ {
       QueryType queryType,
       const QueryVectorArray& vectors,
       size_t top_k,
-      float k_factor,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      float k_factor = 1.f) {
     if (!index_) {
       throw std::runtime_error("Cannot query() because there is no index.");
     }

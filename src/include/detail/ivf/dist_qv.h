@@ -129,7 +129,7 @@ auto dist_qv_finite_ram_part(
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-    std::vector<std::future<decltype(min_scores)>> futs;
+    std::vector<std::future<std::vector<fixed_min_triplet_heap<score_type, shuffled_ids_type, size_t>>>> futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
@@ -167,7 +167,7 @@ auto dist_qv_finite_ram_part(
       auto min_n = futs[n].get();
 
       for (size_t j = 0; j < num_queries; ++j) {
-        for (auto&& [e, f] : min_n[j]) {
+        for (auto&& [e, f, _] : min_n[j]) {
           min_scores[j].insert(e, f);
         }
       }

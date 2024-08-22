@@ -648,13 +648,18 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 
-  size_t num_vectors = 100;
+  size_t num_vectors = 500;
   uint64_t dimensions = 4;
   size_t nlist = 4;
-  uint32_t num_subspaces = 2;
+  uint32_t num_subspaces = 1;
   uint32_t max_iterations = 1;
   float convergence_tolerance = 0.000025f;
   float reassign_ratio = 0.09f;
+
+
+  size_t k_nn = 30;
+  size_t nprobe = nlist;
+
   std::optional<TemporalPolicy> temporal_policy = std::nullopt;
   using feature_type = float;
   using id_type = uint32_t;
@@ -692,8 +697,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     index.train(training, training.raveled_ids());
     index.add(training, training.raveled_ids());
 
-    size_t k_nn = 1;
-    size_t nprobe = nlist;
+
     // for (int i = 1; i <= 4; ++i) {
     //   auto value = static_cast<feature_type>(i);
     //   auto queries =
@@ -714,8 +718,6 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   {
     std::cout << "[unit_ivf_pq_index] load by uri -------------------" << std::endl;
     auto index2 = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
-    size_t k_nn = 1;
-    size_t nprobe = nlist;
     for (int i = 1; i <= 1; ++i) {
       auto value = static_cast<feature_type>(i);
       auto queries =

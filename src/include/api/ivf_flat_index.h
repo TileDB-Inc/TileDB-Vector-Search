@@ -614,7 +614,7 @@ class IndexIVFFlat {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
+          auto [s, t, _] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -624,7 +624,7 @@ class IndexIVFFlat {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
+          auto [s, t, _] = impl_index_.query_infinite_ram(qspan, k_nn, nprobe);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -651,7 +651,7 @@ class IndexIVFFlat {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
+          auto [s, t, _] =
               impl_index_.query_finite_ram(qspan, k_nn, nprobe, upper_bound);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
@@ -662,7 +662,7 @@ class IndexIVFFlat {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
+          auto [s, t, _] =
               impl_index_.query_finite_ram(qspan, k_nn, nprobe, upper_bound);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};

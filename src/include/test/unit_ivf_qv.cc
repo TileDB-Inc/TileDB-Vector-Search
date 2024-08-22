@@ -84,7 +84,7 @@ TEST_CASE("infinite all or none", "[ivf qv]") {
         ctx, sift_parts_uri, sift_index_uri, sift_ids_uri, infinite_parts, 0);
     inf_mat.load();
 
-    auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+    auto&& [D00, I00, _] = detail::ivf::query_infinite_ram(
         inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
     auto check_size = [&D00 = D00, &I00 = I00](const auto& D, auto& I) {
@@ -186,7 +186,7 @@ TEST_CASE("finite all or none", "[ivf qv]") {
         ctx, sift_parts_uri, sift_index_uri, sift_ids_uri, infinite_parts, 0);
     inf_mat.load();
 
-    auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+    auto&& [D00, I00, _] = detail::ivf::query_infinite_ram(
         inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
     auto check_size = [&D00 = D00, &I00 = I00](const auto& D, auto& I) {
@@ -286,7 +286,7 @@ TEST_CASE("finite all or none", "[ivf qv]") {
           active_partitions,
           upper_bound);
 
-      auto&& [D04, I04] = detail::ivf::query_finite_ram(
+      auto&& [D04, I04, _] = detail::ivf::query_finite_ram(
           fin_mat, query, active_queries, k_nn, upper_bound, nthreads);
 
       check_size(D04, I04);
@@ -448,7 +448,7 @@ TEST_CASE("finite all or none", "[ivf qv]") {
 
       counting_l2_distance.reset();
       counting_l2_distance.num_comps_ = 99;
-      auto&& [D04, I04] = detail::ivf::query_finite_ram(
+      auto&& [D04, I04, _] = detail::ivf::query_finite_ram(
           fin_mat,
           query,
           active_queries,
@@ -503,7 +503,7 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
       ctx, sift_parts_uri, sift_index_uri, sift_ids_uri, infinite_parts, 0);
   inf_mat.load();
 
-  auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+  auto&& [D00, I00, _] = detail::ivf::query_infinite_ram(
       inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
   [[maybe_unused]] auto check_size = [&D00 = D00, &I00 = I00](

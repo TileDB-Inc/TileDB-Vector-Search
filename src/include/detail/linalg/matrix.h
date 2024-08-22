@@ -442,8 +442,8 @@ constexpr auto SubMatrix(
 template <class Matrix>
 void debug_matrix(
     const Matrix& matrix, const std::string& msg = "", size_t max_size = 100) {
-  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(dimensions(matrix), static_cast<typename Matrix::size_type>(max_size));
+  auto colsEnd = std::min(num_vectors(matrix), static_cast<typename Matrix::size_type>(max_size));
 
   std::cout << "# " << msg << " (" << dimensions(matrix) << " rows x "
             << num_vectors(matrix) << " cols) ("
