@@ -159,11 +159,11 @@ static void declare_qv_query_heap_infinite_ram(
     py::module& m, const std::string& suffix) {
   m.def(
       ("qv_query_heap_infinite_ram_" + suffix).c_str(),
-      [](ColMajorMatrix<T>& parts,          // Note, will be moved!
-         ColMajorMatrix<float>& centroids,  // Note, will be moved!
+      [](ColMajorMatrix<T>& parts,          // Note, will be moved! // shuffled_vectors
+         ColMajorMatrix<float>& centroids,  // Note, will be moved! // partition_centroids
          const ColMajorMatrix<float>& query_vectors,
-         std::vector<Id_Type>& indices,
-         std::vector<Id_Type>& ids,
+         std::vector<Id_Type>& indices,                             // partition_indexes
+         std::vector<Id_Type>& ids,                                 // external_ids
          size_t nprobe,
          size_t k_nn,
          size_t nthreads,

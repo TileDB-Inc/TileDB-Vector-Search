@@ -162,7 +162,7 @@ class Vector : public std::span<T> {
 
 template <feature_vector V>
 void debug_vector(
-    const V& v, const std::string& msg = "", size_t max_size = 10) {
+    const V& v, const std::string& msg = "", size_t max_size = 100) {
   size_t end = std::min(max_size, dimensions(v));
   if (!msg.empty()) {
     std::cout << msg << ": ";
@@ -182,7 +182,7 @@ void debug_vector(
 
 template <std::ranges::forward_range V>
 void debug_vector(
-    const V& v, const std::string& msg = "", size_t max_size = 10) {
+    const V& v, const std::string& msg = "", size_t max_size = 100) {
   size_t end = std::min(max_size, dimensions(v));
   if (!msg.empty()) {
     std::cout << msg << ": ";
@@ -206,7 +206,7 @@ void debug_vector(
 
 template <feature_vector V>
 void debug_matrix(
-    const V& v, const std::string& msg = "", size_t max_size = 10) {
+    const V& v, const std::string& msg = "", size_t max_size = 100) {
   debug_vector(v, msg, max_size);
 }
 
@@ -214,7 +214,7 @@ template <class T>
 void debug_vector_of_vectors(
     const std::vector<std::vector<T>>& v,
     const std::string& msg = "",
-    size_t max_size = 10) {
+    size_t max_size = 100) {
   std::cout << msg << ":\n";
   for (size_t i = 0; i < std::min(max_size, v.size()); ++i) {
     debug_vector(v[i], "", max_size);

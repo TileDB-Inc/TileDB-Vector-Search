@@ -89,6 +89,7 @@ class IVFPQIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
+        k_factor: int = 1,
         nprobe: Optional[int] = 100,
         **kwargs,
     ):
@@ -101,6 +102,13 @@ class IVFPQIndex(index.Index):
             2D array of query vectors. This can be used as a batch query interface by passing multiple queries in one call.
         k: int
             Number of results to return per query vector.
+        k_factor: int
+            To improve accuracy, IVF_PQ can search for more vectors than requested and then
+            perform re-ranking using the original non-PQ-encoded vectors. This can be slightly
+            slower, but is more accurate. k_factor is the factor by which to increase the number
+            of vectors searched. 1 means we search for exactly `k` vectors. 10 means we search for
+            `10*k` vectors.
+            Defaults to 1.
         nprobe: int
             Number of partitions to check per query.
             Use this parameter to trade-off accuracy for latency and cost.

@@ -38,7 +38,7 @@ template <typename T>
 void debug_unordered_set(
     const std::unordered_set<T>& s,
     const std::string& msg = "",
-    size_t max_size = 10) {
+    size_t max_size = 100) {
   if (s.empty()) {
     std::cout << msg << ": (empty)\n";
     return;

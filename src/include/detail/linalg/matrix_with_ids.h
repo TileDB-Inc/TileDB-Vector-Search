@@ -58,6 +58,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
  public:
   using ids_type = IdsType;
   using size_type = typename Base::size_type;
+  using indices_type = typename Base::index_type;
 
  protected:
   size_type num_ids_{0};
@@ -217,7 +218,7 @@ template <class MatrixWithIds>
 void debug_matrix_with_ids(
     const MatrixWithIds& matrix,
     const std::string& msg = "",
-    size_t max_size = 10) {
+    size_t max_size = 100) {
   auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
 

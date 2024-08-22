@@ -102,14 +102,14 @@
 #include "index/ivf_pq_group.h"
 #include "index/kmeans.h"
 #include "linalg.h"
-
+#include "utils/utils.h"
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 #include "detail/ivf/partition.h"
 #include "detail/ivf/qv.h"
-
 #include <tiledb/tiledb>
 #include <type_traits>
+#include "detail/linalg/tdb_matrix_with_ids_multi_range.h"
 
 /**
  * Class representing an inverted file (IVF) index for flat (non-compressed)
@@ -449,8 +449,6 @@ class ivf_pq_index {
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
-      auto local_sub_distance = SubDistance{sub_begin, sub_end};
-
       // @todo Make choice of kmeans init configurable
       sub_kmeans_random_init(
           training_set, cluster_centroids_, sub_begin, sub_end);
@@ -676,31 +674,19 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
-    // 1. Store the raw feature vectors so that we can retrain the index easily.
-    // They are not used in the IVF_PQ algorithm.
-    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
-        ::dimensions(training_set), ::num_vectors(training_set)));
-    std::copy(
-        training_set.data(),
-        training_set.data() +
-            ::dimensions(training_set) * ::num_vectors(training_set),
-        feature_vectors_.data());
-    std::copy(
-        training_set_ids.begin(),
-        training_set_ids.end(),
-        feature_vectors_.ids());
-
-    // 2. Fill in cluster_centroids_.
+    // 1. Fill in cluster_centroids_.
     // cluster_centroids_ holds the num_clusters_ (256) centroids for each
     // subspace.
     train_pq(training_set);
+    debug_matrix(cluster_centroids_, "[ivf_pq_index@add] cluster_centroids_");
 
-    // 3. Fill in flat_ivf_centroids_.
+    // 2. Fill in flat_ivf_centroids_.
     // We compute num_partitions_ centroids and store in flat_ivf_centroids_.
     // This is the same as IVF_FLAT and has nothing to do with PQ.
     train_ivf(training_set);
+    debug_matrix(flat_ivf_centroids_, "[ivf_pq_index@add] flat_ivf_centroids_");
 
-    // 4. pq-encode the vectors.
+    // 3. pq-encode the vectors.
     // This results in a matrix where we have num_vectors(training_set) columns,
     // and num_subspaces_ rows. So if we had 10 vectors, each with 16
     // dimensions, and 2 num_subspaces_, we store 16 columns and 2 rows. Note
@@ -713,24 +699,43 @@ class ivf_pq_index {
         training_set_ids.begin(),
         training_set_ids.end(),
         unpartitioned_pq_vectors_->ids());
+    debug_matrix_with_ids(*unpartitioned_pq_vectors_, "[ivf_pq_index@add] unpartitioned_pq_vectors_");
 
-    // 5. Assign each vector to a centroid.
+    // 4. Assign each vector to a centroid.
     // flat_ivf_centroids_ holds the uncompressed centroids for the uncompressed
     // vectors. Here we are looking at each vector in the training_set and
     // assigning it to a partition. This is the same thing as IVF_FLAT does.
     auto partition_labels = detail::flat::qv_partition(
         flat_ivf_centroids_, training_set, num_threads_, distance);
+    debug_vector(partition_labels, "[ivf_pq_index@add] partition_labels");
 
-    // 6. Now that we know which centroids each vector should go in, reorder our
+    // 5. Now that we know which centroids each vector should go in, reorder our
     // pq-encoded vectors based on partition_labels. With this change, at search
     // time we can now:
     //   a. First find which partition(s) in flat_ivf_centroids_ the query
-    //   belongs to. b. Search the partition(s) and find the closest vectors.
-    //   Note that we do this part of the search with pq-encoded vectors to be
-    //   faster and use less memory.
+    //   belongs to. 
+    //   b. Search the partition(s) and find the closest vectors. Note that we do this part of the 
+    //   search with pq-encoded vectors to be faster and use less memory.
     auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
     partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(
         *unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
+    debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@add] partitioned_pq_vectors_");
+
+    // 6. Store the raw feature vectors so that we can retrain the index easily.
+    // We shuffle them so that they are aligned with the partitioned_pq_vectors_ - this lets us
+    // easily get the unencoded vectors for use in re-ranking.
+    auto feature_vectors = ColMajorPartitionedMatrix<feature_type, id_type, indices_type>(training_set, partition_labels, num_unique_labels);
+    // TODO(paris): Figure out how to cast directly from ColMajorPartitionedMatrix to ColMajorMatrixWithIds to avoid copy.
+    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(::dimensions(training_set), ::num_vectors(training_set)));
+    std::copy(
+        feature_vectors.data(),
+        feature_vectors.data() + ::dimensions(feature_vectors) * ::num_vectors(feature_vectors),
+        feature_vectors_.data());
+    std::copy(
+        feature_vectors.ids().begin(),
+        feature_vectors.ids().end(),
+        feature_vectors_.ids());
+    debug_matrix_with_ids(feature_vectors_, "[ivf_pq_index@add] feature_vectors_");
   }
 
   template <
@@ -1136,12 +1141,14 @@ class ivf_pq_index {
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      float k_factor = 1.f) {
     switch (queryType) {
       case QueryType::InfiniteRAM:
-        return query_infinite_ram(query_vectors, k_nn, nprobe);
+        return query_infinite_ram(query_vectors, k_nn, nprobe, k_factor);
       case QueryType::FiniteRAM:
-        return query_finite_ram(query_vectors, k_nn, nprobe, upper_bound);
+        return query_finite_ram(
+            query_vectors, k_nn, nprobe, upper_bound, k_factor);
       default:
         throw std::runtime_error("Invalid query type");
     }
@@ -1160,6 +1167,8 @@ class ivf_pq_index {
    * @tparam Q Type of query vectors.
    * @param query_vectors Array of (uncompressed) vectors to query.
    * @param k_nn Number of nearest neighbors to return.
+   * @param k_factor Specifies the multiplier on k_nn for the initial IVF_PQ
+   * query, after which re-ranking is run.
    * @param nprobe Number of centroids to search.
    *
    * @return A tuple containing a matrix of nearest neighbors and a matrix
@@ -1167,7 +1176,9 @@ class ivf_pq_index {
    *
    */
   template <feature_vector_array Q>
-  auto query_infinite_ram(const Q& query_vectors, size_t k_nn, size_t nprobe) {
+  auto query_infinite_ram(
+      const Q& query_vectors, size_t k_nn, size_t nprobe, float k_factor = 1.f) {
+    debug_matrix(query_vectors, "[ivf_pq_index@query_infinite_ram] query_vectors");
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
@@ -1181,20 +1192,46 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
+    debug_vector(active_partitions, "[ivf_pq_index@query_infinite_ram] active_partitions");
+    debug_vector_of_vectors(active_queries, "[ivf_pq_index@query_infinite_ram] active_queries");
+    
     auto query_to_pq_centroid_distance_tables =
         std::move(*generate_query_to_pq_centroid_distance_tables<
                   Q,
                   ColMajorMatrix<float>>(query_vectors));
-    return detail::ivf::query_infinite_ram(
+
+    debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@query_infinite_ram] partitioned_pq_vectors_");
+    // Perform the initial search with k_nn * k_factor.
+    size_t k_initial = static_cast<size_t>(k_nn * k_factor);
+    auto query_return_type = k_factor == 1.f ? QueryReturnType::Ids : QueryReturnType::Indices;
+    auto&& [initial_distances, initial_ids, initial_indices] = detail::ivf::query_infinite_ram(
         *partitioned_pq_vectors_,
         active_partitions,
         query_to_pq_centroid_distance_tables,
         active_queries,
-        k_nn,
+        k_initial,
         num_threads_,
         make_pq_distance_query_to_pq_centroid_distance_tables<
             std::span<float>,
-            decltype(pq_storage_type{}[0])>());
+            decltype(pq_storage_type{}[0])>(),
+        query_return_type);
+
+    debug_matrix(initial_ids, "[ivf_pq_index@query_infinite_ram] initial_ids");
+    debug_matrix(initial_distances, "[ivf_pq_index@query_infinite_ram] initial_distances");
+
+    if (k_factor == 1.) {
+      return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
+    }
+    std::cout << "Will re-rank" << std::endl;
+
+//    std::vector<indices_type> column_indices;
+//    for (size_t i = 0; i < initial_ids.size(); ++i) {
+//      for (size_t j = 0; j < initial_ids[i].size(); ++j) {
+//        column_indices.insert(initial_ids(i, j));
+//      }
+//    }
+
+    return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
   }
 
   /**
@@ -1216,6 +1253,8 @@ class ivf_pq_index {
    * `feature_vector_array`
    * @param query_vectors Array of (uncompressed) vectors to query.
    * @param k_nn Number of nearest neighbors to return.
+   * @param k_factor Specifies the multipler on k_nn for the initial IVF_PQ
+   * query, after which re-ranking is run.
    * @param nprobe Number of centroids to search.
    *
    * @return A tuple containing a matrix of nearest neighbors and a matrix
@@ -1226,7 +1265,8 @@ class ivf_pq_index {
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      float k_factor = 1.f) {
     if (!group_) {
       throw std::runtime_error(
           "[ivf_pq_index@query_finite_ram] Query with finite RAM can only be "

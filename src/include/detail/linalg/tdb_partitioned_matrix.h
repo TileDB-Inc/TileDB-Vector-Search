@@ -622,7 +622,7 @@ class tdbPartitionedMatrix
   }
 
   void debug_tdb_partitioned_matrix(
-      const std::string& msg, size_t max_size = 10) {
+      const std::string& msg, size_t max_size = 100) {
     debug_partitioned_matrix(*this, msg, max_size);
     debug_vector(master_indices_, "# master_indices_", max_size);
     debug_vector(relevant_parts_, "# relevant_parts_", max_size);
