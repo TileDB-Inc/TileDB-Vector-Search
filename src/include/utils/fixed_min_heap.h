@@ -232,10 +232,13 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
     });
   }
 
-  void self_sort() {
-    std::sort_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare(std::get<0>(a), std::get<0>(b));
-    });
+  std::string dump() {
+    std::ostringstream oss;
+    for (const auto& [score, id] : *this) {
+      oss << "(" << score << ", " << id << ") ";
+    }
+    return oss.str();
+  
   }
 };
 
@@ -387,6 +390,9 @@ class fixed_min_triplet_heap : public std::vector<std::tuple<T, U, V>> {
   }
 
   auto pop() {
+    if (this->empty()) {
+      return;
+    }
     std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
       return compare_(std::get<0>(a), std::get<0>(b));
     });
@@ -395,94 +401,22 @@ class fixed_min_triplet_heap : public std::vector<std::tuple<T, U, V>> {
 
   void self_heapify() {
     std::make_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare(std::get<0>(a), std::get<0>(b));
+      return compare_(std::get<0>(a), std::get<0>(b));
     });
   }
 
-  void self_sort() {
-    std::sort_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare(std::get<0>(a), std::get<0>(b));
-    });
+  std::string dump() {
+    std::ostringstream oss;
+    for (const auto& [score, id, third] : *this) {
+      oss << "(" << score << ", " << id << ", " << third << ") ";
+    }
+    return oss.str();
+  
   }
 };
 
 template <class T, class U>
 using k_min_heap = fixed_min_pair_heap<T, U>;
-
-template <class T, class U>
-class threshold_min_pair_heap : public std::vector<std::tuple<T, U>> {
- private:
-  using element = std::tuple<T, U>;
-  using Base = std::vector<element>;
-
-  T threshold_{std::numeric_limits<T>::max()};
-
-  void rebuild_heap() {
-    std::vector<element> new_heap;
-    new_heap.reserve(this->size());
-
-    for (auto&& value : *this) {
-      if (std::get<0>(value) < threshold_) {
-        new_heap.emplace_back(value);
-      }
-    }
-    std::swap(new_heap, *this);
-    std::make_heap(this->begin(), this->end(), first_less<element>{});
-  }
-
- public:
-  threshold_min_pair_heap() = default;
-  threshold_min_pair_heap(T threshold)
-      : threshold_(threshold) {
-  }
-
-  void set_threshold(T new_threshold) {
-    if (new_threshold < threshold_) {
-      threshold_ = new_threshold;
-      rebuild_heap();
-    }
-  }
-
-  void insert(const T& t, const U& u) {
-    if (t < threshold_) {
-      this->emplace_back(t, u);
-      std::push_heap(begin(*this), end(*this), first_less<element>{});
-    }
-  }
-
-  void insert(element value) {
-    if (std::get<0>(value) < threshold_) {
-      this->push_back(value);
-      std::push_heap(begin(*this), end(*this), first_less<element>{});
-    }
-  }
-
-  auto get_min() {
-    if (empty(*this)) {
-      throw std::out_of_range("Heap is empty.");
-    }
-    return this->front();
-  }
-
-  void pop() {
-    if (empty(*this)) {
-      throw std::out_of_range("Heap is empty.");
-    }
-    std::pop_heap(begin(*this), end(*this), first_less<element>{});
-    this->pop_back();
-  }
-
-  void unfiltered_heapify() {
-    std::push_heap(begin(*this), end(*this), first_less<element>{});
-  }
-
-  void filtered_heapify() {
-    rebuild_heap();
-  }
-};
-
-template <class T, class U>
-using threshold_heap = threshold_min_pair_heap<T, U>;
 
 template <class Heap>
 void debug_min_heap(
