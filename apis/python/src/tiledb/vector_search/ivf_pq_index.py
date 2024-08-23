@@ -89,7 +89,7 @@ class IVFPQIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int = 10,
-        k_factor: int = 1,
+        k_factor: float = 1.0,
         nprobe: Optional[int] = 100,
         **kwargs,
     ):
@@ -128,11 +128,11 @@ class IVFPQIndex(index.Index):
 
         if self.memory_budget == -1:
             distances, ids = self.index.query_infinite_ram(
-                queries_feature_vector_array, k, nprobe
+                queries_feature_vector_array, k, nprobe, k_factor
             )
         else:
             distances, ids = self.index.query_finite_ram(
-                queries_feature_vector_array, k, nprobe, self.memory_budget
+                queries_feature_vector_array, k, nprobe, self.memory_budget, k_factor
             )
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
