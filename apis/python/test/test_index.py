@@ -16,6 +16,7 @@ from tiledb.vector_search import vamana_index
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.index import create_metadata
+from tiledb.vector_search.index import open
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.ivf_pq_index import IVFPQIndex
@@ -396,9 +397,8 @@ def test_delete_index(tmp_path):
     vfs = tiledb.VFS()
 
     indexes = ["FLAT", "IVF_FLAT", "VAMANA", "IVF_PQ"]
-    index_classes = [FlatIndex, IVFFlatIndex, VamanaIndex, IVFPQIndex]
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
-    for index_type, index_class in zip(indexes, index_classes):
+    for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         ingest(
             index_type=index_type,
@@ -409,7 +409,7 @@ def test_delete_index(tmp_path):
         Index.delete_index(uri=index_uri, config={})
         assert vfs.dir_size(index_uri) == 0
         with pytest.raises(tiledb.TileDBError) as error:
-            index_class(uri=index_uri)
+            open(uri=index_uri)
         assert "does not exist" in str(error.value)
 
 

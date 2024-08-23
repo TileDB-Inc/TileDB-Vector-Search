@@ -9,9 +9,9 @@ from common import load_metadata
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.index import Index
+from tiledb.vector_search.index import open
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix
 from tiledb.vector_search.module import kmeans_fit
 from tiledb.vector_search.module import kmeans_predict
@@ -72,7 +72,7 @@ def test_vamana_ingestion_u8(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = VamanaIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -100,7 +100,7 @@ def test_flat_ingestion_u8(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -124,7 +124,7 @@ def test_flat_ingestion_f32(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -157,7 +157,7 @@ def test_flat_ingestion_external_id_u8(tmp_path):
     )
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert (
         accuracy(result, gt_i, external_ids_offset=external_ids_offset)
@@ -190,7 +190,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
+    index_ram = open(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -237,7 +237,7 @@ def test_ivf_pq_ingestion_u8(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = IVFPQIndex(uri=index_uri, memory_budget=int(size / 10))
+    index_ram = open(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -1690,7 +1690,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
     )
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
     query_and_check_equals(
         index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]]
     )
@@ -1788,7 +1788,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     index_uri = move_local_index_to_new_location(index_uri)
 
     # Load the index again and query.
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
 
     query_and_check_equals(
         index=index,
@@ -1815,7 +1815,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     # Clear the index history, load, update, and query.
     Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1)
 
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
 
     update_vectors = np.empty([2], dtype=object)
     update_vectors[0] = np.array([11.0, 11.1, 11.2, 11.3], dtype=np.dtype(np.float32))
@@ -1910,7 +1910,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
     index_uri = move_local_index_to_new_location(index_uri)
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
 
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(
