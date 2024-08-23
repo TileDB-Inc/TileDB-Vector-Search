@@ -770,19 +770,18 @@ TEST_CASE("evict_insert functionality", "[fixed_min_triplet_heap]") {
   heap.insert(20, 2, 200);
   heap.insert(5, 3, 300);
 
-  auto [inserted, evicted, old_score, old_id, old_third] = heap.evict_insert(15, 4, 400);
-  
+  auto [inserted, evicted, old_score, old_id] = heap.evict_insert(15, 4, 400);
+
   REQUIRE(inserted);
   REQUIRE(evicted);
   REQUIRE(old_score == 20);
   REQUIRE(old_id == 2);
-  REQUIRE(old_third == 200);
 
-  std::tie(inserted, evicted, old_score, old_id, old_third) = heap.evict_insert(25, 5, 500);
+  std::tie(inserted, evicted, old_score, old_id) = heap.evict_insert(25, 5, 500);
   REQUIRE_FALSE(inserted);
   REQUIRE_FALSE(evicted);
 
-  std::tie(inserted, evicted, old_score, old_id, old_third) = heap.evict_insert<unique_id>(5, 4, 450);
+  std::tie(inserted, evicted, old_score, old_id) = heap.evict_insert<unique_id>(5, 4, 450);
   REQUIRE_FALSE(inserted);
   REQUIRE_FALSE(evicted);
 }
@@ -809,10 +808,10 @@ TEST_CASE("self_heapify and self_sort", "[fixed_min_triplet_heap]") {
   REQUIRE(heap.size() == 4);
   heap.pop();
   REQUIRE(heap.size() == 3);
-  
+
   heap.insert(25, 6, 600);
   REQUIRE(heap.size() == 4);
-  
+
   // Heapify the remaining elements
   heap.self_heapify();
   REQUIRE(heap.size() == 4);
@@ -897,13 +896,12 @@ TEST_CASE("handling of insertions when heap is at capacity with equal elements",
 TEST_CASE("evict_insert on empty heap", "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(3);
 
-  auto [inserted, evicted, old_score, old_id, old_third] = heap.evict_insert(10, 1, 100);
+  auto [inserted, evicted, old_score, old_id] = heap.evict_insert(10, 1, 100);
 
   REQUIRE(inserted);
   REQUIRE_FALSE(evicted);
   REQUIRE(old_score == 10);
   REQUIRE(old_id == 1);
-  REQUIRE(old_third == 100);
   REQUIRE(heap.size() == 1);
 }
 
@@ -914,7 +912,7 @@ TEST_CASE("evict_insert with identical elements", "[fixed_min_triplet_heap]") {
   heap.insert(10, 2, 200);
   heap.insert(10, 3, 300);
 
-  auto [inserted, evicted, old_score, old_id, old_third] = heap.evict_insert(10, 4, 400);
+  auto [inserted, evicted, old_score, old_id] = heap.evict_insert(10, 4, 400);
 
   // No element should be evicted since all elements have the same score
   REQUIRE_FALSE(inserted);
@@ -922,7 +920,7 @@ TEST_CASE("evict_insert with identical elements", "[fixed_min_triplet_heap]") {
   REQUIRE(heap.size() == 3);
 
   // Insert an element with a lower score
-  std::tie(inserted, evicted, old_score, old_id, old_third) = heap.evict_insert(5, 5, 500);
+  std::tie(inserted, evicted, old_score, old_id) = heap.evict_insert(5, 5, 500);
   REQUIRE(inserted);
   REQUIRE(evicted);
   REQUIRE(old_score == 10);
@@ -969,4 +967,43 @@ TEST_CASE("handling insertion of complex types", "[fixed_min_triplet_heap]") {
   REQUIRE(heap.insert("a", 5, 5.5));
   REQUIRE(heap.size() == 3);
   REQUIRE(heap.dump() == "(c, 2, 2.2) (b, 1, 1.1) (a, 5, 5.5) ");
+}
+
+TEST_CASE("X", "[fixed_min_triplet_heap]") {
+  {
+    // Create a heap for pairs (int, int)
+      // fixed_min_tuple_heap<std::tuple<int, int>> pair_heap(3);
+      fixed_min_pair_heap<int, int> pair_heap(3);
+
+      // Insert pairs into the heap
+      pair_heap.insert(5, 1);
+      pair_heap.insert(3, 2);
+      pair_heap.insert(7, 3);
+
+      // Evict and insert a new pair
+      auto result = pair_heap.evict_insert(2, 4);
+
+      // Print the result of the eviction-insertion operation
+      std::cout << "Inserted: " << std::get<0>(result) << ", Evicted: " << std::get<1>(result)
+                << ", Evicted score: " << std::get<2>(result) << ", Evicted id: " << std::get<3>(result) << "\n";
+  }
+
+  {
+    // Create a heap for triplets (int, int, double)
+    // fixed_min_tuple_heap<std::tuple<int, int, double>> triplet_heap(3);
+    fixed_min_triplet_heap<int, int, double> triplet_heap(3);
+
+    // Insert triplets into the heap
+    triplet_heap.insert(5, 1, 0.1);
+    triplet_heap.insert(3, 2, 0.2);
+    triplet_heap.insert(7, 3, 0.3);
+
+    // Evict and insert a new triplet
+    auto result = triplet_heap.evict_insert(2, 4, 0.4);
+
+    // Print the result of the eviction-insertion operation
+    std::cout << "Inserted: " << std::get<0>(result) << ", Evicted: " << std::get<1>(result)
+              << ", Evicted score: " << std::get<2>(result) << ", Evicted id: " << std::get<3>(result) << "\n";
+  }
+
 }

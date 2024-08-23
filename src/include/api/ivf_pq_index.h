@@ -250,7 +250,7 @@ class IndexIVFPQ {
       throw std::runtime_error("Cannot query() because there is no index.");
     }
     return index_->query(
-        queryType, vectors, top_k, k_factor, nprobe, upper_bound);
+        queryType, vectors, top_k, nprobe, upper_bound, k_factor);
   }
 
   void write_index(
@@ -391,9 +391,9 @@ class IndexIVFPQ {
         QueryType queryType,
         const QueryVectorArray& vectors,
         size_t top_k,
-        float k_factor,
         size_t nprobe,
-        size_t upper_bound) = 0;
+        size_t upper_bound,
+        float k_factor) = 0;
 
     virtual void write_index(
         const tiledb::Context& ctx,
@@ -502,9 +502,9 @@ class IndexIVFPQ {
         QueryType queryType,
         const QueryVectorArray& vectors,
         size_t top_k,
-        float k_factor,
         size_t nprobe,
-        size_t upper_bound) override {
+        size_t upper_bound,
+        float k_factor) override {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
 
@@ -516,7 +516,7 @@ class IndexIVFPQ {
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
           auto [s, t] = impl_index_.query(
-              queryType, qspan, top_k, k_factor, nprobe, upper_bound);
+              queryType, qspan, top_k, nprobe, upper_bound, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -527,7 +527,7 @@ class IndexIVFPQ {
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
           auto [s, t] = impl_index_.query(
-              queryType, qspan, top_k, k_factor, nprobe, upper_bound);
+              queryType, qspan, top_k, nprobe, upper_bound, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};

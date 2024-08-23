@@ -1154,6 +1154,40 @@ class ivf_pq_index {
     }
   }
 
+  template <class FeatureVectors, class QueryVectors, class Matrix>
+  auto re_rank_query(
+      const FeatureVectors& feature_vectors, 
+      const QueryVectors& query_vectors, 
+      const Matrix &initial_ids,
+      std::unordered_map<id_type, size_t> &id_to_vector_index,
+      size_t k_nn) const {
+    auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(::num_vectors(query_vectors), fixed_min_pair_heap<score_type, id_type>(k_nn));
+    for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
+      for (size_t j = 0; j < ::dimensions(initial_ids[i]); ++j) {
+        auto id = initial_ids[i][j];
+        auto vector_index = id_to_vector_index[id];
+        float distance;
+        if (distance_metric_ == DistanceMetric::L2) {
+          distance = sum_of_squares_distance{}(query_vectors[i], feature_vectors[vector_index]);
+        } else if (distance_metric_ == DistanceMetric::INNER_PRODUCT) {
+          distance = inner_product_distance{}(query_vectors[i], feature_vectors[vector_index]);
+        } else if (distance_metric_ == DistanceMetric::COSINE) {
+          distance = cosine_distance_normalized{}(query_vectors[i], feature_vectors[vector_index]);
+        } else {
+          throw std::runtime_error("Invalid distance metric");
+        }
+        std::cout << "[ivf_pq_index@query_infinite_ram] Inserting id: " << id << " with distance: " << distance << std::endl;
+        min_scores[i].insert(distance, id);
+      }
+    }
+
+    // return get_top_k_with_scores(min_scores, k_nn);
+    auto&& [distances, ids] = get_top_k_with_scores(min_scores, k_nn);
+    debug_matrix(ids, "[ivf_pq_index@query_infinite_ram] ids");
+    debug_matrix(distances, "[ivf_pq_index@query_infinite_ram] distances");
+    return std::make_tuple(std::move(distances), std::move(ids));
+  }
+
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
    * and distances. The function returns a matrix containing k_nn nearest
@@ -1178,6 +1212,9 @@ class ivf_pq_index {
   template <feature_vector_array Q>
   auto query_infinite_ram(
       const Q& query_vectors, size_t k_nn, size_t nprobe, float k_factor = 1.f) {
+    if (k_factor < 1.f) {
+      throw std::runtime_error("k_factor must be >= 1");
+    }
     debug_matrix(query_vectors, "[ivf_pq_index@query_infinite_ram] query_vectors");
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
@@ -1243,41 +1280,26 @@ class ivf_pq_index {
     }
     debug_vector(vector_indices, "[ivf_pq_index@query_infinite_ram] vector_indices");
 
-    auto feature_vectors = tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
-        group_->cached_ctx(), 
-        group_->feature_vectors_uri(), 
-        vector_indices,
-        dimensions_,
-        0,
-        temporal_policy_);
-    feature_vectors.load();
-    debug_matrix(feature_vectors, "[ivf_pq_index@query_infinite_ram] feature_vectors");
-
-    auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(::num_vectors(query_vectors), fixed_min_pair_heap<score_type, id_type>(k_nn));
-    for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
-      for (size_t j = 0; j < ::dimensions(initial_ids[i]); ++j) {
-        auto id = initial_ids[i][j];
-        auto vector_index = id_to_vector_index[id];
-        float distance;
-        if (distance_metric_ == DistanceMetric::L2) {
-          distance = sum_of_squares_distance{}(query_vectors[i], feature_vectors[vector_index]);
-        } else if (distance_metric_ == DistanceMetric::INNER_PRODUCT) {
-          distance = inner_product_distance{}(query_vectors[i], feature_vectors[vector_index]);
-        } else if (distance_metric_ == DistanceMetric::COSINE) {
-          distance = cosine_distance_normalized{}(query_vectors[i], feature_vectors[vector_index]);
-        } else {
-          throw std::runtime_error("Invalid distance metric");
-        }
-        std::cout << "[ivf_pq_index@query_infinite_ram] Inserting id: " << id << " with distance: " << distance << std::endl;
-        min_scores[i].insert(distance, id);
-      }
+    if (::num_vectors(feature_vectors_) == 0 && !group_) {
+      throw std::runtime_error("No feature vectors available and index was not opened by URI");
     }
 
-    // return get_top_k_with_scores(min_scores, k_nn);
-    auto&& [distances, ids] = get_top_k_with_scores(min_scores, k_nn);
-    debug_matrix(ids, "[ivf_pq_index@query_infinite_ram] ids");
-    debug_matrix(distances, "[ivf_pq_index@query_infinite_ram] distances");
-    return std::make_tuple(std::move(distances), std::move(ids));
+    if (::num_vectors(feature_vectors_) == 0) {
+      auto feature_vectors = tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
+          group_->cached_ctx(), 
+          group_->feature_vectors_uri(), 
+          vector_indices,
+          dimensions_,
+          0,
+          temporal_policy_);
+      feature_vectors.load();
+      debug_matrix(feature_vectors, "[ivf_pq_index@query_infinite_ram] feature_vectors");
+      return re_rank_query(feature_vectors, query_vectors, initial_ids, id_to_vector_index, k_nn);
+    }
+
+    return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
+    // return re_rank_query<decltype(feature_vectors_), decltype(query_vectors)>(
+    //   feature_vectors_, query_vectors, initial_ids, id_to_vector_index, k_nn);
   }
 
   /**

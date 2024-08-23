@@ -892,9 +892,12 @@ auto apply_query(
   const auto& partitioned_ids = partitioned_vectors.ids();
   // These are local to p_v.
   const auto& indices = partitioned_vectors.indices();
+  debug_matrix(query, "[qv@num_queries] query");
 
   auto num_queries = num_vectors(query);
+  std::cout << "[qv@num_queries] num_queries: " << num_queries << std::endl;
 
+  std::cout << "[qv@num_queries] creating min_scores with k_nn: " << k_nn << std::endl;
   auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(
       num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 
@@ -973,6 +976,10 @@ auto apply_query(
         min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
       }
     }
+  }
+
+  for (const auto &score: min_scores) {
+    std::cout << "[qv@apply_query] score: " << score.dump() << std::endl;
   }
 
   return min_scores;
@@ -1133,11 +1140,13 @@ auto query_infinite_ram(
     Distance distance = Distance{},
     QueryReturnType query_return_type = QueryReturnType::Ids) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
+  // debug_partitioned_matrix(partitioned_vectors, "[qv@partitioned_vectors]");
 
   using id_type = typename F::id_type;
   using score_type = float;
 
   auto num_queries = num_vectors(query);
+  std::cout << "[qv@partitioned_vectors] num_queries: " << num_queries << "\n";
 
   auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 

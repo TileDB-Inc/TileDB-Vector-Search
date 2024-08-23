@@ -63,6 +63,11 @@ struct heap_traits {
       typename std::tuple_element<0, typename Heap::value_type>::type;
   using index_type =
       typename std::tuple_element<1, typename Heap::value_type>::type;
+  // using extra_type = std::conditional_t< std::tuple_size<typename Heap::value_type>::value == 3, typename std::tuple_element<2, typename Heap::value_type>::type, void>;
+  // using extra_type = std::conditional_t<
+  //     std::tuple_size<typename Heap::value_type>::value == 3,
+  //     typename std::tuple_element<2, typename Heap::value_type>::type,
+  //     void>;
 };
 
 template <class Heap>
@@ -72,321 +77,158 @@ template <class Heap>
 using heap_index_t = typename heap_traits<Heap>::index_type;
 
 /**
- * Heap to store a pair of values, ordered by the first element.
- * @tparam T Type of first element
- * @tparam U Type of second element
+ * Heap to store a tuple of values, ordered by the first element.
+ * Supports pairs and triplets.
+ * @tparam Tuple Type of tuple (pair or triplet)
  */
-template <class T, class U, class Compare = std::less<T>>
-class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
-  using Base = std::vector<std::tuple<T, U>>;
-  // using Base::Base;
+template <class Tuple, class Compare = std::less<typename std::tuple_element<0, Tuple>::type>>
+class fixed_min_tuple_heap : public std::vector<Tuple> {
+  using Base = std::vector<Tuple>;
+  using T = typename std::tuple_element<0, Tuple>::type;
+  using U = typename std::tuple_element<1, Tuple>::type;
+  // using Extra = std::conditional_t<std::tuple_size<Tuple>::value == 3,
+  //                                  typename std::tuple_element<2, Tuple>::type,
+  //                                  void>;
+
+  // New helper struct
+  template <class TupleType, bool HasThirdElement = (std::tuple_size<TupleType>::value == 3)>
+  struct ExtraTypeHelper {
+    using type = typename std::tuple_element<2, TupleType>::type;
+  };
+
+  template <class TupleType>
+  struct ExtraTypeHelper<TupleType, false> {
+    using type = void*;
+  };
+
+  // Modified Extra type definition
+  using Extra = typename ExtraTypeHelper<Tuple>::type;
+
   unsigned max_size{0};
   constexpr const static Compare compare_{};
 
  public:
-  explicit fixed_min_pair_heap(
-      std::integral auto k, Compare compare = Compare{})
-      : Base(0)
-      , max_size{(unsigned)k}  //    , compare_{std::move(compare)}
-  {
-    Base::reserve(k);
-  }
-
-  explicit fixed_min_pair_heap(
-      unsigned k,
-      std::initializer_list<std::tuple<T, U>> l,
-      Compare compare = Compare{})
-      : Base(0)
-      , max_size{k} {
-    Base::reserve(k);
-    for (const auto& p : l) {
-      insert(std::get<0>(p), std::get<1>(p));
-    }
-  }
-
-  template <class Unique = not_unique>
-  bool insert(const T& x, const U& y) {
-    if (Base::size() < max_size) {
-      if constexpr (std::is_same_v<Unique, unique_id>) {
-        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-              return std::get<1>(e) == y;
-            }) != end(*this)) {
-          return false;
-        }
-      }
-
-      Base::emplace_back(x, y);
-
-      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-      //      if (Base::size() == max_size) {
-      //        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-      //          return std::get<0>(a) < std::get<0>(b);
-      //        });
-      //      }
-      return true;
-    } else if (compare_(x, std::get<0>(this->front()))) {
-      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-
-      if constexpr (std::is_same_v<Unique, unique_id>) {
-        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-              return std::get<1>(e) == y;
-            }) != end(*this)) {
-          std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-            return compare_(std::get<0>(a), std::get<0>(b));
-          });
-          return false;
-        }
-      }
-
-      //      this->pop_back();
-      //      this->emplace_back(x, y);
-      (*this)[max_size - 1] = std::make_tuple(x, y);
-      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-      return true;
-    }
-    return false;
-  }
-
-  // returns { inserted, evicted, evicted_score, evicted_id }
-  // Cases:
-  // 1. Inserted, not evicted: { true, false, x, y }
-  // 2. Inserted, evicted: { true, true, old_score, old_id }
-  // 3. Not inserted, not evicted: { false, false, x, y }
-  // 4. Not inserted, evicted: exception
-  template <class Unique = not_unique>
-  std::tuple<bool, bool, T, U> evict_insert(const T& x, const U& y) {
-    // There is room in the heap for the new element
-    if (Base::size() < max_size) {
-      // If the element id already exists in the heap, return false
-      // We don't insert the element -- return inserted = false
-      if constexpr (std::is_same_v<Unique, unique_id>) {
-        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-              return std::get<1>(e) == y;
-            }) != end(*this)) {
-          // Not inserted
-          return {false, false, x, y};
-        }
-      }
-
-      // Insert, since there is room
-      Base::emplace_back(x, y);
-      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-
-      // Inserted, not evicted
-      return {true, false, x, y};
-    } else if (compare_(x, std::get<0>(this->front()))) {
-      // If x < max_score in the heap, evict max_score and insert x
-      // return inserted = true, evicted = true, old_score, old_id
-
-      // Get the old element
-      auto tmp = this->front();
-      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-
-      if constexpr (std::is_same_v<Unique, unique_id>) {
-        // If the new element id exists in the heap, return inserted = false
-        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-              return std::get<1>(e) == y;
-            }) != end(*this)) {
-          // Since we had previously popped the heap, we need to unpop it
-          std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-            return compare_(std::get<0>(a), std::get<0>(b));
-          });
-          return {false, false, x, y};
-        }
-      }
-
-      // Replace the former max element with the new element and re-heapify
-      (*this)[max_size - 1] = std::make_tuple(x, y);
-      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-
-      // Inserted, evicted: return old element
-      return {true, true, std::get<0>(tmp), std::get<1>(tmp)};
-    }
-
-    // If the new element is larger than the max, return not inserted
-    return {false, false, x, y};
-  }
-
-  auto pop() {
-    std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare_(std::get<0>(a), std::get<0>(b));
-    });
-    this->pop_back();
-  }
-
-  void self_heapify() {
-    std::make_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare(std::get<0>(a), std::get<0>(b));
-    });
-  }
-
-  std::string dump() {
-    std::ostringstream oss;
-    for (const auto& [score, id] : *this) {
-      oss << "(" << score << ", " << id << ") ";
-    }
-    return oss.str();
-  
-  }
-};
-
-/**
- * Heap to store a pair of values, ordered by the first element.
- * @tparam T Type of first element
- * @tparam U Type of second element
- * @tparam V Type of third element
- */
-template <class T, class U, class V, class Compare = std::less<T>>
-class fixed_min_triplet_heap : public std::vector<std::tuple<T, U, V>> {
-  using Base = std::vector<std::tuple<T, U, V>>;
-  unsigned max_size{0};
-  constexpr const static Compare compare_{};
-
- public:
-  explicit fixed_min_triplet_heap(
-      std::integral auto k, Compare compare = Compare{})
+  explicit fixed_min_tuple_heap(std::integral auto k, Compare compare = Compare{})
       : Base(0)
       , max_size{(unsigned)k} {
     Base::reserve(k);
   }
 
-  explicit fixed_min_triplet_heap(
-      unsigned k,
-      std::initializer_list<std::tuple<T, U, V>> l,
-      Compare compare = Compare{})
+  explicit fixed_min_tuple_heap(unsigned k, std::initializer_list<Tuple> l, Compare compare = Compare{})
       : Base(0)
       , max_size{k} {
     Base::reserve(k);
     for (const auto& p : l) {
-      insert(std::get<0>(p), std::get<1>(p), std::get<2>(p));
+      insert(std::get<0>(p), std::get<1>(p), get_extra(p));
     }
   }
 
   template <class Unique = not_unique>
-  bool insert(const T& x, const U& y, const V& z) {
-    if (Base::size() < max_size) {
-      if constexpr (std::is_same_v<Unique, unique_id>) {
-        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-              return std::get<1>(e) == y;
-            }) != end(*this)) {
-          return false;
-        }
+  bool insert(const T& x, const U& y, const Extra& z = Extra{}) {
+      if (max_size == 0) {
+        return false;
       }
+      if (Base::size() < max_size) {
+          if constexpr (std::is_same_v<Unique, unique_id>) {
+              if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+                  return std::get<1>(e) == y;
+              }) != end(*this)) {
+                  return false;
+              }
+          }
 
-      Base::emplace_back(x, y, z);
+          if constexpr (std::tuple_size_v<Tuple> == 2) {
+              Base::emplace_back(x, y);
+          } else {
+              Base::emplace_back(x, y, z);
+          }
 
-      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-      //      if (Base::size() == max_size) {
-      //        std::make_heap(begin(*this), end(*this), [&](auto& a, auto& b) {
-      //          return std::get<0>(a) < std::get<0>(b);
-      //        });
-      //      }
-      return true;
-    } else if (compare_(x, std::get<0>(this->front()))) {
-      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-
-      if constexpr (std::is_same_v<Unique, unique_id>) {
-        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-              return std::get<1>(e) == y;
-            }) != end(*this)) {
           std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-            return compare_(std::get<0>(a), std::get<0>(b));
+              return compare_(std::get<0>(a), std::get<0>(b));
           });
-          return false;
-        }
-      }
+          return true;
+      } else if (compare_(x, std::get<0>(this->front()))) {
+          std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+              return compare_(std::get<0>(a), std::get<0>(b));
+          });
 
-      //      this->pop_back();
-      //      this->emplace_back(x, y);
-      (*this)[max_size - 1] = std::make_tuple(x, y, z);
-      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-        return compare_(std::get<0>(a), std::get<0>(b));
-      });
-      return true;
+          if constexpr (std::is_same_v<Unique, unique_id>) {
+              if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+                  return std::get<1>(e) == y;
+              }) != end(*this)) {
+                  std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+                      return compare_(std::get<0>(a), std::get<0>(b));
+                  });
+                  return false;
+              }
+          }
+
+          if constexpr (std::tuple_size_v<Tuple> == 2) {
+              (*this)[max_size - 1] = Tuple(x, y);
+          } else {
+              (*this)[max_size - 1] = Tuple(x, y, z);
+          }
+
+          std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+              return compare_(std::get<0>(a), std::get<0>(b));
+          });
+          return true;
     }
     return false;
-  }
+}
 
-  // returns { inserted, evicted, evicted_score, evicted_id, evicted_third }
-  // Cases:
-  // 1. Inserted, not evicted: { true, false, x, y }
-  // 2. Inserted, evicted: { true, true, old_score, old_id }
-  // 3. Not inserted, not evicted: { false, false, x, y }
-  // 4. Not inserted, evicted: exception
   template <class Unique = not_unique>
-  std::tuple<bool, bool, T, U, V> evict_insert(const T& x, const U& y, const V& z) {
-    // There is room in the heap for the new element
+  std::tuple<bool, bool, T, U> evict_insert(const T& x, const U& y, const Extra& z = Extra{}) {
     if (Base::size() < max_size) {
-      // If the element id already exists in the heap, return false
-      // We don't insert the element -- return inserted = false
       if constexpr (std::is_same_v<Unique, unique_id>) {
         if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
               return std::get<1>(e) == y;
             }) != end(*this)) {
-          // Not inserted
-          return {false, false, x, y, z};
+          return {false, false, x, y};
         }
       }
 
-      // Insert, since there is room
-      Base::emplace_back(x, y, z);
+      if constexpr (std::tuple_size_v<Tuple> == 2) {
+          Base::emplace_back(x, y);
+      } else {
+          Base::emplace_back(x, y, z);
+      }
+
       std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
-      // Inserted, not evicted
-      return {true, false, x, y, z};
+      return {true, false, x, y};
     } else if (compare_(x, std::get<0>(this->front()))) {
-      // If x < max_score in the heap, evict max_score and insert x
-      // return inserted = true, evicted = true, old_score, old_id
-
-      // Get the old element
       auto tmp = this->front();
       std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
       if constexpr (std::is_same_v<Unique, unique_id>) {
-        // If the new element id exists in the heap, return inserted = false
         if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
               return std::get<1>(e) == y;
             }) != end(*this)) {
-          // Since we had previously popped the heap, we need to unpop it
           std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
             return compare_(std::get<0>(a), std::get<0>(b));
           });
-          return {false, false, x, y, z};
+          return {false, false, x, y};
         }
       }
 
-      // Replace the former max element with the new element and re-heapify
-      (*this)[max_size - 1] = std::make_tuple(x, y, z);
+      if constexpr (std::tuple_size_v<Tuple> == 2) {
+        (*this)[max_size - 1] = Tuple(x, y);
+      } else {
+        (*this)[max_size - 1] = Tuple(x, y, z);
+      }
       std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
-      // Inserted, evicted: return old element
-      return {true, true, std::get<0>(tmp), std::get<1>(tmp), std::get<2>(tmp)};
+      return {true, true, std::get<0>(tmp), std::get<1>(tmp)};
     }
 
-    // If the new element is larger than the max, return not inserted
-    return {false, false, x, y, z};
+    return {false, false, x, y};
   }
 
   auto pop() {
@@ -405,18 +247,64 @@ class fixed_min_triplet_heap : public std::vector<std::tuple<T, U, V>> {
     });
   }
 
-  std::string dump() {
+  void self_sort() {
+    std::sort_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+      return compare_(std::get<0>(a), std::get<0>(b));
+    });
+  }
+
+  std::string dump() const {
     std::ostringstream oss;
-    for (const auto& [score, id, third] : *this) {
-      oss << "(" << score << ", " << id << ", " << third << ") ";
+    if constexpr (std::tuple_size_v<Tuple> == 2) {
+      for (const auto& [score, id] : *this) {
+          oss << "(" << score << ", " << id << ") ";
+      }
+    } else {
+       for (const auto& [score, id, extra] : *this) {
+          oss << "(" << score << ", " << id << ", " << extra << ") ";
+      }
     }
     return oss.str();
-  
   }
+
+private:
+  template <typename TupleType>
+  static constexpr auto get_extra(const TupleType& t) {
+    if constexpr (std::tuple_size_v<TupleType> == 3) {
+      return std::get<2>(t);
+    } else {
+      return Extra{};
+    }
+  }
+};
+
+template <class T, class U, class Compare = std::less<T>>
+class fixed_min_pair_heap : public fixed_min_tuple_heap<std::tuple<T, U>, Compare> {
+  using Base = fixed_min_tuple_heap<std::tuple<T, U>, Compare>;
+public:
+  explicit fixed_min_pair_heap(std::integral auto k, Compare compare = Compare{})
+      : Base(k, compare) {}
+
+  explicit fixed_min_pair_heap(unsigned k, std::initializer_list<std::tuple<T, U>> l, Compare compare = Compare{})
+      : Base(k, l, compare) {}
 };
 
 template <class T, class U>
 using k_min_heap = fixed_min_pair_heap<T, U>;
+
+template <class T, class U, class V, class Compare = std::less<T>>
+class fixed_min_triplet_heap : public fixed_min_tuple_heap<std::tuple<T, U, V>, Compare> {
+  using Base = fixed_min_tuple_heap<std::tuple<T, U, V>, Compare>;
+public:
+  explicit fixed_min_triplet_heap(std::integral auto k, Compare compare = Compare{})
+      : Base(k, compare) {}
+
+  explicit fixed_min_triplet_heap(unsigned k, std::initializer_list<std::tuple<T, U, V>> l, Compare compare = Compare{})
+      : Base(k, l, compare) {}
+};
+
+// template <class T, class U>
+// using k_min_heap = fixed_min_pair_heap<T, U>;
 
 template <class Heap>
 void debug_min_heap(
