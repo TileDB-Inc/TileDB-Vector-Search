@@ -8,8 +8,8 @@ from common import load_metadata
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search import open
 from tiledb.vector_search.index import Index
-from tiledb.vector_search.index import open
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.module import array_to_matrix
