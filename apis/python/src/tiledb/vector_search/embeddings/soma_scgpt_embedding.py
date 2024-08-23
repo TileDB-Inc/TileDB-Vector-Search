@@ -49,12 +49,13 @@ class SomaScGPTEmbedding(ObjectEmbedding):
     def load(self) -> None:
         import io
         import json
-        import torch
-        import tiledb
 
+        import torch
         from scgpt.model import TransformerModel
         from scgpt.tokenizer import GeneVocab
         from scgpt.utils import load_pretrained
+
+        import tiledb
 
         if self.device == "cuda":
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -72,17 +73,17 @@ class SomaScGPTEmbedding(ObjectEmbedding):
                             best_model_uri = child.uri
                         elif a.meta["original_file_name"] == "vocab.json":
                             vocab_uri = child.uri
-            model_config_file=tiledb.filestore.Filestore(model_config_file_uri)
-            model_file=tiledb.filestore.Filestore(best_model_uri)
-            vocab_file=tiledb.filestore.Filestore(vocab_uri)
+            model_config_file = tiledb.filestore.Filestore(model_config_file_uri)
+            model_file = tiledb.filestore.Filestore(best_model_uri)
+            vocab_file = tiledb.filestore.Filestore(vocab_uri)
         else:
             vfs = tiledb.VFS()
             model_config_file_uri = f"{self.model_uri}/args.json"
             best_model_uri = f"{self.model_uri}/best_model.pt"
             vocab_uri = f"{self.model_uri}/vocab.json"
-            model_config_file=vfs.open(model_config_file_uri)
-            model_file=vfs.open(best_model_uri)
-            vocab_file=vfs.open(vocab_uri)
+            model_config_file = vfs.open(model_config_file_uri)
+            model_file = vfs.open(best_model_uri)
+            vocab_file = vfs.open(vocab_uri)
 
         # Load model
         pad_token = "<pad>"
@@ -122,7 +123,6 @@ class SomaScGPTEmbedding(ObjectEmbedding):
         )
         self.model.to(self.device)
         self.model.eval()
-
 
     def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
         import multiprocessing

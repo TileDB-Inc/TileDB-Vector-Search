@@ -13,5 +13,5 @@ __all__ = [
     "RandomEmbedding",
     "SentenceTransformersEmbedding",
     "LangChainEmbedding",
-    "SomaScGPTEmbedding",\
+    "SomaScGPTEmbedding",
 ]

@@ -1,7 +1,8 @@
 from typing import Dict, List, OrderedDict, Tuple
 
-from tiledb.vector_search.object_readers import ObjectPartition, ObjectReader
 from tiledb import Attr
+from tiledb.vector_search.object_readers import ObjectPartition
+from tiledb.vector_search.object_readers import ObjectReader
 
 
 class SomaAnnDataPartition(ObjectPartition):
@@ -42,8 +43,9 @@ class SomaAnnDataReader(ObjectReader):
         timestamp=None,
         **kwargs,
     ):
-        import tiledb
         import tiledbsoma
+
+        import tiledb
 
         self.uri = uri
         self.measurement_name = measurement_name
@@ -59,7 +61,7 @@ class SomaAnnDataReader(ObjectReader):
             tiledb_config=tiledb.default_ctx().config().dict()
         )
         self.exp = tiledbsoma.Experiment.open(self.uri, "r", context=self.context)
-        if self.max_size==-1:
+        if self.max_size == -1:
             self.num_obs = self.exp.obs.count
         else:
             self.num_obs = min(max_size, self.exp.obs.count)
@@ -115,16 +117,15 @@ class SomaAnnDataReader(ObjectReader):
     def read_objects(
         self, partition: SomaAnnDataPartition
     ) -> Tuple[OrderedDict, OrderedDict]:
-        import numpy as np
         import tiledbsoma
 
         query = self.exp.axis_query(
             measurement_name=self.measurement_name,
             obs_query=tiledbsoma.AxisQuery(
                 value_filter=self.obs_value_filter,
-                coords=(slice(partition.coord_start, partition.coord_end - 1),)
+                coords=(slice(partition.coord_start, partition.coord_end - 1),),
             ),
-            var_query=tiledbsoma.AxisQuery(value_filter=self.var_value_filter)
+            var_query=tiledbsoma.AxisQuery(value_filter=self.var_value_filter),
         )
         adata = query.to_anndata(X_name=self.X_name)
         return {
@@ -138,10 +139,9 @@ class SomaAnnDataReader(ObjectReader):
         query = self.exp.axis_query(
             measurement_name=self.measurement_name,
             obs_query=tiledbsoma.AxisQuery(
-                value_filter=self.obs_value_filter,
-                coords=(ids,)
+                value_filter=self.obs_value_filter, coords=(ids,)
             ),
-            var_query=tiledbsoma.AxisQuery(value_filter=self.var_value_filter)
+            var_query=tiledbsoma.AxisQuery(value_filter=self.var_value_filter),
         )
         adata = query.to_anndata(X_name=self.X_name)
         return {"anndata": adata, "external_id": ids}
