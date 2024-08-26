@@ -108,26 +108,30 @@ TEST_CASE("std::set", "[fixed_min_heap]") {
 }
 
 TEST_CASE("std::set with pairs", "[fixed_min_heap]") {
-  using element = std::tuple<float, int>;
+  using element = std::tuple<float, int, int>;
   std::set<element> a;
 
   SECTION("insert in ascending order") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert({10 - i, i});
+      a.insert({10 - i, i, i + 10});
     }
     CHECK(std::get<0>(*(begin(a))) == 1);
     CHECK(std::get<1>(*(begin(a))) == 9);
+    CHECK(std::get<2>(*(begin(a))) == 9 + 10);
     CHECK(std::get<0>(*(rbegin(a))) == 10.0);
     CHECK(std::get<1>(*(rbegin(a))) == 0);
+    CHECK(std::get<2>(*(rbegin(a))) == 0 + 10);
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert({10 + i, i});
+      a.insert({10 + i, i, i + 9});
     }
     CHECK(std::get<0>(*(begin(a))) == 10.0);
     CHECK(std::get<1>(*(begin(a))) == 0);
+    CHECK(std::get<2>(*(begin(a))) == 0 + 9);
     CHECK(std::get<0>(*(rbegin(a))) == 19.0);
     CHECK(std::get<1>(*(rbegin(a))) == 9);
+    CHECK(std::get<2>(*(rbegin(a))) == 9 + 9);
   }
   CHECK(a.size() == 10);
   // CHECK(*begin(a) == element{10, 0});
@@ -135,19 +139,19 @@ TEST_CASE("std::set with pairs", "[fixed_min_heap]") {
 }
 
 TEST_CASE("initializer constructor", "[fixed_min_heap]") {
-  fixed_min_pair_heap<float, int> a(
+  fixed_min_triplet_heap<float, int, int> a(
       5,
       {
-          {10, 0},
-          {9, 1},
-          {8, 2},
-          {7, 3},
-          {6, 4},
-          {5, 5},
-          {4, 6},
-          {3, 7},
-          {2, 8},
-          {1, 9},
+          {10, 0, 10},
+          {9,  1, 11},
+          {8,  2, 12},
+          {7,  3, 13},
+          {6,  4, 14},
+          {5,  5, 15},
+          {4,  6, 16},
+          {3,  7, 17},
+          {2,  8, 18},
+          {1,  9, 19},
       });
   CHECK(std::is_heap(begin(a), end(a)));
   CHECK(std::is_heap(begin(a), end(a), std::less<>()));
@@ -186,16 +190,17 @@ TEST_CASE("initializer constructor", "[fixed_min_heap]") {
     a.pop();
     CHECK(std::get<0>(*(begin(a))) == 4);
     CHECK(std::get<0>(a.front()) == 4);
-    a.insert(10, 10);
+    a.insert(10, 10, 100);
     CHECK(std::get<0>(*(begin(a))) == 10);
     CHECK(std::get<0>(a.front()) == 10);
-    a.insert(3.3, 33);
+    a.insert(3.3, 33, 333);
     CHECK(std::get<0>(*(begin(a))) == 4);
     CHECK(std::get<0>(a.front()) == 4);
     a.pop();
     CHECK(std::get<0>(*(begin(a))) == 3.3F);
     CHECK(std::get<0>(a.front()) == 3.3F);
     CHECK(std::get<1>(a.front()) == 33);
+    CHECK(std::get<2>(a.front()) == 333);
   }
 
   SECTION("sort") {
@@ -232,47 +237,52 @@ TEST_CASE("initializer constructor", "[fixed_min_heap]") {
   }
 }
 
-TEST_CASE("fixed_min_pair_heap", "[fixed_min_heap]") {
-  fixed_min_pair_heap<float, int> a(5);
+TEST_CASE("fixed_min_triplet_heap", "[fixed_min_heap]") {
+  fixed_min_triplet_heap<float, int, int> a(5);
 
   SECTION("insert in ascending order") {
     for (auto&& i : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {
-      a.insert(static_cast<float>(10 - i), i);
+      a.insert(static_cast<float>(10 - i), i, i + 10);
     }
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 1);
     CHECK(std::get<1>(*(begin(a))) == 9);
+    CHECK(std::get<2>(*(begin(a))) == 9 + 10);
     CHECK(std::get<0>(*(rbegin(a))) == 5.0);
     CHECK(std::get<1>(*(rbegin(a))) == 5);
+    CHECK(std::get<2>(*(rbegin(a))) == 5 + 10);
   }
   SECTION("insert in descending order") {
     for (auto&& i : {9, 8, 7, 6, 5, 4, 3, 2, 1, 0}) {
-      a.insert(static_cast<float>(10 + i), i);
+      a.insert(static_cast<float>(10 + i), i, i + 20);
     }
     std::sort(begin(a), end(a));
     CHECK(std::get<0>(*(begin(a))) == 10.0);
     CHECK(std::get<1>(*(begin(a))) == 0);
+    CHECK(std::get<2>(*(begin(a))) == 0 + 20);
     CHECK(std::get<0>(*(rbegin(a))) == 14.0);
     CHECK(std::get<1>(*(rbegin(a))) == 4);
+    CHECK(std::get<2>(*(rbegin(a))) == 4 + 20);
 
     for (size_t i = 0; i < size(a); ++i) {
       CHECK(std::get<0>(a[i]) == 10.0 + i);
       CHECK((size_t)std::get<1>(a[i]) == i);
+      CHECK((size_t)std::get<2>(a[i]) == i + 20);
     }
   }
   CHECK(a.size() == 5);
 }
 
 TEST_CASE("fixed_min_heap with a 5500 vector", "[fixed_min_heap]") {
-  using element = std::tuple<float, int>;
-  fixed_min_pair_heap<float, int> a(7);
+  using element = std::tuple<float, int, int>;
+  fixed_min_triplet_heap<float, int, int> a(7);
   std::vector<element> v(5500);
   for (auto&& i : v) {
-    i = {std::rand(), std::rand()};
+    i = {std::rand(), std::rand(), std::rand()};
     CHECK(i != element{});
   }
-  for (auto&& [e, f] : v) {
-    a.insert(e, f);
+  for (auto&& [e, f, g] : v) {
+    a.insert(e, f, g);
   }
   CHECK(a.size() == 7);
   std::vector<element> a2(begin(a), end(a));
@@ -297,18 +307,18 @@ TEST_CASE("fixed_min_heap with a 5500 vector", "[fixed_min_heap]") {
 
 TEMPLATE_TEST_CASE(
     "first_less", "[fixed_min_heap]", float, double, int, unsigned) {
-  first_less<std::tuple<TestType, size_t>> a;
-  auto v = std::vector<std::tuple<TestType, size_t>>{
-      {0, 0},
-      {1, 1},
-      {0, 2},
-      {3, 3},
-      {4, 4},
-      {5, 5},
-      {6, 6},
-      {7, 7},
-      {8, 8},
-      {9, 9},
+  first_less<std::tuple<TestType, size_t, size_t>> a;
+  auto v = std::vector<std::tuple<TestType, size_t, size_t>>{
+      {0, 0, 0},
+      {1, 1, 1},
+      {0, 2, 2},
+      {3, 3, 3},
+      {4, 4, 4},
+      {5, 5, 5},
+      {6, 6, 6},
+      {7, 7, 7},
+      {8, 8, 8},
+      {9, 9, 9},
   };
   CHECK(a(v[0], v[1]));
   CHECK(!a(v[1], v[0]));
@@ -317,76 +327,78 @@ TEMPLATE_TEST_CASE(
 }
 
 TEST_CASE("insertion into an empty heap", "[fixed_min_heap]") {
-    fixed_min_pair_heap<int, int> heap(3);
+    fixed_min_triplet_heap<int, int, int> heap(3);
 
-    REQUIRE(heap.insert(5, 1) == true);
-    REQUIRE(heap.insert(10, 2) == true);
-    REQUIRE(heap.insert(3, 3) == true);
+    REQUIRE(heap.insert(5, 1, 11) == true);
+    REQUIRE(heap.insert(10, 2, 22) == true);
+    REQUIRE(heap.insert(3, 3, 33) == true);
     
     REQUIRE(heap.size() == 3);
     REQUIRE(std::get<0>(heap.front()) == 10);
 }
 
 TEST_CASE("pop an empty heap", "[fixed_min_heap]") {
-    fixed_min_pair_heap<int, int> heap(3);
+    fixed_min_triplet_heap<int, int, int> heap(3);
 
     heap.pop();
 }
 
 TEST_CASE("handling duplicates with unique_id", "[fixed_min_heap]") {
-    fixed_min_pair_heap<int, int> heap(3);
+    fixed_min_triplet_heap<int, int, int> heap(3);
 
-    REQUIRE(heap.insert<unique_id>(5, 1) == true);
-    REQUIRE(heap.insert<unique_id>(10, 2) == true);
-    REQUIRE(heap.insert<unique_id>(5, 1) == false); // Duplicate ID should not be inserted
+    REQUIRE(heap.insert<unique_id>(5, 1, 11) == true);
+    REQUIRE(heap.insert<unique_id>(10, 2, 22) == true);
+    REQUIRE(heap.insert<unique_id>(5, 1, 11) == false); // Duplicate ID should not be inserted
 
     REQUIRE(heap.size() == 2);
 }
 
 TEST_CASE("inserting into a full heap", "[fixed_min_heap]") {
-    fixed_min_pair_heap<int, int> heap(3);
+    fixed_min_triplet_heap<int, int, int> heap(3);
 
-    REQUIRE(heap.insert(5, 1) == true);
-    REQUIRE(heap.insert(10, 2) == true);
-    REQUIRE(heap.insert(3, 3) == true);
+    REQUIRE(heap.insert(5, 1, 11) == true);
+    REQUIRE(heap.insert(10, 2, 22) == true);
+    REQUIRE(heap.insert(3, 3, 33) == true);
     
     REQUIRE(heap.size() == 3);
 
     // Insert a value smaller than the smallest in the heap
-    REQUIRE(heap.insert(2, 4) == true);
+    REQUIRE(heap.insert(2, 4, 44) == true);
     REQUIRE(heap.size() == 3);
     REQUIRE(std::get<0>(heap.front()) == 5);
+    REQUIRE(std::get<1>(heap.front()) == 1);
+    REQUIRE(std::get<2>(heap.front()) == 11);
 }
 
 TEST_CASE("evict and insert when heap is full", "[fixed_min_heap]") {
-    fixed_min_pair_heap<int, int> heap(3);
+    fixed_min_triplet_heap<int, int, int> heap(3);
 
-    heap.insert(5, 1);
-    heap.insert(10, 2);
-    heap.insert(3, 3);
+    heap.insert(5, 1, 11);
+    heap.insert(10, 2, 22);
+    heap.insert(3, 3, 33);
     
-    auto [inserted, evicted, old_score, old_id] = heap.evict_insert(2, 4);
+    auto [inserted, evicted, evicted_score, evicted_id, evicted_index] = heap.evict_insert(2, 4, 44);
     REQUIRE(inserted == true);
     REQUIRE(evicted == true);
     // 10 should be evicted
-    REQUIRE(old_score == 10);
-    REQUIRE(old_id == 2);
+    REQUIRE(evicted_score == 10);
+    REQUIRE(evicted_id == 2);
+    REQUIRE(evicted_index == 22);
 
     REQUIRE(heap.size() == 3);
-    std::cout << heap.dump() << std::endl;
     // 5 should now be the biggest.
     REQUIRE(std::get<0>(heap.front()) == 5);
-    REQUIRE(heap.dump() == "(5, 1) (3, 3) (2, 4) ");
+    REQUIRE(heap.dump() == "(5, 1, 11) (3, 3, 33) (2, 4, 44) ");
 }
 
 TEST_CASE("no insertion when new element is not smaller", "[fixed_min_heap]") {
-    fixed_min_pair_heap<int, int> heap(3);
+    fixed_min_triplet_heap<int, int, int> heap(3);
 
-    heap.insert(5, 1);
-    heap.insert(10, 2);
-    heap.insert(3, 3);
+    heap.insert(5, 1, 11);
+    heap.insert(10, 2, 22);
+    heap.insert(3, 3, 33);
 
-    auto [inserted, evicted, old_score, old_id] = heap.evict_insert(15, 4);
+    auto [inserted, evicted, evicted_score, evicted_id, evicted_index] = heap.evict_insert(15, 4, 44);
     REQUIRE(inserted == false);
     REQUIRE(evicted == false);
     REQUIRE(heap.size() == 3);
@@ -395,21 +407,22 @@ TEST_CASE("no insertion when new element is not smaller", "[fixed_min_heap]") {
 }
 
 TEST_CASE("insert and evict with unique_id", "[fixed_min_heap]") {
-    fixed_min_pair_heap<int, int> heap(3);
+    fixed_min_triplet_heap<int, int, int> heap(3);
 
-    heap.insert<unique_id>(5, 1);
-    heap.insert<unique_id>(10, 2);
-    heap.insert<unique_id>(3, 3);
+    heap.insert<unique_id>(5, 1, 11);
+    heap.insert<unique_id>(10, 2, 22);
+    heap.insert<unique_id>(3, 3, 33);
 
-    auto [inserted, evicted, evicted_score, evicted_id] = heap.evict_insert<unique_id>(2, 4);
+    auto [inserted, evicted, evicted_score, evicted_id, evicted_index] = heap.evict_insert<unique_id>(2, 4, 44);
     REQUIRE(inserted == true);
     REQUIRE(evicted == true);
     // 10 should be evicted.
     REQUIRE(evicted_score == 10);
     REQUIRE(evicted_id == 2);
+    REQUIRE(evicted_index == 22);
 
     // Try to insert an element with an existing ID
-    auto [inserted2, evicted2, evicted_score2, evicted_id2] = heap.evict_insert<unique_id>(6, 3);
+    auto [inserted2, evicted2, evicted_score2, evicted_id2, evicted_index2] = heap.evict_insert<unique_id>(6, 3, 33);
     REQUIRE(inserted2 == false);
     REQUIRE(evicted2 == false);
     REQUIRE(heap.size() == 3);
@@ -501,18 +514,18 @@ TEST_CASE("threshold_heap: new threshold", "[threshold_heap]") {
 TEST_CASE(
     "fixed_max_heap with a large vector and compare function",
     "[fixed_min_heap]") {
-  using element = std::tuple<float, int>;
+  using element = std::tuple<float, int, int>;
 
-  fixed_min_pair_heap<float, int, std::greater<float>> a(
+  fixed_min_triplet_heap<float, int, int, std::greater<float>> a(
       7, std::greater<float>{});
 
   std::vector<element> v(5500);
   for (auto&& i : v) {
-    i = {std::rand(), std::rand()};
+    i = {std::rand(), std::rand(), std::rand()};
     CHECK(i != element{});
   }
-  for (auto&& [e, f] : v) {
-    a.insert(e, f);
+  for (auto&& [e, f, g] : v) {
+    a.insert(e, f, g);
   }
   CHECK(a.size() == 7);
 
@@ -538,18 +551,18 @@ TEST_CASE(
 }
 
 TEST_CASE("fixed_max_heap with a large vector", "[fixed_min_heap]") {
-  using element = std::tuple<float, int>;
+  using element = std::tuple<float, int, int>;
 
-  fixed_min_pair_heap<float, int, std::greater<float>> a(
+  fixed_min_triplet_heap<float, int, int, std::greater<float>> a(
       7, std::greater<float>{});
 
   std::vector<element> v(5500);
   for (auto&& i : v) {
-    i = {std::rand(), std::rand()};
+    i = {std::rand(), std::rand(), std::rand()};
     CHECK(i != element{});
   }
-  for (auto&& [e, f] : v) {
-    a.insert(e, f);
+  for (auto&& [e, f, g] : v) {
+    a.insert(e, f, g);
   }
   CHECK(a.size() == 7);
 
@@ -573,44 +586,3 @@ TEST_CASE("fixed_max_heap with a large vector", "[fixed_min_heap]") {
   });
   CHECK(a2 == v3);
 }
-
-// This seems to duplicate above
-#if 0
-TEST_CASE(
-    "fixed_max_heap with a large vector", "[fixed_min_heap]") {
-  using element = std::tuple<float, int>;
-
-  fixed_min_pair_heap<float, int, std::greater<float>> a(
-      7, std::greater<float>{});
-
-  std::vector<element> v(5500);
-  for (auto&& i : v) {
-    i = {std::rand(), std::rand()};
-    CHECK(i != element{});
-  }
-  for (auto&& [e, f] : v) {
-    a.insert(e, f);
-  }
-  CHECK(a.size() == 7);
-
-  std::vector<element> a2(begin(a), end(a));
-  std::sort(begin(a2), end(a2), [](auto&& a, auto&& b) {
-    return std::get<0>(a) > std::get<0>(b);
-  });
-
-  std::vector<element> u(v.begin(), v.begin() + 7);
-
-  std::nth_element(v.begin(), v.begin() + 7, v.end(), [](auto&& a, auto&& b) {
-    return std::get<0>(a) > std::get<0>(b);
-  });
-  std::vector<element> w(v.begin(), v.begin() + 7);
-
-  CHECK(u != w);
-
-  std::vector<element> v3(v.begin(), v.begin() + 7);
-  std::sort(begin(v3), end(v3), [](auto&& a, auto&& b) {
-    return std::get<0>(a) > std::get<0>(b);
-  });
-  CHECK(a2 == v3);
-}
-#endif

@@ -63,6 +63,8 @@ struct heap_traits {
       typename std::tuple_element<0, typename Heap::value_type>::type;
   using index_type =
       typename std::tuple_element<1, typename Heap::value_type>::type;
+  using indices_type =
+    typename std::tuple_element<2, typename Heap::value_type>::type;
 };
 
 template <class Heap>
@@ -72,40 +74,39 @@ template <class Heap>
 using heap_index_t = typename heap_traits<Heap>::index_type;
 
 /**
- * Heap to store a pair of values, ordered by the first element.
+ * Heap to store a triplet of values, ordered by the first element.
  * @tparam T Type of first element
  * @tparam U Type of second element
+ * @tparam V Type of third element
  */
-template <class T, class U, class Compare = std::less<T>>
-class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
-  using Base = std::vector<std::tuple<T, U>>;
-  // using Base::Base;
+template <class T, class U, class V, class Compare = std::less<T>>
+class fixed_min_triplet_heap : public std::vector<std::tuple<T, U, V>> {
+  using Base = std::vector<std::tuple<T, U, V>>;
   unsigned max_size{0};
   constexpr const static Compare compare_{};
 
  public:
-  explicit fixed_min_pair_heap(
+  explicit fixed_min_triplet_heap(
       std::integral auto k, Compare compare = Compare{})
       : Base(0)
-      , max_size{(unsigned)k}  //    , compare_{std::move(compare)}
-  {
+      , max_size{(unsigned)k} {
     Base::reserve(k);
   }
 
-  explicit fixed_min_pair_heap(
+  explicit fixed_min_triplet_heap(
       unsigned k,
-      std::initializer_list<std::tuple<T, U>> l,
+      std::initializer_list<std::tuple<T, U, V>> l,
       Compare compare = Compare{})
       : Base(0)
       , max_size{k} {
     Base::reserve(k);
     for (const auto& p : l) {
-      insert(std::get<0>(p), std::get<1>(p));
+      insert(std::get<0>(p), std::get<1>(p), std::get<2>(p));
     }
   }
 
   template <class Unique = not_unique>
-  bool insert(const T& x, const U& y) {
+  bool insert(const T& x, const U& y, const V& z) {
     if (Base::size() < max_size) {
       if constexpr (std::is_same_v<Unique, unique_id>) {
         if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
@@ -115,7 +116,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
         }
       }
 
-      Base::emplace_back(x, y);
+      Base::emplace_back(x, y, z);
 
       std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
@@ -144,7 +145,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
       //      this->pop_back();
       //      this->emplace_back(x, y);
-      (*this)[max_size - 1] = std::make_tuple(x, y);
+      (*this)[max_size - 1] = std::make_tuple(x, y, z);
       std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
@@ -160,7 +161,7 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
   // 3. Not inserted, not evicted: { false, false, x, y }
   // 4. Not inserted, evicted: exception
   template <class Unique = not_unique>
-  std::tuple<bool, bool, T, U> evict_insert(const T& x, const U& y) {
+  std::tuple<bool, bool, T, U, V> evict_insert(const T& x, const U& y, const V& z) {
     // There is room in the heap for the new element
     if (Base::size() < max_size) {
       // If the element id already exists in the heap, return false
@@ -170,18 +171,18 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
               return std::get<1>(e) == y;
             }) != end(*this)) {
           // Not inserted
-          return {false, false, x, y};
+          return {false, false, x, y, z};
         }
       }
 
       // Insert, since there is room
-      Base::emplace_back(x, y);
+      Base::emplace_back(x, y, z);
       std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
       // Inserted, not evicted
-      return {true, false, x, y};
+      return {true, false, x, y, z};
     } else if (compare_(x, std::get<0>(this->front()))) {
       // If x < max_score in the heap, evict max_score and insert x
       // return inserted = true, evicted = true, old_score, old_id
@@ -201,22 +202,22 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
           std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
             return compare_(std::get<0>(a), std::get<0>(b));
           });
-          return {false, false, x, y};
+          return {false, false, x, y, z};
         }
       }
 
       // Replace the former max element with the new element and re-heapify
-      (*this)[max_size - 1] = std::make_tuple(x, y);
+      (*this)[max_size - 1] = std::make_tuple(x, y, z);
       std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
       // Inserted, evicted: return old element
-      return {true, true, std::get<0>(tmp), std::get<1>(tmp)};
+      return {true, true, std::get<0>(tmp), std::get<1>(tmp), std::get<2>(tmp)};
     }
 
     // If the new element is larger than the max, return not inserted
-    return {false, false, x, y};
+    return {false, false, x, y, z};
   }
 
   void pop() {
@@ -231,15 +232,15 @@ class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
 
   std::string dump() const {
     std::ostringstream oss;
-    for (const auto& [score, id] : *this) {
-        oss << "(" << score << ", " << id << ") ";
+    for (const auto& [score, id, index] : *this) {
+        oss << "(" << score << ", " << id << ", " << index << ") ";
     }
     return oss.str();
   }
 };
 
-template <class T, class U>
-using k_min_heap = fixed_min_pair_heap<T, U>;
+template <class T, class U, class V>
+using k_min_heap = fixed_min_triplet_heap<T, U, V>;
 
 template <class T, class U>
 class threshold_min_pair_heap : public std::vector<std::tuple<T, U>> {
@@ -405,21 +406,21 @@ void convert_to_min_heap(std::vector<T>& heap) {
  * @tparam U Type of second element
  */
 template <class T, class U>
-class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
-  using Base = std::vector<std::tuple<T, U>>;
+class fixed_min_triplet_heap : public std::vector<std::tuple<T, U, V>> {
+  using Base = std::vector<std::tuple<T, U, V>>;
 
   // using Base::Base;
   unsigned max_size{0};
 
  public:
-  explicit fixed_min_pair_heap(unsigned k)
+  explicit fixed_min_triplet_heap(unsigned k)
       : Base(0)
       , max_size{k} {
     Base::reserve(k);
   }
 
-  explicit fixed_min_pair_heap(
-      unsigned k, std::initializer_list<std::tuple<T, U>> l)
+  explicit fixed_min_triplet_heap(
+      unsigned k, std::initializer_list<std::tuple<T, U, V>> l)
       : Base(0)
       , max_size{k} {
     Base::reserve(k);
@@ -516,24 +517,24 @@ class fixed_min_set_heap_2 : public std::vector<T> {
  * @tparam U Type of second element
  */
 template <class T, class U, class Compare = std::less<T>>
-class fixed_min_pair_heap : public std::vector<std::tuple<T, U>> {
-  using Base = std::vector<std::tuple<T, U>>;
+class fixed_min_triplet_heap : public std::vector<std::tuple<T, U, V>> {
+  using Base = std::vector<std::tuple<T, U, V>>;
 
   // using Base::Base;
   unsigned max_size{0};
   Compare compare_;
 
  public:
-  explicit fixed_min_pair_heap(unsigned k, Compare compare = Compare())
+  explicit fixed_min_triplet_heap(unsigned k, Compare compare = Compare())
       : Base(0)
       , max_size{k}
       , compare_{std::move(compare)} {
     Base::reserve(k);
   }
 
-  explicit fixed_min_pair_heap(
+  explicit fixed_min_triplet_heap(
       unsigned k,
-      std::initializer_list<std::tuple<T, U>> l,
+      std::initializer_list<std::tuple<T, U, V>> l,
       Compare compare = Compare())
       : Base(0)
       , max_size{k}
