@@ -146,7 +146,7 @@ auto best_first_O2(
   using score_type = float;
   using node_type = std::tuple<score_type, id_type>;
 
-  auto pq = k_min_heap<score_type, id_type>{Lmax};
+  auto pq = fixed_min_pair_heap<score_type, id_type>{Lmax};
   auto frontier = std::vector<node_type>();
 
   // Unordered set to keep track of state of vertices
@@ -364,7 +364,7 @@ auto best_first_O3(
   using score_type = float;
   using node_type = std::tuple<score_type, id_type>;
 
-  auto pq = k_min_heap<score_type, id_type>{Lmax};
+  auto pq = fixed_min_pair_heap<score_type, id_type>{Lmax};
   auto frontier = std::vector<node_type>();
 
   // Map to keep track of state of vertices
@@ -542,7 +542,7 @@ auto best_first_O4(
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
 
-  auto pq = k_min_heap<score_type, id_type>{Lmax};
+  auto pq = fixed_min_pair_heap<score_type, id_type>{Lmax};
 
   // The frontier to hold the next vertices to explore.  We will use it as a
   // min-max heap.  It will never be larger than Lmax.
@@ -674,7 +674,7 @@ auto best_first_O5(
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
 
-  auto pq = k_min_heap<score_type, id_type>{Lmax};
+  auto pq = fixed_min_pair_heap<score_type, id_type>{Lmax};
 
   // Map to keep track of state of vertices
   // Key is vertex id, value is state

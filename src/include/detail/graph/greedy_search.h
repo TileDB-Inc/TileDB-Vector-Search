@@ -309,10 +309,10 @@ auto greedy_search_O1(
     return visited_vertices.contains(v);
   };
 
-  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛: |𝓛| <= L
+  auto result = fixed_min_pair_heap<score_type, id_type>{L};  // 𝓛: |𝓛| <= L
   // auto result = std::set<id_type>{};
-  auto q1 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
-  auto q2 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
+  auto q1 = fixed_min_pair_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
+  auto q2 = fixed_min_pair_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
 
   scoped_timer __{tdb_func__};
 
@@ -333,10 +333,10 @@ auto greedy_search_O1(
 
     // p* <- argmin_{p ∈ 𝓛 \ 𝓥} distance(p, q)
 
-    // Although we use the name `k_min_heap` -- it actually stores a finite
+    // Although we use the name `fixed_min_pair_heap` -- it actually stores a finite
     // number of elements in a max heap (we remove the max element
     // every time we have a smaller element to insert).  Since we are using
-    // a `k_min_heap` for q1, to get and pop the min element, we have to
+    // a `fixed_min_pair_heap` for q1, to get and pop the min element, we have to
     // change it to a min heap, get the min element, and then change it back
     // to a max heap.
     // @todo -- There must be a better way of doing this

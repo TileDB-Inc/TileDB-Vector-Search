@@ -38,15 +38,15 @@ GreedySearch(Graph G, node source, query q, result_size k, frontier_size L) {
 }
 ```
 
-In our initial implementation we used a a `k_min_heap` to represent 𝓛, an `std::unordered_set` to represent 𝓥, and a`k_min_heap` to represent 𝓛 \ 𝓥. By setting the max size of the `k_min_heap` for 𝓛 to be the frontier size, we can maintain that on the fly without a separate "trim" operation.
+In our initial implementation we used a a `fixed_min_pair_heap` to represent 𝓛, an `std::unordered_set` to represent 𝓥, and a`fixed_min_pair_heap` to represent 𝓛 \ 𝓥. By setting the max size of the `fixed_min_pair_heap` for 𝓛 to be the frontier size, we can maintain that on the fly without a separate "trim" operation.
 
 ```
 template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
 auto greedy_search(auto&& graph, auto&& db, id_type source, auto&& query, size_t k_nn, size_t L) {
   std::unordered_set<id_type> visited_vertices;      // 𝓥
-  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛
-  auto q1 = k_min_heap<score_type, id_type>{L};      // 𝓛 \ 𝓥
-  auto q2 = k_min_heap<score_type, id_type>{L};
+  auto result = fixed_min_pair_heap<score_type, id_type>{L};  // 𝓛
+  auto q1 = fixed_min_pair_heap<score_type, id_type>{L};      // 𝓛 \ 𝓥
+  auto q2 = fixed_min_pair_heap<score_type, id_type>{L};
 
   while (!q1.empty()) {
     // Remove smallest element from q1
@@ -65,7 +65,7 @@ We can observe a few things about this (somewhat naive) implementation. First, t
 template <class Graph, feature_vector_array A, feature_vector V, class Distance = sum_of_squares_distance>
 auto best_first_O4(const Graph& graph, const A& db, id_type source, const V& query, size_t k_nn, size_t Lmax) {
   std::unordered_set<id_type> visited_vertices;      // 𝓥
-  auto pq = k_min_heap<score_type, id_type>{Lmax};   // 𝓛
+  auto pq = fixed_min_pair_heap<score_type, id_type>{Lmax};   // 𝓛
   std::vector<uint8_t> vertex_state_property_map(graph.num_vertices(), 0); // bitmap
 
   id_type p_star = source;

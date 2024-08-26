@@ -59,8 +59,8 @@ auto bfs_O1(
   using score_type = float;
 
   // std::deque<vertex_id_type> q1, q2;
-  auto q1 = k_min_heap<score_type, vertex_id_type>{Lmax};
-  auto q2 = k_min_heap<score_type, vertex_id_type>{Lmax};
+  auto q1 = fixed_min_pair_heap<score_type, vertex_id_type>{Lmax};
+  auto q2 = fixed_min_pair_heap<score_type, vertex_id_type>{Lmax};
 
   std::vector<vertex_id_type> level(
       graph.num_vertices(), std::numeric_limits<vertex_id_type>::max());
