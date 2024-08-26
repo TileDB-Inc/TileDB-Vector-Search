@@ -330,6 +330,8 @@ def test_sum_of_squares_distance(tmp_path):
     )
 
     distances, ids = index.query(query_vectors, k=5)
+    distances = np.sqrt(distances)
+
     assert np.allclose(
         distances_sum_of_squares, distances, 1e-4
     ), "Sum of squares distances do not match"
