@@ -333,10 +333,10 @@ auto greedy_search_O1(
 
     // p* <- argmin_{p ∈ 𝓛 \ 𝓥} distance(p, q)
 
-    // Although we use the name `fixed_min_pair_heap` -- it actually stores a finite
-    // number of elements in a max heap (we remove the max element
-    // every time we have a smaller element to insert).  Since we are using
-    // a `fixed_min_pair_heap` for q1, to get and pop the min element, we have to
+    // Although we use the name `fixed_min_pair_heap` -- it actually stores a
+    // finite number of elements in a max heap (we remove the max element every
+    // time we have a smaller element to insert).  Since we are using a
+    // `fixed_min_pair_heap` for q1, to get and pop the min element, we have to
     // change it to a min heap, get the min element, and then change it back
     // to a max heap.
     // @todo -- There must be a better way of doing this

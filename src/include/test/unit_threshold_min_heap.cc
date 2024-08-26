@@ -1,11 +1,11 @@
 /**
- * @file   unit_fixed_min_heap.cc
+ * @file unit_threshold_min_heap.cc
  *
  * @section LICENSE
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,8 @@
 #include "utils/threshold_min_heap.h"
 
 TEST_CASE(
-    "threshold_min_pair_heap: threshold_min_pair_heap", "[fixed_min_heap][threshold_min_pair_heap]") {
+    "threshold_min_pair_heap: threshold_min_pair_heap",
+    "[fixed_min_heap][threshold_min_pair_heap]") {
   threshold_min_pair_heap<float, int> a(5);
 
   SECTION("insert in ascending order") {
@@ -62,7 +63,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "threshold_min_pair_heap: threshold_min_pair_heap with a large vector", "[threshold_min_pair_heap]") {
+    "threshold_min_pair_heap: threshold_min_pair_heap with a large vector",
+    "[threshold_min_pair_heap]") {
   using element = std::tuple<float, int>;
 
   float thresh = std::rand();
@@ -92,7 +94,8 @@ TEST_CASE(
   }
 }
 
-TEST_CASE("threshold_min_pair_heap: new threshold", "[threshold_min_pair_heap]") {
+TEST_CASE(
+    "threshold_min_pair_heap: new threshold", "[threshold_min_pair_heap]") {
   using element = std::tuple<float, int>;
 
   float thresh = static_cast<float>(std::rand());
