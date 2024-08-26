@@ -35,7 +35,7 @@ SIFT_URI = (
 )
 SIFT_FOLDER_NAME = "siftsmall" if USE_SIFT_SMALL else "sift"
 
-TEMP_DIR = os.path.join(os.path.dirname(__file__), "tmp")
+TEMP_DIR = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 RESULTS_DIR = os.path.join(TEMP_DIR, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
@@ -82,7 +82,8 @@ class TimerMode(Enum):
 
 
 class Timer:
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         self.current_timers = {}
 
         self.keyToTimes = {}
@@ -145,7 +146,7 @@ class Timer:
 
     def summary_string(self):
         summary = self.summarize_data()
-        summary_str = ""
+        summary_str = f"Timer: {self.name}\n"
         for tag, data in summary.items():
             summary_str += f"{tag}\n"
             if "ingestion" in data:
@@ -166,7 +167,7 @@ class Timer:
         plt.figure(figsize=(20, 12))
         plt.xlabel("Average Query Accuracy")
         plt.ylabel("Time (seconds)")
-        plt.title("Ingestion Time vs Average Query Accuracy")
+        plt.title(f"{self.name}: Ingestion Time vs Average Query Accuracy")
         for tag, data in summary.items():
             ingestion_times = []
             average_accuracy = sum(data["query"]["accuracies"]) / len(
@@ -180,14 +181,16 @@ class Timer:
             plt.scatter(y, x, marker="o", label=tag)
 
         plt.legend()
-        plt.savefig(os.path.join(RESULTS_DIR, "ingestion_time_vs_accuracy.png"))
+        plt.savefig(
+            os.path.join(RESULTS_DIR, f"{self.name}_ingestion_time_vs_accuracy.png")
+        )
         plt.close()
 
         # Plot query.
         plt.figure(figsize=(20, 12))
         plt.xlabel("Accuracy")
         plt.ylabel("Time (seconds)")
-        plt.title("Query Time vs Accuracy")
+        plt.title(f"{self.name}: Query Time vs Accuracy")
         for tag, data in summary.items():
             query_times = []
             for i in range(data["query"]["count"]):
@@ -198,7 +201,9 @@ class Timer:
             plt.plot(y, x, marker="o", label=tag)
 
         plt.legend()
-        plt.savefig(os.path.join(RESULTS_DIR, "query_time_vs_accuracy.png"))
+        plt.savefig(
+            os.path.join(RESULTS_DIR, f"{self.name}_query_time_vs_accuracy.png")
+        )
         plt.close()
 
     def save_and_print_results(self):
@@ -226,7 +231,7 @@ def download_and_extract(url, download_path, extract_path):
 
 def benchmark_ivf_flat():
     index_type = "IVF_FLAT"
-    timer = Timer()
+    timer = Timer(name=index_type)
 
     k = 100
     queries = load_fvecs(SIFT_QUERIES_PATH)
@@ -264,7 +269,7 @@ def benchmark_ivf_flat():
 
 def benchmark_vamana():
     index_type = "VAMANA"
-    timer = Timer()
+    timer = Timer(name=index_type)
 
     k = 100
     queries = load_fvecs(SIFT_QUERIES_PATH)
@@ -304,7 +309,7 @@ def benchmark_vamana():
 
 def benchmark_ivf_pq():
     index_type = "IVF_PQ"
-    timer = Timer()
+    timer = Timer(name=index_type)
 
     k = 100
     queries = load_fvecs(SIFT_QUERIES_PATH)
@@ -346,9 +351,9 @@ def benchmark_ivf_pq():
 def main():
     download_and_extract(SIFT_URI, SIFT_DOWNLOAD_PATH, TEMP_DIR)
 
-    # benchmark_ivf_flat()
+    benchmark_ivf_flat()
     benchmark_vamana()
-    # benchmark_ivf_pq()
+    benchmark_ivf_pq()
 
 
 main()
