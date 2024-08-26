@@ -1154,18 +1154,27 @@ class ivf_pq_index {
     }
   }
 
-  template <class FeatureVectors, class QueryVectors, class Matrix>
+  template <class FeatureVectors, class QueryVectors>
   auto re_rank_query(
       const FeatureVectors& feature_vectors, 
       const QueryVectors& query_vectors, 
-      const Matrix &initial_ids,
-      std::unordered_map<id_type, size_t> &id_to_vector_index,
+      std::function<size_t(size_t, size_t)> get_vector_index,
+      std::function<size_t(size_t, size_t)> get_vector_id,
+      size_t k_initial,
       size_t k_nn) const {
     auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(::num_vectors(query_vectors), fixed_min_pair_heap<score_type, id_type>(k_nn));
-    for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
-      for (size_t j = 0; j < ::dimensions(initial_ids[i]); ++j) {
-        auto id = initial_ids[i][j];
-        auto vector_index = id_to_vector_index[id];
+    // for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
+    for (size_t i = 0; i < ::num_vectors(query_vectors); ++i) {
+      std::cout << "[ivf_pq_index@re_rank_query] -----------------------------------" << std::endl;
+      // for (size_t j = 0; j < ::dimensions(initial_ids[i]); ++j) {
+        for (size_t j = 0; j < k_initial; ++j) {
+        // auto id = initial_ids[i][j];
+        // auto vector_index = id_to_vector_index[id];
+        // std::cout << "[ivf_pq_index@re_rank_query] id: " << id << " vector_index: " << vector_index << std::endl;
+        auto vector_index = get_vector_index(i, j);
+        auto id = get_vector_id(i, j);
+        std::cout << "[ivf_pq_index@re_rank_query] i: " << i << " j: " << j << " vector_index: " << vector_index << std::endl;
+        debug_vector(feature_vectors[vector_index], "  feature_vector");
         float distance;
         if (distance_metric_ == DistanceMetric::L2) {
           distance = sum_of_squares_distance{}(query_vectors[i], feature_vectors[vector_index]);
@@ -1176,7 +1185,7 @@ class ivf_pq_index {
         } else {
           throw std::runtime_error("Invalid distance metric");
         }
-        std::cout << "[ivf_pq_index@query_infinite_ram] Inserting id: " << id << " with distance: " << distance << std::endl;
+        std::cout << "  Inserting id: " << id << " with distance: " << distance << std::endl;
         min_scores[i].insert(distance, id);
       }
     }
@@ -1253,11 +1262,6 @@ class ivf_pq_index {
             decltype(pq_storage_type{}[0])>(),
         query_return_type);
 
-    // auto num_queries = ::num_vectors(query_vectors);
-    // ColMajorMatrix<id_type> top_k(k_nn, num_queries);
-    // ColMajorMatrix<float> top_scores(k_nn, num_queries);
-    // return std::make_tuple(std::move(top_scores), std::move(top_k));
-
     debug_matrix(initial_indices, "[ivf_pq_index@query_infinite_ram] initial_indices");
     debug_matrix(initial_ids, "[ivf_pq_index@query_infinite_ram] initial_ids");
     debug_matrix(initial_distances, "[ivf_pq_index@query_infinite_ram] initial_distances");
@@ -1267,24 +1271,27 @@ class ivf_pq_index {
     }
     std::cout << "Will re-rank" << std::endl;
 
-    std::unordered_map<id_type, size_t> id_to_vector_index;
-    std::vector<uint64_t> vector_indices;
-    for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
-      for (size_t j = 0; j < ::dimensions(initial_ids[i]); ++j) {
-        std::cout << "Considering id: " << initial_ids[i][j] << " with index: " << initial_indices[i][j] << std::endl;
-        if (id_to_vector_index.find(initial_ids[i][j]) == id_to_vector_index.end()) {
-          id_to_vector_index[initial_ids[i][j]] = vector_indices.size();
-          vector_indices.push_back(initial_indices[i][j]);
-        }
-      }
-    }
-    debug_vector(vector_indices, "[ivf_pq_index@query_infinite_ram] vector_indices");
-
     if (::num_vectors(feature_vectors_) == 0 && !group_) {
       throw std::runtime_error("No feature vectors available and index was not opened by URI");
     }
 
+    std::cout << "[ivf_pq_index@query_infinite_ram] ::num_vectors(initial_ids) = " << ::num_vectors(initial_ids) << std::endl;
+
     if (::num_vectors(feature_vectors_) == 0) {
+      std::unordered_map<id_type, size_t> id_to_vector_index;
+      std::vector<uint64_t> vector_indices;
+      for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
+        for (size_t j = 0; j < ::dimensions(initial_ids[i]); ++j) {
+          std::cout << "Considering id: " << initial_ids[i][j] << " with index: " << initial_indices[i][j] << std::endl;
+          if (id_to_vector_index.find(initial_ids[i][j]) == id_to_vector_index.end()) {
+            id_to_vector_index[initial_ids[i][j]] = vector_indices.size();
+            vector_indices.push_back(initial_indices[i][j]);
+          }
+        }
+      }
+      debug_vector(vector_indices, "[ivf_pq_index@query_infinite_ram] vector_indices");
+
+      std::cout << "Re-ranking with feature_vectors from URI" << std::endl;
       auto feature_vectors = tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
           group_->cached_ctx(), 
           group_->feature_vectors_uri(), 
@@ -1294,12 +1301,31 @@ class ivf_pq_index {
           temporal_policy_);
       feature_vectors.load();
       debug_matrix(feature_vectors, "[ivf_pq_index@query_infinite_ram] feature_vectors");
-      return re_rank_query(feature_vectors, query_vectors, initial_ids, id_to_vector_index, k_nn);
-    }
 
-    return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
-    // return re_rank_query<decltype(feature_vectors_), decltype(query_vectors)>(
-    //   feature_vectors_, query_vectors, initial_ids, id_to_vector_index, k_nn);
+      auto get_vector_index = [&](size_t query_index, size_t nn_index) -> size_t {
+        return id_to_vector_index[initial_ids[query_index][nn_index]];
+      };
+
+      auto get_vector_id = [&](size_t query_index, size_t nn_index) -> size_t {
+        return initial_ids[query_index][nn_index];
+      };
+
+      return re_rank_query(feature_vectors, query_vectors, get_vector_index, get_vector_id, k_initial, k_nn);
+      // return re_rank_query(feature_vectors, query_vectors, initial_ids, id_to_vector_index, k_nn);
+    }
+    std::cout << "Re-ranking with feature_vectors_" << std::endl;
+    // return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
+
+    // initial_ids = make a matrix of ids from feature_vectors_ using feature_vectors_.ids().
+
+    auto get_vector_index = [&](size_t query_index, size_t nn_index) -> size_t {
+      return initial_indices[query_index][nn_index];
+    };
+    auto get_vector_id = [&](size_t query_index, size_t nn_index) -> size_t {
+      return initial_ids[query_index][nn_index];
+    };
+    return re_rank_query<decltype(feature_vectors_), decltype(query_vectors)>(
+        feature_vectors_, query_vectors, get_vector_index, get_vector_id, k_initial, k_nn);
   }
 
   /**

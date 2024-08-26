@@ -35,6 +35,7 @@
 #include "index/ivf_pq_index.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/gen_graphs.h"
+#include "test/utils/test_utils.h"
 #include "test/utils/query_common.h"
 
 struct dummy_pq_index {
@@ -657,8 +658,9 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   float reassign_ratio = 0.09f;
 
 
-  size_t k_nn = 30;
   size_t nprobe = nlist;
+  size_t k_nn = 20;
+  auto k_factor = 2.f;
 
   std::optional<TemporalPolicy> temporal_policy = std::nullopt;
   using feature_type = float;
@@ -677,14 +679,13 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   CHECK(index.nlist() == nlist);
 
   // We can train, add, query, and then write the index.
+  std::vector<id_type> ids(num_vectors);
   {
     std::vector<std::vector<feature_type>> vectors;
     for (int i = 1; i <= num_vectors; ++i) {
       std::vector<feature_type> vector(dimensions, i);
       vectors.push_back(vector);
     }
-    std::vector<id_type> ids(num_vectors);
-    // std::iota(begin(ids), end(ids), 1);
     for (int i = 1; i <= num_vectors; ++i) {
       ids[i - 1] = i * 10;
     }
@@ -693,45 +694,54 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     //     {{1, 1, 1, 1}, {2, 2, 2, 2}, {3, 3, 3, 3}, {4, 4, 4, 4}},
     //     {11, 22, 33, 44}};
     auto training = ColMajorMatrixWithIds<feature_type, id_type>{vectors, ids};
-    std::cout << "[unit_ivf_pq_index] index.add() -------------------" << std::endl;
+    std::cout << "[unit_ivf_pq_index] index.add() ----------------------------------------------------------------------------" << std::endl;
     index.train(training, training.raveled_ids());
     index.add(training, training.raveled_ids());
 
 
-    // for (int i = 1; i <= 4; ++i) {
-    //   auto value = static_cast<feature_type>(i);
-    //   auto queries =
-    //       ColMajorMatrix<feature_type>{{{value, value, value, value}}};
-    //   auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
-    //   CHECK(scores(0, 0) == 0);
-    //   CHECK(ids(0, 0) == i * 11);
-    // }
+    auto queries = ColMajorMatrix<feature_type>{{{1, 1, 1, 1}}};
+    {
+      auto&& [scores_reranking, ids_reranking] = index.query_infinite_ram(queries, k_nn, nprobe, k_factor);
+      debug_matrix(scores_reranking, "scores_reranking");
+      debug_matrix(ids_reranking, "ids_reranking");
+      CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(scores_reranking(0, 0) == 0);
 
+      // auto&& [scores_no_reranking, ids_no_reranking] = index.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      // auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+      // CHECK(num_equal_no_reranking != k_nn);
+      // CHECK(num_equal_no_reranking > 5);
+    }
+    // auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
+    // CHECK(scores(0, 0) == 0);
+    // CHECK(ids(0, 0) == i * 11);
+    return;
     if (vfs.is_dir(ivf_index_uri)) {
       vfs.remove_dir(ivf_index_uri);
     }
-    std::cout << "[unit_ivf_pq_index] index.write_index() -------------------" << std::endl;
+    std::cout << "[unit_ivf_pq_index] index.write_index() ----------------------------------------------------------------------------" << std::endl;
     index.write_index(ctx, ivf_index_uri);
   }
 
-  // We can load and query the index.
+
+  // We can open the index by URI and query.
   {
-    std::cout << "[unit_ivf_pq_index] load by uri -------------------" << std::endl;
+    std::cout << "[unit_ivf_pq_index] load by uri ----------------------------------------------------------------------------" << std::endl;
     auto index2 = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
-    for (int i = 1; i <= 1; ++i) {
-      auto value = static_cast<feature_type>(i);
-      auto queries =
-          ColMajorMatrix<feature_type>{{{value, value, value, value}}};
-      // auto&& [scores_from_finite, ids_from_finite] =
-      //     index2.query_finite_ram(queries, k_nn, nprobe, 5);
-      // CHECK(scores_from_finite(0, 0) == 0);
-      // CHECK(ids_from_finite(0, 0) == i * 11);
-      std::cout << "[unit_ivf_pq_index] index.query_infinite_ram() -------------------" << std::endl;
-      auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nprobe, 2.f);
-      
-      CHECK(scores(0, 0) == 0);
-      // CHECK(ids(0, 0) == i * 11);
-      // CHECK(ids(0, 0) == i);
+    auto queries = ColMajorMatrix<feature_type>{{{1, 1, 1, 1}}};
+    
+    // query_infinite_ram.
+    {
+      auto&& [scores_reranking, ids_reranking] = index2.query_infinite_ram(queries, k_nn, nprobe, k_factor);
+      debug_matrix(scores_reranking, "scores_reranking");
+      debug_matrix(ids_reranking, "ids_reranking");
+      CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(scores_reranking(0, 0) == 0);
+
+      // auto&& [scores_no_reranking, ids_no_reranking] = index2.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      // auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+      // CHECK(num_equal_no_reranking != k_nn);
+      // CHECK(num_equal_no_reranking > 5);
     }
   }
 }

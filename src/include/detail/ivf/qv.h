@@ -892,7 +892,7 @@ auto apply_query(
   const auto& partitioned_ids = partitioned_vectors.ids();
   // These are local to p_v.
   const auto& indices = partitioned_vectors.indices();
-  debug_matrix(query, "[qv@num_queries] query");
+  // debug_matrix(query, "[qv@num_queries] query");
 
   auto num_queries = num_vectors(query);
   std::cout << "[qv@num_queries] num_queries: " << num_queries << std::endl;
@@ -978,9 +978,9 @@ auto apply_query(
     }
   }
 
-  for (const auto &score: min_scores) {
-    std::cout << "[qv@apply_query] score: " << score.dump() << std::endl;
-  }
+  // for (const auto &score: min_scores) {
+  //   std::cout << "[qv@apply_query] score: " << score.dump() << std::endl;
+  // }
 
   return min_scores;
 }
