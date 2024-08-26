@@ -143,14 +143,6 @@ struct assignment_counter {
     return *this;
   }
 };
-
-enum class QueryReturnType {
-  // Return the IDs of vectors.
-  Ids,
-  // Return the indexes of vectors.
-  Indices
-};
-
 }  // anonymous namespace
 
 #endif

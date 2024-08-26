@@ -124,6 +124,7 @@ auto dist_qv_finite_ram_part(
           fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
 
   size_t part_offset = 0;
+  size_t indices_offset = 0;
   while (partitioned_vectors.load()) {
     _i.start();
     auto current_part_size = ::num_partitions(partitioned_vectors);
@@ -148,7 +149,8 @@ auto dist_qv_finite_ram_part(
              k_nn,
              first_part,
              last_part,
-             part_offset]() {
+             part_offset,
+             indices_offset]() {
               return apply_query(
                   partitioned_vectors,
                   std::optional<std::vector<int>>{},
@@ -159,6 +161,7 @@ auto dist_qv_finite_ram_part(
                   first_part,
                   last_part,
                   part_offset,
+                  indices_offset,
                   distance);
             }));
       }
@@ -174,6 +177,7 @@ auto dist_qv_finite_ram_part(
     }
 
     part_offset += current_part_size;
+    indices_offset += num_vectors(partitioned_vectors);
     _i.stop();
   }
   return min_scores;

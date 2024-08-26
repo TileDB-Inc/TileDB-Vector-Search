@@ -256,7 +256,8 @@ class ivf_pq_index {
   DistanceMetric distance_metric_{DistanceMetric::L2};
 
   // Some parameters for execution
-  uint64_t num_threads_{std::thread::hardware_concurrency()};
+  // uint64_t num_threads_{std::thread::hardware_concurrency()};
+  uint64_t num_threads_{1};
 
  public:
   using value_type = feature_type;
@@ -735,7 +736,7 @@ class ivf_pq_index {
         feature_vectors.ids().begin(),
         feature_vectors.ids().end(),
         feature_vectors_.ids());
-    debug_matrix_with_ids(feature_vectors_, "[ivf_pq_index@add] feature_vectors_");
+    debug_matrix_with_ids(feature_vectors_, "[ivf_pq_index@add] feature_vectors_", 600);
   }
 
   template <
@@ -912,7 +913,7 @@ class ivf_pq_index {
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
 
-    partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
+    auto partitioned_pq_vectors = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
         group_->pq_ivf_indices_uri(),
@@ -925,7 +926,7 @@ class ivf_pq_index {
     // NB: We don't load the partitioned_pq_vectors here. We will load them
     // when we do the query.
     return std::make_tuple(
-        std::move(active_partitions), std::move(active_queries));
+        std::move(active_partitions), std::move(active_queries), std::move(partitioned_pq_vectors));
   }
 
   /**
@@ -1249,7 +1250,6 @@ class ivf_pq_index {
     debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@query_infinite_ram] partitioned_pq_vectors_");
     // Perform the initial search with k_nn * k_factor.
     size_t k_initial = static_cast<size_t>(k_nn * k_factor);
-    auto query_return_type = k_factor == 1.f ? QueryReturnType::Ids : QueryReturnType::Indices;
     auto&& [initial_distances, initial_ids, initial_indices] = detail::ivf::query_infinite_ram(
         *partitioned_pq_vectors_,
         active_partitions,
@@ -1259,14 +1259,25 @@ class ivf_pq_index {
         num_threads_,
         make_pq_distance_query_to_pq_centroid_distance_tables<
             std::span<float>,
-            decltype(pq_storage_type{}[0])>(),
-        query_return_type);
+            decltype(pq_storage_type{}[0])>());
+
+    return re_rank(std::move(initial_distances), std::move(initial_ids), std::move(initial_indices), query_vectors, k_initial, k_nn);
+  }
+
+  auto re_rank(
+      ColMajorMatrix<float>&& initial_distances,
+      ColMajorMatrix<id_type>&& initial_ids,
+      ColMajorMatrix<size_t>&& initial_indices,
+      const auto& query_vectors,
+      size_t k_initial,
+      size_t k_nn) {
 
     debug_matrix(initial_indices, "[ivf_pq_index@query_infinite_ram] initial_indices");
     debug_matrix(initial_ids, "[ivf_pq_index@query_infinite_ram] initial_ids");
     debug_matrix(initial_distances, "[ivf_pq_index@query_infinite_ram] initial_distances");
 
-    if (k_factor == 1.) {
+    // if (k_factor == 1.) {
+    if (k_initial == k_nn) {
       return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
     }
     std::cout << "Will re-rank" << std::endl;
@@ -1317,7 +1328,6 @@ class ivf_pq_index {
     // return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
 
     // initial_ids = make a matrix of ids from feature_vectors_ using feature_vectors_.ids().
-
     auto get_vector_index = [&](size_t query_index, size_t nn_index) -> size_t {
       return initial_indices[query_index][nn_index];
     };
@@ -1367,31 +1377,31 @@ class ivf_pq_index {
           "run if you're loading the index by URI. Please open it by URI and "
           "try again. If you just wrote the index, open it up again by URI.");
     }
-    if (partitioned_pq_vectors_) {
-      // We did an infinite query before this. Reset so we can load again.
-      partitioned_pq_vectors_.reset();
-    }
+    // if (partitioned_pq_vectors_) {
+    //   // We did an infinite query before this. Reset so we can load again.
+    //   partitioned_pq_vectors_.reset();
+    // }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
-    auto&& [active_partitions, active_queries] =
+    auto&& [active_partitions, active_queries, partitioned_pq_vectors] =
         read_index_finite(query_vectors, nprobe, upper_bound);
     auto query_to_pq_centroid_distance_tables =
         std::move(*generate_query_to_pq_centroid_distance_tables<
                   Q,
                   ColMajorMatrix<float>>(query_vectors));
+    size_t k_initial = static_cast<size_t>(k_nn * k_factor);
     auto&& [initial_distances, initial_ids, initial_indices] = detail::ivf::query_finite_ram(
-        *partitioned_pq_vectors_,
+        *partitioned_pq_vectors,
         query_to_pq_centroid_distance_tables,
         active_queries,
-        k_nn,
+        k_initial,
         upper_bound,
         num_threads_,
         make_pq_distance_query_to_pq_centroid_distance_tables<
             std::span<float>,
             decltype(pq_storage_type{}[0])>());
-    // TODO(paris): Support re-ranking.
-    return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
+    return re_rank(std::move(initial_distances), std::move(initial_ids), std::move(initial_indices), query_vectors, k_initial, k_nn);
   }
 
   /***************************************************************************

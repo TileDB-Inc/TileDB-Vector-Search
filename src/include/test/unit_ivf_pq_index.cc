@@ -660,7 +660,8 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
 
   size_t nprobe = nlist;
   size_t k_nn = 20;
-  auto k_factor = 2.f;
+  float k_factor = 2.f;
+  size_t upper_bound = 350;
 
   std::optional<TemporalPolicy> temporal_policy = std::nullopt;
   using feature_type = float;
@@ -687,7 +688,8 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       vectors.push_back(vector);
     }
     for (int i = 1; i <= num_vectors; ++i) {
-      ids[i - 1] = i * 10;
+      // ids[i - 1] = i * 10;
+      ids[i - 1] = i;
     }
 
     // auto training = ColMajorMatrixWithIds<feature_type>{
@@ -706,16 +708,14 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       debug_matrix(ids_reranking, "ids_reranking");
       CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
-
-      // auto&& [scores_no_reranking, ids_no_reranking] = index.query_infinite_ram(queries, k_nn, nprobe, 1.f);
-      // auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
-      // CHECK(num_equal_no_reranking != k_nn);
-      // CHECK(num_equal_no_reranking > 5);
+    
+      auto&& [scores_no_reranking, ids_no_reranking] = index.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+      CHECK(num_equal_no_reranking != k_nn);
+      CHECK(num_equal_no_reranking > 5);
     }
-    // auto&& [scores, ids] = index.query_infinite_ram(queries, k_nn, nprobe);
-    // CHECK(scores(0, 0) == 0);
-    // CHECK(ids(0, 0) == i * 11);
-    return;
+    
+
     if (vfs.is_dir(ivf_index_uri)) {
       vfs.remove_dir(ivf_index_uri);
     }
@@ -737,11 +737,26 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       debug_matrix(ids_reranking, "ids_reranking");
       CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
+    
+      auto&& [scores_no_reranking, ids_no_reranking] = index2.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+      CHECK(num_equal_no_reranking != k_nn);
+      CHECK(num_equal_no_reranking > 2);
+    }
 
-      // auto&& [scores_no_reranking, ids_no_reranking] = index2.query_infinite_ram(queries, k_nn, nprobe, 1.f);
-      // auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
-      // CHECK(num_equal_no_reranking != k_nn);
-      // CHECK(num_equal_no_reranking > 5);
+    // query_finite_ram.
+    {
+      auto&& [scores_reranking, ids_reranking] = index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, k_factor);
+      debug_matrix(scores_reranking, "scores_reranking");
+      debug_matrix(ids_reranking, "ids_reranking");
+      CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(scores_reranking(0, 0) == 0);
+
+      auto&& [scores_no_reranking, ids_no_reranking] = index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, 1.f);
+      auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+      debug_matrix(ids_no_reranking, "ids_no_reranking");
+      CHECK(num_equal_no_reranking != k_nn);
+      CHECK(num_equal_no_reranking > 5);
     }
   }
 }

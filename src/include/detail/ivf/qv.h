@@ -864,8 +864,9 @@ auto qv_query_heap_finite_ram(
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
  * @param k_nn How many nearest neighbors to return
- * @param nthreads How many threads to parallelize with
- * @return tuple of the top_k scores and the top_k indices
+ * @param indices_offset When computing the top_k indices, this function may be called multiple times
+ *        on different load()'s of the partitioned matrix. Each individual load does not know about the others, so the indices are local. But we need global indices relative to how the partitioned vectors are layed out on disk. So use this number to offset the local indices.
+ * @return tuple of the top_k scores, the top_k ids, and the top_k indices
  *
  */
 template <
@@ -883,8 +884,8 @@ auto apply_query(
     size_t first_active_part,
     size_t last_active_part,
     size_t part_offset = 0,
-    Distance distance = Distance{},
-    QueryReturnType query_return_type = QueryReturnType::Ids) {
+    size_t indices_offset = 0,
+    Distance distance = Distance{}) {
   using id_type = typename P::id_type;
   using score_type = float;
 
@@ -895,9 +896,12 @@ auto apply_query(
   // debug_matrix(query, "[qv@num_queries] query");
 
   auto num_queries = num_vectors(query);
+  debug_vector_of_vectors(active_queries, "[qv@num_queries] active_queries");
   std::cout << "[qv@num_queries] num_queries: " << num_queries << std::endl;
-
   std::cout << "[qv@num_queries] creating min_scores with k_nn: " << k_nn << std::endl;
+  std::cout << "[qv@num_queries] first_active_part: " << first_active_part << std::endl;
+  std::cout << "[qv@num_queries] last_active_part: " << last_active_part << std::endl;
+  std::cout << "[qv@num_queries] part_offset: " << part_offset << std::endl;
   auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(
       num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 
@@ -905,6 +909,7 @@ auto apply_query(
   // all of the partitions.  For an infinite query, this is a subset, given
   // by `active_partitions`.
   for (size_t p = first_active_part; p < last_active_part; ++p) {
+    std::cout << "[qv@apply_query] -----------------------" << std::endl;
     // Note that in the infinite case, the active_partitions are a subset
     // of all the partitions.  In the finite case, all partitions are active.
     // auto quartno = active_partitions[partno];
@@ -928,32 +933,43 @@ auto apply_query(
     auto len = 2 * (size(active_queries[partno]) / 2);
     auto end = active_queries[partno].begin() + len;
 
+    std::cout << "  partno: " << partno << std::endl;
+    std::cout << "  active_partno: " << active_partno << std::endl;
+    std::cout << "  start: " << start << std::endl;
+    std::cout << "  stop: " << stop << std::endl;
+    std::cout << "  kstep: " << kstep << std::endl;
+    std::cout << "  kstop: " << kstop << std::endl;
+    std::cout << "  len: " << len << std::endl;
+
     for (auto j = active_queries[partno].begin(); j < end; j += 2) {
       auto j0 = j[0];
       auto j1 = j[1];
       const auto& q_vec_0 = query[j0];
       const auto& q_vec_1 = query[j1];
+      std::cout << "    j0: " << j0 << std::endl;
 
       for (size_t kp = start; kp < kstop; kp += 2) {
+        std::cout << "    kp: " << kp << std::endl;
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_01 = distance(q_vec_0, partitioned_vectors[kp + 1]);
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
         auto score_11 = distance(q_vec_1, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
-        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], kp + 1);
-        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], kp + 0);
-        min_scores[j1].insert(score_11, partitioned_ids[kp + 1], kp + 1);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], indices_offset + kp + 0);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], indices_offset + kp + 1);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], indices_offset + kp + 0);
+        min_scores[j1].insert(score_11, partitioned_ids[kp + 1], indices_offset + kp + 1);
       }
 
       /*
        * Cleanup the last iteration(s) of k
        */
       for (size_t kp = kstop; kp < stop; ++kp) {
+        std::cout << "    kp: " << kp << std::endl;
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
-        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], kp + 0);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], indices_offset + kp + 0);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], indices_offset + kp + 0);
       }
     }
 
@@ -963,17 +979,21 @@ auto apply_query(
     for (auto j = end; j < active_queries[partno].end(); ++j) {
       auto j0 = j[0];
       const auto& q_vec_0 = query[j0];
+      std::cout << "    j0: " << j0 << std::endl;
 
       for (size_t kp = start; kp < kstop; kp += 2) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_01 = distance(q_vec_0, partitioned_vectors[kp + 1]);
+        debug_vector(partitioned_vectors[kp + 0], "    kp + 0: " + std::to_string(kp + 0) + ", id: " + std::to_string(partitioned_ids[kp + 0]) + ", score: " + std::to_string(score_00));
+        debug_vector(partitioned_vectors[kp + 1], "    kp + 1: " + std::to_string(kp + 1) + ", id: " + std::to_string(partitioned_ids[kp + 1]) + ", score: " + std::to_string(score_00));
 
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
-        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], kp + 1);
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], indices_offset + kp + 0);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], indices_offset + kp + 1);
       }
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], kp + 0);
+        debug_vector(partitioned_vectors[kp + 0], "    kp + 0: " + std::to_string(kp + 0) + ", id: " + std::to_string(partitioned_ids[kp + 0]) + ", score: " + std::to_string(score_00));
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], indices_offset + kp + 0);
       }
     }
   }
@@ -1026,7 +1046,7 @@ auto apply_query(
  * @return The indices of the top_k neighbors for each query vector
  */
 template <
-    feature_vector_array F,
+    typename F,
     feature_vector_array Q,
     class Distance = sum_of_squares_distance>
 auto query_finite_ram(
@@ -1049,11 +1069,20 @@ auto query_finite_ram(
   log_timer _i{tdb_func__ + " in RAM"};
 
   size_t part_offset = 0;
+  size_t indices_offset = 0;
   while (partitioned_vectors.load()) {
+    std::cout << "[qv@query_finite_ram] ------------------------------------"   << std::endl;
+    // dynamic_cast<tdbColMajorPartitionedMatrix<uint8_t, unsigned int, uint64_t>>(
+    //     partitioned_vectors)
+    // partitioned_vectors.debug_tdb_partitioned_matrix("[qv@query_finite_ram] partitioned_vectors");
     _i.start();
 
     auto current_part_size = ::num_partitions(partitioned_vectors);
+    std::cout << "[qv@query_finite_ram] current_part_size: " << current_part_size << std::endl;
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
+    std::cout << "[qv@query_finite_ram] parts_per_thread: " << parts_per_thread << std::endl;
+
+    std::cout << "[qv@query_finite_ram] num_vectors: " << num_vectors(partitioned_vectors) << std::endl;
 
     std::vector<std::future<decltype(min_scores)>> futs;
     futs.reserve(nthreads);
@@ -1074,7 +1103,8 @@ auto query_finite_ram(
              k_nn,
              first_part,
              last_part,
-             part_offset]() {
+             part_offset,
+             indices_offset]() {
               return apply_query(
                   partitioned_vectors,
                   std::optional<std::vector<int>>{},
@@ -1084,6 +1114,7 @@ auto query_finite_ram(
                   first_part,
                   last_part,
                   part_offset,
+                  indices_offset,
                   distance);
             }));
       }
@@ -1100,6 +1131,7 @@ auto query_finite_ram(
     }
 
     part_offset += current_part_size;
+    indices_offset += num_vectors(partitioned_vectors);
     _i.stop();
   }
 
@@ -1137,8 +1169,7 @@ auto query_infinite_ram(
     auto&& active_queries,
     size_t k_nn,
     size_t nthreads,
-    Distance distance = Distance{},
-    QueryReturnType query_return_type = QueryReturnType::Ids) {
+    Distance distance = Distance{}) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
   // debug_partitioned_matrix(partitioned_vectors, "[qv@partitioned_vectors]");
 
@@ -1171,8 +1202,7 @@ auto query_infinite_ram(
            &distance,
            k_nn,
            first_part,
-           last_part,
-           query_return_type]() {
+           last_part]() {
             return apply_query(
                 partitioned_vectors,
                 std::optional{active_partitions},
@@ -1182,8 +1212,8 @@ auto query_infinite_ram(
                 first_part,
                 last_part,
                 0,
-                distance,
-                query_return_type);
+                0,
+                distance);
           }));
     }
   }
