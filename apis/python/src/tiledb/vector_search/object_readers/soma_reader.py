@@ -43,10 +43,6 @@ class SomaAnnDataReader(ObjectReader):
         timestamp=None,
         **kwargs,
     ):
-        import tiledbsoma
-
-        import tiledb
-
         self.uri = uri
         self.measurement_name = measurement_name
         self.X_name = X_name
@@ -56,16 +52,9 @@ class SomaAnnDataReader(ObjectReader):
         self.cells_per_partition = cells_per_partition
         self.max_size = max_size
         self.timestamp = timestamp
-
-        self.context = tiledbsoma.SOMATileDBContext(
-            tiledb_config=tiledb.default_ctx().config().dict()
-        )
-        self.exp = tiledbsoma.Experiment.open(self.uri, "r", context=self.context)
-        if self.max_size == -1:
-            self.num_obs = self.exp.obs.count
-        else:
-            self.num_obs = min(max_size, self.exp.obs.count)
-        self.obs_array_uri = self.exp.obs.uri
+        self.obs_array_uri = None
+        self.context = None
+        self.exp = None
 
     def init_kwargs(self) -> Dict:
         return {
@@ -80,16 +69,30 @@ class SomaAnnDataReader(ObjectReader):
             "timestamp": self.timestamp,
         }
 
+    def init_soma_exp(self):
+        if self.exp is None:
+            import tiledbsoma
+
+            import tiledb
+
+            self.context = tiledbsoma.SOMATileDBContext(
+                tiledb_config=tiledb.default_ctx().config().dict()
+            )
+            self.exp = tiledbsoma.Experiment.open(self.uri, "r", context=self.context)
+
     def partition_class_name(self) -> str:
         return "SomaAnnDataPartition"
 
     def metadata_array_uri(self) -> str:
+        self.init_soma_exp()
+        if self.obs_array_uri is None:
+            self.obs_array_uri = self.exp.obs.uri
         return self.obs_array_uri
 
     def metadata_attributes(self) -> List[Attr]:
         import tiledb
 
-        with tiledb.open(self.exp.obs.uri, "r") as obs_array:
+        with tiledb.open(self.metadata_array_uri(), "r") as obs_array:
             attributes = []
             for i in range(obs_array.schema.nattr):
                 attributes.append(obs_array.schema.attr(i))
@@ -98,6 +101,11 @@ class SomaAnnDataReader(ObjectReader):
     def get_partitions(
         self, cells_per_partition: int = -1
     ) -> List[SomaAnnDataPartition]:
+        self.init_soma_exp()
+        if self.max_size == -1:
+            self.num_obs = self.exp.obs.count
+        else:
+            self.num_obs = min(self.max_size, self.exp.obs.count)
         if cells_per_partition == -1:
             cells_per_partition = self.cells_per_partition
 
@@ -119,6 +127,7 @@ class SomaAnnDataReader(ObjectReader):
     ) -> Tuple[OrderedDict, OrderedDict]:
         import tiledbsoma
 
+        self.init_soma_exp()
         query = self.exp.axis_query(
             measurement_name=self.measurement_name,
             obs_query=tiledbsoma.AxisQuery(
@@ -136,6 +145,7 @@ class SomaAnnDataReader(ObjectReader):
     def read_objects_by_external_ids(self, ids: List[int]) -> OrderedDict:
         import tiledbsoma
 
+        self.init_soma_exp()
         query = self.exp.axis_query(
             measurement_name=self.measurement_name,
             obs_query=tiledbsoma.AxisQuery(
