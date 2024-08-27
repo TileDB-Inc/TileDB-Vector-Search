@@ -4,6 +4,8 @@ from .object_embedding import ObjectEmbedding
 from .random_embedding import RandomEmbedding
 from .sentence_transformers_embedding import SentenceTransformersEmbedding
 from .soma_geneptw_embedding import SomaGenePTwEmbedding
+from .soma_scgpt_embedding import SomaScGPTEmbedding
+from .soma_scvi_embedding import SomaSCVIEmbedding
 
 __all__ = [
     "ObjectEmbedding",
@@ -12,4 +14,6 @@ __all__ = [
     "RandomEmbedding",
     "SentenceTransformersEmbedding",
     "LangChainEmbedding",
+    "SomaScGPTEmbedding",
+    "SomaSCVIEmbedding",
 ]
