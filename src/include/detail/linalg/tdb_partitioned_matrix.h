@@ -613,6 +613,15 @@ class tdbPartitionedMatrix
     return total_max_cols_;
   }
 
+  size_t local_index_to_global(size_t i) const {
+    // std::cout << "   local_index_to_global: " << i << std::endl;
+    // std::cout << "   relevant_parts_.size(): " << relevant_parts_.size() << std::endl;
+    // std::cout << "   this->part_index_.size(): " << this->part_index_.size() << std::endl;
+    // std::cout << "   this->part_index_[i]: " << this->part_index_[i] << std::endl;
+    // std::cout << "   relevant_parts_[i]: " << relevant_parts_[i] << std::endl;
+    return i + relevant_parts_[i] - this->part_index_[i];
+  }
+
   /**
    * Destructor.  Closes arrays if they are open.
    */
@@ -622,7 +631,7 @@ class tdbPartitionedMatrix
   }
 
   void debug_tdb_partitioned_matrix(
-      const std::string& msg, size_t max_size = 100) {
+      const std::string& msg, size_t max_size = 50) const {
     debug_partitioned_matrix(*this, msg, max_size);
     debug_vector(master_indices_, "# master_indices_", max_size);
     debug_vector(relevant_parts_, "# relevant_parts_", max_size);

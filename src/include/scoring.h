@@ -318,6 +318,15 @@ using cosine_distance_normalized = _cosine_distance::cosine_distance_normalized;
 
 enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
 
+std::string to_string(DistanceMetric metric) {
+  switch (metric) {
+      case DistanceMetric::L2: return "L2";
+      case DistanceMetric::INNER_PRODUCT: return "INNER_PRODUCT";
+      case DistanceMetric::COSINE: return "COSINE";
+      default: return "UNKNOWN";
+  }
+}
+
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
 // ----------------------------------------------------------------------------

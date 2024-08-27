@@ -238,7 +238,7 @@ template <class PartitionedMatrix>
 void debug_partitioned_matrix(
     const PartitionedMatrix& matrix,
     const std::string& msg = "",
-    size_t max_size = 100) {
+    size_t max_size = 50) {
   debug_matrix(matrix, msg, max_size);
 
   std::cout << "# ids: [";

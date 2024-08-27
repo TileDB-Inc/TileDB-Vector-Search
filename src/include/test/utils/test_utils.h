@@ -198,6 +198,8 @@ void check_single_vector_equals(
     const FeatureVectorArray& ids_vector_array,
     const std::vector<float>& expected_scores,
     const std::vector<uint32_t>& expected_ids) {
+  CHECK(scores_vector_array.num_vectors() == ids_vector_array.num_vectors());
+  CHECK(scores_vector_array.num_ids() == ids_vector_array.num_ids());
   auto scores = std::span<float>(
       (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
   auto ids = std::span<uint32_t>(

@@ -218,7 +218,7 @@ template <class MatrixWithIds>
 void debug_matrix_with_ids(
     const MatrixWithIds& matrix,
     const std::string& msg = "",
-    size_t max_size = 100) {
+    size_t max_size = 50) {
   auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
   auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
 

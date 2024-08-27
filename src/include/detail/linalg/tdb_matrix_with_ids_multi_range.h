@@ -138,23 +138,18 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     scoped_timer _{"tdb_matrix_multi_range@load"};
 
     auto elements_to_load = get_elements_to_load();
-    std::cout << "[tdb_matrix_multirange@load] elements_to_load: " << elements_to_load << std::endl;
 
-    // Return if we're at the end.
+    // Return early if we're at the end already.
     if (elements_to_load == 0 || dimensions_ == 0) {
       array_->close();
       return false;
     }
 
     const auto first_resident_col = last_resident_col_;
-    std::cout << "[tdb_matrix_multirange@load] first_resident_col: " << first_resident_col << std::endl;
     last_resident_col_ += elements_to_load;
-    std::cout << "[tdb_matrix_multirange@load] last_resident_col_: " << last_resident_col_ << std::endl;
-
     num_resident_cols_ = last_resident_col_ - first_resident_col;
-    std::cout << "[tdb_matrix_multirange@load] num_resident_cols_: " << num_resident_cols_ << std::endl;
 
-    // a. Set up the vectors subarray.
+    // Set up the subarray.
     auto attr = schema_.attribute(0);
     std::string attr_name = attr.name();
 
@@ -168,14 +163,13 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     // For a 128 dimension vector, Dimension 0 will go from 0 to 127.
     subarray.add_range(0, 0, static_cast<int>(dimensions_) - 1);
 
-    // c. Setup the query ranges.
+    // Setup the query ranges.
     for (size_t i = first_resident_col; i < last_resident_col_; ++i) {
       const auto index = static_cast<int>(column_indices_[i]);
-      std::cout << "[tdb_matrix_multirange@load] adding new range containing index: " << index << std::endl;
       subarray.add_range(1, index, index);
     }
 
-    // d. Execute the vectors query.
+    // Execute the query.
     tiledb::Query query(ctx_, *array_);
     query.set_subarray(subarray)
         .set_layout(schema_.cell_order())
@@ -187,7 +181,7 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
           "[tdb_matrix_multi_range@load] Query status is not complete");
     }
 
-    // f. Close the arrays if we're done.
+    // Close the arrays if we're done.
     if (get_elements_to_load() == 0) {
       array_->close();
     }
