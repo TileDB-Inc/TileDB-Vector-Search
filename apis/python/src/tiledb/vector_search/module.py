@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict, Mapping, Optional
 
 import numpy as np
@@ -407,9 +406,9 @@ def ivf_query(
         ]
     )
 
-    logging.info(
-        f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
-    )
+    # logging.info(
+    #     f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
+    # )
 
     if dtype == np.float32:
         if use_nuv_implementation:

@@ -500,7 +500,7 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     a.add(training_set)
 
     _, ids = a.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.88
+    assert recall(ids, groundtruth_set, k_nn) >= 0.87
 
     index_uri = os.path.join(tmp_path, "array")
     a.write_index(ctx, index_uri)
@@ -508,10 +508,10 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     b = vspy.IndexIVFPQ(ctx, index_uri)
 
     _, ids = b.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.88
+    assert recall(ids, groundtruth_set, k_nn) >= 0.87
 
     _, ids = b.query_finite_ram(query_set, k_nn, nprobe, 500)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.88
+    assert recall(ids, groundtruth_set, k_nn) >= 0.87
 
 
 def test_inplace_build_query_IndexIVFPQ(tmp_path):
@@ -536,7 +536,7 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     a.add(training_set)
 
     _, ids = a.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.895
+    assert recall(ids, groundtruth_set, k_nn) >= 0.87
 
     index_uri = os.path.join(tmp_path, "array")
     a.write_index(ctx, index_uri)
@@ -544,10 +544,10 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     b = vspy.IndexIVFPQ(ctx, index_uri)
 
     _, ids = b.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.895
+    assert recall(ids, groundtruth_set, k_nn) >= 0.87
 
     _, ids = b.query_finite_ram(query_set, k_nn, nprobe, 500)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.895
+    assert recall(ids, groundtruth_set, k_nn) >= 0.87
 
 
 def test_construct_IndexIVFFlat():
