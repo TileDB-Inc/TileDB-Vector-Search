@@ -143,6 +143,7 @@ struct assignment_counter {
     return *this;
   }
 };
+
 }  // anonymous namespace
 
 #endif

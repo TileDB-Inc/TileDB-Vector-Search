@@ -232,20 +232,13 @@ class tdbBlockedMatrix : public MatrixBase {
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();
-
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
         (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
       throw std::runtime_error("Cell order and matrix order must match");
     }
-
     if (cell_order != tile_order) {
       throw std::runtime_error("Cell order and tile order must match");
     }
-
-    auto domain_{schema_.domain()};
-
-    auto row_domain{domain_.dimension(0)};
-    auto col_domain{domain_.dimension(1)};
 
     // If non_empty_domain() is an empty vector it means that
     // the array is empty. Else If the user specifies a value then we use it,

@@ -898,11 +898,11 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
         ids_from_finite.data() + 4,
         std::vector<uint32_t>{1, 2, 3, 4}.begin()));
 
-    // auto&& [scores, ids] = index.query_infinite_ram(queries, 1, n_list);
-    // CHECK(std::equal(
-    //     scores.data(),
-    //     scores.data() + 4,
-    //     std::vector<float>{0, 0, 0, 0}.begin()));
+    auto&& [scores, ids] = index.query_infinite_ram(queries, 1, n_list);
+    CHECK(std::equal(
+        scores.data(),
+        scores.data() + 4,
+        std::vector<float>{0, 0, 0, 0}.begin()));
   }
 }
 

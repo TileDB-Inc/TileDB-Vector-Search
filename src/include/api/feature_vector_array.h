@@ -624,7 +624,6 @@ bool are_equal(
   return true;
 };
 
-  // Use the correct type for the comparison based on the feature type
   switch (a.feature_type()) {
     case TILEDB_FLOAT32: {
       const auto* data_a = static_cast<const float*>(a.data());

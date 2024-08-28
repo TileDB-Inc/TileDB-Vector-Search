@@ -5,7 +5,7 @@
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,6 +56,8 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   using index_type = typename Base::index_type;
   using size_type = typename Base::size_type;
 
+  constexpr static auto matrix_order_{order_v<LayoutPolicy>};
+
  private:
   log_timer constructor_timer{"tdbBlockedMatrixMultiRange constructor"};
 
@@ -80,6 +82,8 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   size_t last_resident_col_{0};
 
   size_t get_elements_to_load() const {
+    // Note that here we try to load column_indices_.size() vectors. If we are time travelling, these
+    // vectors may not exist in the array, but we still need to load them to know that they don't exist.
     return std::min(column_capacity_, column_indices_.size() - last_resident_col_);
   }
 
@@ -106,9 +110,9 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       const tiledb::Context& ctx,
       const std::string& uri,
       const std::vector<I>& column_indices,
-      size_type& dimensions,
+      size_type dimensions,
       size_t upper_bound,
-      TemporalPolicy temporal_policy)
+      TemporalPolicy temporal_policy = TemporalPolicy{})
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(dimensions, column_indices.size())
       , dimensions_{dimensions}
@@ -123,6 +127,17 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       column_capacity_ = column_indices_.size();
     } else {
       column_capacity_ = upper_bound;
+    }
+
+    // Check the cell and tile order.
+    auto cell_order = schema_.cell_order();
+    auto tile_order = schema_.tile_order();
+    if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
+        (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
+      throw std::runtime_error("Cell order and matrix order must match");
+    }
+    if (cell_order != tile_order) {
+      throw std::runtime_error("Cell order and tile order must match");
     }
 
     #ifdef __cpp_lib_smart_ptr_for_overwrite
@@ -167,7 +182,6 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     // Setup the query ranges.
     for (size_t i = first_resident_col; i < last_resident_col_; ++i) {
       const auto index = static_cast<int>(column_indices_[i]);
-      // std::cout << "Loading column " << index << std::endl;
       subarray.add_range(1, index, index);
     }
 

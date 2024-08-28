@@ -318,16 +318,13 @@ class tdbPartitionedMatrix
 
     auto cell_order = partitioned_vectors_schema_.cell_order();
     auto tile_order = partitioned_vectors_schema_.tile_order();
-
     if (cell_order != tile_order) {
       throw std::runtime_error("Cell order and tile order must match");
     }
 
     auto domain_{partitioned_vectors_schema_.domain()};
-
     auto array_rows{domain_.dimension(0)};
     auto array_cols{domain_.dimension(1)};
-
     dimensions_ =
         (array_rows.template domain<row_domain_type>().second -
          array_rows.template domain<row_domain_type>().first + 1);
@@ -666,7 +663,7 @@ class tdbPartitionedMatrix
   }
 
   void debug_tdb_partitioned_matrix(
-      const std::string& msg, size_t max_size = 50) const {
+      const std::string& msg, size_t max_size = 10) const {
     debug_partitioned_matrix(*this, msg, max_size);
     debug_vector(master_indices_,   "# master_indices_  ", max_size);
     debug_vector(relevant_parts_,   "# relevant_parts_  ", max_size);

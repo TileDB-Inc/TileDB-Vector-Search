@@ -258,14 +258,13 @@ class IVFFlatIndex(index.Index):
         if mode is None:
             queries_m = array_to_matrix(np.transpose(queries))
             if self.memory_budget == -1:
-                # paris debug
                 d, i = ivf_query_ram(
                     self.dtype,
-                    self._db, # shuffled_vectors
-                    self._centroids, # partition_centroids
+                    self._db,
+                    self._centroids,
                     queries_m,
-                    self._index, # partition_indexes
-                    self._ids, # external_ids
+                    self._index,
+                    self._ids,
                     nprobe=nprobe,
                     k_nn=k,
                     nthreads=nthreads,

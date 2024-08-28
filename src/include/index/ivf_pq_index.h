@@ -109,7 +109,7 @@
 #include "detail/ivf/qv.h"
 #include <tiledb/tiledb>
 #include <type_traits>
-#include "detail/linalg/tdb_matrix_with_ids_multi_range.h"
+#include "detail/linalg/tdb_matrix_multi_range.h"
 
 /**
  * Class representing an inverted file (IVF) index for flat (non-compressed)
@@ -256,8 +256,7 @@ class ivf_pq_index {
   DistanceMetric distance_metric_{DistanceMetric::L2};
 
   // Some parameters for execution
-  // uint64_t num_threads_{std::thread::hardware_concurrency()};
-  uint64_t num_threads_{1};
+  uint64_t num_threads_{std::thread::hardware_concurrency()};
 
  public:
   using value_type = feature_type;
