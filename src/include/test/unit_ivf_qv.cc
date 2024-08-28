@@ -626,9 +626,12 @@
 //     std::cout << "---------- skip: " << skip << std::endl;
 //     std::vector<part_index_type> relevant_parts;
 //     for (size_t i = 0; i < num_parts; ++i) {
-//       if (i == skip) {
-//         continue;
-//       }
+//       // if (i == skip) {
+//       //   continue;
+//       // }
+//       // if (i == skip * 2) {
+//       //   continue;
+//       // }
 //       relevant_parts.push_back(i);
 //     }
 //     debug_vector(relevant_parts, "relevant_parts");
@@ -642,8 +645,6 @@
 //         ids_uri,
 //         relevant_parts,
 //         0);
-//     tdb_partitioned_matrix.debug_tdb_partitioned_matrix("tdb_partitioned_matrix before load");
-//     std::cout << "~~~~" << std::endl;
 //     tdb_partitioned_matrix.load();
 //     tdb_partitioned_matrix.debug_tdb_partitioned_matrix("tdb_partitioned_matrix");
 //   }

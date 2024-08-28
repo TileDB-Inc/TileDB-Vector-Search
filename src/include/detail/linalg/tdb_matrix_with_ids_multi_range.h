@@ -163,9 +163,13 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     // For a 128 dimension vector, Dimension 0 will go from 0 to 127.
     subarray.add_range(0, 0, static_cast<int>(dimensions_) - 1);
 
+    // Because of how we set up the subarray, for SIFT 10K with knn = 10, we load 1640 vectors instead of 2000. So there are 360 vectors which are duplicated bewteen top k that we fon't fetch.
     // Setup the query ranges.
+    std::cout << "[tdb_matrix_with_ids_multi_range@load] column_indices_.size() = " << column_indices_.size() << std::endl;
+    std::cout << "[tdb_matrix_with_ids_multi_range@load] last_resident_col_ = " << last_resident_col_ << std::endl;
     for (size_t i = first_resident_col; i < last_resident_col_; ++i) {
       const auto index = static_cast<int>(column_indices_[i]);
+      // std::cout << "Loading column " << index << std::endl;
       subarray.add_range(1, index, index);
     }
 

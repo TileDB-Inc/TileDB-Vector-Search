@@ -544,12 +544,14 @@ class tdbPartitionedMatrix
         size_t start = master_indices_[relevant_parts_[j]];
         size_t stop = master_indices_[relevant_parts_[j] + 1];
         size_t len = stop - start;
+        std::cout << "[tdb_partitioned_matrix@load] Loading partition " << j << " with " << len << " columns which goes from " << start << " to " << stop << std::endl;
         if (len == 0) {
           continue;
         }
         col_count += len;
         subarray.add_range(1, (int)start, (int)stop - 1);
         ids_subarray.add_range(0, (int)start, (int)stop - 1);
+        // internal_ids_.push_back(start -> stop);
       }
       if (col_count != last_resident_col_ - first_resident_col) {
         throw std::runtime_error(
@@ -613,13 +615,45 @@ class tdbPartitionedMatrix
     return total_max_cols_;
   }
 
-  size_t local_index_to_global(size_t i) const {
+  size_t local_index_to_global(size_t i) const override {
+    return i;
+
+    // First we need to find which part we are in. This is local to the parts we have loaded.
+    size_t local_part = 0;
+    for (size_t j = 0; j < squashed_indices_.size(); ++j) {
+      local_part = j;
+      if (i <= squashed_indices_[j]) {
+        break;
+      }
+    }
+    
+    // Now see how many vectors into this local part we are.
+    size_t difference = squashed_indices_[local_part] - i;
+
+    // Now we find which part we are in relative to all the parts saved at this URI.
+    size_t global_part = relevant_parts_[local_part];
+
+    // Now we can see where this part lies in the global array.
+    size_t start = master_indices_[global_part];
+
+    // And we return how many vectors past the start of this part in the global array we are.
+    return start + difference;
+
+    // Then we look in master_indices with that part to find how much we need to add to i.
+
+
     // std::cout << "   local_index_to_global: " << i << std::endl;
     // std::cout << "   relevant_parts_.size(): " << relevant_parts_.size() << std::endl;
     // std::cout << "   this->part_index_.size(): " << this->part_index_.size() << std::endl;
     // std::cout << "   this->part_index_[i]: " << this->part_index_[i] << std::endl;
     // std::cout << "   relevant_parts_[i]: " << relevant_parts_[i] << std::endl;
-    return i + relevant_parts_[i] - this->part_index_[i];
+    // if (this->part_index_[i] > relevant_parts_[i]) {
+    //   return i;
+    // }
+    // std::cout << "   i: " << i << " vs relevant_parts_[i]: " << relevant_parts_[i] << std::endl;
+    // return master_indices_[relevant_parts_[i]];
+    // return i;
+    // return i + relevant_parts_[i] - this->part_index_[i];
   }
 
   /**
@@ -633,8 +667,8 @@ class tdbPartitionedMatrix
   void debug_tdb_partitioned_matrix(
       const std::string& msg, size_t max_size = 50) const {
     debug_partitioned_matrix(*this, msg, max_size);
-    debug_vector(master_indices_, "# master_indices_", max_size);
-    debug_vector(relevant_parts_, "# relevant_parts_", max_size);
+    debug_vector(master_indices_,   "# master_indices_  ", max_size);
+    debug_vector(relevant_parts_,   "# relevant_parts_  ", max_size);
     debug_vector(squashed_indices_, "# squashed_indices_", max_size);
     std::cout << "# total_num_parts_: " << total_num_parts_ << std::endl;
     std::cout << "# last_resident_part_: " << last_resident_part_ << std::endl;

@@ -731,6 +731,7 @@ class ivf_pq_index {
         feature_vectors.ids().begin(),
         feature_vectors.ids().end(),
         feature_vectors_.ids());
+    debug_matrix_with_ids(feature_vectors_, "[ivf_pq_index@add] feature_vectors_", 100);
   }
 
   template <
@@ -1295,6 +1296,8 @@ class ivf_pq_index {
           }
         }
       }
+
+      debug_vector(vector_indices, "[ivf_pq_index@re_rank] vector_indices", 10000);
 
       auto feature_vectors = tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
           group_->cached_ctx(), 

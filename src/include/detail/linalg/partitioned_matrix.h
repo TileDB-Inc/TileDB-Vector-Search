@@ -202,6 +202,10 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return num_vectors_;
   }
 
+  virtual size_t local_index_to_global(size_t i) const {
+    return i;
+  }
+
   constexpr size_t num_partitions() const {
     return num_parts_;
   }
@@ -241,7 +245,7 @@ void debug_partitioned_matrix(
     size_t max_size = 50) {
   debug_matrix(matrix, msg, max_size);
 
-  std::cout << "# ids: [";
+  std::cout << "# ids:               [";
   auto end = std::min(matrix.num_vectors(), static_cast<size_t>(max_size));
   for (size_t i = 0; i < end; ++i) {
     std::cout << matrix.ids()[i];
@@ -254,7 +258,7 @@ void debug_partitioned_matrix(
   }
   std::cout << "]" << std::endl;
 
-  std::cout << "# indices: [";
+  std::cout << "# indices:           [";
   end = std::min(matrix.indices().size(), static_cast<size_t>(max_size));
   for (size_t i = 0; i < end; ++i) {
     std::cout << matrix.indices()[i];
