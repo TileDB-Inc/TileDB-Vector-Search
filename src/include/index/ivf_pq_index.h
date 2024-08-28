@@ -733,7 +733,6 @@ class ivf_pq_index {
         feature_vectors.ids().begin(),
         feature_vectors.ids().end(),
         feature_vectors_.ids());
-    // debug_matrix_with_ids(feature_vectors_, "[ivf_pq_index@add] feature_vectors_", 100);
   }
 
   template <
@@ -857,7 +856,6 @@ class ivf_pq_index {
     auto infinite_parts =
         std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
     std::iota(begin(infinite_parts), end(infinite_parts), 0);
-    // debug_matrix(infinite_parts, "[ivf_pq_index@read_index_infinite] active_partitions", 10000);
     partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
@@ -910,7 +908,6 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
-    // debug_matrix(active_partitions, "[ivf_pq_index@read_index_finite] active_partitions", 10000);
     auto partitioned_pq_vectors = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
@@ -921,7 +918,6 @@ class ivf_pq_index {
         upper_bound,
         temporal_policy_);
 
-    // debug_matrix(active_queries, "[ivf_pq_index@read_index_finite] active_queries");
     // NB: We don't load the partitioned_pq_vectors here. We will load them
     // when we do the query.
     return std::make_tuple(
@@ -1163,7 +1159,6 @@ class ivf_pq_index {
       size_t k_initial,
       size_t k_nn) const {
     auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(::num_vectors(query_vectors), fixed_min_pair_heap<score_type, id_type>(k_nn));
-    // for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
     for (size_t i = 0; i < ::num_vectors(query_vectors); ++i) {
         for (size_t j = 0; j < k_initial; ++j) {
         auto vector_index = get_vector_index(i, j);
@@ -1185,13 +1180,7 @@ class ivf_pq_index {
       }
     }
 
-    // return get_top_k_with_scores(min_scores, k_nn);
-    auto&& [distances, ids] = get_top_k_with_scores(min_scores, k_nn);
-    
-    // debug_matrix(ids, "[ivf_pq_index@re_rank_query] ids");
-    // debug_matrix(distances, "[ivf_pq_index@re_rank_query] distances");
-
-    return std::make_tuple(std::move(distances), std::move(ids));
+    return get_top_k_with_scores(min_scores, k_nn);
   }
 
   /**
@@ -1234,7 +1223,6 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
-    
     auto query_to_pq_centroid_distance_tables =
         std::move(*generate_query_to_pq_centroid_distance_tables<
                   Q,
@@ -1242,9 +1230,6 @@ class ivf_pq_index {
 
     // Perform the initial search with k_nn * k_factor.
     size_t k_initial = static_cast<size_t>(k_nn * k_factor);
-    // std::cout << "[ivf_pq_index@query_infinite_ram] k_nn: " << k_nn << std::endl;
-    // std::cout << "[ivf_pq_index@query_infinite_ram] k_factor: " << k_factor << std::endl;
-    // std::cout << "[ivf_pq_index@query_infinite_ram] k_initial: " << k_initial << std::endl;
     auto&& [initial_distances, initial_ids, initial_indices] = detail::ivf::query_infinite_ram(
         *partitioned_pq_vectors_,
         active_partitions,
@@ -1266,13 +1251,8 @@ class ivf_pq_index {
       const auto& query_vectors,
       size_t k_initial,
       size_t k_nn) {
-    // debug_matrix(initial_ids, "[ivf_pq_inex@rerank] initial_ids");
-    // debug_matrix(initial_indices, "[ivf_pq_inex@rerank] initial_indices");
-    // debug_matrix(initial_distances, "[ivf_pq_inex@rerank] initial_distances");
 
     if (k_initial == k_nn) {
-      // std::cout << "[ivf_pq_index@re_rank] return because k_initial == k_nn" << std::endl;
-      // debug_matrix(initial_ids, "[ivf_pq_index@re_rank] initial_ids", 2000);
       return std::make_tuple(std::move(initial_distances), std::move(initial_ids));
     }
 
@@ -1290,7 +1270,6 @@ class ivf_pq_index {
       std::vector<uint64_t> vector_indices;
       for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
         for (size_t j = 0; j < ::dimensions(initial_ids[i]); ++j) {
-          // std::cout << "initial_ids[" << i << "][" << j << "]: " << initial_ids[i][j] << std::endl;
           if (
             initial_ids[i][j] != std::numeric_limits<id_type>::max() && 
             id_to_vector_index.find(initial_ids[i][j]) == id_to_vector_index.end()) {
@@ -1299,8 +1278,6 @@ class ivf_pq_index {
           }
         }
       }
-
-      // debug_vector(vector_indices, "[ivf_pq_index@re_rank] vector_indices", 10000);
 
       auto feature_vectors = tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
           group_->cached_ctx(), 
@@ -1366,11 +1343,6 @@ class ivf_pq_index {
     if (k_factor < 1.f) {
       throw std::runtime_error("k_factor must be >= 1");
     }
-    // if (partitioned_pq_vectors_) {
-    //   // We did an infinite query before this. Reset so we can load again.
-    //   partitioned_pq_vectors_.reset();
-    // }
-    // debug_matrix(query_vectors, "[ivf_pq_index@query_finite_ram] query_vectors");
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
@@ -1381,10 +1353,6 @@ class ivf_pq_index {
                   Q,
                   ColMajorMatrix<float>>(query_vectors));
     size_t k_initial = static_cast<size_t>(k_nn * k_factor);
-    // std::cout << "[ivf_pq_index@query_finite_ram] k_nn: " << k_nn << std::endl;
-    // std::cout << "[ivf_pq_index@query_finite_ram] k_factor: " << k_factor << std::endl;
-    // std::cout << "[ivf_pq_index@query_finite_ram] k_initial: " << k_initial << std::endl;
-    // std::cout << "[ivf_pq_index@query_finite_ram] upper_bound: " << upper_bound << std::endl;
     auto&& [initial_distances, initial_ids, initial_indices] = detail::ivf::query_finite_ram(
         *partitioned_pq_vectors,
         query_to_pq_centroid_distance_tables,
