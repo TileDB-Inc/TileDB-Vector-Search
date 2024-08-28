@@ -338,7 +338,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "create empty index and then train and query with sift",
+    "query finite & infinite, with re-ranking and without",
     "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
@@ -392,16 +392,15 @@ TEST_CASE(
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    // auto&& [scores, ids] =
-    //     index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
-    // auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-    // std::cout << "InfiniteRAM intersections: " << intersections << std::endl;
-    // CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) > 0.7);
+    auto&& [scores, ids] =
+        index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
+    auto intersections = count_intersections(ids, groundtruth_set, k_nn);
+    std::cout << "InfiniteRAM intersections: " << intersections << std::endl;
+    CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) > 0.7);
   }
 
   {
     auto index = IndexIVFPQ(ctx, index_uri);
-    // size_t nprobe = 1;   
     float k_factor = 20.f;
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);

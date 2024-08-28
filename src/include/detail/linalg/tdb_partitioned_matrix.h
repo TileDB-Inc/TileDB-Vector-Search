@@ -541,14 +541,12 @@ class tdbPartitionedMatrix
         size_t start = master_indices_[relevant_parts_[j]];
         size_t stop = master_indices_[relevant_parts_[j] + 1];
         size_t len = stop - start;
-        // std::cout << "[tdb_partitioned_matrix@load] Loading partition " << j << " with " << len << " columns which goes from " << start << " to " << stop << std::endl;
         if (len == 0) {
           continue;
         }
         col_count += len;
         subarray.add_range(1, (int)start, (int)stop - 1);
         ids_subarray.add_range(0, (int)start, (int)stop - 1);
-        // internal_ids_.push_back(start -> stop);
       }
       if (col_count != last_resident_col_ - first_resident_col) {
         throw std::runtime_error(

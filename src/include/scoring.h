@@ -349,7 +349,7 @@ enum class DistanceMetric : uint32_t {
   L2 = 3
 };
 
-static std::string to_string(DistanceMetric metric) {
+inline std::string to_string(DistanceMetric metric) {
   switch (metric) {
       case DistanceMetric::L2: return "L2";
       case DistanceMetric::INNER_PRODUCT: return "INNER_PRODUCT";
