@@ -1,23 +1,25 @@
-from typing import Any, Dict, Mapping, Optional, OrderedDict
+from typing import Dict, OrderedDict
 
 import numpy as np
 
-# from tiledb.vector_search.embeddings import ObjectEmbedding
+from tiledb.vector_search.embeddings import ObjectEmbedding
 
 EMBED_DIM = 1536  # embedding dim from GPT-3.5
 
 
-# class SomaGenePTwEmbedding(ObjectEmbedding):
-class SomaGenePTwEmbedding:
+class SomaGenePTwEmbedding(ObjectEmbedding):
     def __init__(
         self,
         gene_embeddings_uri: str,
         soma_uri: str,
-        config: Optional[Mapping[str, Any]] = None,
+        measurement_name: str = "RNA",
+        gene_col: str = "feature_name",
     ):
         self.gene_embeddings_uri = gene_embeddings_uri
         self.soma_uri = soma_uri
-        self.config = config
+        self.measurement_name = measurement_name
+        self.gene_col = gene_col
+
         self.gene_embedding = None
         self.gene_names = None
 
@@ -25,7 +27,8 @@ class SomaGenePTwEmbedding:
         return {
             "gene_embeddings_uri": self.gene_embeddings_uri,
             "soma_uri": self.soma_uri,
-            "config": self.config,
+            "measurement_name": self.measurement_name,
+            "gene_col": self.gene_col,
         }
 
     def dimensions(self) -> int:
@@ -50,13 +53,15 @@ class SomaGenePTwEmbedding:
                 gene_pt_embeddings[str(gene)] = gene_pt["embeddings"][i]
                 i += 1
 
-        context = tiledbsoma.SOMATileDBContext(tiledb_ctx=tiledb.Ctx(self.config))
-        experiment = tiledbsoma.Experiment.open(self.soma_uri, "r", context=context)
+        tiledbsoma.SOMATileDBContext(tiledb_config=tiledb.default_ctx().config().dict())
+        experiment = tiledbsoma.Experiment.open(
+            self.soma_uri, "r", context=self.context
+        )
         self.gene_names = (
-            experiment.ms["RNA"]
+            experiment.ms[self.measurement_name]
             .var.read()
             .concat()
-            .to_pandas()["feature_name"]
+            .to_pandas()[self.gene_col]
             .to_numpy()
         )
 
@@ -69,6 +74,7 @@ class SomaGenePTwEmbedding:
         import numpy as np
 
         return np.array(
-            np.dot(objects["data"], self.gene_embedding) / len(self.gene_names),
+            np.dot(objects["anndata"].X.toarray(), self.gene_embedding)
+            / len(self.gene_names),
             dtype=np.float32,
         )

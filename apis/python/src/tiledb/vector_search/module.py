@@ -273,7 +273,7 @@ def ivf_query_ram(
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
 ):
     """
     Run IVF vector query using infinite RAM
@@ -354,7 +354,7 @@ def ivf_query(
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
     timestamp: int = 0,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
 ):
     """
     Run IVF vector query using a memory budget

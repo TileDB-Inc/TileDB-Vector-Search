@@ -350,7 +350,7 @@ class IVFFlatIndex(index.Index):
         num_partitions: int = -1,
         num_workers: int = -1,
         config: Optional[Mapping[str, Any]] = None,
-        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     ):
         """
         Query an IVF_FLAT index using TileDB cloud taskgraphs
@@ -536,7 +536,7 @@ def create(
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     **kwargs,
 ) -> IVFFlatIndex:
     """
@@ -562,7 +562,8 @@ def create(
     """
     validate_storage_version(storage_version)
     if (
-        distance_metric != vspy.DistanceMetric.L2
+        distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES
+        and distance_metric != vspy.DistanceMetric.L2
         and distance_metric != vspy.DistanceMetric.COSINE
     ):
         raise ValueError(

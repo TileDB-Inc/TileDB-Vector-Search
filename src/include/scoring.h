@@ -111,6 +111,31 @@ struct sum_of_squares_distance {
 #endif
 };
 
+struct sqrt_sum_of_squares_distance {
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return sqrt(avx2_sum_of_squares(a, b));
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return sqrt(avx2_sum_of_squares(a));
+  }
+
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return sqrt(unroll4_sum_of_squares(a, b));
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return sqrt(unroll4_sum_of_squares(a));
+  }
+#endif
+};
+
 /**
  * @brief Function object for computing the sum of squared distance, augmented
  * to count the number of comparisons.
@@ -163,6 +188,7 @@ struct logging_sum_of_squares_distance {
 }  // namespace _l2_distance
 
 using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
+using sqrt_sum_of_squares_distance = _l2_distance::sqrt_sum_of_squares_distance;
 inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
 
 using counting_sum_of_squares_distance =
@@ -316,7 +342,12 @@ struct cosine_distance_normalized {
 using cosine_distance = _cosine_distance::cosine_distance;
 using cosine_distance_normalized = _cosine_distance::cosine_distance_normalized;
 
-enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
+enum class DistanceMetric : uint32_t {
+  SUM_OF_SQUARES = 0,
+  INNER_PRODUCT = 1,
+  COSINE = 2,
+  L2 = 3
+};
 
 static std::string to_string(DistanceMetric metric) {
   switch (metric) {
