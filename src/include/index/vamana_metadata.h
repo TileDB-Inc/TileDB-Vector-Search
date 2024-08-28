@@ -88,7 +88,7 @@ class vamana_index_metadata
   float alpha_max_{1.2};
   uint64_t medoid_{0};
 
-  DistanceMetric distance_metric_{DistanceMetric::L2};
+  DistanceMetric distance_metric_{DistanceMetric::SUM_OF_SQUARES};
 
  protected:
   std::vector<metadata_string_check_type> metadata_string_checks_impl{

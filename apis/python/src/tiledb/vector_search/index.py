@@ -61,12 +61,15 @@ class Index:
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         try:
             self.distance_metric = vspy.DistanceMetric(
-                self.group.meta.get("distance_metric", vspy.DistanceMetric.L2)
+                self.group.meta.get(
+                    "distance_metric", vspy.DistanceMetric.SUM_OF_SQUARES
+                )
             )
         except ValueError:
             raise ValueError(
                 f"Invalid distance metric in metadata: {self.group.meta.get('distance_metric')}."
             )
+
         if (
             not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
             and timestamp is not None

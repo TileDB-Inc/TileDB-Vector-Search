@@ -544,7 +544,7 @@ def test_create_metadata(tmp_path):
         vector_type,
         index_type,
         storage_version,
-        vspy.DistanceMetric.L2,
+        vspy.DistanceMetric.SUM_OF_SQUARES,
         group_exists,
     )
 

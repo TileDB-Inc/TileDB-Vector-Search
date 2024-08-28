@@ -84,7 +84,7 @@ def ingest(
     ] = None,
     write_centroids_resources: Optional[Mapping[str, Any]] = None,
     partial_index_resources: Optional[Mapping[str, Any]] = None,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     normalized: bool = False,
     **kwargs,
 ):
@@ -197,7 +197,7 @@ def ingest(
     partial_index_resources: Optional[Mapping[str, Any]]
         Resources to request when performing the computation of partial indexing, only applies to BATCH mode
     distance_metric: vspy.DistanceMetric
-        Distance metric to use for the index, defaults to 'vspy.DistanceMetric.L2'. Options are 'vspy.DistanceMetric.L2', 'vspy.DistanceMetric.INNER_PRODUCT', 'vspy.DistanceMetric.COSINE'.
+        Distance metric to use for the index, defaults to 'vspy.DistanceMetric.SUM_OF_SQUARES'. Options are 'vspy.DistanceMetric.SUM_OF_SQUARES', 'vspy.DistanceMetric.INNER_PRODUCT', 'vspy.DistanceMetric.COSINE', 'vspy.DistanceMetric.L2'.
     """
     import enum
     import json
@@ -1252,7 +1252,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     ) -> np.ndarray:
         logger = setup(config, verbose)
         logger.debug(
@@ -1682,7 +1682,7 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
-        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     ):
         import os
         import random
