@@ -637,11 +637,7 @@ class tdbPartitionedMatrix
 
     // And we return how many vectors past the start of this part in the global array we are.
     size_t result = start + difference;
-
-    if (result == 6911) {
-      std::cout <<  "here" << std::endl;
-    }
-
+    
     return result;
 
     // Then we look in master_indices with that part to find how much we need to add to i.
