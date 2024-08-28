@@ -1074,9 +1074,9 @@ auto query_finite_ram(
     size_t nthreads,
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__};
-  std::cout << "[qv@query_finite_ram] k_nn: " << k_nn << std::endl;
-  std::cout << "[qv@query_finite_ram] upper_bound: " << upper_bound << std::endl;
-  std::cout << "[qv@query_finite_ram] nthreads: " << nthreads << std::endl;
+  // std::cout << "[qv@query_finite_ram] k_nn: " << k_nn << std::endl;
+  // std::cout << "[qv@query_finite_ram] upper_bound: " << upper_bound << std::endl;
+  // std::cout << "[qv@query_finite_ram] nthreads: " << nthreads << std::endl;
 
   using id_type = typename F::id_type;
   using score_type = float;
@@ -1193,8 +1193,8 @@ auto query_infinite_ram(
     size_t nthreads,
     Distance distance = Distance{}) {
   scoped_timer _{tdb_func__ + std::string{"_in_ram"}};
-  std::cout << "[qv@query_infinite_ram] k_nn: " << k_nn << std::endl;
-  std::cout << "[qv@query_infinite_ram] nthreads: " << nthreads << std::endl;
+  // std::cout << "[qv@query_infinite_ram] k_nn: " << k_nn << std::endl;
+  // std::cout << "[qv@query_infinite_ram] nthreads: " << nthreads << std::endl;
 
   using id_type = typename F::id_type;
   using score_type = float;

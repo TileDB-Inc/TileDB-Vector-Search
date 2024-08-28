@@ -544,7 +544,7 @@ class tdbPartitionedMatrix
         size_t start = master_indices_[relevant_parts_[j]];
         size_t stop = master_indices_[relevant_parts_[j] + 1];
         size_t len = stop - start;
-        std::cout << "[tdb_partitioned_matrix@load] Loading partition " << j << " with " << len << " columns which goes from " << start << " to " << stop << std::endl;
+        // std::cout << "[tdb_partitioned_matrix@load] Loading partition " << j << " with " << len << " columns which goes from " << start << " to " << stop << std::endl;
         if (len == 0) {
           continue;
         }
@@ -637,7 +637,7 @@ class tdbPartitionedMatrix
 
     // And we return how many vectors past the start of this part in the global array we are.
     size_t result = start + difference;
-    
+
     return result;
 
     // Then we look in master_indices with that part to find how much we need to add to i.

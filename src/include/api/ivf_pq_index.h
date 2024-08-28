@@ -126,7 +126,7 @@ class IndexIVFPQ {
       }
     }
 
-    std::cout << "[IndexIVFPQ] Created index with distance_metric_: " << to_string(distance_metric_) << "\n";
+    // std::cout << "[IndexIVFPQ] Created index with distance_metric_: " << to_string(distance_metric_) << "\n";
   }
 
   /**
