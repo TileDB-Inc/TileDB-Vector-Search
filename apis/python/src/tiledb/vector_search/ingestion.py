@@ -1684,10 +1684,6 @@ def ingest(
         trace_id: Optional[str] = None,
         distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     ):
-        import os
-        import random
-        import tempfile
-
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
         from tiledb.vector_search.module import array_to_matrix
@@ -1710,7 +1706,7 @@ def ingest(
 
             str(part) + "-" + str(part_end)
             part_id = int(part / batch)
-            partition_start = part_id * (partitions + 1)
+            part_id * (partitions + 1)
 
             logger.debug("Input vectors start_pos: %d, end_pos: %d", part, part_end)
             updated_ids = read_updated_ids(
@@ -1796,10 +1792,6 @@ def ingest(
         verbose: bool = False,
         trace_id: Optional[str] = None,
     ):
-        import os
-        import random
-        import tempfile
-
         import tiledb.cloud
         from tiledb.vector_search.module import StdVector_u64
         from tiledb.vector_search.module import array_to_matrix
