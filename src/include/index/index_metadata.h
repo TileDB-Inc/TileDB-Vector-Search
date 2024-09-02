@@ -564,7 +564,7 @@ inline DistanceMetric parseAndValidateDistanceMetric(
   try {
     int metric_value = std::stoi(value);
     if (metric_value < 0 ||
-        metric_value > static_cast<int>(DistanceMetric::COSINE)) {
+        metric_value > static_cast<int>(DistanceMetric::L2)) {
       throw std::runtime_error("Invalid distance metric value: " + value);
     }
 

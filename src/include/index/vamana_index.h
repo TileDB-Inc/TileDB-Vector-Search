@@ -159,7 +159,7 @@ class vamana_index {
   uint32_t r_max_degree_{0};  // diskANN paper says default = 64
   float alpha_min_{1.0};      // per diskANN paper
   float alpha_max_{1.2};      // per diskANN paper
-  DistanceMetric distance_metric_{DistanceMetric::L2};
+  DistanceMetric distance_metric_{DistanceMetric::SUM_OF_SQUARES};
   Distance distance_function_;
 
  public:
@@ -183,7 +183,7 @@ class vamana_index {
       uint32_t l_build,
       uint32_t r_max_degree,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      DistanceMetric distance_metric = DistanceMetric::L2)
+      DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES)
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}

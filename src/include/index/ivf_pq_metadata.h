@@ -84,7 +84,7 @@ class ivf_pq_metadata : public base_index_metadata<ivf_pq_metadata> {
   uint32_t max_iterations_{0};
   float convergence_tolerance_{0.f};
   float reassign_ratio_{0.f};
-  DistanceMetric distance_metric_{DistanceMetric::L2};
+  DistanceMetric distance_metric_{DistanceMetric::SUM_OF_SQUARES};
 
  protected:
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
