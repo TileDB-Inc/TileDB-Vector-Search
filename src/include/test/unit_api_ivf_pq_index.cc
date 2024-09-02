@@ -404,7 +404,7 @@ TEST_CASE(
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    for (auto upper_bound : {400, 1000, 0}) {
+    for (auto upper_bound : {450, 1000, 0}) {
       auto&& [distances, ids] =
           index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
       auto intersections = count_intersections(ids, groundtruth_set, k_nn);
