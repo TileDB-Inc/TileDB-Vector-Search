@@ -2400,7 +2400,11 @@ def ingest(
                 # Which reads the vectors and normalizes them, then swaps source_uri for normalized_uri
                 # This is because the cosine distance metric requires normalized vectors
                 normalization_nodes = []
-                if distance_metric == vspy.DistanceMetric.COSINE and not normalized and size > 0:
+                if (
+                    distance_metric == vspy.DistanceMetric.COSINE
+                    and not normalized
+                    and size > 0
+                ):
                     group = tiledb.Group(index_group_uri, "w")
                     normalized_uri = create_array(
                         group=group,
