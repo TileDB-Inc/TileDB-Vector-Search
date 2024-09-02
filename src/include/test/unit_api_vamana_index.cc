@@ -331,7 +331,7 @@ TEST_CASE("infer feature type", "[api_vamana_index]") {
   a.train(training_set);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
-  CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
+  CHECK(a.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
 }
 
 TEST_CASE("infer dimension", "[api_vamana_index]") {

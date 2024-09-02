@@ -46,7 +46,7 @@ TEST_CASE("init constructor", "[api_ivf_pq_index]") {
         a.partitioning_index_type_string() ==
         datatype_to_string(TILEDB_UINT32));
     CHECK(dimensions(a) == 0);
-    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
+    CHECK(a.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   SECTION("float uint32 uint32") {
