@@ -218,8 +218,8 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
         return compare_(std::get<0>(a), std::get<0>(b));
       });
 
-      // If the new element id exists in the heap, return inserted = false
       if constexpr (std::is_same_v<Unique, unique_id>) {
+        // If the new element id exists in the heap, return inserted = false
         if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
               return std::get<1>(e) == y;
             }) != end(*this)) {
