@@ -414,11 +414,6 @@ TEST_CASE(
 
       auto&& [distances_finite, ids_finite] = index.query(
           QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
-      intersections = count_intersections(ids_finite, groundtruth_set, k_nn);
-      num_ids = num_vectors(ids_finite);
-      auto recall_finite = intersections / static_cast<double>(num_ids * k_nn);
-      CHECK(recall == recall_finite);
-
       CHECK(are_equal(ids, ids_finite));
       CHECK(are_equal(distances, distances_finite));
     }
