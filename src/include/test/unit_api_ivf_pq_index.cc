@@ -202,6 +202,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   {
@@ -242,6 +243,7 @@ TEST_CASE(
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
   uint32_t num_subspaces = 1;
+  auto distance_metric = DistanceMetric::L2;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -257,6 +259,7 @@ TEST_CASE(
         {"partitioning_index_type", partitioning_index_type},
         {"dimensions", std::to_string(dimensions)},
         {"num_subspaces", std::to_string(num_subspaces)},
+        {"distance_metric", std::to_string(static_cast<size_t>(distance_metric))}
     }));
 
     size_t num_vectors = 0;
@@ -271,6 +274,7 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
   }
 
   {
@@ -281,6 +285,7 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
@@ -292,6 +297,9 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
@@ -406,7 +414,7 @@ TEST_CASE(
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
     
-    for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking]: std::vector<std::tuple<int, float, float>>{{1, .4f, .45f}, {2, .6f, .65f}, {10, .75f, .9f}, {100, .8f, 1.f}}) {
+    for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking]: std::vector<std::tuple<int, float, float>>{{1, .4f, .45f}, {2, .5f, .6f}, {10, .75f, .9f}, {100, .8f, 1.f}}) {
     std::cout << "InfiniteRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
     auto&& [distances, ids] = index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);

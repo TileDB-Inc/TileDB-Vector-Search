@@ -1167,8 +1167,10 @@ class ivf_pq_index {
           continue;
         }
         float distance;
-        if (distance_metric_ == DistanceMetric::L2) {
+        if (distance_metric_ == DistanceMetric::SUM_OF_SQUARES) {
           distance = sum_of_squares_distance{}(query_vectors[i], feature_vectors[vector_index]);
+        } else if (distance_metric_ == DistanceMetric::L2) {
+          distance = sqrt_sum_of_squares_distance{}(query_vectors[i], feature_vectors[vector_index]);
         } else if (distance_metric_ == DistanceMetric::INNER_PRODUCT) {
           distance = inner_product_distance{}(query_vectors[i], feature_vectors[vector_index]);
         } else if (distance_metric_ == DistanceMetric::COSINE) {

@@ -351,9 +351,10 @@ enum class DistanceMetric : uint32_t {
 
 inline std::string to_string(DistanceMetric metric) {
   switch (metric) {
-      case DistanceMetric::L2: return "L2";
+      case DistanceMetric::SUM_OF_SQUARES: return "SUM_OF_SQUARES";
       case DistanceMetric::INNER_PRODUCT: return "INNER_PRODUCT";
       case DistanceMetric::COSINE: return "COSINE";
+      case DistanceMetric::L2: return "L2";
       default: return "UNKNOWN";
   }
 }
