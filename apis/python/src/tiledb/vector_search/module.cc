@@ -1,12 +1,9 @@
-#include <tiledb/tiledb>
-
-#include <cstdio>
-
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <cstdio>
+#include <tiledb/tiledb>
 
-// @todo Replace
 #include "detail/flat/qv.h"
 #include "detail/flat/vq.h"
 #include "detail/ivf/dist_qv.h"
@@ -30,18 +27,24 @@ PYBIND11_MAKE_OPAQUE(std::vector<uint8_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<int8_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint32_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<uint64_t>);
+PYBIND11_MAKE_OPAQUE(std::vector<int32_t>);
+PYBIND11_MAKE_OPAQUE(std::vector<int64_t>);
 PYBIND11_MAKE_OPAQUE(std::vector<float>);
 PYBIND11_MAKE_OPAQUE(std::vector<double>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<uint8_t>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<int8_t>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<uint32_t>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<uint64_t>>);
+PYBIND11_MAKE_OPAQUE(std::list<std::vector<int32_t>>);
+PYBIND11_MAKE_OPAQUE(std::list<std::vector<int64_t>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<float>>);
 PYBIND11_MAKE_OPAQUE(std::list<std::vector<double>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<uint8_t>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<int8_t>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<uint32_t>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<uint64_t>>);
+PYBIND11_MAKE_OPAQUE(std::vector<std::list<int32_t>>);
+PYBIND11_MAKE_OPAQUE(std::vector<std::list<int64_t>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<float>>);
 PYBIND11_MAKE_OPAQUE(std::vector<std::list<double>>);
 #if !(defined(__GNUC__) || defined(_MSC_VER))
