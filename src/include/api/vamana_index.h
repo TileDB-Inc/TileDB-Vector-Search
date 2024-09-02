@@ -283,6 +283,10 @@ class IndexVamana {
     return r_max_degree_;
   }
 
+  constexpr DistanceMetric distance_metric() const {
+    return distance_metric_;
+  }
+
   constexpr tiledb_datatype_t feature_type() const {
     return feature_datatype_;
   }

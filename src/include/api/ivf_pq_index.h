@@ -322,6 +322,10 @@ class IndexIVFPQ {
     return reassign_ratio_;
   }
 
+  constexpr DistanceMetric distance_metric() const {
+    return distance_metric_;
+  }
+
   constexpr tiledb_datatype_t feature_type() const {
     return feature_datatype_;
   }
@@ -608,7 +612,7 @@ class IndexIVFPQ {
   tiledb_datatype_t id_datatype_{TILEDB_ANY};
   tiledb_datatype_t partitioning_index_datatype_{TILEDB_ANY};
   std::unique_ptr<index_base> index_;
-  DistanceMetric distance_metric_;
+  DistanceMetric distance_metric_{DistanceMetric::SUM_OF_SQUARES};
 };
 
 // clang-format off

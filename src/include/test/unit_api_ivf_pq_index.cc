@@ -46,6 +46,7 @@ TEST_CASE("init constructor", "[api_ivf_pq_index]") {
         a.partitioning_index_type_string() ==
         datatype_to_string(TILEDB_UINT32));
     CHECK(dimensions(a) == 0);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   SECTION("float uint32 uint32") {
@@ -202,6 +203,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   {
@@ -242,6 +244,7 @@ TEST_CASE(
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
   uint32_t num_subspaces = 1;
+  auto distance_metric = DistanceMetric::L2;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -251,13 +254,14 @@ TEST_CASE(
   }
 
   {
-    auto index = IndexIVFPQ(std::make_optional<IndexOptions>({
-        {"feature_type", feature_type},
-        {"id_type", id_type},
-        {"partitioning_index_type", partitioning_index_type},
-        {"dimensions", std::to_string(dimensions)},
-        {"num_subspaces", std::to_string(num_subspaces)},
-    }));
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"partitioning_index_type", partitioning_index_type},
+         {"dimensions", std::to_string(dimensions)},
+         {"num_subspaces", std::to_string(num_subspaces)},
+         {"distance_metric",
+          std::to_string(static_cast<size_t>(distance_metric))}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -271,6 +275,7 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
   }
 
   {
@@ -281,6 +286,7 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
@@ -292,6 +298,9 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
@@ -370,6 +379,7 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   {
