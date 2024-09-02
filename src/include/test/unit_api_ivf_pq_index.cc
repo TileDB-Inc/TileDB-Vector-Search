@@ -405,19 +405,22 @@ TEST_CASE(
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
     for (auto upper_bound : {400, 1000, 0}) {
-      auto&& [_, ids] =
+      auto&& [distances, ids] =
           index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
       auto intersections = count_intersections(ids, groundtruth_set, k_nn);
       auto num_ids = num_vectors(ids);
       auto recall = intersections / static_cast<double>(num_ids * k_nn);
       CHECK(recall > 0.7);
 
-      auto&& [__, ids_finite] = index.query(
+      auto&& [distances_finite, ids_finite] = index.query(
           QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
       intersections = count_intersections(ids_finite, groundtruth_set, k_nn);
       num_ids = num_vectors(ids_finite);
-      recall = intersections / static_cast<double>(num_ids * k_nn);
-      CHECK(recall > 0.7);
+      auto recall_finite = intersections / static_cast<double>(num_ids * k_nn);
+      CHECK(recall == recall_finite);
+
+      CHECK(are_equal(ids, ids_finite));
+      CHECK(are_equal(distances, distances_finite));
     }
   }
 }
