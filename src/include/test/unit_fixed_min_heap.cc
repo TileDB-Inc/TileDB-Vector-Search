@@ -39,6 +39,10 @@
 
 bool debug = false;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// fixed_min_pair_heap
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 TEST_CASE("std::heap", "[fixed_min_heap]") {
   std::vector<int> v{3, 1, 4, 1, 5, 9};
 
@@ -681,34 +685,21 @@ TEST_CASE(
   CHECK(a2 == v3);
 }
 
-void debug_vector_tuples(
-    const std::vector<std::tuple<float, int, int>>& v,
-    const std::string& name) {
-  std::cout << name << ": ";
-  for (auto&& [value, x, y] : v) {
-    std::cout << "(" << value << ", " << x << ", " << y << "), ";
-  }
-  std::cout << std::endl;
-}
-
 TEST_CASE("fixed_max_triplet_heap with a large vector", "[fixed_min_heap]") {
   using triplet = std::tuple<float, int, int>;
 
   fixed_min_triplet_heap<float, int, int, std::greater<float>> triplet_heap(
       7, std::greater<float>{});
-  std::cout << "triplet_heap: " << triplet_heap.dump() << std::endl;
 
   std::vector<triplet> random_triplets(55);
   for (auto&& current_triplet : random_triplets) {
     current_triplet = {std::rand(), std::rand(), std::rand()};
     CHECK(current_triplet != triplet{});
   }
-  debug_vector_tuples(random_triplets, "random_triplets");
   for (auto&& [value, x, y] : random_triplets) {
     triplet_heap.insert(value, x, y);
   }
   CHECK(triplet_heap.size() == 7);
-  std::cout << "triplet_heap: " << triplet_heap.dump() << std::endl;
 
   std::vector<triplet> sorted_heap_triplets(
       begin(triplet_heap), end(triplet_heap));
@@ -718,12 +709,9 @@ TEST_CASE("fixed_max_triplet_heap with a large vector", "[fixed_min_heap]") {
       [](auto&& lhs, auto&& rhs) {
         return std::get<0>(lhs) > std::get<0>(rhs);
       });
-  std::cout << "triplet_heap: " << triplet_heap.dump() << std::endl;
 
   std::vector<triplet> first_seven_random_triplets(
       random_triplets.begin(), random_triplets.begin() + 7);
-  debug_vector_tuples(
-      first_seven_random_triplets, "first_seven_random_triplets");
 
   std::nth_element(
       random_triplets.begin(),
@@ -732,25 +720,19 @@ TEST_CASE("fixed_max_triplet_heap with a large vector", "[fixed_min_heap]") {
       [](auto&& lhs, auto&& rhs) {
         return std::get<0>(lhs) > std::get<0>(rhs);
       });
-  debug_vector_tuples(random_triplets, "random_triplets");
   std::vector<triplet> top_seven_random_triplets(
       random_triplets.begin(), random_triplets.begin() + 7);
-  debug_vector_tuples(top_seven_random_triplets, "top_seven_random_triplets");
 
   CHECK(first_seven_random_triplets != top_seven_random_triplets);
 
   std::vector<triplet> sorted_top_seven_random_triplets(
       random_triplets.begin(), random_triplets.begin() + 7);
-  debug_vector_tuples(
-      sorted_top_seven_random_triplets, "sorted_top_seven_random_triplets");
   std::sort(
       begin(sorted_top_seven_random_triplets),
       end(sorted_top_seven_random_triplets),
       [](auto&& lhs, auto&& rhs) {
         return std::get<0>(lhs) > std::get<0>(rhs);
       });
-  debug_vector_tuples(
-      sorted_top_seven_random_triplets, "sorted_top_seven_random_triplets");
   CHECK(sorted_heap_triplets == sorted_top_seven_random_triplets);
 }
 
