@@ -617,7 +617,12 @@ TEST_CASE("fixed_min_triplet_heap with a 5500 vector", "[fixed_min_heap]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "first_less with triplets", "[fixed_min_heap]", float, double, int, unsigned) {
+    "first_less with triplets",
+    "[fixed_min_heap]",
+    float,
+    double,
+    int,
+    unsigned) {
   first_less<std::tuple<TestType, size_t, size_t>> a;
   auto v = std::vector<std::tuple<TestType, size_t, size_t>>{
       {0, 0, 0},
@@ -676,7 +681,9 @@ TEST_CASE(
   CHECK(a2 == v3);
 }
 
-void debug_vector_tuples(const std::vector<std::tuple<float, int, int>>& v, const std::string& name) {
+void debug_vector_tuples(
+    const std::vector<std::tuple<float, int, int>>& v,
+    const std::string& name) {
   std::cout << name << ": ";
   for (auto&& [value, x, y] : v) {
     std::cout << "(" << value << ", " << x << ", " << y << "), ";
@@ -703,30 +710,47 @@ TEST_CASE("fixed_max_triplet_heap with a large vector", "[fixed_min_heap]") {
   CHECK(triplet_heap.size() == 7);
   std::cout << "triplet_heap: " << triplet_heap.dump() << std::endl;
 
-  std::vector<triplet> sorted_heap_triplets(begin(triplet_heap), end(triplet_heap));
-  std::sort(begin(sorted_heap_triplets), end(sorted_heap_triplets), [](auto&& lhs, auto&& rhs) {
-    return std::get<0>(lhs) > std::get<0>(rhs);
-  });
+  std::vector<triplet> sorted_heap_triplets(
+      begin(triplet_heap), end(triplet_heap));
+  std::sort(
+      begin(sorted_heap_triplets),
+      end(sorted_heap_triplets),
+      [](auto&& lhs, auto&& rhs) {
+        return std::get<0>(lhs) > std::get<0>(rhs);
+      });
   std::cout << "triplet_heap: " << triplet_heap.dump() << std::endl;
 
-  std::vector<triplet> first_seven_random_triplets(random_triplets.begin(), random_triplets.begin() + 7);
-  debug_vector_tuples(first_seven_random_triplets, "first_seven_random_triplets");
+  std::vector<triplet> first_seven_random_triplets(
+      random_triplets.begin(), random_triplets.begin() + 7);
+  debug_vector_tuples(
+      first_seven_random_triplets, "first_seven_random_triplets");
 
-  std::nth_element(random_triplets.begin(), random_triplets.begin() + 7, random_triplets.end(), [](auto&& lhs, auto&& rhs) {
-    return std::get<0>(lhs) > std::get<0>(rhs);
-  });
+  std::nth_element(
+      random_triplets.begin(),
+      random_triplets.begin() + 7,
+      random_triplets.end(),
+      [](auto&& lhs, auto&& rhs) {
+        return std::get<0>(lhs) > std::get<0>(rhs);
+      });
   debug_vector_tuples(random_triplets, "random_triplets");
-  std::vector<triplet> top_seven_random_triplets(random_triplets.begin(), random_triplets.begin() + 7);
+  std::vector<triplet> top_seven_random_triplets(
+      random_triplets.begin(), random_triplets.begin() + 7);
   debug_vector_tuples(top_seven_random_triplets, "top_seven_random_triplets");
 
   CHECK(first_seven_random_triplets != top_seven_random_triplets);
 
-  std::vector<triplet> sorted_top_seven_random_triplets(random_triplets.begin(), random_triplets.begin() + 7);
-  debug_vector_tuples(sorted_top_seven_random_triplets, "sorted_top_seven_random_triplets");
-  std::sort(begin(sorted_top_seven_random_triplets), end(sorted_top_seven_random_triplets), [](auto&& lhs, auto&& rhs) {
-    return std::get<0>(lhs) > std::get<0>(rhs);
-  });
-  debug_vector_tuples(sorted_top_seven_random_triplets, "sorted_top_seven_random_triplets");
+  std::vector<triplet> sorted_top_seven_random_triplets(
+      random_triplets.begin(), random_triplets.begin() + 7);
+  debug_vector_tuples(
+      sorted_top_seven_random_triplets, "sorted_top_seven_random_triplets");
+  std::sort(
+      begin(sorted_top_seven_random_triplets),
+      end(sorted_top_seven_random_triplets),
+      [](auto&& lhs, auto&& rhs) {
+        return std::get<0>(lhs) > std::get<0>(rhs);
+      });
+  debug_vector_tuples(
+      sorted_top_seven_random_triplets, "sorted_top_seven_random_triplets");
   CHECK(sorted_heap_triplets == sorted_top_seven_random_triplets);
 }
 
@@ -740,7 +764,9 @@ TEST_CASE("basic insertion and size check", "[fixed_min_triplet_heap]") {
   REQUIRE(heap.size() == 3);
 }
 
-TEST_CASE("insertion beyond capacity and eviction check", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "insertion beyond capacity and eviction check",
+    "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(3);
 
   heap.insert(10, 1, 100);
@@ -794,17 +820,23 @@ TEST_CASE("evict_insert functionality", "[fixed_min_triplet_heap]") {
   REQUIRE(old_score == 20);
   REQUIRE(old_id == 2);
 
-  std::tie(inserted, evicted, old_score, old_id) = heap.evict_insert(25, 5, 500);
+  std::tie(inserted, evicted, old_score, old_id) =
+      heap.evict_insert(25, 5, 500);
   REQUIRE_FALSE(inserted);
   REQUIRE_FALSE(evicted);
 
-  std::tie(inserted, evicted, old_score, old_id) = heap.evict_insert<unique_id>(5, 4, 450);
+  std::tie(inserted, evicted, old_score, old_id) =
+      heap.evict_insert<unique_id>(5, 4, 450);
   REQUIRE_FALSE(inserted);
   REQUIRE_FALSE(evicted);
 }
 
 template <typename T, typename U, typename V>
-void check_front(const fixed_min_triplet_heap<T, U, V>& heap, const T &expected_first, const U &expected_second, const V &expected_third) {
+void check_front(
+    const fixed_min_triplet_heap<T, U, V>& heap,
+    const T& expected_first,
+    const U& expected_second,
+    const V& expected_third) {
   auto [first, second, third] = heap.front();
   REQUIRE(first == expected_first);
   REQUIRE(second == expected_second);
@@ -854,40 +886,49 @@ TEST_CASE("insertion of duplicate values", "[fixed_min_triplet_heap]") {
   check_front(heap, 10, 1, 100);
 }
 
-TEST_CASE("inserting elements with min and max values", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "inserting elements with min and max values", "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(3);
 
   REQUIRE(heap.insert(std::numeric_limits<int>::max(), 1, 100));
   REQUIRE(heap.dump() == "(2147483647, 1, 100) ");
   REQUIRE(heap.size() == 1);
-  
+
   REQUIRE(heap.insert(std::numeric_limits<int>::min(), 2, 200));
   REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) ");
   REQUIRE(heap.size() == 2);
 
   REQUIRE(heap.insert(0, 3, 300));
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
   REQUIRE(heap.size() == 3);
 
   check_front(heap, std::numeric_limits<int>::max(), 1, 100);
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
 
   REQUIRE_FALSE(heap.insert(std::numeric_limits<int>::max(), 4, 400));
   check_front(heap, std::numeric_limits<int>::max(), 1, 100);
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
 
   REQUIRE_FALSE(heap.insert(std::numeric_limits<int>::max(), -10, -10));
   REQUIRE(heap.size() == 3);
   check_front(heap, std::numeric_limits<int>::max(), 1, 100);
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
 
   REQUIRE(heap.insert(std::numeric_limits<int>::min(), 5, 500));
   REQUIRE(heap.size() == 3);
   check_front(heap, 0, 3, 300);
-  REQUIRE(heap.dump() == "(0, 3, 300) (-2147483648, 2, 200) (-2147483648, 5, 500) ");
+  REQUIRE(
+      heap.dump() ==
+      "(0, 3, 300) (-2147483648, 2, 200) (-2147483648, 5, 500) ");
 }
 
-TEST_CASE("handling of insertions when heap is at capacity with equal elements", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "handling of insertions when heap is at capacity with equal elements",
+    "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(3);
 
   heap.insert(10, 1, 100);
@@ -956,7 +997,9 @@ TEST_CASE("pop on an empty heap", "[fixed_min_triplet_heap]") {
   REQUIRE_NOTHROW(heap.pop());
 }
 
-TEST_CASE("large number of insertions to test heap integrity", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "large number of insertions to test heap integrity",
+    "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(10);
 
   for (int i = 0; i < 100; ++i) {

@@ -63,8 +63,9 @@ struct heap_traits {
       typename std::tuple_element<0, typename Heap::value_type>::type;
   using index_type =
       typename std::tuple_element<1, typename Heap::value_type>::type;
-  // using extra_type = std::conditional_t< std::tuple_size<typename Heap::value_type>::value == 3, typename std::tuple_element<2, typename Heap::value_type>::type, void>;
-  // using extra_type = std::conditional_t<
+  // using extra_type = std::conditional_t< std::tuple_size<typename
+  // Heap::value_type>::value == 3, typename std::tuple_element<2, typename
+  // Heap::value_type>::type, void>; using extra_type = std::conditional_t<
   //     std::tuple_size<typename Heap::value_type>::value == 3,
   //     typename std::tuple_element<2, typename Heap::value_type>::type,
   //     void>;
@@ -81,17 +82,21 @@ using heap_index_t = typename heap_traits<Heap>::index_type;
  * Supports pairs and triplets.
  * @tparam Tuple Type of tuple (pair or triplet)
  */
-template <class Tuple, class Compare = std::less<typename std::tuple_element<0, Tuple>::type>>
+template <
+    class Tuple,
+    class Compare = std::less<typename std::tuple_element<0, Tuple>::type>>
 class fixed_min_tuple_heap : public std::vector<Tuple> {
   using Base = std::vector<Tuple>;
   using T = typename std::tuple_element<0, Tuple>::type;
   using U = typename std::tuple_element<1, Tuple>::type;
   // using Extra = std::conditional_t<std::tuple_size<Tuple>::value == 3,
-  //                                  typename std::tuple_element<2, Tuple>::type,
-  //                                  void>;
+  //                                  typename std::tuple_element<2,
+  //                                  Tuple>::type, void>;
 
   // New helper struct
-  template <class TupleType, bool HasThirdElement = (std::tuple_size<TupleType>::value == 3)>
+  template <
+      class TupleType,
+      bool HasThirdElement = (std::tuple_size<TupleType>::value == 3)>
   struct ExtraTypeHelper {
     using type = typename std::tuple_element<2, TupleType>::type;
   };
@@ -108,13 +113,15 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
   constexpr const static Compare compare_{};
 
  public:
-  explicit fixed_min_tuple_heap(std::integral auto k, Compare compare = Compare{})
+  explicit fixed_min_tuple_heap(
+      std::integral auto k, Compare compare = Compare{})
       : Base(0)
       , max_size{(unsigned)k} {
     Base::reserve(k);
   }
 
-  explicit fixed_min_tuple_heap(unsigned k, std::initializer_list<Tuple> l, Compare compare = Compare{})
+  explicit fixed_min_tuple_heap(
+      unsigned k, std::initializer_list<Tuple> l, Compare compare = Compare{})
       : Base(0)
       , max_size{k} {
     Base::reserve(k);
@@ -125,60 +132,61 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
 
   template <class Unique = not_unique>
   bool insert(const T& x, const U& y, const Extra& z = Extra{}) {
-      if (max_size == 0) {
-        return false;
+    if (max_size == 0) {
+      return false;
+    }
+    if (Base::size() < max_size) {
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
+          return false;
+        }
       }
-      if (Base::size() < max_size) {
-          if constexpr (std::is_same_v<Unique, unique_id>) {
-              if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-                  return std::get<1>(e) == y;
-              }) != end(*this)) {
-                  return false;
-              }
-          }
 
-          if constexpr (std::tuple_size_v<Tuple> == 2) {
-              Base::emplace_back(x, y);
-          } else {
-              Base::emplace_back(x, y, z);
-          }
+      if constexpr (std::tuple_size_v<Tuple> == 2) {
+        Base::emplace_back(x, y);
+      } else {
+        Base::emplace_back(x, y, z);
+      }
 
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+      return true;
+    } else if (compare_(x, std::get<0>(this->front()))) {
+      std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+
+      if constexpr (std::is_same_v<Unique, unique_id>) {
+        if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
+              return std::get<1>(e) == y;
+            }) != end(*this)) {
           std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-              return compare_(std::get<0>(a), std::get<0>(b));
+            return compare_(std::get<0>(a), std::get<0>(b));
           });
-          return true;
-      } else if (compare_(x, std::get<0>(this->front()))) {
-          std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-              return compare_(std::get<0>(a), std::get<0>(b));
-          });
+          return false;
+        }
+      }
 
-          if constexpr (std::is_same_v<Unique, unique_id>) {
-              if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
-                  return std::get<1>(e) == y;
-              }) != end(*this)) {
-                  std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-                      return compare_(std::get<0>(a), std::get<0>(b));
-                  });
-                  return false;
-              }
-          }
+      if constexpr (std::tuple_size_v<Tuple> == 2) {
+        (*this)[max_size - 1] = Tuple(x, y);
+      } else {
+        (*this)[max_size - 1] = Tuple(x, y, z);
+      }
 
-          if constexpr (std::tuple_size_v<Tuple> == 2) {
-              (*this)[max_size - 1] = Tuple(x, y);
-          } else {
-              (*this)[max_size - 1] = Tuple(x, y, z);
-          }
-
-          std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-              return compare_(std::get<0>(a), std::get<0>(b));
-          });
-          return true;
+      std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+        return compare_(std::get<0>(a), std::get<0>(b));
+      });
+      return true;
     }
     return false;
-}
+  }
 
   template <class Unique = not_unique>
-  std::tuple<bool, bool, T, U> evict_insert(const T& x, const U& y, const Extra& z = Extra{}) {
+  std::tuple<bool, bool, T, U> evict_insert(
+      const T& x, const U& y, const Extra& z = Extra{}) {
     if (Base::size() < max_size) {
       if constexpr (std::is_same_v<Unique, unique_id>) {
         if (std::find_if(begin(*this), end(*this), [y](auto&& e) {
@@ -189,9 +197,9 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
       }
 
       if constexpr (std::tuple_size_v<Tuple> == 2) {
-          Base::emplace_back(x, y);
+        Base::emplace_back(x, y);
       } else {
-          Base::emplace_back(x, y, z);
+        Base::emplace_back(x, y, z);
       }
 
       std::push_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
@@ -257,17 +265,17 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
     std::ostringstream oss;
     if constexpr (std::tuple_size_v<Tuple> == 2) {
       for (const auto& [score, id] : *this) {
-          oss << "(" << score << ", " << id << ") ";
+        oss << "(" << score << ", " << id << ") ";
       }
     } else {
-       for (const auto& [score, id, extra] : *this) {
-          oss << "(" << score << ", " << id << ", " << extra << ") ";
+      for (const auto& [score, id, extra] : *this) {
+        oss << "(" << score << ", " << id << ", " << extra << ") ";
       }
     }
     return oss.str();
   }
 
-private:
+ private:
   template <typename TupleType>
   static constexpr auto get_extra(const TupleType& t) {
     if constexpr (std::tuple_size_v<TupleType> == 3) {
@@ -279,28 +287,44 @@ private:
 };
 
 template <class T, class U, class Compare = std::less<T>>
-class fixed_min_pair_heap : public fixed_min_tuple_heap<std::tuple<T, U>, Compare> {
+class fixed_min_pair_heap
+    : public fixed_min_tuple_heap<std::tuple<T, U>, Compare> {
   using Base = fixed_min_tuple_heap<std::tuple<T, U>, Compare>;
-public:
-  explicit fixed_min_pair_heap(std::integral auto k, Compare compare = Compare{})
-      : Base(k, compare) {}
 
-  explicit fixed_min_pair_heap(unsigned k, std::initializer_list<std::tuple<T, U>> l, Compare compare = Compare{})
-      : Base(k, l, compare) {}
+ public:
+  explicit fixed_min_pair_heap(
+      std::integral auto k, Compare compare = Compare{})
+      : Base(k, compare) {
+  }
+
+  explicit fixed_min_pair_heap(
+      unsigned k,
+      std::initializer_list<std::tuple<T, U>> l,
+      Compare compare = Compare{})
+      : Base(k, l, compare) {
+  }
 };
 
 template <class T, class U>
 using k_min_heap = fixed_min_pair_heap<T, U>;
 
 template <class T, class U, class V, class Compare = std::less<T>>
-class fixed_min_triplet_heap : public fixed_min_tuple_heap<std::tuple<T, U, V>, Compare> {
+class fixed_min_triplet_heap
+    : public fixed_min_tuple_heap<std::tuple<T, U, V>, Compare> {
   using Base = fixed_min_tuple_heap<std::tuple<T, U, V>, Compare>;
-public:
-  explicit fixed_min_triplet_heap(std::integral auto k, Compare compare = Compare{})
-      : Base(k, compare) {}
 
-  explicit fixed_min_triplet_heap(unsigned k, std::initializer_list<std::tuple<T, U, V>> l, Compare compare = Compare{})
-      : Base(k, l, compare) {}
+ public:
+  explicit fixed_min_triplet_heap(
+      std::integral auto k, Compare compare = Compare{})
+      : Base(k, compare) {
+  }
+
+  explicit fixed_min_triplet_heap(
+      unsigned k,
+      std::initializer_list<std::tuple<T, U, V>> l,
+      Compare compare = Compare{})
+      : Base(k, l, compare) {
+  }
 };
 
 // template <class T, class U>
