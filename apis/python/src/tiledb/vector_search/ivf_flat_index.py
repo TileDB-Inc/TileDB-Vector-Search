@@ -427,8 +427,7 @@ class IVFFlatIndex(index.Index):
                 k_nn=k_nn,
                 ctx=Ctx(config),
                 timestamp=timestamp,
-                # TODO(nikos) add this after the library change gets released in TileDB cloud
-                # upper_bound=0 if memory_budget == -1 else memory_budget,
+                upper_bound=0 if memory_budget == -1 else memory_budget,
             )
             results = []
             for q in range(len(r)):
