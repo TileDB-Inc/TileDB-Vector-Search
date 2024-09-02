@@ -14,16 +14,6 @@ from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import load_fvecs
 
-
-def normalize_vectors(vectors):
-    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
-    return vectors / norms
-
-
-def normalize_vector(vector):
-    return vector / np.linalg.norm(vector)
-
-
 MINIMUM_ACCURACY = 0.85
 MINIMUM_ACCURACY_IVF_PQ = 0.75
 
@@ -384,14 +374,6 @@ def test_vamana_create_cosine(tmp_path):
     )
 
 
-def cosine_distance(a, b):
-    return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-
-def l2_distance(a, b):
-    return np.sqrt(np.sum((a - b) ** 2))
-
-
 def test_ivf_flat_create_cosine_numpy(tmp_path):
     index_uri = os.path.join(tmp_path, "sift10k_flat_COSINE")
 
@@ -470,10 +452,6 @@ def test_vamana_create_inner_product(tmp_path):
             source_type="FVEC",
             distance_metric=vspy.DistanceMetric.INNER_PRODUCT,
         )
-
-
-def sum_of_squares_distance(a, b):
-    return np.sum((a - b) ** 2)
 
 
 def test_ivfpq_create_sum_of_squares(tmp_path):
