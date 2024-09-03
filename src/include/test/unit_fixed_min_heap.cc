@@ -39,6 +39,10 @@
 
 bool debug = false;
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// fixed_min_pair_heap
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 TEST_CASE("std::heap", "[fixed_min_heap]") {
   std::vector<int> v{3, 1, 4, 1, 5, 9};
 
@@ -682,40 +686,54 @@ TEST_CASE(
 }
 
 TEST_CASE("fixed_max_triplet_heap with a large vector", "[fixed_min_heap]") {
-  using element = std::tuple<float, int, int>;
+  using triplet = std::tuple<float, int, int>;
 
-  fixed_min_triplet_heap<float, int, int, std::greater<float>> a(
+  fixed_min_triplet_heap<float, int, int, std::greater<float>> triplet_heap(
       7, std::greater<float>{});
 
-  std::vector<element> v(5500);
-  for (auto&& i : v) {
-    i = {std::rand(), std::rand(), std::rand()};
-    CHECK(i != element{});
+  std::vector<triplet> random_triplets(55);
+  for (auto&& current_triplet : random_triplets) {
+    current_triplet = {std::rand(), std::rand(), std::rand()};
+    CHECK(current_triplet != triplet{});
   }
-  for (auto&& [e, f, g] : v) {
-    a.insert(e, f, g);
+  for (auto&& [value, x, y] : random_triplets) {
+    triplet_heap.insert(value, x, y);
   }
-  CHECK(a.size() == 7);
+  CHECK(triplet_heap.size() == 7);
 
-  std::vector<element> a2(begin(a), end(a));
-  std::sort(begin(a2), end(a2), [](auto&& a, auto&& b) {
-    return std::get<0>(a) > std::get<0>(b);
-  });
+  std::vector<triplet> sorted_heap_triplets(
+      begin(triplet_heap), end(triplet_heap));
+  std::sort(
+      begin(sorted_heap_triplets),
+      end(sorted_heap_triplets),
+      [](auto&& lhs, auto&& rhs) {
+        return std::get<0>(lhs) > std::get<0>(rhs);
+      });
 
-  std::vector<element> u(v.begin(), v.begin() + 7);
+  std::vector<triplet> first_seven_random_triplets(
+      random_triplets.begin(), random_triplets.begin() + 7);
 
-  std::nth_element(v.begin(), v.begin() + 7, v.end(), [](auto&& a, auto&& b) {
-    return std::get<0>(a) > std::get<0>(b);
-  });
-  std::vector<element> w(v.begin(), v.begin() + 7);
+  std::nth_element(
+      random_triplets.begin(),
+      random_triplets.begin() + 7,
+      random_triplets.end(),
+      [](auto&& lhs, auto&& rhs) {
+        return std::get<0>(lhs) > std::get<0>(rhs);
+      });
+  std::vector<triplet> top_seven_random_triplets(
+      random_triplets.begin(), random_triplets.begin() + 7);
 
-  CHECK(u != w);
+  CHECK(first_seven_random_triplets != top_seven_random_triplets);
 
-  std::vector<element> v3(v.begin(), v.begin() + 7);
-  std::sort(begin(v3), end(v3), [](auto&& a, auto&& b) {
-    return std::get<0>(a) > std::get<0>(b);
-  });
-  CHECK(a2 == v3);
+  std::vector<triplet> sorted_top_seven_random_triplets(
+      random_triplets.begin(), random_triplets.begin() + 7);
+  std::sort(
+      begin(sorted_top_seven_random_triplets),
+      end(sorted_top_seven_random_triplets),
+      [](auto&& lhs, auto&& rhs) {
+        return std::get<0>(lhs) > std::get<0>(rhs);
+      });
+  CHECK(sorted_heap_triplets == sorted_top_seven_random_triplets);
 }
 
 TEST_CASE("basic insertion and size check", "[fixed_min_triplet_heap]") {
@@ -991,46 +1009,4 @@ TEST_CASE("handling insertion of complex types", "[fixed_min_triplet_heap]") {
   REQUIRE(heap.insert("a", 5, 5.5));
   REQUIRE(heap.size() == 3);
   REQUIRE(heap.dump() == "(c, 2, 2.2) (b, 1, 1.1) (a, 5, 5.5) ");
-}
-
-TEST_CASE("X", "[fixed_min_triplet_heap]") {
-  {
-    // Create a heap for pairs (int, int)
-    // fixed_min_tuple_heap<std::tuple<int, int>> pair_heap(3);
-    fixed_min_pair_heap<int, int> pair_heap(3);
-
-    // Insert pairs into the heap
-    pair_heap.insert(5, 1);
-    pair_heap.insert(3, 2);
-    pair_heap.insert(7, 3);
-
-    // Evict and insert a new pair
-    auto result = pair_heap.evict_insert(2, 4);
-
-    // Print the result of the eviction-insertion operation
-    std::cout << "Inserted: " << std::get<0>(result)
-              << ", Evicted: " << std::get<1>(result)
-              << ", Evicted score: " << std::get<2>(result)
-              << ", Evicted id: " << std::get<3>(result) << "\n";
-  }
-
-  {
-    // Create a heap for triplets (int, int, double)
-    // fixed_min_tuple_heap<std::tuple<int, int, double>> triplet_heap(3);
-    fixed_min_triplet_heap<int, int, double> triplet_heap(3);
-
-    // Insert triplets into the heap
-    triplet_heap.insert(5, 1, 0.1);
-    triplet_heap.insert(3, 2, 0.2);
-    triplet_heap.insert(7, 3, 0.3);
-
-    // Evict and insert a new triplet
-    auto result = triplet_heap.evict_insert(2, 4, 0.4);
-
-    // Print the result of the eviction-insertion operation
-    std::cout << "Inserted: " << std::get<0>(result)
-              << ", Evicted: " << std::get<1>(result)
-              << ", Evicted score: " << std::get<2>(result)
-              << ", Evicted id: " << std::get<3>(result) << "\n";
-  }
 }
