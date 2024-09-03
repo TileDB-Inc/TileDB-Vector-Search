@@ -547,89 +547,91 @@ bool are_equal(
     const FeatureVectorArray& a,
     const FeatureVectorArray& b,
     double epsilon = 0.0) {
-  
   if (a.feature_type() != b.feature_type()) {
-    std::cout << "[feature_vector_array@are_equal] Feature types do not match: " 
-              << a.feature_type_string() << " vs " 
-              << b.feature_type_string() << std::endl;
+    std::cout << "[feature_vector_array@are_equal] Feature types do not match: "
+              << a.feature_type_string() << " vs " << b.feature_type_string()
+              << std::endl;
     return false;
   }
   if (a.feature_size() != b.feature_size()) {
-    std::cout << "[feature_vector_array@are_equal] Feature sizes do not match: " 
-              << a.feature_size() << " vs " 
-              << b.feature_size() << std::endl;
+    std::cout << "[feature_vector_array@are_equal] Feature sizes do not match: "
+              << a.feature_size() << " vs " << b.feature_size() << std::endl;
     return false;
   }
   if (a.num_vectors() != b.num_vectors()) {
-    std::cout << "[feature_vector_array@are_equal] Number of vectors do not match: " 
-              << a.num_vectors() << " vs " 
-              << b.num_vectors() << std::endl;
+    std::cout
+        << "[feature_vector_array@are_equal] Number of vectors do not match: "
+        << a.num_vectors() << " vs " << b.num_vectors() << std::endl;
     return false;
   }
   if (a.dimensions() != b.dimensions()) {
-    std::cout << "[feature_vector_array@are_equal] Number of dimensions do not match: " 
-              << a.dimensions() << " vs " 
-              << b.dimensions() << std::endl;
+    std::cout << "[feature_vector_array@are_equal] Number of dimensions do not "
+                 "match: "
+              << a.dimensions() << " vs " << b.dimensions() << std::endl;
     return false;
   }
 
   if (a.ids_type() != b.ids_type()) {
-    std::cout << "[feature_vector_array@are_equal] IDs types do not match: " 
-              << a.ids_type_string() << " vs " 
-              << b.ids_type_string() << std::endl;
+    std::cout << "[feature_vector_array@are_equal] IDs types do not match: "
+              << a.ids_type_string() << " vs " << b.ids_type_string()
+              << std::endl;
     return false;
   }
   if (a.ids_size() != b.ids_size()) {
-    std::cout << "[feature_vector_array@are_equal] IDs sizes do not match: " 
-              << a.ids_size() << " vs " 
-              << b.ids_size() << std::endl;
+    std::cout << "[feature_vector_array@are_equal] IDs sizes do not match: "
+              << a.ids_size() << " vs " << b.ids_size() << std::endl;
     return false;
   }
   if (a.num_ids() != b.num_ids()) {
-    std::cout << "[feature_vector_array@are_equal] Number of IDs do not match: " 
-              << a.num_ids() << " vs " 
-              << b.num_ids() << std::endl;
+    std::cout << "[feature_vector_array@are_equal] Number of IDs do not match: "
+              << a.num_ids() << " vs " << b.num_ids() << std::endl;
     return false;
   }
 
   if (a.extents() != b.extents()) {
-    std::cout << "[feature_vector_array@are_equal] Extents do not match: " 
+    std::cout << "[feature_vector_array@are_equal] Extents do not match: "
               << "A: {" << a.extents()[0] << ", " << a.dimensions() << "}, "
-              << "B: {" << b.extents()[0] << ", " << b.dimensions() << "}" 
+              << "B: {" << b.extents()[0] << ", " << b.dimensions() << "}"
               << std::endl;
     return false;
   }
 
   // Compare the data of the feature vectors with optional epsilon
-  auto compare_data = [&epsilon](const auto* data_a, const auto* data_b, size_t size) {
-  if (epsilon > 0.0) {
-    for (size_t i = 0; i < size; ++i) {
-      if (std::abs(static_cast<double>(data_a[i]) - static_cast<double>(data_b[i])) > epsilon) {
-        std::cout << "[feature_vector_array@are_equal] Data mismatch at index " << i 
-                  << ": " << data_a[i] << " vs " 
-                  << data_b[i] << " (epsilon: " << epsilon << ")" << std::endl;
-        return false;
+  auto compare_data = [&epsilon](
+                          const auto* data_a, const auto* data_b, size_t size) {
+    if (epsilon > 0.0) {
+      for (size_t i = 0; i < size; ++i) {
+        if (std::abs(
+                static_cast<double>(data_a[i]) -
+                static_cast<double>(data_b[i])) > epsilon) {
+          std::cout
+              << "[feature_vector_array@are_equal] Data mismatch at index " << i
+              << ": " << data_a[i] << " vs " << data_b[i]
+              << " (epsilon: " << epsilon << ")" << std::endl;
+          return false;
+        }
+      }
+    } else {
+      for (size_t i = 0; i < size; ++i) {
+        if (data_a[i] != data_b[i]) {
+          std::cout
+              << "[feature_vector_array@are_equal] Data mismatch at index " << i
+              << ": " << data_a[i] << " vs " << data_b[i] << std::endl;
+          return false;
+        }
       }
     }
-  } else {
-    for (size_t i = 0; i < size; ++i) {
-      if (data_a[i] != data_b[i]) {
-        std::cout << "[feature_vector_array@are_equal] Data mismatch at index " << i 
-                  << ": " << data_a[i] << " vs " 
-                  << data_b[i] << std::endl;
-        return false;
-      }
-    }
-  }
-  return true;
-};
+    return true;
+  };
 
   switch (a.feature_type()) {
     case TILEDB_FLOAT32: {
       const auto* data_a = static_cast<const float*>(a.data());
       const auto* data_b = static_cast<const float*>(b.data());
       if (!compare_data(data_a, data_b, a.num_vectors() * a.dimensions())) {
-        std::cout << "[feature_vector_array@are_equal] Feature vector data comparison failed for type FLOAT32" << std::endl;
+        std::cout << "[feature_vector_array@are_equal] Feature vector data "
+                     "comparison failed for type FLOAT32"
+                  << std::endl;
         return false;
       }
       break;
@@ -638,7 +640,9 @@ bool are_equal(
       const auto* data_a = static_cast<const int8_t*>(a.data());
       const auto* data_b = static_cast<const int8_t*>(b.data());
       if (!compare_data(data_a, data_b, a.num_vectors() * a.dimensions())) {
-        std::cout << "[feature_vector_array@are_equal] Feature vector data comparison failed for type INT8" << std::endl;
+        std::cout << "[feature_vector_array@are_equal] Feature vector data "
+                     "comparison failed for type INT8"
+                  << std::endl;
         return false;
       }
       break;
@@ -647,7 +651,9 @@ bool are_equal(
       const auto* data_a = static_cast<const uint8_t*>(a.data());
       const auto* data_b = static_cast<const uint8_t*>(b.data());
       if (!compare_data(data_a, data_b, a.num_vectors() * a.dimensions())) {
-        std::cout << "[feature_vector_array@are_equal] Feature vector data comparison failed for type UINT8" << std::endl;
+        std::cout << "[feature_vector_array@are_equal] Feature vector data "
+                     "comparison failed for type UINT8"
+                  << std::endl;
         return false;
       }
       break;
@@ -656,7 +662,9 @@ bool are_equal(
       const auto* data_a = static_cast<const int32_t*>(a.data());
       const auto* data_b = static_cast<const int32_t*>(b.data());
       if (!compare_data(data_a, data_b, a.num_vectors() * a.dimensions())) {
-        std::cout << "[feature_vector_array@are_equal] Feature vector data comparison failed for type INT32" << std::endl;
+        std::cout << "[feature_vector_array@are_equal] Feature vector data "
+                     "comparison failed for type INT32"
+                  << std::endl;
         return false;
       }
       break;
@@ -665,7 +673,9 @@ bool are_equal(
       const auto* data_a = static_cast<const uint32_t*>(a.data());
       const auto* data_b = static_cast<const uint32_t*>(b.data());
       if (!compare_data(data_a, data_b, a.num_vectors() * a.dimensions())) {
-        std::cout << "[feature_vector_array@are_equal] Feature vector data comparison failed for type UINT32" << std::endl;
+        std::cout << "[feature_vector_array@are_equal] Feature vector data "
+                     "comparison failed for type UINT32"
+                  << std::endl;
         return false;
       }
       break;
@@ -674,7 +684,9 @@ bool are_equal(
       const auto* data_a = static_cast<const int64_t*>(a.data());
       const auto* data_b = static_cast<const int64_t*>(b.data());
       if (!compare_data(data_a, data_b, a.num_vectors() * a.dimensions())) {
-        std::cout << "[feature_vector_array@are_equal] Feature vector data comparison failed for type INT64" << std::endl;
+        std::cout << "[feature_vector_array@are_equal] Feature vector data "
+                     "comparison failed for type INT64"
+                  << std::endl;
         return false;
       }
       break;
@@ -683,13 +695,17 @@ bool are_equal(
       const auto* data_a = static_cast<const uint64_t*>(a.data());
       const auto* data_b = static_cast<const uint64_t*>(b.data());
       if (!compare_data(data_a, data_b, a.num_vectors() * a.dimensions())) {
-        std::cout << "[feature_vector_array@are_equal] Feature vector data comparison failed for type UINT64" << std::endl;
+        std::cout << "[feature_vector_array@are_equal] Feature vector data "
+                     "comparison failed for type UINT64"
+                  << std::endl;
         return false;
       }
       break;
     }
     default:
-      std::cout << "[feature_vector_array@are_equal] Unsupported feature vector attribute type" << std::endl;
+      std::cout << "[feature_vector_array@are_equal] Unsupported feature "
+                   "vector attribute type"
+                << std::endl;
       throw std::runtime_error("Unsupported attribute type");
   }
 
@@ -700,7 +716,9 @@ bool are_equal(
         const auto* ids_a = static_cast<const uint32_t*>(a.ids());
         const auto* ids_b = static_cast<const uint32_t*>(b.ids());
         if (!compare_data(ids_a, ids_b, a.num_ids())) {
-          std::cout << "[feature_vector_array@are_equal] ID comparison failed for type UINT32" << std::endl;
+          std::cout << "[feature_vector_array@are_equal] ID comparison failed "
+                       "for type UINT32"
+                    << std::endl;
           return false;
         }
         break;
@@ -709,7 +727,9 @@ bool are_equal(
         const auto* ids_a = static_cast<const uint64_t*>(a.ids());
         const auto* ids_b = static_cast<const uint64_t*>(b.ids());
         if (!compare_data(ids_a, ids_b, a.num_ids())) {
-          std::cout << "[feature_vector_array@are_equal] ID comparison failed for type UINT64" << std::endl;
+          std::cout << "[feature_vector_array@are_equal] ID comparison failed "
+                       "for type UINT64"
+                    << std::endl;
           return false;
         }
         break;

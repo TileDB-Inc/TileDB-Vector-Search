@@ -44,10 +44,7 @@
  * Derived from `tdbBlockedMatrix`, which we have derive from `Matrix`.
  * Initialized in construction by filling from the TileDB vectors array.
  */
-template <
-    class T,
-    class LayoutPolicy = stdx::layout_right,
-    class I = size_t>
+template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
 class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   using Base = Matrix<T, LayoutPolicy, I>;
   using Base::Base;
@@ -69,7 +66,8 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   std::unique_ptr<tiledb::Array> array_;
   tiledb::ArraySchema schema_;
 
-  // The indices of all the columns to load. The size of this is the total number of columns.
+  // The indices of all the columns to load. The size of this is the total
+  // number of columns.
   std::vector<I> column_indices_;
 
   // The max number of columns that can fit in allocated memory
@@ -82,9 +80,11 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   size_t last_resident_col_{0};
 
   size_t get_elements_to_load() const {
-    // Note that here we try to load column_indices_.size() vectors. If we are time travelling, these
-    // vectors may not exist in the array, but we still need to load them to know that they don't exist.
-    return std::min(column_capacity_, column_indices_.size() - last_resident_col_);
+    // Note that here we try to load column_indices_.size() vectors. If we are
+    // time travelling, these vectors may not exist in the array, but we still
+    // need to load them to know that they don't exist.
+    return std::min(
+        column_capacity_, column_indices_.size() - last_resident_col_);
   }
 
  public:
@@ -117,7 +117,8 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       : Base(dimensions, column_indices.size())
       , dimensions_{dimensions}
       , uri_{uri}
-      , array_(std::make_unique<tiledb::Array>(ctx, uri, TILEDB_READ, temporal_policy.to_tiledb_temporal_policy()))
+      , array_(std::make_unique<tiledb::Array>(
+            ctx, uri, TILEDB_READ, temporal_policy.to_tiledb_temporal_policy()))
       , schema_{array_->schema()}
       , column_indices_{column_indices} {
     constructor_timer.stop();
@@ -140,12 +141,13 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       throw std::runtime_error("Cell order and tile order must match");
     }
 
-    #ifdef __cpp_lib_smart_ptr_for_overwrite
-      auto data = std::make_unique_for_overwrite<T[]>(dimensions * column_capacity_);
-    #else
-      auto data = std::unique_ptr<T[]>(new T[dimensions * column_capacity_]);
-    #endif
-      Base::operator=(Base{std::move(data), dimensions, column_capacity_});
+#ifdef __cpp_lib_smart_ptr_for_overwrite
+    auto data =
+        std::make_unique_for_overwrite<T[]>(dimensions * column_capacity_);
+#else
+    auto data = std::unique_ptr<T[]>(new T[dimensions * column_capacity_]);
+#endif
+    Base::operator=(Base{std::move(data), dimensions, column_capacity_});
   }
 
   // @todo Allow specification of how many columns to advance by
@@ -178,8 +180,9 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     // For a 128 dimension vector, Dimension 0 will go from 0 to 127.
     subarray.add_range(0, 0, static_cast<int>(dimensions_) - 1);
 
-    // Because of how we set up the subarray, for SIFT 10K with knn = 10, we load 1640 vectors instead of 2000. So there are 360 vectors which are duplicated bewteen top k that we fon't fetch.
-    // Setup the query ranges.
+    // Because of how we set up the subarray, for SIFT 10K with knn = 10, we
+    // load 1640 vectors instead of 2000. So there are 360 vectors which are
+    // duplicated bewteen top k that we fon't fetch. Setup the query ranges.
     for (size_t i = first_resident_col; i < last_resident_col_; ++i) {
       const auto index = static_cast<int>(column_indices_[i]);
       subarray.add_range(1, index, index);
@@ -189,7 +192,8 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     tiledb::Query query(ctx_, *array_);
     query.set_subarray(subarray)
         .set_layout(schema_.cell_order())
-        .set_data_buffer(attr_name, this->data(), num_resident_cols_ * dimensions_);
+        .set_data_buffer(
+            attr_name, this->data(), num_resident_cols_ * dimensions_);
     tiledb_helpers::submit_query(tdb_func__, uri_, query);
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
@@ -210,6 +214,7 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
-using tdbColMajorMatrixMultiRange = tdbBlockedMatrixMultiRange<T, stdx::layout_left, I>;
+using tdbColMajorMatrixMultiRange =
+    tdbBlockedMatrixMultiRange<T, stdx::layout_left, I>;
 
 #endif  // TDB_MATRIX_MULTI_RANGE_H

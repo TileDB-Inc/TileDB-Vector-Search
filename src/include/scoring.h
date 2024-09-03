@@ -351,11 +351,16 @@ enum class DistanceMetric : uint32_t {
 
 inline std::string to_string(DistanceMetric metric) {
   switch (metric) {
-      case DistanceMetric::SUM_OF_SQUARES: return "SUM_OF_SQUARES";
-      case DistanceMetric::INNER_PRODUCT: return "INNER_PRODUCT";
-      case DistanceMetric::COSINE: return "COSINE";
-      case DistanceMetric::L2: return "L2";
-      default: return "UNKNOWN";
+    case DistanceMetric::SUM_OF_SQUARES:
+      return "SUM_OF_SQUARES";
+    case DistanceMetric::INNER_PRODUCT:
+      return "INNER_PRODUCT";
+    case DistanceMetric::COSINE:
+      return "COSINE";
+    case DistanceMetric::L2:
+      return "L2";
+    default:
+      return "UNKNOWN";
   }
 }
 
@@ -384,7 +389,8 @@ void pad_with_sentinels(size_t start, U& top_k, V& top_k_scores) {
 }
 
 template <class U, class V, class W>
-void pad_with_sentinels(size_t start, U& top_k, W& top_k_indices, V& top_k_scores) {
+void pad_with_sentinels(
+    size_t start, U& top_k, W& top_k_indices, V& top_k_scores) {
   using score_type = typename V::value_type;
   using index_type = typename U::value_type;
   using indices_type = size_t;
@@ -549,7 +555,10 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
 // ----------------------------------------------------------------------------
 
 inline void get_top_k_with_scores_and_indices_from_heap(
-    auto&& min_scores, auto&& top_k, auto&& top_k_indices, auto&& top_k_scores) {
+    auto&& min_scores,
+    auto&& top_k,
+    auto&& top_k_indices,
+    auto&& top_k_scores) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
     return std::get<0>(a) < std::get<0>(b);
   });
@@ -564,9 +573,10 @@ inline void get_top_k_with_scores_and_indices_from_heap(
         return std::get<1>(e);
       }));
   std::transform(
-      begin(min_scores), begin(min_scores) + k_nn, begin(top_k_indices), ([](auto&& e) {
-        return std::get<2>(e);
-      }));
+      begin(min_scores),
+      begin(min_scores) + k_nn,
+      begin(top_k_indices),
+      ([](auto&& e) { return std::get<2>(e); }));
   pad_with_sentinels(k_nn, top_k, top_k_indices, top_k_scores);
 }
 
@@ -621,7 +631,8 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
 }
 
 template <class Heap>
-inline auto get_top_k_with_scores_and_indices(std::vector<Heap>& scores, size_t k_nn) {
+inline auto get_top_k_with_scores_and_indices(
+    std::vector<Heap>& scores, size_t k_nn) {
   using score_type = heap_score_t<Heap>;
   using index_type = heap_index_t<Heap>;
   using indices_type = size_t;
@@ -634,9 +645,13 @@ inline auto get_top_k_with_scores_and_indices(std::vector<Heap>& scores, size_t 
 
   for (size_t j = 0; j < num_queries; ++j) {
     get_top_k_with_scores_and_indices_from_heap(
-        scores[j], top_k[j], top_k_indices[j], top_scores[j]);  // Will pad with sentinels
+        scores[j],
+        top_k[j],
+        top_k_indices[j],
+        top_scores[j]);  // Will pad with sentinels
   }
-  return std::make_tuple(std::move(top_scores), std::move(top_k), std::move(top_k_indices));
+  return std::make_tuple(
+      std::move(top_scores), std::move(top_k), std::move(top_k_indices));
 }
 
 // Overload for two-d scores

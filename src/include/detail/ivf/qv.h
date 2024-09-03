@@ -65,8 +65,8 @@
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "linalg.h"
 #include "scoring.h"
-#include "utils/utils.h"
 #include "utils/print_types.h"
+#include "utils/utils.h"
 
 namespace detail::ivf {
 
@@ -864,8 +864,11 @@ auto qv_query_heap_finite_ram(
  * @param query The query to be applied
  * @param active_queries The queries associated with each (active) partition
  * @param k_nn How many nearest neighbors to return
- * @param indices_offset When computing the top_k indices, this function may be called multiple times
- *        on different load()'s of the partitioned matrix. Each individual load does not know about the others, so the indices are local. But we need global indices relative to how the partitioned vectors are layed out on disk. So use this number to offset the local indices.
+ * @param indices_offset When computing the top_k indices, this function may be
+ * called multiple times on different load()'s of the partitioned matrix. Each
+ * individual load does not know about the others, so the indices are local. But
+ * we need global indices relative to how the partitioned vectors are layed out
+ * on disk. So use this number to offset the local indices.
  * @return tuple of the top_k scores, the top_k ids, and the top_k indices
  *
  */
@@ -895,8 +898,10 @@ auto apply_query(
   const auto& indices = partitioned_vectors.indices();
 
   auto num_queries = num_vectors(query);
-  auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(
-      num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
+  auto min_scores =
+      std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(
+          num_queries,
+          fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 
   // Iterate through the active partitions -- for a finite query, this is
   // all of the partitions.  For an infinite query, this is a subset, given
@@ -937,10 +942,22 @@ auto apply_query(
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
         auto score_11 = distance(q_vec_1, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
-        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j1].insert(score_11, partitioned_ids[kp + 1], partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
+        min_scores[j0].insert(
+            score_00,
+            partitioned_ids[kp + 0],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+        min_scores[j0].insert(
+            score_01,
+            partitioned_ids[kp + 1],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
+        min_scores[j1].insert(
+            score_10,
+            partitioned_ids[kp + 0],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+        min_scores[j1].insert(
+            score_11,
+            partitioned_ids[kp + 1],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
       }
 
       /*
@@ -950,8 +967,14 @@ auto apply_query(
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
 
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+        min_scores[j0].insert(
+            score_00,
+            partitioned_ids[kp + 0],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+        min_scores[j1].insert(
+            score_10,
+            partitioned_ids[kp + 0],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
       }
     }
 
@@ -966,12 +989,21 @@ auto apply_query(
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_01 = distance(q_vec_0, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
+        min_scores[j0].insert(
+            score_00,
+            partitioned_ids[kp + 0],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+        min_scores[j0].insert(
+            score_01,
+            partitioned_ids[kp + 1],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
       }
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+        min_scores[j0].insert(
+            score_00,
+            partitioned_ids[kp + 0],
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
       }
     }
   }
@@ -1038,7 +1070,10 @@ auto query_finite_ram(
 
   auto num_queries = num_vectors(query);
 
-  auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
+  auto min_scores =
+      std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(
+          num_queries,
+          fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 
   log_timer _i{tdb_func__ + " in RAM"};
 
@@ -1142,7 +1177,10 @@ auto query_infinite_ram(
 
   auto num_queries = num_vectors(query);
 
-  auto min_scores = std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(num_queries, fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
+  auto min_scores =
+      std::vector<fixed_min_triplet_heap<score_type, id_type, size_t>>(
+          num_queries,
+          fixed_min_triplet_heap<score_type, id_type, size_t>(k_nn));
 
   size_t parts_per_thread = (size(active_partitions) + nthreads - 1) / nthreads;
   std::vector<std::future<decltype(min_scores)>> futs;

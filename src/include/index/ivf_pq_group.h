@@ -45,10 +45,10 @@
 [[maybe_unused]] static StorageFormat ivf_pq_storage_formats = {
     {"0.3",
      {
-        // The centroids for each subspace.
-        {"cluster_centroids_array_name", "pq_subspace_centroids"},
-        // The centroids for each partition (of the original vectors).
-        {"flat_ivf_centroids_array_name", "partition_centroids"},
+         // The centroids for each subspace.
+         {"cluster_centroids_array_name", "pq_subspace_centroids"},
+         // The centroids for each partition (of the original vectors).
+         {"flat_ivf_centroids_array_name", "partition_centroids"},
 
          // The partitioned, PQ-encoded vectors.
          {"pq_ivf_indices_array_name", "partitioned_pq_vector_indexes"},

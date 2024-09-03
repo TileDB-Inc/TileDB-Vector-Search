@@ -130,7 +130,9 @@ auto dist_qv_finite_ram_part(
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-    std::vector<std::future<std::vector<fixed_min_triplet_heap<score_type, shuffled_ids_type, size_t>>>> futs;
+    std::vector<std::future<std::vector<
+        fixed_min_triplet_heap<score_type, shuffled_ids_type, size_t>>>>
+        futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {

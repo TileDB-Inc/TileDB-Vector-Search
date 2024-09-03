@@ -35,8 +35,8 @@
 #include "index/ivf_pq_index.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/gen_graphs.h"
-#include "test/utils/test_utils.h"
 #include "test/utils/query_common.h"
+#include "test/utils/test_utils.h"
 
 struct dummy_pq_index {
   using feature_type = float;
@@ -767,64 +767,82 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
     //     {{1, 1, 1, 1}, {2, 2, 2, 2}, {3, 3, 3, 3}, {4, 4, 4, 4}},
     //     {11, 22, 33, 44}};
     auto training = ColMajorMatrixWithIds<feature_type, id_type>{vectors, ids};
-    std::cout << "[unit_ivf_pq_index] index.add() ----------------------------------------------------------------------------" << std::endl;
+    std::cout << "[unit_ivf_pq_index] index.add() "
+                 "-------------------------------------------------------------"
+                 "---------------"
+              << std::endl;
     index.train(training, training.raveled_ids());
     index.add(training, training.raveled_ids());
 
-
     auto queries = ColMajorMatrix<feature_type>{{{1, 1, 1, 1}}};
     {
-      auto&& [scores_reranking, ids_reranking] = index.query_infinite_ram(queries, k_nn, nprobe, k_factor);
+      auto&& [scores_reranking, ids_reranking] =
+          index.query_infinite_ram(queries, k_nn, nprobe, k_factor);
       debug_matrix(scores_reranking, "scores_reranking");
       debug_matrix(ids_reranking, "ids_reranking");
-      CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(
+          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
-    
-      auto&& [scores_no_reranking, ids_no_reranking] = index.query_infinite_ram(queries, k_nn, nprobe, 1.f);
-      auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+
+      auto&& [scores_no_reranking, ids_no_reranking] =
+          index.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      auto num_equal_no_reranking =
+          check_single_vector_num_equal(ids_no_reranking, ids);
       CHECK(num_equal_no_reranking != k_nn);
       CHECK(num_equal_no_reranking > 5);
     }
-    
 
     if (vfs.is_dir(ivf_index_uri)) {
       vfs.remove_dir(ivf_index_uri);
     }
-    std::cout << "[unit_ivf_pq_index] index.write_index() ----------------------------------------------------------------------------" << std::endl;
+    std::cout << "[unit_ivf_pq_index] index.write_index() "
+                 "-------------------------------------------------------------"
+                 "---------------"
+              << std::endl;
     index.write_index(ctx, ivf_index_uri);
   }
 
-
   // We can open the index by URI and query.
   {
-    std::cout << "[unit_ivf_pq_index] load by uri ----------------------------------------------------------------------------" << std::endl;
+    std::cout << "[unit_ivf_pq_index] load by uri "
+                 "-------------------------------------------------------------"
+                 "---------------"
+              << std::endl;
     auto index2 = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
     auto queries = ColMajorMatrix<feature_type>{{{1, 1, 1, 1}}};
-    
+
     // query_infinite_ram.
     {
-      auto&& [scores_reranking, ids_reranking] = index2.query_infinite_ram(queries, k_nn, nprobe, k_factor);
+      auto&& [scores_reranking, ids_reranking] =
+          index2.query_infinite_ram(queries, k_nn, nprobe, k_factor);
       debug_matrix(scores_reranking, "scores_reranking");
       debug_matrix(ids_reranking, "ids_reranking");
-      CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(
+          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
-    
-      auto&& [scores_no_reranking, ids_no_reranking] = index2.query_infinite_ram(queries, k_nn, nprobe, 1.f);
-      auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+
+      auto&& [scores_no_reranking, ids_no_reranking] =
+          index2.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      auto num_equal_no_reranking =
+          check_single_vector_num_equal(ids_no_reranking, ids);
       CHECK(num_equal_no_reranking != k_nn);
       CHECK(num_equal_no_reranking > 2);
     }
 
     // query_finite_ram.
     {
-      auto&& [scores_reranking, ids_reranking] = index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, k_factor);
+      auto&& [scores_reranking, ids_reranking] =
+          index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, k_factor);
       debug_matrix(scores_reranking, "scores_reranking");
       debug_matrix(ids_reranking, "ids_reranking");
-      CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(
+          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
 
-      auto&& [scores_no_reranking, ids_no_reranking] = index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, 1.f);
-      auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+      auto&& [scores_no_reranking, ids_no_reranking] =
+          index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, 1.f);
+      auto num_equal_no_reranking =
+          check_single_vector_num_equal(ids_no_reranking, ids);
       debug_matrix(ids_no_reranking, "ids_no_reranking");
       CHECK(num_equal_no_reranking != k_nn);
       CHECK(num_equal_no_reranking > 5);

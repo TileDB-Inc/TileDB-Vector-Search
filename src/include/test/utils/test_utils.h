@@ -219,10 +219,12 @@ void check_single_vector_equals(
 }
 
 /*
- * @brief Check the number of elements that are equal between the first element in the matrix and the vector.
+ * @brief Check the number of elements that are equal between the first element
+ * in the matrix and the vector.
  */
 template <typename T>
-size_t check_single_vector_num_equal(const ColMajorMatrix<T>& matrix, const std::vector<T>& vector) {
+size_t check_single_vector_num_equal(
+    const ColMajorMatrix<T>& matrix, const std::vector<T>& vector) {
   CHECK(::num_vectors(matrix) == 1);
   auto matrix_as_vector = std::span<T>((T*)matrix.data(), matrix.size());
   auto num_equal = 0;

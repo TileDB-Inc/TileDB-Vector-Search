@@ -617,7 +617,12 @@ TEST_CASE("fixed_min_triplet_heap with a 5500 vector", "[fixed_min_heap]") {
 }
 
 TEMPLATE_TEST_CASE(
-    "first_less with triplets", "[fixed_min_heap]", float, double, int, unsigned) {
+    "first_less with triplets",
+    "[fixed_min_heap]",
+    float,
+    double,
+    int,
+    unsigned) {
   first_less<std::tuple<TestType, size_t, size_t>> a;
   auto v = std::vector<std::tuple<TestType, size_t, size_t>>{
       {0, 0, 0},
@@ -723,7 +728,9 @@ TEST_CASE("basic insertion and size check", "[fixed_min_triplet_heap]") {
   REQUIRE(heap.size() == 3);
 }
 
-TEST_CASE("insertion beyond capacity and eviction check", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "insertion beyond capacity and eviction check",
+    "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(3);
 
   heap.insert(10, 1, 100);
@@ -777,17 +784,23 @@ TEST_CASE("evict_insert functionality", "[fixed_min_triplet_heap]") {
   REQUIRE(old_score == 20);
   REQUIRE(old_id == 2);
 
-  std::tie(inserted, evicted, old_score, old_id) = heap.evict_insert(25, 5, 500);
+  std::tie(inserted, evicted, old_score, old_id) =
+      heap.evict_insert(25, 5, 500);
   REQUIRE_FALSE(inserted);
   REQUIRE_FALSE(evicted);
 
-  std::tie(inserted, evicted, old_score, old_id) = heap.evict_insert<unique_id>(5, 4, 450);
+  std::tie(inserted, evicted, old_score, old_id) =
+      heap.evict_insert<unique_id>(5, 4, 450);
   REQUIRE_FALSE(inserted);
   REQUIRE_FALSE(evicted);
 }
 
 template <typename T, typename U, typename V>
-void check_front(const fixed_min_triplet_heap<T, U, V>& heap, const T &expected_first, const U &expected_second, const V &expected_third) {
+void check_front(
+    const fixed_min_triplet_heap<T, U, V>& heap,
+    const T& expected_first,
+    const U& expected_second,
+    const V& expected_third) {
   auto [first, second, third] = heap.front();
   REQUIRE(first == expected_first);
   REQUIRE(second == expected_second);
@@ -837,40 +850,49 @@ TEST_CASE("insertion of duplicate values", "[fixed_min_triplet_heap]") {
   check_front(heap, 10, 1, 100);
 }
 
-TEST_CASE("inserting elements with min and max values", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "inserting elements with min and max values", "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(3);
 
   REQUIRE(heap.insert(std::numeric_limits<int>::max(), 1, 100));
   REQUIRE(heap.dump() == "(2147483647, 1, 100) ");
   REQUIRE(heap.size() == 1);
-  
+
   REQUIRE(heap.insert(std::numeric_limits<int>::min(), 2, 200));
   REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) ");
   REQUIRE(heap.size() == 2);
 
   REQUIRE(heap.insert(0, 3, 300));
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
   REQUIRE(heap.size() == 3);
 
   check_front(heap, std::numeric_limits<int>::max(), 1, 100);
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
 
   REQUIRE_FALSE(heap.insert(std::numeric_limits<int>::max(), 4, 400));
   check_front(heap, std::numeric_limits<int>::max(), 1, 100);
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
 
   REQUIRE_FALSE(heap.insert(std::numeric_limits<int>::max(), -10, -10));
   REQUIRE(heap.size() == 3);
   check_front(heap, std::numeric_limits<int>::max(), 1, 100);
-  REQUIRE(heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
+  REQUIRE(
+      heap.dump() == "(2147483647, 1, 100) (-2147483648, 2, 200) (0, 3, 300) ");
 
   REQUIRE(heap.insert(std::numeric_limits<int>::min(), 5, 500));
   REQUIRE(heap.size() == 3);
   check_front(heap, 0, 3, 300);
-  REQUIRE(heap.dump() == "(0, 3, 300) (-2147483648, 2, 200) (-2147483648, 5, 500) ");
+  REQUIRE(
+      heap.dump() ==
+      "(0, 3, 300) (-2147483648, 2, 200) (-2147483648, 5, 500) ");
 }
 
-TEST_CASE("handling of insertions when heap is at capacity with equal elements", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "handling of insertions when heap is at capacity with equal elements",
+    "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(3);
 
   heap.insert(10, 1, 100);
@@ -939,7 +961,9 @@ TEST_CASE("pop on an empty heap", "[fixed_min_triplet_heap]") {
   REQUIRE_NOTHROW(heap.pop());
 }
 
-TEST_CASE("large number of insertions to test heap integrity", "[fixed_min_triplet_heap]") {
+TEST_CASE(
+    "large number of insertions to test heap integrity",
+    "[fixed_min_triplet_heap]") {
   fixed_min_triplet_heap<int, int, int> heap(10);
 
   for (int i = 0; i < 100; ++i) {
@@ -972,20 +996,22 @@ TEST_CASE("handling insertion of complex types", "[fixed_min_triplet_heap]") {
 TEST_CASE("X", "[fixed_min_triplet_heap]") {
   {
     // Create a heap for pairs (int, int)
-      // fixed_min_tuple_heap<std::tuple<int, int>> pair_heap(3);
-      fixed_min_pair_heap<int, int> pair_heap(3);
+    // fixed_min_tuple_heap<std::tuple<int, int>> pair_heap(3);
+    fixed_min_pair_heap<int, int> pair_heap(3);
 
-      // Insert pairs into the heap
-      pair_heap.insert(5, 1);
-      pair_heap.insert(3, 2);
-      pair_heap.insert(7, 3);
+    // Insert pairs into the heap
+    pair_heap.insert(5, 1);
+    pair_heap.insert(3, 2);
+    pair_heap.insert(7, 3);
 
-      // Evict and insert a new pair
-      auto result = pair_heap.evict_insert(2, 4);
+    // Evict and insert a new pair
+    auto result = pair_heap.evict_insert(2, 4);
 
-      // Print the result of the eviction-insertion operation
-      std::cout << "Inserted: " << std::get<0>(result) << ", Evicted: " << std::get<1>(result)
-                << ", Evicted score: " << std::get<2>(result) << ", Evicted id: " << std::get<3>(result) << "\n";
+    // Print the result of the eviction-insertion operation
+    std::cout << "Inserted: " << std::get<0>(result)
+              << ", Evicted: " << std::get<1>(result)
+              << ", Evicted score: " << std::get<2>(result)
+              << ", Evicted id: " << std::get<3>(result) << "\n";
   }
 
   {
@@ -1002,8 +1028,9 @@ TEST_CASE("X", "[fixed_min_triplet_heap]") {
     auto result = triplet_heap.evict_insert(2, 4, 0.4);
 
     // Print the result of the eviction-insertion operation
-    std::cout << "Inserted: " << std::get<0>(result) << ", Evicted: " << std::get<1>(result)
-              << ", Evicted score: " << std::get<2>(result) << ", Evicted id: " << std::get<3>(result) << "\n";
+    std::cout << "Inserted: " << std::get<0>(result)
+              << ", Evicted: " << std::get<1>(result)
+              << ", Evicted score: " << std::get<2>(result)
+              << ", Evicted id: " << std::get<3>(result) << "\n";
   }
-
 }

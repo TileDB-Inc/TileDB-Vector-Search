@@ -93,7 +93,8 @@ class tdbBlockedMatrix : public MatrixBase {
   index_type first_col_;
   index_type last_col_;
 
-  // The columns loaded into memory.  Except for the last (remainder) block, this range will be equal to `load_blocksize_`.
+  // The columns loaded into memory.  Except for the last (remainder) block,
+  // this range will be equal to `load_blocksize_`.
   index_type first_resident_col_;
   index_type last_resident_col_;
 

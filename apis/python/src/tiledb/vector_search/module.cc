@@ -162,8 +162,8 @@ static void declare_qv_query_heap_infinite_ram(
       [](ColMajorMatrix<T>& parts,          // Note, will be moved!
          ColMajorMatrix<float>& centroids,  // Note, will be moved!
          const ColMajorMatrix<float>& query_vectors,
-         std::vector<Id_Type>& indices,                            
-         std::vector<Id_Type>& ids,                                
+         std::vector<Id_Type>& indices,
+         std::vector<Id_Type>& ids,
          size_t nprobe,
          size_t k_nn,
          size_t nthreads,

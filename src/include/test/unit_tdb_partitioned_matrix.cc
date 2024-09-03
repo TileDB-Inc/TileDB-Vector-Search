@@ -92,7 +92,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //   using part_index_type = int;
 
 //   std::string partitioned_vectors_uri =
-//       (std::filesystem::temp_directory_path() / "partitioned_vectors").string();
+//       (std::filesystem::temp_directory_path() /
+//       "partitioned_vectors").string();
 //   std::string ids_uri =
 //       (std::filesystem::temp_directory_path() / "ids").string();
 //   // Setup data.
@@ -105,7 +106,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //     }
 
 //     auto partitioned_vectors =
-//         ColMajorMatrix<feature_type>{{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}}};
+//         ColMajorMatrix<feature_type>{{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5,
+//         5}}};
 //     write_matrix(ctx, partitioned_vectors, partitioned_vectors_uri);
 //     std::vector<id_type> ids = {1, 2, 3, 4, 5};
 //     write_vector(ctx, ids, ids_uri);
@@ -118,7 +120,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 
 //     auto matrix =
 //         tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
-//             ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
+//             ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts,
+//             0);
 //     matrix.load();
 
 //     CHECK(matrix.num_vectors() == 5);
@@ -143,7 +146,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 
 //     auto matrix =
 //         tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
-//             ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
+//             ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts,
+//             0);
 //     matrix.load();
 
 //     CHECK(matrix.num_vectors() == 3);
@@ -168,7 +172,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 
 //     auto matrix =
 //         tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
-//             ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
+//             ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts,
+//             0);
 //     matrix.load();
 
 //     CHECK(matrix.num_vectors() == 0);
@@ -246,7 +251,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //   using part_index_type = uint64_t;
 
 //   std::string partitioned_vectors_uri =
-//       (std::filesystem::temp_directory_path() / "partitioned_vectors").string();
+//       (std::filesystem::temp_directory_path() /
+//       "partitioned_vectors").string();
 //   std::string ids_uri =
 //       (std::filesystem::temp_directory_path() / "ids").string();
 
@@ -270,7 +276,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //         }
 
 //         auto partitioned_matrix =
-//             ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+//             ColMajorPartitionedMatrix<feature_type, id_type,
+//             part_index_type>(
 //                 training_set, part_labels, num_parts);
 
 //         if (vfs.is_dir(partitioned_vectors_uri)) {
@@ -282,7 +289,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //         write_matrix(ctx, partitioned_matrix, partitioned_vectors_uri);
 //         write_vector(ctx, partitioned_matrix.ids(), ids_uri);
 
-//         // We have num_parts partitions. Create combinations of them. i.e. for
+//         // We have num_parts partitions. Create combinations of them. i.e.
+//         for
 //         // num_parts = 3: [0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2].
 //         auto relevant_parts_combinations =
 //             generateSubsets<part_index_type>(num_parts);
@@ -311,8 +319,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //             }
 //           }
 
-//           CHECK(tdb_partitioned_matrix.num_vectors() == expected_num_vectors);
-//           CHECK(
+//           CHECK(tdb_partitioned_matrix.num_vectors() ==
+//           expected_num_vectors); CHECK(
 //               tdb_partitioned_matrix.total_num_vectors() ==
 //               expected_num_vectors);
 //           CHECK(
@@ -335,7 +343,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //   using part_index_type = uint64_t;
 
 //   std::string partitioned_vectors_uri =
-//       (std::filesystem::temp_directory_path() / "partitioned_vectors").string();
+//       (std::filesystem::temp_directory_path() /
+//       "partitioned_vectors").string();
 //   std::string ids_uri =
 //       (std::filesystem::temp_directory_path() / "ids").string();
 
@@ -369,9 +378,11 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 
 //   // Test that we do not crash if we have an empty part (i.e. two elements in
 //   // indices with the same value). These values were taken from running
-//   // `api_ivf_flat_index: read index and query infinite and finite - finite out
+//   // `api_ivf_flat_index: read index and query infinite and finite - finite
+//   out
 //   // of core, 1000, nprobe: 32, max_iter: 8` which used to crash with these
-//   // values. Note that 17, 30, 54, and 59 are all missing from the series 1 ->
+//   // values. Note that 17, 30, 54, and 59 are all missing from the series 1
+//   ->
 //   // 100.
 //   std::vector<part_index_type> relevant_parts = {
 //       1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
@@ -418,7 +429,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //   using part_index_type = uint64_t;
 
 //   std::string partitioned_vectors_uri =
-//       (std::filesystem::temp_directory_path() / "partitioned_vectors").string();
+//       (std::filesystem::temp_directory_path() /
+//       "partitioned_vectors").string();
 //   std::string ids_uri =
 //       (std::filesystem::temp_directory_path() / "ids").string();
 
@@ -505,7 +517,8 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //        "single_vector_partitioned_vectors")
 //           .string();
 //   std::string ids_uri =
-//       (std::filesystem::temp_directory_path() / "single_vector_ids").string();
+//       (std::filesystem::temp_directory_path() /
+//       "single_vector_ids").string();
 //   // Setup data.
 //   {
 //     if (vfs.is_dir(partitioned_vectors_uri)) {
@@ -538,7 +551,9 @@ std::vector<std::vector<T>> generateSubsets(int num_parts) {
 //   CHECK_FALSE(matrix.load());
 // }
 
-TEST_CASE("infinite and finite upper_bound's are equivalent", "[tdb_partitioned_matrix]") {
+TEST_CASE(
+    "infinite and finite upper_bound's are equivalent",
+    "[tdb_partitioned_matrix]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 
@@ -566,7 +581,9 @@ TEST_CASE("infinite and finite upper_bound's are equivalent", "[tdb_partitioned_
     part_labels[i] = i % num_parts;
   }
 
-  auto partitioned_matrix = ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(training_set, part_labels, num_parts);
+  auto partitioned_matrix =
+      ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+          training_set, part_labels, num_parts);
   if (vfs.is_dir(partitioned_vectors_uri)) {
     vfs.remove_dir(partitioned_vectors_uri);
   }
@@ -581,18 +598,17 @@ TEST_CASE("infinite and finite upper_bound's are equivalent", "[tdb_partitioned_
     std::vector<part_index_type> relevant_parts(num_parts);
     std::iota(relevant_parts.begin(), relevant_parts.end(), 0);
     debug_vector(relevant_parts, "relevant_parts");
-    auto tdb_partitioned_matrix = tdbColMajorPartitionedMatrix<
-        feature_type,
-        id_type,
-        part_index_type>(
-        ctx,
-        partitioned_vectors_uri,
-        partitioned_matrix.indices(),
-        ids_uri,
-        relevant_parts,
-        0);
+    auto tdb_partitioned_matrix =
+        tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            ctx,
+            partitioned_vectors_uri,
+            partitioned_matrix.indices(),
+            ids_uri,
+            relevant_parts,
+            0);
     tdb_partitioned_matrix.load();
-    tdb_partitioned_matrix.debug_tdb_partitioned_matrix("tdb_partitioned_matrix");
+    tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
+        "tdb_partitioned_matrix");
   }
   std::cout << "----------------------------------------" << std::endl;
 
@@ -606,17 +622,16 @@ TEST_CASE("infinite and finite upper_bound's are equivalent", "[tdb_partitioned_
       relevant_parts.push_back(i);
     }
     debug_vector(relevant_parts, "relevant_parts");
-    auto tdb_partitioned_matrix = tdbColMajorPartitionedMatrix<
-        feature_type,
-        id_type,
-        part_index_type>(
-        ctx,
-        partitioned_vectors_uri,
-        partitioned_matrix.indices(),
-        ids_uri,
-        relevant_parts,
-        0);
+    auto tdb_partitioned_matrix =
+        tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            ctx,
+            partitioned_vectors_uri,
+            partitioned_matrix.indices(),
+            ids_uri,
+            relevant_parts,
+            0);
     tdb_partitioned_matrix.load();
-    tdb_partitioned_matrix.debug_tdb_partitioned_matrix("tdb_partitioned_matrix");
+    tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
+        "tdb_partitioned_matrix");
   }
 }

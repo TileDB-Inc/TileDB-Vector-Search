@@ -46,6 +46,7 @@ TEST_CASE("init constructor", "[api_ivf_pq_index]") {
         a.partitioning_index_type_string() ==
         datatype_to_string(TILEDB_UINT32));
     CHECK(dimensions(a) == 0);
+    CHECK(a.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   SECTION("float uint32 uint32") {
@@ -253,14 +254,14 @@ TEST_CASE(
   }
 
   {
-    auto index = IndexIVFPQ(std::make_optional<IndexOptions>({
-        {"feature_type", feature_type},
-        {"id_type", id_type},
-        {"partitioning_index_type", partitioning_index_type},
-        {"dimensions", std::to_string(dimensions)},
-        {"num_subspaces", std::to_string(num_subspaces)},
-        {"distance_metric", std::to_string(static_cast<size_t>(distance_metric))}
-    }));
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"partitioning_index_type", partitioning_index_type},
+         {"dimensions", std::to_string(dimensions)},
+         {"num_subspaces", std::to_string(num_subspaces)},
+         {"distance_metric",
+          std::to_string(static_cast<size_t>(distance_metric))}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -380,6 +381,7 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   {
@@ -413,42 +415,88 @@ TEST_CASE(
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    
-    for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking]: std::vector<std::tuple<int, float, float>>{{1, .4f, .45f}, {2, .5f, .6f}, {10, .75f, .9f}, {100, .8f, 1.f}}) {
-    std::cout << "InfiniteRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-    auto&& [distances, ids] = index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
-    auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-    std::cout << "  intersections: " << intersections << std::endl;
-      std::cout << "ACC: " << (intersections / static_cast<double>(num_vectors(ids) * k_nn)) <<std::endl;
-    CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) >= expected_accuracy);
 
-    std::cout << "InfiniteRAM re-ranking ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-    auto&& [distances_with_reranking, ids_with_reranking] =
-        index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe, 0, k_factor);
-    auto intersections_with_reranking = count_intersections(ids_with_reranking, groundtruth_set, k_nn);
-    std::cout << "  intersections: " << intersections_with_reranking << std::endl;
-    std::cout << "ACC: " << (intersections_with_reranking / static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) << std::endl;
-    CHECK((intersections_with_reranking / static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >= expected_accuracy_with_reranking);
+    for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
+         std::vector<std::tuple<int, float, float>>{
+             {1, .4f, .45f}, {2, .5f, .6f}, {10, .75f, .9f}, {100, .8f, 1.f}}) {
+      std::cout << "InfiniteRAM "
+                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                << std::endl;
+      auto&& [distances, ids] =
+          index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
+      auto intersections = count_intersections(ids, groundtruth_set, k_nn);
+      std::cout << "  intersections: " << intersections << std::endl;
+      std::cout << "ACC: "
+                << (intersections /
+                    static_cast<double>(num_vectors(ids) * k_nn))
+                << std::endl;
+      CHECK(
+          (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
+          expected_accuracy);
 
-    for (auto upper_bound : {0}) {
-      std::cout << "FiniteRAM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-      auto&& [distances_finite, ids_finite] = index.query(QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
-      auto intersections_finite = count_intersections(ids_finite, groundtruth_set, k_nn);
-      std::cout << "  intersections: " << intersections_finite << std::endl;
-      CHECK(ids_finite.num_vectors() == ids.num_vectors());
-      CHECK(intersections_finite == intersections);  
-      CHECK(are_equal(ids_finite, ids));
-      CHECK(are_equal(distances_finite, distances));
-      
-      std::cout << "FiniteRAM re-ranking ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-      auto&& [distances_finite_with_reranking, ids_finite_with_reranking] = index.query(QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound, k_factor);
-      auto intersections_finite_with_reranking = count_intersections(ids_finite_with_reranking, groundtruth_set, k_nn);
-      std::cout << "  intersections: " << intersections_finite_with_reranking << std::endl;
-      CHECK(ids_finite_with_reranking.num_vectors() == ids.num_vectors());
-      CHECK(intersections_finite_with_reranking == intersections_with_reranking);
-      CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
-      CHECK(are_equal(distances_finite_with_reranking, distances_with_reranking));
-    }
+      std::cout << "InfiniteRAM re-ranking "
+                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                << std::endl;
+      auto&& [distances_with_reranking, ids_with_reranking] = index.query(
+          QueryType::InfiniteRAM, query_set, k_nn, nprobe, 0, k_factor);
+      auto intersections_with_reranking =
+          count_intersections(ids_with_reranking, groundtruth_set, k_nn);
+      std::cout << "  intersections: " << intersections_with_reranking
+                << std::endl;
+      std::cout << "ACC: "
+                << (intersections_with_reranking /
+                    static_cast<double>(num_vectors(ids_with_reranking) * k_nn))
+                << std::endl;
+      CHECK(
+          (intersections_with_reranking /
+           static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >=
+          expected_accuracy_with_reranking);
+
+      for (auto upper_bound : {0}) {
+        std::cout << "FiniteRAM "
+                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                  << std::endl;
+        auto&& [distances_finite, ids_finite] = index.query(
+            QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
+        auto intersections_finite =
+            count_intersections(ids_finite, groundtruth_set, k_nn);
+        std::cout << "  intersections: " << intersections_finite << std::endl;
+        CHECK(ids_finite.num_vectors() == ids.num_vectors());
+        CHECK(intersections_finite == intersections);
+        CHECK(are_equal(ids_finite, ids));
+        CHECK(are_equal(distances_finite, distances));
+
+        std::cout << "FiniteRAM re-ranking "
+                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                  << std::endl;
+        auto&& [distances_finite_with_reranking, ids_finite_with_reranking] =
+            index.query(
+                QueryType::FiniteRAM,
+                query_set,
+                k_nn,
+                nprobe,
+                upper_bound,
+                k_factor);
+        auto intersections_finite_with_reranking = count_intersections(
+            ids_finite_with_reranking, groundtruth_set, k_nn);
+        std::cout << "  intersections: " << intersections_finite_with_reranking
+                  << std::endl;
+        CHECK(ids_finite_with_reranking.num_vectors() == ids.num_vectors());
+        CHECK(
+            intersections_finite_with_reranking ==
+            intersections_with_reranking);
+        CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
+        CHECK(are_equal(
+            distances_finite_with_reranking, distances_with_reranking));
+      }
     }
   }
 }
@@ -790,12 +838,21 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{{{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
-    auto&& [scores_vector_array, ids_vector_array] = index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0);
-    check_single_vector_equals(scores_vector_array, ids_vector_array, {0, 0, 0, 0}, {1, 2, 3, 4});
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
+    auto&& [scores_vector_array, ids_vector_array] = index.query(
+        QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0);
+    check_single_vector_equals(
+        scores_vector_array, ids_vector_array, {0, 0, 0, 0}, {1, 2, 3, 4});
 
-    auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] = index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
-    check_single_vector_equals(scores_vector_array_with_reranking, ids_vector_array_with_reranking, {0, 0, 0, 0}, {1, 2, 3, 4});
+    auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
+    check_single_vector_equals(
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
+        {0, 0, 0, 0},
+        {1, 2, 3, 4});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
@@ -931,22 +988,26 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {0, 0, 0, 0},
         {1, 2, 3, 4});
     auto&& [scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking] =
-        index.query(QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
+        index.query(
+            QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
     check_single_vector_equals(
         scores_vector_array_finite_with_reranking,
         ids_vector_array_finite_with_reranking,
         {0, 0, 0, 0},
         {1, 2, 3, 4});
-    
-    
+
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
         scores_vector_array, ids_vector_array, {0, 0, 0, 0}, {1, 2, 3, 4});
     auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
-        index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
     check_single_vector_equals(
-        scores_vector_array_with_reranking, ids_vector_array_with_reranking, {0, 0, 0, 0}, {1, 2, 3, 4});
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
+        {0, 0, 0, 0},
+        {1, 2, 3, 4});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
@@ -1002,12 +1063,14 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {std::numeric_limits<float>::max()},
         {std::numeric_limits<uint32_t>::max()});
     auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
-        index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 1.9f);
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 1.9f);
     check_single_vector_equals(
-        scores_vector_array_with_reranking, ids_vector_array_with_reranking,
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
         {std::numeric_limits<float>::max()},
         {std::numeric_limits<uint32_t>::max()});
-    
+
     auto&& [scores_vector_array_finite, ids_vector_array_finite] =
         index.query(QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 4);
     check_single_vector_equals(
@@ -1016,9 +1079,13 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {std::numeric_limits<float>::max()},
         {std::numeric_limits<uint32_t>::max()});
     auto&& [scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking] =
-        index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 4, 1.9f);
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 4, 1.9f);
     check_single_vector_equals(
-        scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking, {std::numeric_limits<float>::max()}, {std::numeric_limits<uint32_t>::max()});
+        scores_vector_array_finite_with_reranking,
+        ids_vector_array_finite_with_reranking,
+        {std::numeric_limits<float>::max()},
+        {std::numeric_limits<uint32_t>::max()});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
@@ -1074,22 +1141,39 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     auto default_score = std::numeric_limits<float>::max();
     auto default_id = std::numeric_limits<uint32_t>::max();
-    auto expected_scores = std::vector<float>{default_score, default_score, default_score, default_score};
-    auto expected_ids = std::vector<uint32_t>{default_id, default_id, default_id, default_id};
+    auto expected_scores = std::vector<float>{
+        default_score, default_score, default_score, default_score};
+    auto expected_ids =
+        std::vector<uint32_t>{default_id, default_id, default_id, default_id};
 
     auto&& [scores_vector_array_finite, ids_vector_array_finite] =
         index.query(QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0);
-    check_single_vector_equals(scores_vector_array_finite, ids_vector_array_finite, expected_scores, expected_ids);
+    check_single_vector_equals(
+        scores_vector_array_finite,
+        ids_vector_array_finite,
+        expected_scores,
+        expected_ids);
     auto&& [scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking] =
-        index.query(QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 20.f);
-    check_single_vector_equals(scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking, expected_scores, expected_ids);
-    
+        index.query(
+            QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 20.f);
+    check_single_vector_equals(
+        scores_vector_array_finite_with_reranking,
+        ids_vector_array_finite_with_reranking,
+        expected_scores,
+        expected_ids);
+
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
-    check_single_vector_equals(scores_vector_array, ids_vector_array, expected_scores, expected_ids);
+    check_single_vector_equals(
+        scores_vector_array, ids_vector_array, expected_scores, expected_ids);
     auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
-        index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 20.f);
-    check_single_vector_equals(scores_vector_array_with_reranking, ids_vector_array_with_reranking, expected_scores, expected_ids);
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 20.f);
+    check_single_vector_equals(
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
+        expected_scores,
+        expected_ids);
 
     auto typed_index = ivf_pq_index<
         feature_type_type,

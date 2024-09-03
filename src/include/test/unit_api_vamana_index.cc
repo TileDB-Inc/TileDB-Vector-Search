@@ -157,6 +157,7 @@ TEST_CASE("create empty index and then train and query", "[api_vamana_index]") {
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   {
@@ -202,6 +203,7 @@ TEST_CASE(
   auto feature_type = "uint8";
   auto id_type = "uint32";
   uint64_t dimensions = 3;
+  auto distance_metric = DistanceMetric::L2;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_vamana_index").string();
@@ -212,7 +214,10 @@ TEST_CASE(
 
   {
     auto index = IndexVamana(std::make_optional<IndexOptions>(
-        {{"feature_type", feature_type}, {"id_type", id_type}}));
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"distance_metric",
+          std::to_string(static_cast<size_t>(distance_metric))}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -223,6 +228,7 @@ TEST_CASE(
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
+    CHECK(index.distance_metric() == distance_metric);
   }
 
   {
@@ -230,6 +236,7 @@ TEST_CASE(
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
+    CHECK(index.distance_metric() == distance_metric);
 
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
@@ -241,6 +248,7 @@ TEST_CASE(
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
+    CHECK(index.distance_metric() == distance_metric);
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
@@ -287,6 +295,7 @@ TEST_CASE(
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   {
@@ -302,6 +311,7 @@ TEST_CASE(
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
@@ -321,6 +331,7 @@ TEST_CASE("infer feature type", "[api_vamana_index]") {
   a.train(training_set);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
+  CHECK(a.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
 }
 
 TEST_CASE("infer dimension", "[api_vamana_index]") {
@@ -332,6 +343,7 @@ TEST_CASE("infer dimension", "[api_vamana_index]") {
   a.train(training_set);
   CHECK(a.feature_type() == TILEDB_FLOAT32);
   CHECK(a.id_type() == TILEDB_UINT32);
+  CHECK(a.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   CHECK(dimensions(a) == 128);
 }
 

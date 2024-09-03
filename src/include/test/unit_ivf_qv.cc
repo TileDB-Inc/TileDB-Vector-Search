@@ -608,7 +608,9 @@ TEST_CASE("print out relevant parts", "[ivf qv]") {
       part_labels[i] = i % num_parts;
     }
 
-    auto partitioned_matrix = ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(training_set, part_labels, num_parts);
+    auto partitioned_matrix =
+        ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            training_set, part_labels, num_parts);
     if (vfs.is_dir(partitioned_vectors_uri)) {
       vfs.remove_dir(partitioned_vectors_uri);
     }
@@ -634,18 +636,12 @@ TEST_CASE("print out relevant parts", "[ivf qv]") {
       relevant_parts.push_back(i);
     }
     debug_vector(relevant_parts, "relevant_parts");
-    auto tdb_partitioned_matrix = tdbColMajorPartitionedMatrix<
-        feature_type,
-        id_type,
-        part_index_type>(
-        ctx,
-        partitioned_vectors_uri,
-        indices,
-        ids_uri,
-        relevant_parts,
-        0);
+    auto tdb_partitioned_matrix =
+        tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
     tdb_partitioned_matrix.load();
-    tdb_partitioned_matrix.debug_tdb_partitioned_matrix("tdb_partitioned_matrix");
+    tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
+        "tdb_partitioned_matrix");
   }
 }
 
@@ -681,7 +677,9 @@ TEST_CASE("indices", "[ivf qv]") {
       part_labels[i] = i % num_parts;
     }
 
-    auto partitioned_matrix = ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(training_set, part_labels, num_parts);
+    auto partitioned_matrix =
+        ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            training_set, part_labels, num_parts);
     if (vfs.is_dir(partitioned_vectors_uri)) {
       vfs.remove_dir(partitioned_vectors_uri);
     }
@@ -704,18 +702,12 @@ TEST_CASE("indices", "[ivf qv]") {
     relevant_parts.push_back(i);
   }
   debug_vector(relevant_parts, "relevant_parts", 1000);
-  auto tdb_partitioned_matrix = tdbColMajorPartitionedMatrix<
-      feature_type,
-      id_type,
-      part_index_type>(
-      ctx,
-      partitioned_vectors_uri,
-      indices,
-      ids_uri,
-      relevant_parts,
-      0);
+  auto tdb_partitioned_matrix =
+      tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+          ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
   tdb_partitioned_matrix.load();
-  tdb_partitioned_matrix.debug_tdb_partitioned_matrix("tdb_partitioned_matrix", 1000);
+  tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
+      "tdb_partitioned_matrix", 1000);
 
   std::vector<std::vector<feature_type>> queries_vector;
   for (size_t i = 0; i < num_queries; ++i) {
@@ -727,7 +719,7 @@ TEST_CASE("indices", "[ivf qv]") {
   }
   auto queries = ColMajorMatrix<feature_type>{queries_vector};
   CHECK(::num_vectors(queries) == num_queries);
-  
+
   std::vector<std::vector<part_index_type>> active_queries;
   for (size_t i = 0; i < relevant_parts.size(); ++i) {
     std::vector<part_index_type> queries_for_part;
@@ -744,43 +736,55 @@ TEST_CASE("indices", "[ivf qv]") {
   size_t indices_offset = 0;
 
   auto min_heap_per_query = detail::ivf::apply_query(
-    tdb_partitioned_matrix,
-    std::optional<std::vector<int>>{},
-    queries,
-    active_queries,
-    k_nn,
-    first_part,
-    last_part,
-    part_offset,
-    indices_offset);
+      tdb_partitioned_matrix,
+      std::optional<std::vector<int>>{},
+      queries,
+      active_queries,
+      k_nn,
+      first_part,
+      last_part,
+      part_offset,
+      indices_offset);
 
-  const auto &ids = tdb_partitioned_matrix.ids();
+  const auto& ids = tdb_partitioned_matrix.ids();
   std::set<id_type> ids_set;
   for (size_t i = 0; i < ids.size(); ++i) {
     ids_set.insert(ids[i]);
   }
-  
+
   for (size_t i = 0; i < num_queries; ++i) {
-    // Note this sorting doesn't get done on each insertion for performance, but when testing we can explicitly call it.
+    // Note this sorting doesn't get done on each insertion for performance, but
+    // when testing we can explicitly call it.
     min_heap_per_query[i].self_sort();
     std::cout << "  " << min_heap_per_query[i].dump() << std::endl;
 
     CHECK(min_heap_per_query[i].size() == k_nn);
-    
+
     auto distance = std::get<0>(min_heap_per_query[i][0]);
     auto id = std::get<1>(min_heap_per_query[i][0]);
     auto index = std::get<2>(min_heap_per_query[i][0]);
     if (!ids_set.count(i)) {
-      // In this case, we did not load the vector that is exactly the same as our query vector. While we could still check the distance is not crazy, we don't care about case as much. Rather, this point of this test is to verify that we can get back exactly the same vector as a query vector with the correct id and index.
+      // In this case, we did not load the vector that is exactly the same as
+      // our query vector. While we could still check the distance is not crazy,
+      // we don't care about case as much. Rather, this point of this test is to
+      // verify that we can get back exactly the same vector as a query vector
+      // with the correct id and index.
       CHECK(distance < 5.f);
       continue;
     }
-    
-    // We are looking at the first element of the min heap, i.e the smallest distance we found from this query vector to the tdb_partitioned_matrix. It should be 0 because it's the same vector against itself.
+
+    // We are looking at the first element of the min heap, i.e the smallest
+    // distance we found from this query vector to the tdb_partitioned_matrix.
+    // It should be 0 because it's the same vector against itself.
     CHECK(distance == 0);
-    // First let's look at the id, which should be the same as the index of the query vector. This is just from how we set up the test: when we construct queries, we just use the index as the value.
+    // First let's look at the id, which should be the same as the index of the
+    // query vector. This is just from how we set up the test: when we construct
+    // queries, we just use the index as the value.
     CHECK(id == i);
-    // Now let's look at the index. The big thing to notice here is that unlike you may expect, this index is not relative to the current load. Instead it is global, i.e. index = 1 means that we are pointing at the vector at index 1 in partitioned_vectors_uri.
+    // Now let's look at the index. The big thing to notice here is that unlike
+    // you may expect, this index is not relative to the current load. Instead
+    // it is global, i.e. index = 1 means that we are pointing at the vector at
+    // index 1 in partitioned_vectors_uri.
     CHECK(index == i);
   }
 }

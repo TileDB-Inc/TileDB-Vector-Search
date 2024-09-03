@@ -39,7 +39,15 @@
 #include "mdspan/mdspan.hpp"
 #include "test/utils/test_utils.h"
 
-TEMPLATE_TEST_CASE("constructors", "[tdb_matrix_multi_rannge]", float, double, int, char, size_t, uint32_t) {
+TEMPLATE_TEST_CASE(
+    "constructors",
+    "[tdb_matrix_multi_rannge]",
+    float,
+    double,
+    int,
+    char,
+    size_t,
+    uint32_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -59,7 +67,8 @@ TEMPLATE_TEST_CASE("constructors", "[tdb_matrix_multi_rannge]", float, double, i
   std::vector<size_t> column_indices(num_vectors);
   std::iota(column_indices.begin(), column_indices.end(), 0);
 
-  auto Y = tdbColMajorMatrixMultiRange<TestType>(ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors);
+  auto Y = tdbColMajorMatrixMultiRange<TestType>(
+      ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors);
   CHECK(Y.load() == true);
   for (int i = 0; i < 5; ++i) {
     CHECK(Y.load() == false);
@@ -81,7 +90,8 @@ TEMPLATE_TEST_CASE("constructors", "[tdb_matrix_multi_rannge]", float, double, i
   }
 }
 
-TEMPLATE_TEST_CASE("assign to matrix", "[tdb_matrix_multi_rannge]", float, uint8_t) {
+TEMPLATE_TEST_CASE(
+    "assign to matrix", "[tdb_matrix_multi_rannge]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -104,7 +114,8 @@ TEMPLATE_TEST_CASE("assign to matrix", "[tdb_matrix_multi_rannge]", float, uint8
   {
     std::vector<size_t> column_indices(num_vectors);
     std::iota(column_indices.begin(), column_indices.end(), 0);
-    auto Y = tdbColMajorMatrixMultiRange<TestType>(ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors);
+    auto Y = tdbColMajorMatrixMultiRange<TestType>(
+        ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors);
     Y.load();
     B = std::move(Y);
   }
@@ -113,12 +124,14 @@ TEMPLATE_TEST_CASE("assign to matrix", "[tdb_matrix_multi_rannge]", float, uint8
     std::vector<size_t> column_indices(num_vectors);
     std::iota(column_indices.begin(), column_indices.end(), 0);
     auto Y = tdbColMajorMatrixMultiRange<TestType>(
-        tdbColMajorMatrixMultiRange<TestType>(ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors));
+        tdbColMajorMatrixMultiRange<TestType>(
+            ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors));
   }
 
   std::vector<size_t> column_indices(num_vectors);
   std::iota(column_indices.begin(), column_indices.end(), 0);
-  auto Y = tdbColMajorMatrixMultiRange<TestType>(ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors);
+  auto Y = tdbColMajorMatrixMultiRange<TestType>(
+      ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors);
   Y.load();
 
   CHECK(::num_vectors(Y) == ::num_vectors(X));
@@ -159,14 +172,14 @@ TEMPLATE_TEST_CASE("assign to matrix", "[tdb_matrix_multi_rannge]", float, uint8
 
   CHECK(::num_vectors(B) == ::num_vectors(X));
   CHECK(::dimensions(B) == ::dimensions(X));
-  CHECK(std::equal(X.data(), X.data() + ::dimensions(X) * ::num_vectors(X), B.data()));
+  CHECK(std::equal(
+      X.data(), X.data() + ::dimensions(X) * ::num_vectors(X), B.data()));
   for (size_t c = 0; c < num_vectors; ++c) {
     for (size_t r = 0; r < dimensions; ++r) {
       CHECK(X(r, c) == B(r, c));
     }
   }
 }
-
 
 TEST_CASE("limit column_indices", "[tdb_matrix_multi_rannge]") {
   tiledb::Context ctx;
@@ -186,12 +199,15 @@ TEST_CASE("limit column_indices", "[tdb_matrix_multi_rannge]") {
       (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
 
   auto X = ColMajorMatrix<T>(dimensions, num_vectors);
-  fill_and_write_matrix(ctx, X, tmp_matrix_uri, dimensions, num_vectors, offset);
+  fill_and_write_matrix(
+      ctx, X, tmp_matrix_uri, dimensions, num_vectors, offset);
   CHECK(::num_vectors(X) == num_vectors);
   CHECK(::dimensions(X) == dimensions);
 
-  std::vector<size_t> column_indices = {0, 1, 2, 3, 10, 100, 15, 299, 309, 4, 100};
-  auto Y = tdbBlockedMatrixMultiRange<T, LayoutPolicy, I>(ctx, tmp_matrix_uri, column_indices, dimensions, 0);
+  std::vector<size_t> column_indices = {
+      0, 1, 2, 3, 10, 100, 15, 299, 309, 4, 100};
+  auto Y = tdbBlockedMatrixMultiRange<T, LayoutPolicy, I>(
+      ctx, tmp_matrix_uri, column_indices, dimensions, 0);
   Y.load();
   CHECK(::num_vectors(Y) == column_indices.size());
   CHECK(::dimensions(Y) == ::dimensions(X));
@@ -226,8 +242,8 @@ TEST_CASE("empty matrix", "[tdb_matrix_multi_rannge]") {
 
   {
     // No dimensions and no num_vectors.
-    auto X =
-        tdbColMajorMatrixMultiRange<float>(ctx, tmp_matrix_uri, {}, 0, 0, TemporalPolicy{TimeTravel, 50});
+    auto X = tdbColMajorMatrixMultiRange<float>(
+        ctx, tmp_matrix_uri, {}, 0, 0, TemporalPolicy{TimeTravel, 50});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(::num_vectors(X) == 0);
@@ -259,7 +275,8 @@ TEST_CASE("empty matrix", "[tdb_matrix_multi_rannge]") {
 
   {
     // No constraints.
-    auto X = tdbColMajorMatrixMultiRange<float>(ctx, tmp_matrix_uri, {}, 0, 0, TemporalPolicy{TimeTravel, 50});
+    auto X = tdbColMajorMatrixMultiRange<float>(
+        ctx, tmp_matrix_uri, {}, 0, 0, TemporalPolicy{TimeTravel, 50});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(::num_vectors(X) == 0);
@@ -292,7 +309,8 @@ TEST_CASE("time travel", "[tdb_matrix_multi_rannge]") {
 
   {
     // We can load the matrix at the creation timestamp.
-    auto Y = tdbColMajorMatrixMultiRange<int>(ctx, tmp_matrix_uri, column_indices, dimensions, 0);
+    auto Y = tdbColMajorMatrixMultiRange<int>(
+        ctx, tmp_matrix_uri, column_indices, dimensions, 0);
     CHECK(Y.load());
     CHECK(::num_vectors(Y) == ::num_vectors(X));
     CHECK(::dimensions(Y) == ::dimensions(X));
@@ -308,7 +326,12 @@ TEST_CASE("time travel", "[tdb_matrix_multi_rannge]") {
   {
     // We can load the matrix at a later timestamp.
     auto Y = tdbColMajorMatrixMultiRange<int>(
-        ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors, TemporalPolicy{TimeTravel, 100});
+        ctx,
+        tmp_matrix_uri,
+        column_indices,
+        dimensions,
+        num_vectors,
+        TemporalPolicy{TimeTravel, 100});
     CHECK(Y.load());
     CHECK(::num_vectors(Y) == ::num_vectors(X));
     CHECK(::dimensions(Y) == ::dimensions(X));
@@ -324,10 +347,15 @@ TEST_CASE("time travel", "[tdb_matrix_multi_rannge]") {
   {
     // We get no data if we load the matrix at an earlier timestamp.
     auto Y = tdbColMajorMatrixMultiRange<int>(
-        ctx, tmp_matrix_uri, column_indices, dimensions, num_vectors, TemporalPolicy{TimeTravel, 5});
+        ctx,
+        tmp_matrix_uri,
+        column_indices,
+        dimensions,
+        num_vectors,
+        TemporalPolicy{TimeTravel, 5});
     CHECK(Y.load());
-    // Note that even though there are no vectors to load, we still try to load all the vectors, so
-    // we will have filled the matrix with fill values.
+    // Note that even though there are no vectors to load, we still try to load
+    // all the vectors, so we will have filled the matrix with fill values.
     CHECK(::num_vectors(Y) == column_indices.size());
     CHECK(::dimensions(Y) == dimensions);
   }

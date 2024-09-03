@@ -329,7 +329,9 @@ def test_ivf_pq_index(tmp_path):
     assert distances[0][0] == MAX_FLOAT32
     assert ids[0][0] == MAX_UINT64
     query_and_check_distances(index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]])
-    query_and_check_distances(index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]], k_factor=2.0)
+    query_and_check_distances(
+        index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]], k_factor=2.0
+    )
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "IVF_PQ")
 
     update_vectors = np.empty([5], dtype=object)
@@ -346,7 +348,12 @@ def test_ivf_pq_index(tmp_path):
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
     query_and_check_distances(
-        index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]], k_factor=2.0
+        index,
+        np.array([[2, 2, 2]], dtype=np.float32),
+        2,
+        [[0, 3]],
+        [[2, 1]],
+        k_factor=2.0,
     )
 
     index = index.consolidate_updates()
@@ -376,7 +383,7 @@ def test_ivf_pq_index(tmp_path):
             1,
             [[0], [0]],
             [[i], [i]],
-            k_factor=2.0
+            k_factor=2.0,
         )
 
     # Test that we can query with k > 1.
@@ -398,7 +405,7 @@ def test_ivf_pq_index(tmp_path):
         2,
         [[0, 3], [0, 3]],
         [[0, 1], [4, 3]],
-        k_factor=2.0
+        k_factor=2.0,
     )
 
     vfs = tiledb.VFS()
