@@ -96,10 +96,11 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
     using type = void*;
   };
 
-  using Extra = typename ExtraTypeHelper<Tuple>::type;
-
   unsigned max_size{0};
   constexpr const static Compare compare_{};
+
+ protected:
+  using Extra = typename ExtraTypeHelper<Tuple>::type;
 
  public:
   explicit fixed_min_tuple_heap(
@@ -115,12 +116,49 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
       , max_size{k} {
     Base::reserve(k);
     for (const auto& p : l) {
-      insert(std::get<0>(p), std::get<1>(p), get_extra(p));
+      insert_impl(std::get<0>(p), std::get<1>(p), get_extra(p));
     }
   }
 
+  auto pop() {
+    if (this->empty()) {
+      return;
+    }
+    std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+      return compare_(std::get<0>(a), std::get<0>(b));
+    });
+    this->pop_back();
+  }
+
+  void self_heapify() {
+    std::make_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+      return compare_(std::get<0>(a), std::get<0>(b));
+    });
+  }
+
+  void self_sort() {
+    std::sort_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
+      return compare_(std::get<0>(a), std::get<0>(b));
+    });
+  }
+
+  std::string dump() const {
+    std::ostringstream oss;
+    if constexpr (std::tuple_size_v<Tuple> == 2) {
+      for (const auto& [score, id] : *this) {
+        oss << "(" << score << ", " << id << ") ";
+      }
+    } else {
+      for (const auto& [score, id, extra] : *this) {
+        oss << "(" << score << ", " << id << ", " << extra << ") ";
+      }
+    }
+    return oss.str();
+  }
+
+ protected:
   template <class Unique = not_unique>
-  bool insert(const T& x, const U& y, const Extra& z = Extra{}) {
+  bool insert_impl(const T& x, const U& y, const Extra& z = Extra{}) {
     if (max_size == 0) {
       return false;
     }
@@ -180,7 +218,7 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
   // 3. Not inserted, not evicted: { false, false, x, y }
   // 4. Not inserted, evicted: exception
   template <class Unique = not_unique>
-  std::tuple<bool, bool, T, U> evict_insert(
+  std::tuple<bool, bool, T, U> evict_insert_impl(
       const T& x, const U& y, const Extra& z = Extra{}) {
     // There is room in the heap for the new element
     if (Base::size() < max_size) {
@@ -249,42 +287,6 @@ class fixed_min_tuple_heap : public std::vector<Tuple> {
     return {false, false, x, y};
   }
 
-  auto pop() {
-    if (this->empty()) {
-      return;
-    }
-    std::pop_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare_(std::get<0>(a), std::get<0>(b));
-    });
-    this->pop_back();
-  }
-
-  void self_heapify() {
-    std::make_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare_(std::get<0>(a), std::get<0>(b));
-    });
-  }
-
-  void self_sort() {
-    std::sort_heap(begin(*this), end(*this), [&](const auto& a, auto& b) {
-      return compare_(std::get<0>(a), std::get<0>(b));
-    });
-  }
-
-  std::string dump() const {
-    std::ostringstream oss;
-    if constexpr (std::tuple_size_v<Tuple> == 2) {
-      for (const auto& [score, id] : *this) {
-        oss << "(" << score << ", " << id << ") ";
-      }
-    } else {
-      for (const auto& [score, id, extra] : *this) {
-        oss << "(" << score << ", " << id << ", " << extra << ") ";
-      }
-    }
-    return oss.str();
-  }
-
  private:
   template <typename TupleType>
   static constexpr auto get_extra(const TupleType& t) {
@@ -313,6 +315,16 @@ class fixed_min_pair_heap
       Compare compare = Compare{})
       : Base(k, l, compare) {
   }
+
+  template <class Unique = not_unique>
+  bool insert(const T& x, const U& y) {
+    return Base::template insert_impl<Unique>(x, y);
+  }
+
+  template <class Unique = not_unique>
+  auto evict_insert(const T& x, const U& y) {
+    return Base::template evict_insert_impl<Unique>(x, y);
+  }
 };
 
 template <class T, class U>
@@ -334,6 +346,16 @@ class fixed_min_triplet_heap
       std::initializer_list<std::tuple<T, U, V>> l,
       Compare compare = Compare{})
       : Base(k, l, compare) {
+  }
+
+  template <class Unique = not_unique>
+  bool insert(const T& x, const U& y, const Base::Extra& z) {
+    return Base::template insert_impl<Unique>(x, y, z);
+  }
+
+  template <class Unique = not_unique>
+  auto evict_insert(const T& x, const U& y, const Base::Extra& z) {
+    return Base::template evict_insert_impl<Unique>(x, y, z);
   }
 };
 
