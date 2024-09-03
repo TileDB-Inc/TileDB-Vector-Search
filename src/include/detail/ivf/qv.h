@@ -1020,7 +1020,7 @@ auto apply_query(
  * @return The indices of the top_k neighbors for each query vector
  */
 template <
-    typename F,
+    feature_vector_array F,
     feature_vector_array Q,
     class Distance = sum_of_squares_distance>
 auto query_finite_ram(
