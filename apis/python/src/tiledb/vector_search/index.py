@@ -541,6 +541,7 @@ class Index:
             external_ids_type="TILEDB_ARRAY",
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
+            distance_metric=self.distance_metric,
             storage_version=self.storage_version,
             copy_centroids_uri=self.centroids_uri
             if should_pass_copy_centroids_uri

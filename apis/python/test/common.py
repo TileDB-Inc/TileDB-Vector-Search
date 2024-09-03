@@ -450,3 +450,24 @@ def query_and_check(index, queries, k, expected, expected_distances=None, **kwar
                     atol=1e-5,
                     err_msg=f"Distance mismatch for ID {id}",
                 )
+
+
+def sum_of_squares_distance(a, b):
+    return np.sum((a - b) ** 2)
+
+
+def cosine_distance(a, b):
+    return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+
+def l2_distance(a, b):
+    return np.sqrt(np.sum((a - b) ** 2))
+
+
+def normalize_vectors(vectors):
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    return vectors / norms
+
+
+def normalize_vector(vector):
+    return vector / np.linalg.norm(vector)
