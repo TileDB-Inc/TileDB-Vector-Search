@@ -26,7 +26,7 @@ from tiledb.vector_search.utils import load_fvecs
 # Use headless mode for matplotlib.
 matplotlib.use("Agg")
 
-USE_SIFT_SMALL = True
+USE_SIFT_SMALL = False
 
 SIFT_URI = (
     "ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz"
@@ -316,43 +316,48 @@ def benchmark_ivf_pq():
     dimensions = queries.shape[1]
     gt_i, gt_d = get_groundtruth_ivec(SIFT_GROUNDTRUTH_PATH, k=k, nqueries=len(queries))
 
-    for partitions in [50]:
-        for num_subspaces in [dimensions / 2, dimensions / 4, dimensions / 8]:
-            tag = f"{index_type}_partitions={partitions}_num_subspaces={num_subspaces}"
-            logger.info(f"Running {tag}")
+    for partitions in [200]:
+        for num_subspaces in [dimensions / 4]:
+            for k_factor in [1, 1.5, 2, 4, 8, 16]:
+                tag = f"{index_type}_partitions={partitions}_num_subspaces={num_subspaces}_k_factor={k_factor}"
+                logger.info(f"Running {tag}")
 
-            index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
-            if os.path.exists(index_uri):
-                shutil.rmtree(index_uri)
+                index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
+                if os.path.exists(index_uri):
+                    shutil.rmtree(index_uri)
 
-            timer.start(tag, TimerMode.INGESTION)
-            index = ingest(
-                index_type=index_type,
-                index_uri=index_uri,
-                source_uri=SIFT_BASE_PATH,
-                partitions=partitions,
-                training_sampling_policy=TrainingSamplingPolicy.RANDOM,
-                num_subspaces=num_subspaces,
-            )
-            ingest_time = timer.stop(tag, TimerMode.INGESTION)
-
-            for nprobe in [5, 10, 20, 40, 60]:
-                timer.start(tag, TimerMode.QUERY)
-                _, result = index.query(queries, k=k, nprobe=nprobe)
-                query_time = timer.stop(tag, TimerMode.QUERY)
-                acc = timer.accuracy(tag, accuracy(result, gt_i))
-                logger.info(
-                    f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
+                timer.start(tag, TimerMode.INGESTION)
+                index = ingest(
+                    index_type=index_type,
+                    index_uri=index_uri,
+                    source_uri=SIFT_BASE_PATH,
+                    partitions=partitions,
+                    training_sampling_policy=TrainingSamplingPolicy.RANDOM,
+                    num_subspaces=num_subspaces,
                 )
+                ingest_time = timer.stop(tag, TimerMode.INGESTION)
+
+                for nprobe in [5, 10, 20, 40, 60]:
+                    timer.start(tag, TimerMode.QUERY)
+                    _, result = index.query(
+                        queries, k=k, nprobe=nprobe, k_factor=k_factor
+                    )
+                    query_time = timer.stop(tag, TimerMode.QUERY)
+                    acc = timer.accuracy(tag, accuracy(result, gt_i))
+                    logger.info(
+                        f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
+                    )
 
     timer.save_and_print_results()
 
 
 def main():
+    print("Results will be saved in:", RESULTS_DIR)
+
     download_and_extract(SIFT_URI, SIFT_DOWNLOAD_PATH, TEMP_DIR)
 
-    benchmark_ivf_flat()
-    benchmark_vamana()
+    # benchmark_ivf_flat()
+    # benchmark_vamana()
     benchmark_ivf_pq()
 
 
