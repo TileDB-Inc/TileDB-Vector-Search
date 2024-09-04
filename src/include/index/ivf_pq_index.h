@@ -452,8 +452,6 @@ class ivf_pq_index {
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
-      auto local_sub_distance = SubDistance{sub_begin, sub_end};
-
       // @todo Make choice of kmeans init configurable
       sub_kmeans_random_init(
           training_set, cluster_centroids_, sub_begin, sub_end);
@@ -909,8 +907,7 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
-
-    partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
+    auto partitioned_pq_vectors = std::make_unique<tdb_pq_storage_type>(
         group_->cached_ctx(),
         group_->pq_ivf_vectors_uri(),
         group_->pq_ivf_indices_uri(),
@@ -923,7 +920,9 @@ class ivf_pq_index {
     // NB: We don't load the partitioned_pq_vectors here. We will load them
     // when we do the query.
     return std::make_tuple(
-        std::move(active_partitions), std::move(active_queries));
+        std::move(active_partitions),
+        std::move(active_queries),
+        std::move(partitioned_pq_vectors));
   }
 
   /**
@@ -1236,21 +1235,17 @@ class ivf_pq_index {
           "run if you're loading the index by URI. Please open it by URI and "
           "try again. If you just wrote the index, open it up again by URI.");
     }
-    if (partitioned_pq_vectors_) {
-      // We did an infinite query before this. Reset so we can load again.
-      partitioned_pq_vectors_.reset();
-    }
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
-    auto&& [active_partitions, active_queries] =
+    auto&& [active_partitions, active_queries, partitioned_pq_vectors] =
         read_index_finite(query_vectors, nprobe, upper_bound);
     auto query_to_pq_centroid_distance_tables =
         std::move(*generate_query_to_pq_centroid_distance_tables<
                   Q,
                   ColMajorMatrix<float>>(query_vectors));
     return detail::ivf::query_finite_ram(
-        *partitioned_pq_vectors_,
+        *partitioned_pq_vectors,
         query_to_pq_centroid_distance_tables,
         active_queries,
         k_nn,

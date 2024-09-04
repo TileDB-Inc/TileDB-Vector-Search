@@ -242,7 +242,7 @@ void debug_partitioned_matrix(
   debug_matrix(matrix, msg, max_size);
 
   std::cout << "# ids: [";
-  auto end = std::min(matrix.ids().size(), static_cast<size_t>(max_size));
+  auto end = std::min(matrix.num_vectors(), static_cast<size_t>(max_size));
   for (size_t i = 0; i < end; ++i) {
     std::cout << matrix.ids()[i];
     if (i != matrix.ids().size() - 1) {

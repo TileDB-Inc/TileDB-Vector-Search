@@ -680,36 +680,39 @@ bool validate_top_k(TK& top_k, const G& g) {
 
 template <feature_vector_array U, feature_vector_array V>
 auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
-  // print_types(I, groundtruth);
-
   size_t total_intersected = 0;
 
   if constexpr (feature_vector_array<std::remove_cvref_t<decltype(I)>>) {
     for (size_t i = 0; i < I.num_cols(); ++i) {
-      std::sort(begin(I[i]), end(I[i]));
-      std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+      std::vector<std::decay_t<decltype(I[i][0])>> sorted_I(
+          begin(I[i]), end(I[i]));
+      std::vector<std::decay_t<decltype(groundtruth[i][0])>> sorted_groundtruth(
+          begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
 
-      // @todo remove -- for debugging only
-      std::vector<size_t> x(begin(I[i]), end(I[i]));
-      std::vector<size_t> y(begin(groundtruth[i]), end(groundtruth[i]));
+      std::sort(begin(sorted_I), end(sorted_I));
+      std::sort(begin(sorted_groundtruth), end(sorted_groundtruth));
 
       total_intersected += std::set_intersection(
-          begin(I[i]),
-          end(I[i]),
-          begin(groundtruth[i]),
-          /*end(groundtruth[i]*/ begin(groundtruth[i]) + k_nn,
+          begin(sorted_I),
+          end(sorted_I),
+          begin(sorted_groundtruth),
+          end(sorted_groundtruth),
           assignment_counter{});
     }
   } else {
     if constexpr (feature_vector<std::remove_cvref_t<decltype(I)>>) {
-      std::sort(begin(I), end(I));
-      std::sort(begin(groundtruth), begin(groundtruth) + k_nn);
+      std::vector<std::decay_t<decltype(I[0])>> sorted_I(begin(I), end(I));
+      std::vector<std::decay_t<decltype(groundtruth[0])>> sorted_groundtruth(
+          begin(groundtruth), begin(groundtruth) + k_nn);
+
+      std::sort(begin(sorted_I), end(sorted_I));
+      std::sort(begin(sorted_groundtruth), end(sorted_groundtruth));
 
       total_intersected += std::set_intersection(
-          begin(I),
-          end(I),
-          begin(groundtruth),
-          /*end(groundtruth)*/ begin(groundtruth) + k_nn,
+          begin(sorted_I),
+          end(sorted_I),
+          begin(sorted_groundtruth),
+          end(sorted_groundtruth),
           assignment_counter{});
     } else {
       static_assert(
@@ -718,7 +721,7 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
     }
   }
   return total_intersected;
-};
+}
 
 #if defined(TILEDB_VS_ENABLE_BLAS) && 0
 

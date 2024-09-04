@@ -351,6 +351,7 @@ TEST_CASE(
     "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
+  size_t n_list = 100;
   auto feature_type = "float32";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
@@ -367,6 +368,7 @@ TEST_CASE(
         {{"feature_type", feature_type},
          {"id_type", id_type},
          {"partitioning_index_type", partitioning_index_type},
+         {"n_list", std::to_string(n_list)},
          {"num_subspaces", std::to_string(siftsmall_dimensions / 4)}}));
 
     size_t num_vectors = 0;
@@ -414,20 +416,27 @@ TEST_CASE(
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    for (auto upper_bound : {400, 1000, 0}) {
-      auto&& [_, ids] =
+
+    for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
+         std::vector<std::tuple<int, float, float>>{
+             {1, .4f, .45f},
+             {2, .5f, .6f},
+             {5, .7f, .7f},
+             {10, .75f, .9f},
+             {100, .8f, 1.f}}) {
+      auto&& [distances, ids] =
           index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
       auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-      auto num_ids = num_vectors(ids);
-      auto recall = intersections / static_cast<double>(num_ids * k_nn);
-      CHECK(recall > 0.7);
+      CHECK(
+          (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
+          expected_accuracy);
 
-      auto&& [__, ids_finite] = index.query(
-          QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
-      intersections = count_intersections(ids_finite, groundtruth_set, k_nn);
-      num_ids = num_vectors(ids_finite);
-      recall = intersections / static_cast<double>(num_ids * k_nn);
-      CHECK(recall > 0.7);
+      for (auto upper_bound : {450, 1000, 0}) {
+        auto&& [distances_finite, ids_finite] = index.query(
+            QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
+        CHECK(are_equal(ids_finite, ids));
+        CHECK(are_equal(distances_finite, distances));
+      }
     }
   }
 }
