@@ -299,25 +299,25 @@ class ivf_pq_index {
    * @todo -- May also want start/stop?  Use a variant?  TemporalPolicy?
    */
   ivf_pq_index(
-      size_t nlist = 0,
-      uint32_t num_subspaces = 16,
-      uint32_t max_iterations = 2,
-      float convergence_tolerance = 0.000025f,
-      float reassign_ratio = 0.075f,
-      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES,
-      uint64_t seed = std::random_device{}()
-      )
-      : temporal_policy_{
-        temporal_policy.has_value() ? *temporal_policy :
-        TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
-      , num_partitions_(nlist)
-      , num_subspaces_{num_subspaces}
-      , max_iterations_(max_iterations)
-      , convergence_tolerance_(convergence_tolerance)
-      , reassign_ratio_(reassign_ratio)
-      , distance_metric_{distance_metric}
-      {
+     size_t nlist = 0,
+     uint32_t num_subspaces = 16,
+     uint32_t max_iterations = 2,
+     float convergence_tolerance = 0.000025f,
+     float reassign_ratio = 0.075f,
+     std::optional<TemporalPolicy> temporal_policy = std::nullopt,
+     DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES,
+     uint64_t seed = std::random_device{}()
+         )
+     : temporal_policy_{
+           temporal_policy.has_value() ? *temporal_policy :
+                                         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
+     , num_partitions_(nlist)
+     , num_subspaces_{num_subspaces}
+     , max_iterations_(max_iterations)
+     , convergence_tolerance_(convergence_tolerance)
+     , reassign_ratio_(reassign_ratio)
+     , distance_metric_{distance_metric}
+ {
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
           "num_subspaces (" + std::to_string(num_subspaces_) +

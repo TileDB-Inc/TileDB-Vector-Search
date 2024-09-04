@@ -219,8 +219,12 @@ void debug_matrix_with_ids(
     const MatrixWithIds& matrix,
     const std::string& msg = "",
     size_t max_size = 10) {
-  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(
+      dimensions(matrix),
+      static_cast<typename MatrixWithIds::size_type>(max_size));
+  auto colsEnd = std::min(
+      num_vectors(matrix),
+      static_cast<typename MatrixWithIds::size_type>(max_size));
 
   debug_matrix(matrix, msg, max_size);
 

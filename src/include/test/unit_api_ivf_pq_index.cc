@@ -418,20 +418,14 @@ TEST_CASE(
 
     for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
          std::vector<std::tuple<int, float, float>>{
-             {1, .4f, .45f}, {2, .5f, .6f}, {10, .75f, .9f}, {100, .8f, 1.f}}) {
-      std::cout << "InfiniteRAM "
-                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                << std::endl;
+             {1, .4f, .45f},
+             {2, .5f, .6f},
+             {5, .7f, .7f},
+             {10, .75f, .9f},
+             {100, .8f, 1.f}}) {
       auto&& [distances, ids] =
           index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
       auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-      std::cout << "  intersections: " << intersections << std::endl;
-      std::cout << "ACC: "
-                << (intersections /
-                    static_cast<double>(num_vectors(ids) * k_nn))
-                << std::endl;
       CHECK(
           (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
           expected_accuracy);
