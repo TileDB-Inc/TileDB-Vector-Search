@@ -26,7 +26,7 @@ from tiledb.vector_search.utils import load_fvecs
 # Use headless mode for matplotlib.
 matplotlib.use("Agg")
 
-USE_SIFT_SMALL = True
+USE_SIFT_SMALL = False
 
 SIFT_URI = (
     "ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz"
