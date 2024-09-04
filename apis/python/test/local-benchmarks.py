@@ -113,7 +113,7 @@ class Timer:
         self.tagToAccuracies[tag].append(acc)
         return acc
 
-    def summarize_data(self):
+    def _summarize_data(self):
         summary = {}
         for key, intervals in self.keyToTimes.items():
             tag, mode = key.rsplit("_", 1)
@@ -144,8 +144,8 @@ class Timer:
 
         return summary
 
-    def summary_string(self):
-        summary = self.summarize_data()
+    def _summary_string(self):
+        summary = self._summarize_data()
         summary_str = f"Timer: {self.name}\n"
         for tag, data in summary.items():
             summary_str += f"{tag}\n"
@@ -160,14 +160,9 @@ class Timer:
             summary_str += "\n"
         return summary_str
 
-    def save_charts(self):
-        summary = self.summarize_data()
+    def add_data_to_ingestion_time_vs_average_query_accuracy(self):
+        summary = self._summarize_data()
 
-        # Plot ingestion.
-        plt.figure(figsize=(20, 12))
-        plt.xlabel("Average Query Accuracy")
-        plt.ylabel("Time (seconds)")
-        plt.title(f"{self.name}: Ingestion Time vs Average Query Accuracy")
         for tag, data in summary.items():
             ingestion_times = []
             average_accuracy = sum(data["query"]["accuracies"]) / len(
@@ -180,6 +175,25 @@ class Timer:
             x, y = zip(*ingestion_times)
             plt.scatter(y, x, marker="o", label=tag)
 
+    def add_data_to_query_time_vs_accuracy(self):
+        summary = self._summarize_data()
+
+        for tag, data in summary.items():
+            query_times = []
+            for i in range(data["query"]["count"]):
+                query_times.append(
+                    (data["query"]["times"][i], data["query"]["accuracies"][i])
+                )
+            x, y = zip(*query_times)
+            plt.plot(y, x, marker="o", label=tag)
+
+    def save_charts(self):
+        # Plot ingestion.
+        plt.figure(figsize=(20, 12))
+        plt.xlabel("Average Query Accuracy")
+        plt.ylabel("Time (seconds)")
+        plt.title(f"{self.name}: Ingestion Time vs Average Query Accuracy")
+        self.add_data_to_ingestion_time_vs_average_query_accuracy()
         plt.legend()
         plt.savefig(
             os.path.join(RESULTS_DIR, f"{self.name}_ingestion_time_vs_accuracy.png")
@@ -191,15 +205,7 @@ class Timer:
         plt.xlabel("Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title(f"{self.name}: Query Time vs Accuracy")
-        for tag, data in summary.items():
-            query_times = []
-            for i in range(data["query"]["count"]):
-                query_times.append(
-                    (data["query"]["times"][i], data["query"]["accuracies"][i])
-                )
-            x, y = zip(*query_times)
-            plt.plot(y, x, marker="o", label=tag)
-
+        self.add_data_to_query_time_vs_accuracy()
         plt.legend()
         plt.savefig(
             os.path.join(RESULTS_DIR, f"{self.name}_query_time_vs_accuracy.png")
@@ -207,10 +213,46 @@ class Timer:
         plt.close()
 
     def save_and_print_results(self):
-        summary_string = self.summary_string()
+        summary_string = self._summary_string()
         logger.info(summary_string)
 
         self.save_charts()
+
+
+class TimerManager:
+    def __init__(self):
+        self.timers = []
+
+    def new_timer(self, name):
+        timer = Timer(name)
+        self.timers.append(timer)
+        return timer
+
+    def save_charts(self):
+        # Plot ingestion.
+        plt.figure(figsize=(20, 12))
+        plt.xlabel("Average Query Accuracy")
+        plt.ylabel("Time (seconds)")
+        plt.title("Ingestion Time vs Average Query Accuracy")
+        for timer in self.timers:
+            timer.add_data_to_ingestion_time_vs_average_query_accuracy()
+        plt.legend()
+        plt.savefig(os.path.join(RESULTS_DIR, "ingestion_time_vs_accuracy.png"))
+        plt.close()
+
+        # Plot query.
+        plt.figure(figsize=(20, 12))
+        plt.xlabel("Accuracy")
+        plt.ylabel("Time (seconds)")
+        plt.title("Query Time vs Accuracy")
+        for timer in self.timers:
+            timer.add_data_to_query_time_vs_accuracy()
+        plt.legend()
+        plt.savefig(os.path.join(RESULTS_DIR, "query_time_vs_accuracy.png"))
+        plt.close()
+
+
+timer_manager = TimerManager()
 
 
 def download_and_extract(url, download_path, extract_path):
@@ -231,7 +273,7 @@ def download_and_extract(url, download_path, extract_path):
 
 def benchmark_ivf_flat():
     index_type = "IVF_FLAT"
-    timer = Timer(name=index_type)
+    timer = timer_manager.new_timer(index_type)
 
     k = 100
     queries = load_fvecs(SIFT_QUERIES_PATH)
@@ -269,7 +311,7 @@ def benchmark_ivf_flat():
 
 def benchmark_vamana():
     index_type = "VAMANA"
-    timer = Timer(name=index_type)
+    timer = timer_manager.new_timer(index_type)
 
     k = 100
     queries = load_fvecs(SIFT_QUERIES_PATH)
@@ -309,7 +351,7 @@ def benchmark_vamana():
 
 def benchmark_ivf_pq():
     index_type = "IVF_PQ"
-    timer = Timer(name=index_type)
+    timer = timer_manager.new_timer(index_type)
 
     k = 100
     queries = load_fvecs(SIFT_QUERIES_PATH)
@@ -354,6 +396,8 @@ def main():
     benchmark_ivf_flat()
     benchmark_vamana()
     benchmark_ivf_pq()
+
+    timer_manager.save_charts()
 
 
 main()
