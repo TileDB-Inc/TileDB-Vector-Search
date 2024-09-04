@@ -283,10 +283,9 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
         write_vector(ctx, partitioned_matrix.ids(), ids_uri);
 
         // We have num_parts partitions. Create combinations of them. i.e.
-        for
-          // num_parts = 3: [0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2].
-          auto relevant_parts_combinations =
-              generateSubsets<part_index_type>(num_parts);
+        // num_parts = 3: [0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2].
+        auto relevant_parts_combinations =
+            generateSubsets<part_index_type>(num_parts);
         for (const auto& relevant_parts : relevant_parts_combinations) {
           auto tdb_partitioned_matrix = tdbColMajorPartitionedMatrix<
               feature_type,
@@ -370,14 +369,11 @@ TEST_CASE("empty partition", "[tdb_partitioned_matrix]") {
 
   // Test that we do not crash if we have an empty part (i.e. two elements in
   // indices with the same value). These values were taken from running
-  // `api_ivf_flat_index: read index and query infinite and finite - finite
-  out
-      // of core, 1000, nprobe: 32, max_iter: 8` which used to crash with these
-      // values. Note that 17, 30, 54, and 59 are all missing from the series 1
-      ->
-      // 100.
-      std::vector<part_index_type>
-          relevant_parts = {
+  // `api_ivf_flat_index: read index and query infinite and finite - finite out
+  // of core, 1000, nprobe: 32, max_iter: 8` which used to crash with these
+  // values. Note that 17, 30, 54, and 59 are all missing from the series 1 ->
+  // 100.
+  std::vector<part_index_type> relevant_parts = {
       1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
       18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 34,
       35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
