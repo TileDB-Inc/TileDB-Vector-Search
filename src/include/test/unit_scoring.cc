@@ -691,7 +691,7 @@ inline float sum_of_squares_avx2(const V& a, const W& b) {
 
   __m256 sum_vec = _mm256_setzero_ps();
 
-  for (int i = start; i < stop; i += 8) {
+  for (size_t i = start; i < stop; i += 8) {
     // @todo Align on 256 bit boundaries
     __m256 vec_a = _mm256_loadu_ps(a_ptr + i + 0);
     __m256 vec_b = _mm256_loadu_ps(b_ptr + i + 0);

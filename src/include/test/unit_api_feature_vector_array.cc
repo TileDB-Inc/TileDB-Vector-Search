@@ -246,8 +246,8 @@ TEST_CASE("feature vector array with IDs open", "[api]") {
 }
 
 TEST_CASE("MatrixWithIds constructors and destructors", "[api]") {
-  auto rows = 3;
-  auto cols = 7;
+  uint64_t rows = 3;
+  uint64_t cols = 7;
 
   SECTION("copy constructor") {
     using DataType = int;
@@ -568,7 +568,7 @@ TEST_CASE("temporal_policy", "[api]") {
     vfs.remove_dir(ids_uri);
   }
 
-  auto dimension = 3;
+  size_t dimension = 3;
 
   using FeatureType = float;
   using IdsType = uint32_t;

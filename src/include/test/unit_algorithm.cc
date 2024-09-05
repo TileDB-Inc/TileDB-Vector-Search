@@ -203,7 +203,7 @@ TEST_CASE("range_for_each", "[algorithm]") {
         queries,
         [&](auto&& vector, auto thread_index, auto index) {
           thread_used[index] = thread_index;
-          for (int j = 0; j < k; ++j) {
+          for (size_t j = 0; j < k; ++j) {
             thread_used_matrix[index][j] = thread_index;
           }
         });
@@ -211,7 +211,7 @@ TEST_CASE("range_for_each", "[algorithm]") {
     size_t block_size = (num_vectors + num_threads - 1) / num_threads;
 
     for (size_t i = 0; i < num_vectors; ++i) {
-      size_t expected_thread = i / block_size;
+      int expected_thread = i / block_size;
       CHECK(thread_used[i] == expected_thread);
 
       for (size_t j = 0; j < k; ++j) {
