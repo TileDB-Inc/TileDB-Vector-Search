@@ -13,23 +13,26 @@ import time
 import urllib.request
 from datetime import datetime
 from enum import Enum
-import tiledb
+
 import matplotlib
 import matplotlib.pyplot as plt
 from common import accuracy
 from common import get_groundtruth_ivec
 
+import tiledb
+from tiledb.vector_search.index import Index
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.index import Index
 from tiledb.vector_search.utils import load_fvecs
+
 
 class RemoteURIType(Enum):
     LOCAL = 1
     TILEDB = 2
 
+
 ## Settings
-REMOTE_URI_TYPE = RemoteURIType.TILEDB
+REMOTE_URI_TYPE = RemoteURIType.LOCAL
 USE_SIFT_SMALL = True
 
 # Use headless mode for matplotlib.
@@ -289,6 +292,7 @@ def get_uri(tag):
     elif REMOTE_URI_TYPE == RemoteURIType.TILEDB:
         from common import create_cloud_uri
         from common import setUpCloudToken
+
         setUpCloudToken()
         index_uri = create_cloud_uri(index_name, "local_benchmarks")
         logger.info(f"TileDB URI {index_uri}")
@@ -297,10 +301,13 @@ def get_uri(tag):
     else:
         raise ValueError(f"Invalid REMOTE_URI_TYPE {REMOTE_URI_TYPE}")
 
+
 def cleanup_uri(index_uri):
     if REMOTE_URI_TYPE == RemoteURIType.TILEDB:
         from common import delete_uri
+
         delete_uri(uri=index_uri, config=tiledb.cloud.Config())
+
 
 def benchmark_ivf_flat():
     index_type = "IVF_FLAT"
@@ -321,7 +328,9 @@ def benchmark_ivf_flat():
             index_type=index_type,
             index_uri=index_uri,
             source_uri=SIFT_BASE_PATH,
-            config=tiledb.cloud.Config().dict() if REMOTE_URI_TYPE is not None else None,
+            config=tiledb.cloud.Config().dict()
+            if REMOTE_URI_TYPE is not None
+            else None,
             partitions=partitions,
             training_sampling_policy=TrainingSamplingPolicy.RANDOM,
         )
@@ -361,7 +370,9 @@ def benchmark_vamana():
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=SIFT_BASE_PATH,
-                config=tiledb.cloud.Config().dict() if REMOTE_URI_TYPE is not None else None,
+                config=tiledb.cloud.Config().dict()
+                if REMOTE_URI_TYPE is not None
+                else None,
                 l_build=l_build,
                 r_max_degree=r_max_degree,
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
@@ -376,7 +387,7 @@ def benchmark_vamana():
                 logger.info(
                     f"Finished {tag} with l_search={l_search}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
                 )
-            
+
             cleanup_uri(index_uri)
 
     timer.save_and_print_results()
@@ -403,7 +414,9 @@ def benchmark_ivf_pq():
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=SIFT_BASE_PATH,
-                config=tiledb.cloud.Config().dict() if REMOTE_URI_TYPE is not None else None,
+                config=tiledb.cloud.Config().dict()
+                if REMOTE_URI_TYPE is not None
+                else None,
                 partitions=partitions,
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
                 num_subspaces=num_subspaces,
@@ -418,7 +431,7 @@ def benchmark_ivf_pq():
                 logger.info(
                     f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
                 )
-            
+
             cleanup_uri(index_uri)
 
     timer.save_and_print_results()
@@ -434,5 +447,6 @@ def main():
     benchmark_ivf_pq()
 
     timer_manager.save_charts()
+
 
 main()
