@@ -385,6 +385,9 @@ class TileDBLoader:
             mime_type = mimetypes.guess_type(self.uri)[0]
             f = vfs.open(self.uri)
 
+        if mime_type is None:
+            mime_type="text/plain"
+
         if mime_type.startswith("image/"):
             from langchain_community.document_loaders import UnstructuredFileIOLoader
 
