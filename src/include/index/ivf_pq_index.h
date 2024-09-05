@@ -95,21 +95,22 @@
 #ifndef TILEDB_ivf_pq_H
 #define TILEDB_ivf_pq_H
 
-#include <tiledb/tiledb>
-#include <type_traits>
 #include "algorithm.h"
 #include "concepts.h"
 #include "cpos.h"
+#include "index/index_defs.h"
+#include "index/ivf_pq_group.h"
+#include "index/kmeans.h"
+#include "linalg.h"
+
 #include "detail/flat/qv.h"
 #include "detail/ivf/index.h"
 #include "detail/ivf/partition.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/tdb_matrix_multi_range.h"
-#include "index/index_defs.h"
-#include "index/ivf_pq_group.h"
-#include "index/kmeans.h"
-#include "linalg.h"
-#include "utils/utils.h"
+
+#include <tiledb/tiledb>
+#include <type_traits>
 
 /**
  * Class representing an inverted file (IVF) index for flat (non-compressed)
@@ -299,26 +300,24 @@ class ivf_pq_index {
    * @todo -- May also want start/stop?  Use a variant?  TemporalPolicy?
    */
   ivf_pq_index(
-    size_t nlist = 0,
-    uint32_t num_subspaces = 16,
-    uint32_t max_iterations = 2,
-    float convergence_tolerance = 0.000025f,
-    float reassign_ratio = 0.075f,
-    std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-    DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES,
-    uint64_t seed = std::random_device{}()
-        )
-    : temporal_policy_{
-      temporal_policy.has_value() ? *temporal_policy :
-      TemporalPolicy{TimeTravel, static_cast<uint64_t>
-  (std::chrono::duration_cast<std::chrono::milliseconds>
-  (std::chrono::system_clock::now().time_since_epoch()).count())}}
-    , num_partitions_(nlist)
-    , num_subspaces_{num_subspaces}
-    , max_iterations_(max_iterations)
-    , convergence_tolerance_(convergence_tolerance)
-    , reassign_ratio_(reassign_ratio)
-    , distance_metric_{distance_metric}
+      size_t nlist = 0,
+      uint32_t num_subspaces = 16,
+      uint32_t max_iterations = 2,
+      float convergence_tolerance = 0.000025f,
+      float reassign_ratio = 0.075f,
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
+      DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES,
+      uint64_t seed = std::random_device{}()
+      )
+      : temporal_policy_{
+        temporal_policy.has_value() ? *temporal_policy :
+        TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
+      , num_partitions_(nlist)
+      , num_subspaces_{num_subspaces}
+      , max_iterations_(max_iterations)
+      , convergence_tolerance_(convergence_tolerance)
+      , reassign_ratio_(reassign_ratio)
+      , distance_metric_{distance_metric}
       {
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
@@ -1160,49 +1159,6 @@ class ivf_pq_index {
     }
   }
 
-  template <class FeatureVectors, class QueryVectors>
-  auto re_rank_query(
-      const FeatureVectors& feature_vectors,
-      const QueryVectors& query_vectors,
-      std::function<size_t(size_t, size_t)> get_vector_index,
-      std::function<std::tuple<bool, size_t>(size_t, size_t)> get_vector_id,
-      size_t k_initial,
-      size_t k_nn) const {
-    auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
-        ::num_vectors(query_vectors),
-        fixed_min_pair_heap<score_type, id_type>(k_nn));
-    for (size_t i = 0; i < ::num_vectors(query_vectors); ++i) {
-      for (size_t j = 0; j < k_initial; ++j) {
-        auto vector_index = get_vector_index(i, j);
-        auto [valid, id] = get_vector_id(i, j);
-        if (!valid) {
-          continue;
-        }
-        float distance;
-        if (distance_metric_ == DistanceMetric::SUM_OF_SQUARES) {
-          distance = sum_of_squares_distance{}(
-              query_vectors[i], feature_vectors[vector_index]);
-        } else if (distance_metric_ == DistanceMetric::L2) {
-          distance = sqrt_sum_of_squares_distance{}(
-              query_vectors[i], feature_vectors[vector_index]);
-        } else if (distance_metric_ == DistanceMetric::INNER_PRODUCT) {
-          distance = inner_product_distance{}(
-              query_vectors[i], feature_vectors[vector_index]);
-        } else if (distance_metric_ == DistanceMetric::COSINE) {
-          distance = cosine_distance_normalized{}(
-              query_vectors[i], feature_vectors[vector_index]);
-        } else {
-          throw std::runtime_error(
-              "[ivf_pq_index@re_rank_query] Invalid distance metric: " +
-              to_string(distance_metric_));
-        }
-        min_scores[i].insert(distance, id);
-      }
-    }
-
-    return get_top_k_with_scores(min_scores, k_nn);
-  }
-
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
    * and distances. The function returns a matrix containing k_nn nearest
@@ -1265,6 +1221,78 @@ class ivf_pq_index {
                 std::span<float>,
                 decltype(pq_storage_type{}[0])>());
 
+    return re_rank(
+        std::move(initial_distances),
+        std::move(initial_ids),
+        std::move(initial_indices),
+        query_vectors,
+        k_initial,
+        k_nn);
+  }
+
+  /**
+   * @brief Perform a query on the index, returning the nearest neighbors
+   * and distances. The function returns a matrix containing k_nn nearest
+   * neighbors for each given query and a matrix containing the distances
+   * corresponding to each returned neighbor.
+   *
+   * This function searches for the nearest neighbors using "finite RAM",
+   * that is, it only loads that portion of the IVF index into memory that
+   * is necessary for the given query. In addition, it supports out of core
+   * operation, meaning that only a subset of the necessary partitions are
+   * loaded into memory at any one time.
+   *
+   * See the documentation for that function in detail/ivf/qv.h
+   * for more details.
+   *
+   * @tparam Q Type of query vectors. Must meet requirements of
+   * `feature_vector_array`
+   * @param query_vectors Array of (uncompressed) vectors to query.
+   * @param k_nn Number of nearest neighbors to return.
+   * @param k_factor Specifies the multipler on k_nn for the initial IVF_PQ
+   * query, after which re-ranking is run.
+   * @param nprobe Number of centroids to search.
+   *
+   * @return A tuple containing a matrix of nearest neighbors and a matrix
+   * of the corresponding distances.
+   */
+  template <feature_vector_array Q>
+  auto query_finite_ram(
+      const Q& query_vectors,
+      size_t k_nn,
+      size_t nprobe,
+      size_t upper_bound = 0,
+      float k_factor = 1.f) {
+    if (!group_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@query_finite_ram] Query with finite RAM can only be "
+          "run if you're loading the index by URI. Please open it by URI and "
+          "try again. If you just wrote the index, open it up again by URI.");
+    }
+    if (k_factor < 1.f) {
+      throw std::runtime_error("k_factor must be >= 1");
+    }
+    if (::num_vectors(flat_ivf_centroids_) < nprobe) {
+      nprobe = ::num_vectors(flat_ivf_centroids_);
+    }
+    auto&& [active_partitions, active_queries, partitioned_pq_vectors] =
+        read_index_finite(query_vectors, nprobe, upper_bound);
+    auto query_to_pq_centroid_distance_tables =
+        std::move(*generate_query_to_pq_centroid_distance_tables<
+                  Q,
+                  ColMajorMatrix<float>>(query_vectors));
+    size_t k_initial = static_cast<size_t>(k_nn * k_factor);
+    auto&& [initial_distances, initial_ids, initial_indices] =
+        detail::ivf::query_finite_ram(
+            *partitioned_pq_vectors,
+            query_to_pq_centroid_distance_tables,
+            active_queries,
+            k_initial,
+            upper_bound,
+            num_threads_,
+            make_pq_distance_query_to_pq_centroid_distance_tables<
+                std::span<float>,
+                decltype(pq_storage_type{}[0])>());
     return re_rank(
         std::move(initial_distances),
         std::move(initial_ids),
@@ -1347,76 +1375,47 @@ class ivf_pq_index {
         k_nn);
   }
 
-  /**
-   * @brief Perform a query on the index, returning the nearest neighbors
-   * and distances. The function returns a matrix containing k_nn nearest
-   * neighbors for each given query and a matrix containing the distances
-   * corresponding to each returned neighbor.
-   *
-   * This function searches for the nearest neighbors using "finite RAM",
-   * that is, it only loads that portion of the IVF index into memory that
-   * is necessary for the given query. In addition, it supports out of core
-   * operation, meaning that only a subset of the necessary partitions are
-   * loaded into memory at any one time.
-   *
-   * See the documentation for that function in detail/ivf/qv.h
-   * for more details.
-   *
-   * @tparam Q Type of query vectors. Must meet requirements of
-   * `feature_vector_array`
-   * @param query_vectors Array of (uncompressed) vectors to query.
-   * @param k_nn Number of nearest neighbors to return.
-   * @param k_factor Specifies the multipler on k_nn for the initial IVF_PQ
-   * query, after which re-ranking is run.
-   * @param nprobe Number of centroids to search.
-   *
-   * @return A tuple containing a matrix of nearest neighbors and a matrix
-   * of the corresponding distances.
-   */
-  template <feature_vector_array Q>
-  auto query_finite_ram(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0,
-      float k_factor = 1.f) {
-    if (!group_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@query_finite_ram] Query with finite RAM can only be "
-          "run if you're loading the index by URI. Please open it by URI and "
-          "try again. If you just wrote the index, open it up again by URI.");
+  template <class FeatureVectors, class QueryVectors>
+  auto re_rank_query(
+      const FeatureVectors& feature_vectors,
+      const QueryVectors& query_vectors,
+      std::function<size_t(size_t, size_t)> get_vector_index,
+      std::function<std::tuple<bool, size_t>(size_t, size_t)> get_vector_id,
+      size_t k_initial,
+      size_t k_nn) const {
+    auto min_scores = std::vector<fixed_min_pair_heap<score_type, id_type>>(
+        ::num_vectors(query_vectors),
+        fixed_min_pair_heap<score_type, id_type>(k_nn));
+    for (size_t i = 0; i < ::num_vectors(query_vectors); ++i) {
+      for (size_t j = 0; j < k_initial; ++j) {
+        auto vector_index = get_vector_index(i, j);
+        auto [valid, id] = get_vector_id(i, j);
+        if (!valid) {
+          continue;
+        }
+        float distance;
+        if (distance_metric_ == DistanceMetric::SUM_OF_SQUARES) {
+          distance = sum_of_squares_distance{}(
+              query_vectors[i], feature_vectors[vector_index]);
+        } else if (distance_metric_ == DistanceMetric::L2) {
+          distance = sqrt_sum_of_squares_distance{}(
+              query_vectors[i], feature_vectors[vector_index]);
+        } else if (distance_metric_ == DistanceMetric::INNER_PRODUCT) {
+          distance = inner_product_distance{}(
+              query_vectors[i], feature_vectors[vector_index]);
+        } else if (distance_metric_ == DistanceMetric::COSINE) {
+          distance = cosine_distance_normalized{}(
+              query_vectors[i], feature_vectors[vector_index]);
+        } else {
+          throw std::runtime_error(
+              "[ivf_pq_index@re_rank_query] Invalid distance metric: " +
+              to_string(distance_metric_));
+        }
+        min_scores[i].insert(distance, id);
+      }
     }
-    if (k_factor < 1.f) {
-      throw std::runtime_error("k_factor must be >= 1");
-    }
-    if (::num_vectors(flat_ivf_centroids_) < nprobe) {
-      nprobe = ::num_vectors(flat_ivf_centroids_);
-    }
-    auto&& [active_partitions, active_queries, partitioned_pq_vectors] =
-        read_index_finite(query_vectors, nprobe, upper_bound);
-    auto query_to_pq_centroid_distance_tables =
-        std::move(*generate_query_to_pq_centroid_distance_tables<
-                  Q,
-                  ColMajorMatrix<float>>(query_vectors));
-    size_t k_initial = static_cast<size_t>(k_nn * k_factor);
-    auto&& [initial_distances, initial_ids, initial_indices] =
-        detail::ivf::query_finite_ram(
-            *partitioned_pq_vectors,
-            query_to_pq_centroid_distance_tables,
-            active_queries,
-            k_initial,
-            upper_bound,
-            num_threads_,
-            make_pq_distance_query_to_pq_centroid_distance_tables<
-                std::span<float>,
-                decltype(pq_storage_type{}[0])>());
-    return re_rank(
-        std::move(initial_distances),
-        std::move(initial_ids),
-        std::move(initial_indices),
-        query_vectors,
-        k_initial,
-        k_nn);
+
+    return get_top_k_with_scores(min_scores, k_nn);
   }
 
   /***************************************************************************

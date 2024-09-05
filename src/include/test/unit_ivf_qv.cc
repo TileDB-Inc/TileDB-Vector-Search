@@ -577,74 +577,6 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
   }
 }
 
-TEST_CASE("print out relevant parts", "[ivf qv]") {
-  tiledb::Context ctx;
-  tiledb::VFS vfs(ctx);
-
-  using feature_type = float;
-  using id_type = uint64_t;
-  using part_index_type = uint64_t;
-
-  std::string partitioned_vectors_uri =
-      (std::filesystem::temp_directory_path() / "partitioned_vectors").string();
-  std::string ids_uri =
-      (std::filesystem::temp_directory_path() / "ids").string();
-
-  // Create partitioned_matrix.
-  int num_vectors = 10;
-  uint64_t dimensions = 3;
-  int num_parts = 10;
-  std::vector<part_index_type> indices;
-  {
-    auto training_set = ColMajorMatrix<feature_type>(dimensions, num_vectors);
-    for (size_t i = 0; i < dimensions; ++i) {
-      for (size_t j = 0; j < num_vectors; ++j) {
-        training_set(i, j) = j;
-      }
-    }
-
-    std::vector<id_type> part_labels(num_vectors, 0);
-    for (size_t i = 0; i < num_vectors; ++i) {
-      part_labels[i] = i % num_parts;
-    }
-
-    auto partitioned_matrix =
-        ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
-            training_set, part_labels, num_parts);
-    if (vfs.is_dir(partitioned_vectors_uri)) {
-      vfs.remove_dir(partitioned_vectors_uri);
-    }
-    if (vfs.is_dir(ids_uri)) {
-      vfs.remove_dir(ids_uri);
-    }
-    write_matrix(ctx, partitioned_matrix, partitioned_vectors_uri);
-    write_vector(ctx, partitioned_matrix.ids(), ids_uri);
-
-    indices = partitioned_matrix.indices();
-  }
-
-  // Load partitioned_matrix with all parts.
-  for (size_t skip = 0; skip < num_parts; ++skip) {
-    std::vector<part_index_type> relevant_parts;
-    for (size_t i = 0; i < num_parts; ++i) {
-      if (i == skip) {
-        continue;
-      }
-      // if (i == skip * 2) {
-      //   continue;
-      // }
-      relevant_parts.push_back(i);
-    }
-    debug_vector(relevant_parts, "relevant_parts");
-    auto tdb_partitioned_matrix =
-        tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
-            ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
-    tdb_partitioned_matrix.load();
-    tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
-        "tdb_partitioned_matrix");
-  }
-}
-
 TEST_CASE("indices", "[ivf qv]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -756,7 +688,6 @@ TEST_CASE("indices", "[ivf qv]") {
     // Note this sorting doesn't get done on each insertion for performance, but
     // when testing we can explicitly call it.
     min_heap_per_query[i].self_sort();
-    std::cout << "  " << min_heap_per_query[i].dump() << std::endl;
 
     CHECK(min_heap_per_query[i].size() == k_nn);
 

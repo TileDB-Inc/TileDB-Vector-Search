@@ -430,47 +430,21 @@ TEST_CASE(
           (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
           expected_accuracy);
 
-      std::cout << "InfiniteRAM re-ranking "
-                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                   "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                << std::endl;
       auto&& [distances_with_reranking, ids_with_reranking] = index.query(
           QueryType::InfiniteRAM, query_set, k_nn, nprobe, 0, k_factor);
       auto intersections_with_reranking =
           count_intersections(ids_with_reranking, groundtruth_set, k_nn);
-      std::cout << "  intersections: " << intersections_with_reranking
-                << std::endl;
-      std::cout << "ACC: "
-                << (intersections_with_reranking /
-                    static_cast<double>(num_vectors(ids_with_reranking) * k_nn))
-                << std::endl;
       CHECK(
           (intersections_with_reranking /
            static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >=
           expected_accuracy_with_reranking);
 
-      for (auto upper_bound : {0}) {
-        std::cout << "FiniteRAM "
-                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                  << std::endl;
+      for (auto upper_bound : {450, 1000, 0}) {
         auto&& [distances_finite, ids_finite] = index.query(
             QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
-        auto intersections_finite =
-            count_intersections(ids_finite, groundtruth_set, k_nn);
-        std::cout << "  intersections: " << intersections_finite << std::endl;
-        CHECK(ids_finite.num_vectors() == ids.num_vectors());
-        CHECK(intersections_finite == intersections);
         CHECK(are_equal(ids_finite, ids));
         CHECK(are_equal(distances_finite, distances));
 
-        std::cout << "FiniteRAM re-ranking "
-                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-                  << std::endl;
         auto&& [distances_finite_with_reranking, ids_finite_with_reranking] =
             index.query(
                 QueryType::FiniteRAM,
@@ -479,14 +453,6 @@ TEST_CASE(
                 nprobe,
                 upper_bound,
                 k_factor);
-        auto intersections_finite_with_reranking = count_intersections(
-            ids_finite_with_reranking, groundtruth_set, k_nn);
-        std::cout << "  intersections: " << intersections_finite_with_reranking
-                  << std::endl;
-        CHECK(ids_finite_with_reranking.num_vectors() == ids.num_vectors());
-        CHECK(
-            intersections_finite_with_reranking ==
-            intersections_with_reranking);
         CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
         CHECK(are_equal(
             distances_finite_with_reranking, distances_with_reranking));

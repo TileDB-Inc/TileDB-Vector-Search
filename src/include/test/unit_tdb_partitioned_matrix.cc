@@ -282,7 +282,7 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
         write_matrix(ctx, partitioned_matrix, partitioned_vectors_uri);
         write_vector(ctx, partitioned_matrix.ids(), ids_uri);
 
-        // We have num_parts partitions. Create combinations of them. i.e.
+        // We have num_parts partitions. Create combinations of them. i.e. for
         // num_parts = 3: [0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2].
         auto relevant_parts_combinations =
             generateSubsets<part_index_type>(num_parts);
@@ -538,9 +538,7 @@ TEST_CASE("single vector and single partition", "[tdb_partitioned_matrix]") {
   CHECK_FALSE(matrix.load());
 }
 
-TEST_CASE(
-    "infinite and finite upper_bound's are equivalent",
-    "[tdb_partitioned_matrix]") {
+TEST_CASE("check missing parts effect", "[tdb_partitioned_matrix]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 
@@ -584,7 +582,6 @@ TEST_CASE(
   {
     std::vector<part_index_type> relevant_parts(num_parts);
     std::iota(relevant_parts.begin(), relevant_parts.end(), 0);
-    debug_vector(relevant_parts, "relevant_parts");
     auto tdb_partitioned_matrix =
         tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
             ctx,
@@ -594,10 +591,10 @@ TEST_CASE(
             relevant_parts,
             0);
     tdb_partitioned_matrix.load();
-    tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
-        "tdb_partitioned_matrix");
+    CHECK(tdb_partitioned_matrix.num_vectors() == num_vectors);
+    CHECK(tdb_partitioned_matrix.total_num_vectors() == num_vectors);
+    CHECK(tdb_partitioned_matrix.num_partitions() == num_vectors);
   }
-  std::cout << "----------------------------------------" << std::endl;
 
   // Missing a few parts.
   {
@@ -608,7 +605,6 @@ TEST_CASE(
       }
       relevant_parts.push_back(i);
     }
-    debug_vector(relevant_parts, "relevant_parts");
     auto tdb_partitioned_matrix =
         tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
             ctx,
@@ -618,7 +614,9 @@ TEST_CASE(
             relevant_parts,
             0);
     tdb_partitioned_matrix.load();
-    tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
-        "tdb_partitioned_matrix");
+    // We have one vector per partition, and we skip one partition.
+    CHECK(tdb_partitioned_matrix.num_vectors() == num_vectors - 1);
+    CHECK(tdb_partitioned_matrix.total_num_vectors() == num_vectors - 1);
+    CHECK(tdb_partitioned_matrix.num_partitions() == num_vectors - 1);
   }
 }

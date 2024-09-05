@@ -295,6 +295,9 @@ auto qv_query_heap_tiled(
     Distance distance = Distance{}) {
   load(db);
 
+  // debug_matrix(db);
+  // debug_matrix(query);
+
   scoped_timer _{tdb_func__};
 
   // using feature_type = typename

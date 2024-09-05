@@ -58,7 +58,6 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
  public:
   using ids_type = IdsType;
   using size_type = typename Base::size_type;
-  using indices_type = typename Base::index_type;
 
  protected:
   size_type num_ids_{0};

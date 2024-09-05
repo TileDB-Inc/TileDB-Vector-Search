@@ -41,7 +41,7 @@
 #include "tdb_defs.h"
 
 /**
- * Derived from `tdbBlockedMatrix`, which we have derive from `Matrix`.
+ * Derived from `Matrix`.
  * Initialized in construction by filling from the TileDB vectors array.
  */
 template <class T, class LayoutPolicy = stdx::layout_right, class I = size_t>
@@ -150,7 +150,6 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     Base::operator=(Base{std::move(data), dimensions, column_capacity_});
   }
 
-  // @todo Allow specification of how many columns to advance by
   bool load() {
     scoped_timer _{"tdb_matrix_multi_range@load"};
 

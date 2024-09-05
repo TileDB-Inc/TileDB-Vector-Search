@@ -1,11 +1,11 @@
 /**
- * @file   unit_tdb_matrix.cc
+ * @file unit_tdb_matrix_multi_range.cc
  *
  * @section LICENSE
  *
  * The MIT License
  *
- * @copyright Copyright (c) 2023 TileDB, Inc.
+ * @copyright Copyright (c) 2024 TileDB, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@
 
 TEMPLATE_TEST_CASE(
     "constructors",
-    "[tdb_matrix_multi_rannge]",
+    "[tdb_matrix_multi_range]",
     float,
     double,
     int,
@@ -91,7 +91,7 @@ TEMPLATE_TEST_CASE(
 }
 
 TEMPLATE_TEST_CASE(
-    "assign to matrix", "[tdb_matrix_multi_rannge]", float, uint8_t) {
+    "assign to matrix", "[tdb_matrix_multi_range]", float, uint8_t) {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -181,7 +181,7 @@ TEMPLATE_TEST_CASE(
   }
 }
 
-TEST_CASE("limit column_indices", "[tdb_matrix_multi_rannge]") {
+TEST_CASE("limit column_indices", "[tdb_matrix_multi_range]") {
   tiledb::Context ctx;
   int offset = 13;
 
@@ -218,7 +218,7 @@ TEST_CASE("limit column_indices", "[tdb_matrix_multi_rannge]") {
   }
 }
 
-TEST_CASE("empty matrix", "[tdb_matrix_multi_rannge]") {
+TEST_CASE("empty matrix", "[tdb_matrix_multi_range]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
@@ -285,7 +285,7 @@ TEST_CASE("empty matrix", "[tdb_matrix_multi_rannge]") {
   }
 }
 
-TEST_CASE("time travel", "[tdb_matrix_multi_rannge]") {
+TEST_CASE("time travel", "[tdb_matrix_multi_range]") {
   tiledb::Context ctx;
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
