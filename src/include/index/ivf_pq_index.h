@@ -1221,7 +1221,7 @@ class ivf_pq_index {
                 std::span<float>,
                 decltype(pq_storage_type{}[0])>());
 
-    return re_rank(
+    return rerank(
         std::move(initial_distances),
         std::move(initial_ids),
         std::move(initial_indices),
@@ -1293,7 +1293,7 @@ class ivf_pq_index {
             make_pq_distance_query_to_pq_centroid_distance_tables<
                 std::span<float>,
                 decltype(pq_storage_type{}[0])>());
-    return re_rank(
+    return rerank(
         std::move(initial_distances),
         std::move(initial_ids),
         std::move(initial_indices),
@@ -1302,7 +1302,7 @@ class ivf_pq_index {
         k_nn);
   }
 
-  auto re_rank(
+  auto rerank(
       ColMajorMatrix<float>&& initial_distances,
       ColMajorMatrix<id_type>&& initial_ids,
       ColMajorMatrix<size_t>&& initial_indices,
@@ -1314,11 +1314,6 @@ class ivf_pq_index {
           std::move(initial_distances), std::move(initial_ids));
     }
 
-    if (::num_vectors(feature_vectors_) == 0 && !group_) {
-      throw std::runtime_error(
-          "No feature vectors available and index was not opened by URI");
-    }
-
     auto get_vector_id = [&](size_t query_index,
                              size_t nn_index) -> std::tuple<bool, size_t> {
       auto valid = initial_ids[query_index][nn_index] !=
@@ -1326,7 +1321,7 @@ class ivf_pq_index {
       return {valid, valid ? initial_ids[query_index][nn_index] : 0};
     };
 
-    if (::num_vectors(feature_vectors_) == 0) {
+    if (::num_vectors(feature_vectors_) == 0 && group_) {
       std::unordered_map<id_type, size_t> id_to_vector_index;
       std::vector<uint64_t> vector_indices;
       for (size_t i = 0; i < ::num_vectors(initial_ids); ++i) {
@@ -1354,7 +1349,7 @@ class ivf_pq_index {
                                   size_t nn_index) -> size_t {
         return id_to_vector_index[initial_ids[query_index][nn_index]];
       };
-      return re_rank_query(
+      return rerank_query(
           feature_vectors,
           query_vectors,
           get_vector_index,
@@ -1366,7 +1361,7 @@ class ivf_pq_index {
     auto get_vector_index = [&](size_t query_index, size_t nn_index) -> size_t {
       return initial_indices[query_index][nn_index];
     };
-    return re_rank_query<decltype(feature_vectors_), decltype(query_vectors)>(
+    return rerank_query<decltype(feature_vectors_), decltype(query_vectors)>(
         feature_vectors_,
         query_vectors,
         get_vector_index,
@@ -1376,7 +1371,7 @@ class ivf_pq_index {
   }
 
   template <class FeatureVectors, class QueryVectors>
-  auto re_rank_query(
+  auto rerank_query(
       const FeatureVectors& feature_vectors,
       const QueryVectors& query_vectors,
       std::function<size_t(size_t, size_t)> get_vector_index,
@@ -1408,7 +1403,7 @@ class ivf_pq_index {
               query_vectors[i], feature_vectors[vector_index]);
         } else {
           throw std::runtime_error(
-              "[ivf_pq_index@re_rank_query] Invalid distance metric: " +
+              "[ivf_pq_index@rerank_query] Invalid distance metric: " +
               to_string(distance_metric_));
         }
         min_scores[i].insert(distance, id);

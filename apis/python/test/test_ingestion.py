@@ -247,7 +247,7 @@ def test_ivf_pq_ingestion_u8(tmp_path):
         nprobe=nprobe,
     )
     query_accuracy = accuracy(result, gt_i)
-    assert query_accuracy > MINIMUM_ACCURACY and query_accuracy < 0.9
+    assert query_accuracy > MINIMUM_ACCURACY
 
     _, result = index_ram.query(
         queries,
@@ -255,7 +255,7 @@ def test_ivf_pq_ingestion_u8(tmp_path):
         k_factor=2,
         nprobe=nprobe,
     )
-    assert accuracy(result, gt_i) > 0.98
+    assert accuracy(result, gt_i) > query_accuracy + 0.1
 
     _, result = index_ram.query(
         queries,

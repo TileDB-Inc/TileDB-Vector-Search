@@ -186,6 +186,9 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     vfs.remove_dir(index_uri);
   }
 
+  auto queries = ColMajorMatrix<feature_type_type>{
+      {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
+
   {
     auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
@@ -204,6 +207,27 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
+
+    // Make sure we can query with k_factor > 1 on an empty index that is not
+    // loaded by URI.
+    size_t top_k = 1;
+    size_t nprobe = 1;
+    size_t upper_bound = 0;
+    float k_factor = 2.f;
+    auto&& [scores_vector_array, ids_vector_array] = index.query(
+        QueryType::InfiniteRAM,
+        FeatureVectorArray(queries),
+        top_k,
+        nprobe,
+        upper_bound,
+        k_factor);
+    auto default_score = std::numeric_limits<float>::max();
+    auto default_id = std::numeric_limits<uint32_t>::max();
+    check_single_vector_equals(
+        scores_vector_array,
+        ids_vector_array,
+        {default_score, default_score, default_score, default_score},
+        {default_id, default_id, default_id, default_id});
   }
 
   {
@@ -224,8 +248,6 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{
-        {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
