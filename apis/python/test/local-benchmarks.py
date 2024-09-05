@@ -13,7 +13,7 @@ import time
 import urllib.request
 from datetime import datetime
 from enum import Enum
-
+import tiledb
 import matplotlib
 import matplotlib.pyplot as plt
 from common import accuracy
@@ -21,12 +21,19 @@ from common import get_groundtruth_ivec
 
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.index import Index
 from tiledb.vector_search.utils import load_fvecs
+
+class RemoteURIType(Enum):
+    LOCAL = 1
+    TILEDB = 2
+
+## Settings
+REMOTE_URI_TYPE = RemoteURIType.TILEDB
+USE_SIFT_SMALL = True
 
 # Use headless mode for matplotlib.
 matplotlib.use("Agg")
-
-USE_SIFT_SMALL = True
 
 SIFT_URI = (
     "ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz"
@@ -271,6 +278,30 @@ def download_and_extract(url, download_path, extract_path):
         logger.info("Finished extracting files.")
 
 
+def get_uri(tag):
+    index_name = f"index_{tag.replace('=', '_')}"
+    if REMOTE_URI_TYPE == RemoteURIType.LOCAL:
+        index_uri = os.path.join(TEMP_DIR, index_name)
+        logger.info(f"Local URI {index_uri}")
+        if os.path.exists(index_uri):
+            shutil.rmtree(index_uri)
+        return index_uri
+    elif REMOTE_URI_TYPE == RemoteURIType.TILEDB:
+        from common import create_cloud_uri
+        from common import setUpCloudToken
+        setUpCloudToken()
+        index_uri = create_cloud_uri(index_name, "local_benchmarks")
+        logger.info(f"TileDB URI {index_uri}")
+        Index.delete_index(uri=index_uri, config=tiledb.cloud.Config())
+        return index_uri
+    else:
+        raise ValueError(f"Invalid REMOTE_URI_TYPE {REMOTE_URI_TYPE}")
+
+def cleanup_uri(index_uri):
+    if REMOTE_URI_TYPE == RemoteURIType.TILEDB:
+        from common import delete_uri
+        delete_uri(uri=index_uri, config=tiledb.cloud.Config())
+
 def benchmark_ivf_flat():
     index_type = "IVF_FLAT"
     timer = timer_manager.new_timer(index_type)
@@ -283,15 +314,14 @@ def benchmark_ivf_flat():
         tag = f"{index_type}_partitions={partitions}"
         logger.info(f"Running {tag}")
 
-        index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
-        if os.path.exists(index_uri):
-            shutil.rmtree(index_uri)
+        index_uri = get_uri(tag)
 
         timer.start(tag, TimerMode.INGESTION)
         index = ingest(
             index_type=index_type,
             index_uri=index_uri,
             source_uri=SIFT_BASE_PATH,
+            config=tiledb.cloud.Config().dict() if REMOTE_URI_TYPE is not None else None,
             partitions=partitions,
             training_sampling_policy=TrainingSamplingPolicy.RANDOM,
         )
@@ -305,6 +335,8 @@ def benchmark_ivf_flat():
             logger.info(
                 f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
             )
+
+        cleanup_uri(index_uri)
 
     timer.save_and_print_results()
 
@@ -322,15 +354,14 @@ def benchmark_vamana():
             tag = f"{index_type}_l_build={l_build}_r_max_degree={r_max_degree}"
             logger.info(f"Running {tag}")
 
-            index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
-            if os.path.exists(index_uri):
-                shutil.rmtree(index_uri)
+            index_uri = get_uri(tag)
 
             timer.start(tag, TimerMode.INGESTION)
             index = ingest(
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=SIFT_BASE_PATH,
+                config=tiledb.cloud.Config().dict() if REMOTE_URI_TYPE is not None else None,
                 l_build=l_build,
                 r_max_degree=r_max_degree,
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
@@ -345,6 +376,8 @@ def benchmark_vamana():
                 logger.info(
                     f"Finished {tag} with l_search={l_search}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
                 )
+            
+            cleanup_uri(index_uri)
 
     timer.save_and_print_results()
 
@@ -363,15 +396,14 @@ def benchmark_ivf_pq():
             tag = f"{index_type}_partitions={partitions}_num_subspaces={num_subspaces}"
             logger.info(f"Running {tag}")
 
-            index_uri = os.path.join(TEMP_DIR, f"index_{index_type}")
-            if os.path.exists(index_uri):
-                shutil.rmtree(index_uri)
+            index_uri = get_uri(tag)
 
             timer.start(tag, TimerMode.INGESTION)
             index = ingest(
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=SIFT_BASE_PATH,
+                config=tiledb.cloud.Config().dict() if REMOTE_URI_TYPE is not None else None,
                 partitions=partitions,
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
                 num_subspaces=num_subspaces,
@@ -386,11 +418,15 @@ def benchmark_ivf_pq():
                 logger.info(
                     f"Finished {tag} with nprobe={nprobe}. Ingestion: {ingest_time:.4f}s. Query: {query_time:.4f}s. Accuracy: {acc:.4f}."
                 )
+            
+            cleanup_uri(index_uri)
 
     timer.save_and_print_results()
 
 
 def main():
+    logger.info(f"Saving results to {RESULTS_DIR}")
+
     download_and_extract(SIFT_URI, SIFT_DOWNLOAD_PATH, TEMP_DIR)
 
     benchmark_ivf_flat()
@@ -398,6 +434,5 @@ def main():
     benchmark_ivf_pq()
 
     timer_manager.save_charts()
-
 
 main()
