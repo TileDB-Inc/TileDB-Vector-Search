@@ -942,22 +942,15 @@ auto apply_query(
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
         auto score_11 = distance(q_vec_1, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(
-            score_00,
-            partitioned_ids[kp + 0],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j0].insert(
-            score_01,
-            partitioned_ids[kp + 1],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
-        min_scores[j1].insert(
-            score_10,
-            partitioned_ids[kp + 0],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j1].insert(
-            score_11,
-            partitioned_ids[kp + 1],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
+        auto index_0 =
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0);
+        auto index_1 =
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 1);
+
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], index_0);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], index_1);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], index_0);
+        min_scores[j1].insert(score_11, partitioned_ids[kp + 1], index_1);
       }
 
       /*
@@ -967,14 +960,11 @@ auto apply_query(
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_10 = distance(q_vec_1, partitioned_vectors[kp + 0]);
 
-        min_scores[j0].insert(
-            score_00,
-            partitioned_ids[kp + 0],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j1].insert(
-            score_10,
-            partitioned_ids[kp + 0],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+        auto index_0 =
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0);
+
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], index_0);
+        min_scores[j1].insert(score_10, partitioned_ids[kp + 0], index_0);
       }
     }
 
@@ -989,21 +979,21 @@ auto apply_query(
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
         auto score_01 = distance(q_vec_0, partitioned_vectors[kp + 1]);
 
-        min_scores[j0].insert(
-            score_00,
-            partitioned_ids[kp + 0],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
-        min_scores[j0].insert(
-            score_01,
-            partitioned_ids[kp + 1],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 1));
+        auto index_0 =
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0);
+        auto index_1 =
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 1);
+
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], index_0);
+        min_scores[j0].insert(score_01, partitioned_ids[kp + 1], index_1);
       }
       for (size_t kp = kstop; kp < stop; ++kp) {
         auto score_00 = distance(q_vec_0, partitioned_vectors[kp + 0]);
-        min_scores[j0].insert(
-            score_00,
-            partitioned_ids[kp + 0],
-            partitioned_vectors.local_index_to_global(indices_offset + kp + 0));
+
+        auto index_0 =
+            partitioned_vectors.local_index_to_global(indices_offset + kp + 0);
+
+        min_scores[j0].insert(score_00, partitioned_ids[kp + 0], index_0);
       }
     }
   }

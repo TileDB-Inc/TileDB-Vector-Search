@@ -405,7 +405,6 @@ TEST_CASE(
     auto&& [scores, ids] =
         index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-    std::cout << "InfiniteRAM intersections: " << intersections << std::endl;
     CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) > 0.7);
   }
 

@@ -633,13 +633,10 @@ TEST_CASE("indices", "[ivf qv]") {
     }
     relevant_parts.push_back(i);
   }
-  debug_vector(relevant_parts, "relevant_parts", 1000);
   auto tdb_partitioned_matrix =
       tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
           ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
   tdb_partitioned_matrix.load();
-  tdb_partitioned_matrix.debug_tdb_partitioned_matrix(
-      "tdb_partitioned_matrix", 1000);
 
   std::vector<std::vector<feature_type>> queries_vector;
   for (size_t i = 0; i < num_queries; ++i) {
@@ -660,7 +657,6 @@ TEST_CASE("indices", "[ivf qv]") {
     }
     active_queries.push_back(queries_for_part);
   }
-  debug_vector_of_vectors(active_queries, "active_queries", 1000);
   size_t k_nn = 3;
   size_t first_part = 0;
   size_t last_part = num_parts - 1;

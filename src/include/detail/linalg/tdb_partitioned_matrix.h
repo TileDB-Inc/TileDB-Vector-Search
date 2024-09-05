@@ -617,31 +617,12 @@ class tdbPartitionedMatrix
 
     // First we need to find which part we are in. This is local to the parts we
     // have loaded.
-    size_t local_part = 0;
-    for (size_t j = 0; j < squashed_indices_.size(); ++j) {
-      local_part = j;
-      if (i < squashed_indices_[j]) {
-        break;
-      }
-    }
+    auto it =
+        std::upper_bound(squashed_indices_.begin(), squashed_indices_.end(), i);
+    size_t local_part = std::distance(squashed_indices_.begin(), it);
+    // Adjust for the case where the iterator points beyond the actual part we
+    // are in.
     local_part = local_part == 0 ? local_part : local_part - 1;
-
-    {
-      // First we need to find which part we are in. This is local to the parts
-      // we
-      // have loaded.
-      auto it = std::lower_bound(
-          squashed_indices_.begin(), squashed_indices_.end(), i);
-      // std::cout << "it: " << it == squashed_indices_.end() << std::endl;
-        // std::cout << "it: " << (it == squashed_indices_.end() ? "end" : std::to_string(*it)) << std::endl;
-      size_t new_local_part = std::distance(squashed_indices_.begin(), it);
-      std::cout << "local_part: " << local_part << " new_local_part: " << new_local_part << std::endl;
-      // // Adjust for the case where the iterator points beyond the actual part we
-      // // are in.
-      // new_local_part =
-      //     new_local_part == 0 ? new_local_part : new_local_part - 1;
-      // std::cout << "local_part: " << local_part << std::endl;
-    }
 
     // Now see how many vectors into this local part we are.
     size_t difference = i - squashed_indices_[local_part];
