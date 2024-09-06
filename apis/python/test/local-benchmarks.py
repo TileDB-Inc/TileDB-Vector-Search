@@ -7,7 +7,6 @@
 
 import logging
 import os
-import shutil
 import tarfile
 import time
 import urllib.request
@@ -171,7 +170,7 @@ class Timer:
             summary_str += "\n"
         return summary_str
 
-    def add_data_to_ingestion_time_vs_average_query_accuracy(self):
+    def add_data_to_ingestion_time_vs_average_query_accuracy(self, marker="o"):
         summary = self._summarize_data()
 
         for tag, data in summary.items():
@@ -184,9 +183,9 @@ class Timer:
                     (data["ingestion"]["times"][i], average_accuracy)
                 )
             x, y = zip(*ingestion_times)
-            plt.scatter(y, x, marker="o", label=tag)
+            plt.scatter(y, x, marker=marker, label=tag)
 
-    def add_data_to_query_time_vs_accuracy(self):
+    def add_data_to_query_time_vs_accuracy(self, marker="o"):
         summary = self._summarize_data()
 
         for tag, data in summary.items():
@@ -196,7 +195,7 @@ class Timer:
                     (data["query"]["times"][i], data["query"]["accuracies"][i])
                 )
             x, y = zip(*query_times)
-            plt.plot(y, x, marker="o", label=tag)
+            plt.plot(y, x, marker=marker, label=tag)
 
     def save_charts(self):
         # Plot ingestion.
@@ -240,13 +239,17 @@ class TimerManager:
         return timer
 
     def save_charts(self):
+        markers = ["o", "^", "D", "*", "P", "s", "2"]
+
         # Plot ingestion.
         plt.figure(figsize=(20, 12))
         plt.xlabel("Average Query Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title("Ingestion Time vs Average Query Accuracy")
-        for timer in self.timers:
-            timer.add_data_to_ingestion_time_vs_average_query_accuracy()
+        for idx, timer in self.timers:
+            timer.add_data_to_ingestion_time_vs_average_query_accuracy(
+                markers[idx % len(markers)]
+            )
         plt.legend()
         plt.savefig(os.path.join(RESULTS_DIR, "ingestion_time_vs_accuracy.png"))
         plt.close()
@@ -256,8 +259,8 @@ class TimerManager:
         plt.xlabel("Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title("Query Time vs Accuracy")
-        for timer in self.timers:
-            timer.add_data_to_query_time_vs_accuracy()
+        for idx, timer in self.timers:
+            timer.add_data_to_query_time_vs_accuracy(markers[idx % len(markers)])
         plt.legend()
         plt.savefig(os.path.join(RESULTS_DIR, "query_time_vs_accuracy.png"))
         plt.close()
@@ -281,7 +284,9 @@ def download_and_extract(url, download_path, extract_path):
         tar.extractall(path=extract_path)
         logger.info("Finished extracting files.")
 
+
 config = {}
+
 
 def get_uri(tag):
     index_name = f"index_{tag.replace('=', '_')}"
@@ -291,16 +296,18 @@ def get_uri(tag):
     elif REMOTE_URI_TYPE == RemoteURIType.TILEDB:
         from common import create_cloud_uri
         from common import setUpCloudToken
+
         setUpCloudToken()
         index_uri = create_cloud_uri(index_name, "local_benchmarks")
-        
+
         config = tiledb.cloud.Config()
     elif REMOTE_URI_TYPE == RemoteURIType.AWS:
         from common import create_cloud_uri
         from common import setUpCloudToken
+
         setUpCloudToken()
         index_uri = create_cloud_uri(index_name, "local_benchmarks", True)
-        
+
         config = {
             "vfs.s3.aws_access_key_id": os.environ["AWS_ACCESS_KEY_ID"],
             "vfs.s3.aws_secret_access_key": os.environ["AWS_SECRET_ACCESS_KEY"],
