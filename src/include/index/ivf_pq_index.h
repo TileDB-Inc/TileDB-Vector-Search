@@ -188,6 +188,8 @@ class ivf_pq_index {
   /****************************************************************************
    * Index group information
    ****************************************************************************/
+  IndexLoadStrategy index_load_strategy_;
+  size_t upper_bound_;
   TemporalPolicy temporal_policy_;
   std::unique_ptr<ivf_pq_group<ivf_pq_index>> group_;
 
@@ -349,10 +351,17 @@ class ivf_pq_index {
   ivf_pq_index(
       const tiledb::Context& ctx,
       const std::string& uri,
-      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
-      : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
+      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::NORMAL,
+      size_t upper_bound = 0,
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt) : 
+      index_load_strategy_{index_load_strategy}
+      , upper_bound_{upper_bound}
+      , temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
+    if (index_load_strategy_ == IndexLoadStrategy::PRELOAD_FEATURE_VECTORS && upper_bound != 0) {
+      throw std::runtime_error("Can only preload feature vectors with an upper bound 0. It was " + std::to_string(upper_bound));
+    }
     /**
      * Read the centroids. How the partitioned_pq_vectors_ are read in will be
      * determined by the type of query we are doing. But they will be read
@@ -366,6 +375,10 @@ class ivf_pq_index {
     convergence_tolerance_ = group_->get_convergence_tolerance();
     reassign_ratio_ = group_->get_reassign_ratio();
     distance_metric_ = group_->get_distance_metric();
+
+    if (index_load_strategy_ == IndexLoadStrategy::UNLOADED) {
+      return;
+    }
 
     flat_ivf_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(
@@ -384,6 +397,44 @@ class ivf_pq_index {
             std::nullopt,
             num_clusters_,
             temporal_policy_);
+
+    if (index_load_strategy_ == IndexLoadStrategy::PRELOAD_FEATURE_VECTORS || upper_bound == 0) {
+      // Read the the complete index arrays into ("infinite") memory. This will read the centroids, indices, partitioned_ids, and and the complete set of partitioned_pq_vectors, along with metadata from a group_uri.
+      // Load all partitions for infinite query
+      // Note that the constructor will move the infinite_parts vector
+      auto infinite_parts =
+          std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
+      std::iota(begin(infinite_parts), end(infinite_parts), 0);
+      partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
+          group_->cached_ctx(),
+          group_->pq_ivf_vectors_uri(),
+          group_->pq_ivf_indices_uri(),
+          group_->get_num_partitions() + 1,
+          group_->pq_ivf_ids_uri(),
+          infinite_parts,
+          0,
+          temporal_policy_);
+
+      partitioned_pq_vectors_->load();
+
+      if (::num_vectors(*partitioned_pq_vectors_) !=
+          size(partitioned_pq_vectors_->ids())) {
+        throw std::runtime_error(
+            "[ivf_flat_index@read_index_infinite] "
+            "::num_vectors(*partitioned_pq_vectors_) != "
+            "size(partitioned_pq_vectors_->ids())");
+      }
+      if (size(partitioned_pq_vectors_->indices()) !=
+          ::num_vectors(flat_ivf_centroids_) + 1) {
+        throw std::runtime_error(
+            "[ivf_flat_index@read_index_infinite] "
+            "size(partitioned_pq_vectors_->indices()) != "
+            "::num_vectors(flat_ivf_centroids_) + 1");
+      }
+    }
+    if (index_load_strategy_ == IndexLoadStrategy::PRELOAD_FEATURE_VECTORS) {
+      // TODO: Load the feature vectors
+    }
   }
 
   /****************************************************************************
@@ -826,63 +877,6 @@ class ivf_pq_index {
     return pq_vectors;
   }
 
-  /*****************************************************************************
-   * Methods for reading and reading the index from a group.
-   *****************************************************************************/
-
-  /**
-   * @brief Read the the complete index arrays into ("infinite") memory.
-   * This will read the centroids, indices, partitioned_ids, and
-   * and the complete set of partitioned_pq_vectors, along with metadata
-   * from a group_uri.
-   */
-  auto read_index_infinite() {
-    if (!group_) {
-      if (!partitioned_pq_vectors_) {
-        throw std::runtime_error(
-            "[ivf_pq_index@read_index_infinite] Neither partitioned_pq_vectors "
-            "nor the group have been initialized");
-      }
-      // If we have created an empty index and then try to query it,
-      // partitioned_pq_vectors_ will be empty so we will try to read here, but
-      // we won't have a group_. Just return and leave partitioned_pq_vectors_
-      // empty.
-      return;
-    }
-
-    // Load all partitions for infinite query
-    // Note that the constructor will move the infinite_parts vector
-    auto infinite_parts =
-        std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
-    std::iota(begin(infinite_parts), end(infinite_parts), 0);
-    partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
-        group_->cached_ctx(),
-        group_->pq_ivf_vectors_uri(),
-        group_->pq_ivf_indices_uri(),
-        group_->get_num_partitions() + 1,
-        group_->pq_ivf_ids_uri(),
-        infinite_parts,
-        0,
-        temporal_policy_);
-
-    partitioned_pq_vectors_->load();
-
-    if (::num_vectors(*partitioned_pq_vectors_) !=
-        size(partitioned_pq_vectors_->ids())) {
-      throw std::runtime_error(
-          "[ivf_flat_index@read_index_infinite] "
-          "::num_vectors(*partitioned_pq_vectors_) != "
-          "size(partitioned_pq_vectors_->ids())");
-    }
-    if (size(partitioned_pq_vectors_->indices()) !=
-        ::num_vectors(flat_ivf_centroids_) + 1) {
-      throw std::runtime_error(
-          "[ivf_flat_index@read_index_infinite] "
-          "size(partitioned_pq_vectors_->indices()) != "
-          "::num_vectors(flat_ivf_centroids_) + 1");
-    }
-  }
-
   /**
    * @brief Open the index from the arrays contained in the group_uri.
    * The "finite" queries only load as much data (ids and vectors) as are
@@ -1173,11 +1167,11 @@ class ivf_pq_index {
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
-    if (!partitioned_pq_vectors_ ||
-        partitioned_pq_vectors_->num_vectors() == 0 ||
-        partitioned_pq_vectors_->num_vectors() !=
-            partitioned_pq_vectors_->total_num_vectors()) {
-      read_index_infinite();
+    // if (!partitioned_pq_vectors_ || partitioned_pq_vectors_->num_vectors() == 0 || partitioned_pq_vectors_->num_vectors() != partitioned_pq_vectors_->total_num_vectors()) {
+    //   read_index_infinite();
+    // }
+    if (!partitioned_pq_vectors_ || partitioned_pq_vectors_->num_vectors() == 0) {
+      return;
     }
 
     auto&& [active_partitions, active_queries] =

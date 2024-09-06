@@ -37,6 +37,12 @@ class IVFPQIndex(index.Index):
         If not provided, all index data are loaded in main memory.
         Otherwise, no index data are loaded in main memory and this memory budget is
         applied during queries.
+    preload_k_factor_vectors: bool
+        When using `k_factor` in a query, we first query for `k_factor * k` pq-encoded vectors,
+        and then do a re-ranking step using the original input vectors for the top `k` vectors.
+        If `True`, we will load all the input vectors in main memory. This can only be used with 
+        `memory_budget` set to `-1`, and is useful when the input vectors are small enough to fit in 
+        memory and you want to speed up re-ranking.
     open_for_remote_query_execution: bool
         If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
         If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
@@ -48,14 +54,25 @@ class IVFPQIndex(index.Index):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         memory_budget: int = -1,
+        preload_k_factor_vectors: bool = False,
         open_for_remote_query_execution: bool = False,
         **kwargs,
     ):
+        if preload_k_factor_vectors and memory_budget != -1:
+            raise ValueError(
+                "preload_k_factor_vectors can only be used with memory_budget set to -1."
+            )
+        if preload_k_factor_vectors and open_for_remote_query_execution:
+            raise ValueError(
+                "preload_k_factor_vectors can only be used with open_for_remote_query_execution set to False."
+            )
+
         self.index_open_kwargs = {
             "uri": uri,
             "config": config,
             "timestamp": timestamp,
             "memory_budget": memory_budget,
+            "preload_k_factor_vectors": preload_k_factor_vectors,
         }
         self.index_open_kwargs.update(kwargs)
         self.index_type = INDEX_TYPE
@@ -65,8 +82,14 @@ class IVFPQIndex(index.Index):
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
         )
-        # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
-        self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))
+        strategy = IndexLoadStrategy.PRELOAD_VECTORS_FOR_RERANKING if preload_k_factor_vectors else IndexLoadStrategy.ONLY_METADATA if open_for_remote_query_execution else IndexLoadStrategy.DEFAULT
+        self.index = vspy.IndexIVFPQ(
+            self.ctx, 
+            uri,
+            strategy,
+            0 if memory_budget == -1 else memory_budget,
+            to_temporal_policy(timestamp)
+        )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
         ].uri
@@ -117,16 +140,7 @@ class IVFPQIndex(index.Index):
         if not queries.flags.f_contiguous:
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
-
-        if self.memory_budget == -1:
-            distances, ids = self.index.query_infinite_ram(
-                queries_feature_vector_array, k, nprobe
-            )
-        else:
-            distances, ids = self.index.query_finite_ram(
-                queries_feature_vector_array, k, nprobe, self.memory_budget
-            )
-
+        distances, ids = self.index.query(queries_feature_vector_array, k, nprobe)
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
 

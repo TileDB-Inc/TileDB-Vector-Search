@@ -1096,6 +1096,12 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       .value("L2", DistanceMetric::L2)
       .export_values();
 
+  py::enum_<IndexLoadStrategy>(m, "IndexLoadStrategy")
+      .value("UNLOADED", IndexLoadStrategy::UNLOADED)
+      .value("NORMAL", IndexLoadStrategy::NORMAL)
+      .value("PRELOAD_FEATURE_VECTORS", IndexLoadStrategy::PRELOAD_FEATURE_VECTORS)
+      .export_values();
+
   /* === Module inits === */
 
   init_kmeans(m);
