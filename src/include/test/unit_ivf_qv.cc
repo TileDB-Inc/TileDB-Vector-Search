@@ -84,7 +84,7 @@ TEST_CASE("infinite all or none", "[ivf qv]") {
         ctx, sift_parts_uri, sift_index_uri, sift_ids_uri, infinite_parts, 0);
     inf_mat.load();
 
-    auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+    auto&& [D00, I00, _] = detail::ivf::query_infinite_ram(
         inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
     auto check_size = [&D00 = D00, &I00 = I00](const auto& D, auto& I) {
@@ -186,7 +186,7 @@ TEST_CASE("finite all or none", "[ivf qv]") {
         ctx, sift_parts_uri, sift_index_uri, sift_ids_uri, infinite_parts, 0);
     inf_mat.load();
 
-    auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+    auto&& [D00, I00, _] = detail::ivf::query_infinite_ram(
         inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
     auto check_size = [&D00 = D00, &I00 = I00](const auto& D, auto& I) {
@@ -286,7 +286,7 @@ TEST_CASE("finite all or none", "[ivf qv]") {
           active_partitions,
           upper_bound);
 
-      auto&& [D04, I04] = detail::ivf::query_finite_ram(
+      auto&& [D04, I04, _] = detail::ivf::query_finite_ram(
           fin_mat, query, active_queries, k_nn, upper_bound, nthreads);
 
       check_size(D04, I04);
@@ -448,7 +448,7 @@ TEST_CASE("finite all or none", "[ivf qv]") {
 
       counting_l2_distance.reset();
       counting_l2_distance.num_comps_ = 99;
-      auto&& [D04, I04] = detail::ivf::query_finite_ram(
+      auto&& [D04, I04, _] = detail::ivf::query_finite_ram(
           fin_mat,
           query,
           active_queries,
@@ -503,7 +503,7 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
       ctx, sift_parts_uri, sift_index_uri, sift_ids_uri, infinite_parts, 0);
   inf_mat.load();
 
-  auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+  auto&& [D00, I00, _] = detail::ivf::query_infinite_ram(
       inf_mat, active_partitions, query, active_queries, k_nn, nthreads);
 
   [[maybe_unused]] auto check_size = [&D00 = D00, &I00 = I00](
@@ -574,5 +574,144 @@ TEST_CASE("ivf_qv: dist_qv", "[ivf qv]") {
     CHECK(std::labs(intersections00 - intersections05) < 12);
 
     CHECK(std::equal(D00.data(), D00.data() + D00.size(), D05.data()));
+  }
+}
+
+TEST_CASE("indices", "[ivf qv]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+
+  using feature_type = float;
+  using id_type = uint64_t;
+  using part_index_type = uint64_t;
+
+  std::string partitioned_vectors_uri =
+      (std::filesystem::temp_directory_path() / "partitioned_vectors").string();
+  std::string ids_uri =
+      (std::filesystem::temp_directory_path() / "ids").string();
+
+  // Create the partitioned_matrix.
+  int num_vectors = GENERATE(37, 99, 377);
+  uint64_t dimensions = 3;
+  int num_parts = num_vectors;
+  int num_queries = GENERATE(1, 9, 38);
+  std::vector<part_index_type> indices;
+  {
+    auto training_set = ColMajorMatrix<feature_type>(dimensions, num_vectors);
+    for (size_t i = 0; i < dimensions; ++i) {
+      for (size_t j = 0; j < num_vectors; ++j) {
+        training_set(i, j) = j;
+      }
+    }
+
+    std::vector<id_type> part_labels(num_vectors, 0);
+    for (size_t i = 0; i < num_vectors; ++i) {
+      part_labels[i] = i % num_parts;
+    }
+
+    auto partitioned_matrix =
+        ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            training_set, part_labels, num_parts);
+    if (vfs.is_dir(partitioned_vectors_uri)) {
+      vfs.remove_dir(partitioned_vectors_uri);
+    }
+    if (vfs.is_dir(ids_uri)) {
+      vfs.remove_dir(ids_uri);
+    }
+    write_matrix(ctx, partitioned_matrix, partitioned_vectors_uri);
+    write_vector(ctx, partitioned_matrix.ids(), ids_uri);
+
+    indices = partitioned_matrix.indices();
+  }
+
+  // Load the partitioned_matrix but skip some parts.
+  size_t part_to_skip = GENERATE(0, 2, 5, 10);
+  std::vector<part_index_type> relevant_parts;
+  for (size_t i = 0; i < num_parts; ++i) {
+    if (i == part_to_skip) {
+      continue;
+    }
+    relevant_parts.push_back(i);
+  }
+  auto tdb_partitioned_matrix =
+      tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+          ctx, partitioned_vectors_uri, indices, ids_uri, relevant_parts, 0);
+  tdb_partitioned_matrix.load();
+
+  std::vector<std::vector<feature_type>> queries_vector;
+  for (size_t i = 0; i < num_queries; ++i) {
+    std::vector<feature_type> query_vector;
+    for (size_t j = 0; j < dimensions; ++j) {
+      query_vector.push_back(i);
+    }
+    queries_vector.push_back(query_vector);
+  }
+  auto queries = ColMajorMatrix<feature_type>{queries_vector};
+  CHECK(::num_vectors(queries) == num_queries);
+
+  std::vector<std::vector<part_index_type>> active_queries;
+  for (size_t i = 0; i < relevant_parts.size(); ++i) {
+    std::vector<part_index_type> queries_for_part;
+    for (size_t j = 0; j < ::num_vectors(queries); ++j) {
+      queries_for_part.push_back(j);
+    }
+    active_queries.push_back(queries_for_part);
+  }
+  size_t k_nn = 3;
+  size_t first_part = 0;
+  size_t last_part = num_parts - 1;
+  size_t part_offset = 0;
+  size_t indices_offset = 0;
+
+  auto min_heap_per_query = detail::ivf::apply_query(
+      tdb_partitioned_matrix,
+      std::optional<std::vector<int>>{},
+      queries,
+      active_queries,
+      k_nn,
+      first_part,
+      last_part,
+      part_offset,
+      indices_offset);
+
+  const auto& ids = tdb_partitioned_matrix.ids();
+  std::set<id_type> ids_set;
+  for (size_t i = 0; i < ids.size(); ++i) {
+    ids_set.insert(ids[i]);
+  }
+
+  for (size_t i = 0; i < num_queries; ++i) {
+    // Note this sorting doesn't get done on each insertion for performance, but
+    // when testing we can explicitly call it.
+    min_heap_per_query[i].self_sort();
+
+    CHECK(min_heap_per_query[i].size() == k_nn);
+
+    auto distance = std::get<0>(min_heap_per_query[i][0]);
+    auto id = std::get<1>(min_heap_per_query[i][0]);
+    auto index = std::get<2>(min_heap_per_query[i][0]);
+    if (!ids_set.count(i)) {
+      // In this case, we did not load the vector that is exactly the same as
+      // our query vector. While we could still check the distance is not crazy,
+      // we don't care about case as much. Rather, this point of this test is to
+      // verify that we can get back exactly the same vector as a query vector
+      // with the correct id and index.
+      CHECK(distance < 5.f);
+      continue;
+    }
+
+    // We are looking at the first element of the min heap, i.e the smallest
+    // distance we found from this query vector to the tdb_partitioned_matrix.
+    // It should be 0 because it's the same vector against itself.
+    CHECK(distance == 0);
+    // First let's look at the id, which should be the same as the index of the
+    // query vector. This is just from how we set up the test: when we construct
+    // queries, we just use the index as the value.
+    CHECK(id == i);
+    // Now let's look at the index. The big thing to notice here is that unlike
+    // you may expect, this index is not relative to the current load. Instead
+    // it is global, i.e. index = 1 means that we are pointing at the vector at
+    // index 1 in partitioned_vectors_uri.
+    CHECK(index == i);
   }
 }

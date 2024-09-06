@@ -81,7 +81,7 @@ TEST_CASE("infinite all or none", "[ivf vq]") {
             k_nn,
             nthreads);
 
-    auto&& [D00, I00] =
+    auto&& [D00, I00, _] =
         detail::ivf::vq_query_infinite_ram<test_feature_type, test_ids_type>(
             ctx,
             sift_parts_uri,
@@ -92,7 +92,7 @@ TEST_CASE("infinite all or none", "[ivf vq]") {
             nprobe,
             k_nn,
             nthreads);
-    auto&& [D01, I01] =
+    auto&& [D01, I01, _] =
         detail::ivf::vq_query_infinite_ram_2<test_feature_type, test_ids_type>(
             ctx,
             sift_parts_uri,
@@ -150,7 +150,7 @@ TEST_CASE("finite all or none", "[ivf vq]") {
     std::cout << upper_bound << " " << nprobe << " " << num_queries << " "
               << k_nn << " " << nthreads << std::endl;
 
-    auto&& [D00, I00] =
+    auto&& [D00, I00, _] =
         detail::ivf::query_infinite_ram<test_feature_type, test_ids_type>(
             ctx,
             sift_parts_uri,
@@ -162,7 +162,7 @@ TEST_CASE("finite all or none", "[ivf vq]") {
             k_nn,
             nthreads);
 
-    auto&& [D01, I01] =
+    auto&& [D01, I01, _] =
         detail::ivf::vq_query_finite_ram<test_feature_type, test_ids_type>(
             ctx,
             sift_parts_uri,

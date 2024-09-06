@@ -245,9 +245,17 @@ def test_ivf_pq_ingestion_u8(tmp_path):
         queries,
         k=k,
         nprobe=nprobe,
-        use_nuv_implementation=True,
     )
-    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+    query_accuracy = accuracy(result, gt_i)
+    assert query_accuracy > MINIMUM_ACCURACY
+
+    _, result = index_ram.query(
+        queries,
+        k=k,
+        k_factor=2,
+        nprobe=nprobe,
+    )
+    assert accuracy(result, gt_i) > query_accuracy + 0.1
 
     _, result = index_ram.query(
         queries,

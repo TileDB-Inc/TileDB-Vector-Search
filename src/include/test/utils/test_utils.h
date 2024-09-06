@@ -198,6 +198,8 @@ void check_single_vector_equals(
     const FeatureVectorArray& ids_vector_array,
     const std::vector<float>& expected_scores,
     const std::vector<uint32_t>& expected_ids) {
+  CHECK(scores_vector_array.num_vectors() == ids_vector_array.num_vectors());
+  CHECK(scores_vector_array.num_ids() == ids_vector_array.num_ids());
   auto scores = std::span<float>(
       (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
   auto ids = std::span<uint32_t>(
@@ -214,6 +216,24 @@ void check_single_vector_equals(
     debug_vector(expected_ids, "expected_ids");
     CHECK(false);
   }
+}
+
+/*
+ * @brief Check the number of elements that are equal between the first element
+ * in the matrix and the vector.
+ */
+template <typename T>
+size_t check_single_vector_num_equal(
+    const ColMajorMatrix<T>& matrix, const std::vector<T>& vector) {
+  CHECK(::num_vectors(matrix) == 1);
+  auto matrix_as_vector = std::span<T>((T*)matrix.data(), matrix.size());
+  auto num_equal = 0;
+  for (size_t i = 0; i < matrix_as_vector.size(); i++) {
+    if (matrix_as_vector[i] == vector[i]) {
+      num_equal++;
+    }
+  }
+  return num_equal;
 }
 
 #endif  // TILEDB_TEST_UTILS_H

@@ -394,13 +394,17 @@ def setUpCloudToken():
     tiledb.cloud.login(token=token)
 
 
-def create_cloud_uri(name, folder_name=None):
+def create_cloud_uri(name, folder_name=None, aws_uri=False):
     namespace, storage_path, _ = groups._default_ns_path_cred()
     storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
+
     if not folder_name:
         folder_name = random_name("vector_search")
-    test_path = f"tiledb://{namespace}/{storage_path}/{folder_name}"
-    return f"{test_path}/{name}"
+
+    if aws_uri:
+        return f"{storage_path}/{folder_name}/{name}"
+    else:
+        return f"tiledb://{namespace}/{storage_path}/{folder_name}/{name}"
 
 
 def delete_uri(uri, config):

@@ -36,6 +36,7 @@
 #include "test/utils/array_defs.h"
 #include "test/utils/gen_graphs.h"
 #include "test/utils/query_common.h"
+#include "test/utils/test_utils.h"
 
 struct dummy_pq_index {
   using feature_type = float;
@@ -712,6 +713,116 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       auto&& [scores, ids] = index2.query_infinite_ram(queries, k_nn, nprobe);
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
+    }
+  }
+}
+
+TEST_CASE("k_factor", "[ivf_pq_index]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+
+  size_t num_vectors = 500;
+  uint64_t dimensions = 4;
+  size_t nlist = 4;
+  uint32_t num_subspaces = 1;
+  uint32_t max_iterations = 1;
+  float convergence_tolerance = 0.000025f;
+  float reassign_ratio = 0.09f;
+
+  size_t nprobe = nlist;
+  size_t k_nn = 20;
+  float k_factor = 2.f;
+  size_t upper_bound = 350;
+
+  std::optional<TemporalPolicy> temporal_policy = std::nullopt;
+  using feature_type = float;
+  using id_type = uint32_t;
+  auto index = ivf_pq_index<feature_type, id_type>(
+      nlist,
+      num_subspaces,
+      max_iterations,
+      convergence_tolerance,
+      reassign_ratio,
+      temporal_policy,
+      DistanceMetric::L2);
+  auto ivf_index_uri =
+      (std::filesystem::temp_directory_path() / "ivf_index").string();
+
+  CHECK(index.nlist() == nlist);
+
+  // We can train, add, query, and then write the index.
+  std::vector<id_type> ids(num_vectors);
+  {
+    std::vector<std::vector<feature_type>> vectors;
+    for (int i = 1; i <= num_vectors; ++i) {
+      std::vector<feature_type> vector(dimensions, i);
+      vectors.push_back(vector);
+    }
+    for (int i = 1; i <= num_vectors; ++i) {
+      ids[i - 1] = i;
+    }
+
+    auto training = ColMajorMatrixWithIds<feature_type, id_type>{vectors, ids};
+    index.train(training, training.raveled_ids());
+    index.add(training, training.raveled_ids());
+
+    auto queries = ColMajorMatrix<feature_type>{{{1, 1, 1, 1}}};
+    {
+      auto&& [scores_reranking, ids_reranking] =
+          index.query_infinite_ram(queries, k_nn, nprobe, k_factor);
+      CHECK(
+          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(scores_reranking(0, 0) == 0);
+
+      auto&& [scores_no_reranking, ids_no_reranking] =
+          index.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      auto num_equal_no_reranking =
+          check_single_vector_num_equal(ids_no_reranking, ids);
+      CHECK(num_equal_no_reranking != k_nn);
+      CHECK(num_equal_no_reranking > 5);
+    }
+
+    if (vfs.is_dir(ivf_index_uri)) {
+      vfs.remove_dir(ivf_index_uri);
+    }
+    index.write_index(ctx, ivf_index_uri);
+  }
+
+  // We can open the index by URI and query.
+  {
+    auto index2 = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
+    auto queries = ColMajorMatrix<feature_type>{{{1, 1, 1, 1}}};
+
+    // query_infinite_ram.
+    {
+      auto&& [scores_reranking, ids_reranking] =
+          index2.query_infinite_ram(queries, k_nn, nprobe, k_factor);
+      CHECK(
+          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(scores_reranking(0, 0) == 0);
+
+      auto&& [scores_no_reranking, ids_no_reranking] =
+          index2.query_infinite_ram(queries, k_nn, nprobe, 1.f);
+      auto num_equal_no_reranking =
+          check_single_vector_num_equal(ids_no_reranking, ids);
+      CHECK(num_equal_no_reranking != k_nn);
+      CHECK(num_equal_no_reranking > 2);
+    }
+
+    // query_finite_ram.
+    {
+      auto&& [scores_reranking, ids_reranking] =
+          index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, k_factor);
+      CHECK(
+          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      CHECK(scores_reranking(0, 0) == 0);
+
+      auto&& [scores_no_reranking, ids_no_reranking] =
+          index2.query_finite_ram(queries, k_nn, nprobe, upper_bound, 1.f);
+      auto num_equal_no_reranking =
+          check_single_vector_num_equal(ids_no_reranking, ids);
+      CHECK(num_equal_no_reranking != k_nn);
+      CHECK(num_equal_no_reranking > 5);
     }
   }
 }
