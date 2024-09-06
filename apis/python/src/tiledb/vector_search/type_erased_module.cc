@@ -467,17 +467,17 @@ void init_type_erased_module(py::module_& m) {
           [](IndexIVFPQ& instance,
              const tiledb::Context& ctx,
              const std::string& group_uri,
-             IndexLoadStrategy index_load_strategy,
              size_t memory_budget,
-             std::optional<TemporalPolicy> temporal_policy) {
-            new (&instance) IndexIVFPQ(ctx, group_uri, index_load_strategy, memory_budget, temporal_policy);
+             std::optional<TemporalPolicy> temporal_policy,
+             IndexLoadStrategy index_load_strategy) {
+            new (&instance) IndexIVFPQ(ctx, group_uri, memory_budget, temporal_policy, index_load_strategy);
           },
           py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
-          py::arg("memory_budget"),
-          py::arg("index_load_strategy"),
-          py::arg("temporal_policy") = std::nullopt)
+          py::arg("memory_budget") = 0,
+          py::arg("temporal_policy") = std::nullopt,
+          py::arg("index_load_strategy") = IndexLoadStrategy::DEFAULT),
       .def(
           "__init__",
           [](IndexIVFPQ& instance, py::kwargs kwargs) {
@@ -498,41 +498,18 @@ void init_type_erased_module(py::module_& m) {
           },
           py::arg("vectors"))
       .def(
-          "query_infinite_ram",
+          "query",
           [](IndexIVFPQ& index,
              const FeatureVectorArray& vectors,
              size_t top_k,
              size_t nprobe,
              float k_factor) {
-            auto r = index.query(
-                QueryType::InfiniteRAM, vectors, top_k, nprobe, 0, k_factor);
+            auto r = index.query(vectors, top_k, nprobe, k_factor);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
           py::arg("top_k"),
           py::arg("nprobe"),
-          py::arg("k_factor") = 1.f)
-      .def(
-          "query_finite_ram",
-          [](IndexIVFPQ& index,
-             const FeatureVectorArray& vectors,
-             size_t top_k,
-             size_t nprobe,
-             size_t memory_budget,
-             float k_factor) {
-            auto r = index.query(
-                QueryType::FiniteRAM,
-                vectors,
-                top_k,
-                nprobe,
-                memory_budget,
-                k_factor);
-            return make_python_pair(std::move(r));
-          },
-          py::arg("vectors"),
-          py::arg("top_k"),
-          py::arg("nprobe"),
-          py::arg("memory_budget"),
           py::arg("k_factor") = 1.f)
       .def(
           "write_index",

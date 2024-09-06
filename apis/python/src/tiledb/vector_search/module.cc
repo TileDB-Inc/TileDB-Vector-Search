@@ -11,6 +11,7 @@
 #include "detail/flat/vq.h"
 #include "detail/ivf/dist_qv.h"
 #include "detail/ivf/index.h"
+#include "index/index_defs.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/compat.h"
 #include "detail/linalg/matrix.h"
@@ -1097,9 +1098,9 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       .export_values();
 
   py::enum_<IndexLoadStrategy>(m, "IndexLoadStrategy")
-      .value("UNLOADED", IndexLoadStrategy::UNLOADED)
-      .value("NORMAL", IndexLoadStrategy::NORMAL)
-      .value("PRELOAD_FEATURE_VECTORS", IndexLoadStrategy::PRELOAD_FEATURE_VECTORS)
+      .value("ONLY_METADATA", IndexLoadStrategy::ONLY_METADATA)
+      .value("DEFAULT", IndexLoadStrategy::DEFAULT)
+      .value("PRELOAD_VECTORS_FOR_RERANKING", IndexLoadStrategy::PRELOAD_VECTORS_FOR_RERANKING)
       .export_values();
 
   /* === Module inits === */
