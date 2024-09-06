@@ -326,8 +326,7 @@ TEST_CASE("test different combinations", "[tdb_partitioned_matrix]") {
   }
 }
 
-TEST_CASE(
-    "tdb_partitioned_matrix: empty partition", "[tdb_partitioned_matrix]") {
+TEST_CASE("empty partition", "[tdb_partitioned_matrix]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 
@@ -410,8 +409,7 @@ TEST_CASE(
   CHECK_FALSE(matrix.load());
 }
 
-TEST_CASE(
-    "tdb_partitioned_matrix: full partition", "[tdb_partitioned_matrix]") {
+TEST_CASE("full partition", "[tdb_partitioned_matrix]") {
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
 
@@ -538,4 +536,87 @@ TEST_CASE("single vector and single partition", "[tdb_partitioned_matrix]") {
   CHECK(matrix.ids()[0] == 1);
   CHECK(matrix.indices() == indices);
   CHECK_FALSE(matrix.load());
+}
+
+TEST_CASE("check missing parts effect", "[tdb_partitioned_matrix]") {
+  tiledb::Context ctx;
+  tiledb::VFS vfs(ctx);
+
+  using feature_type = uint64_t;
+  using id_type = uint64_t;
+  using part_index_type = uint64_t;
+
+  std::string partitioned_vectors_uri =
+      (std::filesystem::temp_directory_path() / "partitioned_vectors").string();
+  std::string ids_uri =
+      (std::filesystem::temp_directory_path() / "ids").string();
+
+  int num_vectors = 10;
+  uint64_t dimensions = 3;
+  int num_parts = 10;
+  auto training_set = ColMajorMatrix<feature_type>(dimensions, num_vectors);
+  for (size_t i = 0; i < dimensions; ++i) {
+    for (size_t j = 0; j < num_vectors; ++j) {
+      training_set(i, j) = j;
+    }
+  }
+
+  std::vector<id_type> part_labels(num_vectors, 0);
+  for (size_t i = 0; i < num_vectors; ++i) {
+    part_labels[i] = i % num_parts;
+  }
+
+  auto partitioned_matrix =
+      ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+          training_set, part_labels, num_parts);
+  if (vfs.is_dir(partitioned_vectors_uri)) {
+    vfs.remove_dir(partitioned_vectors_uri);
+  }
+  if (vfs.is_dir(ids_uri)) {
+    vfs.remove_dir(ids_uri);
+  }
+  write_matrix(ctx, partitioned_matrix, partitioned_vectors_uri);
+  write_vector(ctx, partitioned_matrix.ids(), ids_uri);
+
+  // All parts.
+  {
+    std::vector<part_index_type> relevant_parts(num_parts);
+    std::iota(relevant_parts.begin(), relevant_parts.end(), 0);
+    auto tdb_partitioned_matrix =
+        tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            ctx,
+            partitioned_vectors_uri,
+            partitioned_matrix.indices(),
+            ids_uri,
+            relevant_parts,
+            0);
+    tdb_partitioned_matrix.load();
+    CHECK(tdb_partitioned_matrix.num_vectors() == num_vectors);
+    CHECK(tdb_partitioned_matrix.total_num_vectors() == num_vectors);
+    CHECK(tdb_partitioned_matrix.num_partitions() == num_vectors);
+  }
+
+  // Missing a few parts.
+  {
+    std::vector<part_index_type> relevant_parts;
+    for (int i = 0; i < num_parts; ++i) {
+      if (i == 2) {
+        continue;
+      }
+      relevant_parts.push_back(i);
+    }
+    auto tdb_partitioned_matrix =
+        tdbColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
+            ctx,
+            partitioned_vectors_uri,
+            partitioned_matrix.indices(),
+            ids_uri,
+            relevant_parts,
+            0);
+    tdb_partitioned_matrix.load();
+    // We have one vector per partition, and we skip one partition.
+    CHECK(tdb_partitioned_matrix.num_vectors() == num_vectors - 1);
+    CHECK(tdb_partitioned_matrix.total_num_vectors() == num_vectors - 1);
+    CHECK(tdb_partitioned_matrix.num_partitions() == num_vectors - 1);
+  }
 }

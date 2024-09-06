@@ -610,6 +610,37 @@ class tdbPartitionedMatrix
     return total_max_cols_;
   }
 
+  size_t local_index_to_global(size_t i) const override {
+    if (squashed_indices_.empty()) {
+      return i;
+    }
+
+    // First we need to find which part we are in. This is local to the parts we
+    // have loaded.
+    auto it =
+        std::upper_bound(squashed_indices_.begin(), squashed_indices_.end(), i);
+    size_t local_part = std::distance(squashed_indices_.begin(), it);
+    // Adjust for the case where the iterator points beyond the actual part we
+    // are in.
+    local_part = local_part == 0 ? local_part : local_part - 1;
+
+    // Now see how many vectors into this local part we are.
+    size_t difference = i - squashed_indices_[local_part];
+
+    // Now we find which part we are in relative to all the parts saved at this
+    // URI.
+    size_t global_part = relevant_parts_[local_part];
+
+    // Now we can see where this part lies in the global array.
+    size_t start = master_indices_[global_part];
+
+    // And we return how many vectors past the start of this part in the global
+    // array we are.
+    size_t result = start + difference;
+
+    return result;
+  }
+
   /**
    * Destructor.  Closes arrays if they are open.
    */

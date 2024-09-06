@@ -248,11 +248,13 @@ class IndexIVFPQ {
       const QueryVectorArray& vectors,
       size_t top_k,
       size_t nprobe,
-      size_t upper_bound = 0) {
+      size_t upper_bound = 0,
+      float k_factor = 1.f) {
     if (!index_) {
       throw std::runtime_error("Cannot query() because there is no index.");
     }
-    return index_->query(queryType, vectors, top_k, nprobe, upper_bound);
+    return index_->query(
+        queryType, vectors, top_k, nprobe, upper_bound, k_factor);
   }
 
   void write_index(
@@ -398,7 +400,8 @@ class IndexIVFPQ {
         const QueryVectorArray& vectors,
         size_t top_k,
         size_t nprobe,
-        size_t upper_bound) = 0;
+        size_t upper_bound,
+        float k_factor) = 0;
 
     virtual void write_index(
         const tiledb::Context& ctx,
@@ -508,7 +511,8 @@ class IndexIVFPQ {
         const QueryVectorArray& vectors,
         size_t top_k,
         size_t nprobe,
-        size_t upper_bound) override {
+        size_t upper_bound,
+        float k_factor) override {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
 
@@ -519,8 +523,8 @@ class IndexIVFPQ {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
-              impl_index_.query(queryType, qspan, top_k, nprobe, upper_bound);
+          auto [s, t] = impl_index_.query(
+              queryType, qspan, top_k, nprobe, upper_bound, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -530,8 +534,8 @@ class IndexIVFPQ {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
-              impl_index_.query(queryType, qspan, top_k, nprobe, upper_bound);
+          auto [s, t] = impl_index_.query(
+              queryType, qspan, top_k, nprobe, upper_bound, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
