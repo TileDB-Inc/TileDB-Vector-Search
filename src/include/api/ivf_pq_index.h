@@ -159,7 +159,8 @@ class IndexIVFPQ {
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    index_ = uri_dispatch_table.at(type)(ctx, group_uri, upper_bound, temporal_policy, index_load_strategy);
+    index_ = uri_dispatch_table.at(type)(
+        ctx, group_uri, upper_bound, temporal_policy, index_load_strategy);
     n_list_ = index_->nlist();
     num_subspaces_ = index_->num_subspaces();
     max_iterations_ = index_->max_iterations();
@@ -456,7 +457,12 @@ class IndexIVFPQ {
         size_t upper_bound,
         std::optional<TemporalPolicy> temporal_policy,
         IndexLoadStrategy index_load_strategy)
-        : impl_index_(ctx, index_uri, upper_bound, temporal_policy, index_load_strategy) {
+        : impl_index_(
+              ctx,
+              index_uri,
+              upper_bound,
+              temporal_policy,
+              index_load_strategy) {
     }
 
     void train(const FeatureVectorArray& training_set) override {
@@ -526,8 +532,7 @@ class IndexIVFPQ {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
-              impl_index_.query(qspan, top_k, nprobe, k_factor);
+          auto [s, t] = impl_index_.query(qspan, top_k, nprobe, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -537,8 +542,7 @@ class IndexIVFPQ {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] =
-              impl_index_.query(qspan, top_k, nprobe, k_factor);
+          auto [s, t] = impl_index_.query(qspan, top_k, nprobe, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};

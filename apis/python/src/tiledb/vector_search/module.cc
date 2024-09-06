@@ -11,7 +11,6 @@
 #include "detail/flat/vq.h"
 #include "detail/ivf/dist_qv.h"
 #include "detail/ivf/index.h"
-#include "index/index_defs.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/compat.h"
 #include "detail/linalg/matrix.h"
@@ -19,6 +18,7 @@
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/time/temporal_policy.h"
+#include "index/index_defs.h"
 #include "utils/seeder.h"
 
 namespace py = pybind11;
@@ -1100,7 +1100,9 @@ PYBIND11_MODULE(_tiledbvspy, m) {
   py::enum_<IndexLoadStrategy>(m, "IndexLoadStrategy")
       .value("ONLY_METADATA", IndexLoadStrategy::ONLY_METADATA)
       .value("DEFAULT", IndexLoadStrategy::DEFAULT)
-      .value("PRELOAD_VECTORS_FOR_RERANKING", IndexLoadStrategy::PRELOAD_VECTORS_FOR_RERANKING)
+      .value(
+          "PRELOAD_VECTORS_FOR_RERANKING",
+          IndexLoadStrategy::PRELOAD_VECTORS_FOR_RERANKING)
       .export_values();
 
   /* === Module inits === */

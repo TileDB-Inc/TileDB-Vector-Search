@@ -498,8 +498,7 @@ TEST_CASE("build index and infinite query in place", "[ivf_pq_index]") {
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
 
-  std::tie(top_k_ivf_scores, top_k_ivf) =
-      idx.query(query_set, k_nn, nprobe);
+  std::tie(top_k_ivf_scores, top_k_ivf) = idx.query(query_set, k_nn, nprobe);
 
   // NOTE: Can be used to debug the results:
   // debug_slice(top_k_ivf, "top_k_ivf");
@@ -622,7 +621,9 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
 
   // We can load and query an empty index.
   {
-    auto index_infinite = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(ctx, ivf_index_uri);
+    auto index_infinite =
+        ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+            ctx, ivf_index_uri);
     CHECK(index_infinite.num_vectors() == num_vectors);
     size_t k_nn = 1;
     auto&& [scores, ids] = index_infinite.query(queries, k_nn, nlist);
@@ -635,7 +636,9 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
   }
   {
     size_t upper_bound = 11;
-    auto index_finite = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(ctx, ivf_index_uri, upper_bound);
+    auto index_finite =
+        ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
+            ctx, ivf_index_uri, upper_bound);
     CHECK(index_finite.num_vectors() == num_vectors);
     size_t k_nn = 1;
     auto&& [scores, ids] = index_finite.query(queries, k_nn, nlist, 9);
@@ -672,7 +675,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       DistanceMetric::SUM_OF_SQUARES);
   auto ivf_index_uri =
       (std::filesystem::temp_directory_path() / "ivf_index").string();
-  
+
   CHECK(index.num_vectors() == 0);
   CHECK(index.nlist() == nlist);
 
@@ -707,12 +710,14 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   {
     std::unique_ptr<ivf_pq_index<feature_type, id_type>> index2;
     SECTION("infinite") {
-      index2 = std::make_unique<ivf_pq_index<feature_type, id_type>>(ctx, ivf_index_uri);
+      index2 = std::make_unique<ivf_pq_index<feature_type, id_type>>(
+          ctx, ivf_index_uri);
       CHECK(index2->upper_bound() == 0);
     }
     SECTION("finite") {
       size_t upper_bound = 97;
-      index2 = std::make_unique<ivf_pq_index<feature_type, id_type>>(ctx, ivf_index_uri, upper_bound);
+      index2 = std::make_unique<ivf_pq_index<feature_type, id_type>>(
+          ctx, ivf_index_uri, upper_bound);
       CHECK(index2->upper_bound() == upper_bound);
     }
     CHECK(index2->num_vectors() == 4);
@@ -787,13 +792,16 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
     auto queries = ColMajorMatrix<feature_type>{{{1, 1, 1, 1}}};
     {
-      auto&& [scores_reranking, ids_reranking] = index.query(queries, k_nn, nprobe, k_factor);
-      CHECK(k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
+      auto&& [scores_reranking, ids_reranking] =
+          index.query(queries, k_nn, nprobe, k_factor);
+      CHECK(
+          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
 
       auto&& [scores_no_reranking, ids_no_reranking] =
           index.query(queries, k_nn, nprobe, 1.f);
-      auto num_equal_no_reranking = check_single_vector_num_equal(ids_no_reranking, ids);
+      auto num_equal_no_reranking =
+          check_single_vector_num_equal(ids_no_reranking, ids);
       CHECK(num_equal_no_reranking != k_nn);
       CHECK(num_equal_no_reranking > 5);
     }
@@ -812,7 +820,8 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
     // infinite.
     {
-      auto index_infinite = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
+      auto index_infinite =
+          ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri);
       CHECK(index_infinite.num_vectors() == num_vectors);
       CHECK(index_infinite.upper_bound() == 0);
       auto&& [scores_reranking, ids_reranking] =
@@ -832,7 +841,8 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
     // finite.
     {
       size_t upper_bound = 200;
-      auto index_finite = ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri, upper_bound);
+      auto index_finite =
+          ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri, upper_bound);
       CHECK(index_finite.upper_bound() == upper_bound);
       CHECK(index_finite.num_vectors() == num_vectors);
 
@@ -900,29 +910,36 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
 
   // Load the index and query.
   {
-    std::unique_ptr<ivf_pq_index<feature_type_type, id_type_type, partitioning_index_type_type>> index;
+    std::unique_ptr<ivf_pq_index<
+        feature_type_type,
+        id_type_type,
+        partitioning_index_type_type>>
+        index;
     SECTION("infinite") {
-      index = std::make_unique<ivf_pq_index<feature_type_type, id_type_type, partitioning_index_type_type>>(ctx, index_uri);
+      index = std::make_unique<ivf_pq_index<
+          feature_type_type,
+          id_type_type,
+          partitioning_index_type_type>>(ctx, index_uri);
       CHECK(index->upper_bound() == 0);
     }
     SECTION("finite") {
       size_t upper_bound = 5;
-      index = std::make_unique<ivf_pq_index<feature_type_type, id_type_type, partitioning_index_type_type>>(ctx, index_uri, upper_bound);
+      index = std::make_unique<ivf_pq_index<
+          feature_type_type,
+          id_type_type,
+          partitioning_index_type_type>>(ctx, index_uri, upper_bound);
       CHECK(index->upper_bound() == upper_bound);
     }
     auto queries = ColMajorMatrix<feature_type_type>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
 
-    auto&& [scores, ids] =
-        index->query(queries, 1, n_list, 5);
+    auto&& [scores, ids] = index->query(queries, 1, n_list, 5);
     CHECK(std::equal(
         scores.data(),
         scores.data() + 4,
         std::vector<float>{0, 0, 0, 0}.begin()));
     CHECK(std::equal(
-        ids.data(),
-        ids.data() + 4,
-        std::vector<uint32_t>{1, 2, 3, 4}.begin()));
+        ids.data(), ids.data() + 4, std::vector<uint32_t>{1, 2, 3, 4}.begin()));
   }
 }
 

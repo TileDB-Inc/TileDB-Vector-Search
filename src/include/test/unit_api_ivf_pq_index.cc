@@ -213,11 +213,8 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     size_t top_k = 1;
     size_t nprobe = 1;
     float k_factor = 2.f;
-    auto&& [scores, ids] = index.query(
-        FeatureVectorArray(queries),
-        top_k,
-        nprobe,
-        k_factor);
+    auto&& [scores, ids] =
+        index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     auto default_score = std::numeric_limits<float>::max();
     auto default_id = std::numeric_limits<uint32_t>::max();
     check_single_vector_equals(
@@ -231,12 +228,12 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
   {
     std::unique_ptr<IndexIVFPQ> index;
     SECTION("infinite") {
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
+      index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
     }
     SECTION("finite") {
-        size_t upper_bound = 97;
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound);
-        CHECK(index->upper_bound() == upper_bound);
+      size_t upper_bound = 97;
+      index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound);
+      CHECK(index->upper_bound() == upper_bound);
     }
 
     CHECK(index->feature_type_string() == feature_type);
@@ -256,7 +253,8 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
 
     size_t top_k = 1;
     size_t nprobe = 1;
-    auto&& [scores, ids] = index->query(FeatureVectorArray(queries), top_k, nprobe);
+    auto&& [scores, ids] =
+        index->query(FeatureVectorArray(queries), top_k, nprobe);
     check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {0, 1, 2, 3});
   }
 }
@@ -333,10 +331,8 @@ TEST_CASE(
     auto queries = ColMajorMatrix<feature_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
 
-    auto&& [scores, ids] =
-        index.query(FeatureVectorArray(queries), 1, 1);
-    check_single_vector_equals(
-        scores, ids, {0, 0, 0, 0}, {10, 11, 12, 13});
+    auto&& [scores, ids] = index.query(FeatureVectorArray(queries), 1, 1);
+    check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {10, 11, 12, 13});
   }
 
   {
@@ -345,13 +341,14 @@ TEST_CASE(
 
     std::unique_ptr<IndexIVFPQ> index;
     SECTION("infinite") {
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
+      index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
     }
     SECTION("finite") {
-        size_t upper_bound = GENERATE(3, 4, 5, 100, 0);
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound);
-        CHECK(index->upper_bound() == upper_bound);
-        std::cout << "Executing finite test with upper bound " << upper_bound << std::endl;
+      size_t upper_bound = GENERATE(3, 4, 5, 100, 0);
+      index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound);
+      CHECK(index->upper_bound() == upper_bound);
+      std::cout << "Executing finite test with upper bound " << upper_bound
+                << std::endl;
     }
 
     CHECK(index->feature_type_string() == feature_type);
@@ -360,15 +357,9 @@ TEST_CASE(
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
-      auto&& [scores, ids] = index->query(
-          FeatureVectorArray(queries),
-          top_k,
-          nprobe);
-      check_single_vector_equals(
-          scores,
-          ids,
-          {0, 0, 0, 0},
-          {10, 11, 12, 13});
+    auto&& [scores, ids] =
+        index->query(FeatureVectorArray(queries), top_k, nprobe);
+    check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {10, 11, 12, 13});
   }
 }
 
@@ -428,8 +419,7 @@ TEST_CASE(
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    auto&& [scores, ids] =
-        index.query(query_set, k_nn, 5);
+    auto&& [scores, ids] = index.query(query_set, k_nn, 5);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
     CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) > 0.7);
   }
@@ -440,7 +430,7 @@ TEST_CASE(
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
     auto index = IndexIVFPQ(ctx, index_uri);
-    
+
     size_t upper_bound = GENERATE(450, 1000, 0);
     auto index_finite = IndexIVFPQ(ctx, index_uri, upper_bound);
 
@@ -451,15 +441,14 @@ TEST_CASE(
              {5, .7f, .7f},
              {10, .75f, .9f},
              {100, .8f, 1.f}}) {
-      auto&& [distances, ids] =
-          index.query(query_set, k_nn, nprobe);
+      auto&& [distances, ids] = index.query(query_set, k_nn, nprobe);
       auto intersections = count_intersections(ids, groundtruth_set, k_nn);
       CHECK(
           (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
           expected_accuracy);
 
-      auto&& [distances_with_reranking, ids_with_reranking] = index.query(
-          query_set, k_nn, nprobe, k_factor);
+      auto&& [distances_with_reranking, ids_with_reranking] =
+          index.query(query_set, k_nn, nprobe, k_factor);
       auto intersections_with_reranking =
           count_intersections(ids_with_reranking, groundtruth_set, k_nn);
       CHECK(
@@ -467,22 +456,23 @@ TEST_CASE(
            static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >=
           expected_accuracy_with_reranking);
 
-//    auto&& [distances_finite, ids_finite] = index_finite.query(
-//        QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
-//    CHECK(are_equal(ids_finite, ids));
-//    CHECK(are_equal(distances_finite, distances));
-//
-//    auto&& [distances_finite_with_reranking, ids_finite_with_reranking] =
-//        index_finite.query(
-//            QueryType::FiniteRAM,
-//            query_set,
-//            k_nn,
-//            nprobe,
-//            upper_bound,
-//            k_factor);
-//    CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
-//    CHECK(are_equal(
-//        distances_finite_with_reranking, distances_with_reranking));
+      //    auto&& [distances_finite, ids_finite] = index_finite.query(
+      //        QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
+      //    CHECK(are_equal(ids_finite, ids));
+      //    CHECK(are_equal(distances_finite, distances));
+      //
+      //    auto&& [distances_finite_with_reranking, ids_finite_with_reranking]
+      //    =
+      //        index_finite.query(
+      //            QueryType::FiniteRAM,
+      //            query_set,
+      //            k_nn,
+      //            nprobe,
+      //            upper_bound,
+      //            k_factor);
+      //    CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
+      //    CHECK(are_equal(
+      //        distances_finite_with_reranking, distances_with_reranking));
     }
   }
 }
@@ -571,42 +561,43 @@ TEST_CASE("read index and query", "[api_ivf_pq_index]") {
     vfs.remove_dir(api_ivf_pq_index_uri);
   }
 
-    auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
-        {{"feature_type", "float32"},
-        {"id_type", "uint32"},
-        {"partitioning_index_type", "uint32"},
-        {"num_subspaces", std::to_string(sift_dimensions / 4)}}));
+  auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
+      {{"feature_type", "float32"},
+       {"id_type", "uint32"},
+       {"partitioning_index_type", "uint32"},
+       {"num_subspaces", std::to_string(sift_dimensions / 4)}}));
 
-    auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-    a.train(training_set);
-    a.add(training_set);
-    a.write_index(ctx, api_ivf_pq_index_uri);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  a.train(training_set);
+  a.add(training_set);
+  a.write_index(ctx, api_ivf_pq_index_uri);
 
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
   std::unique_ptr<IndexIVFPQ> b;
-    SECTION("infinite") {
-      b = std::make_unique<IndexIVFPQ>(ctx, api_ivf_pq_index_uri);
-    }
-    SECTION("finite") {
-        size_t upper_bound = GENERATE(0, 500);
-        b = std::make_unique<IndexIVFPQ>(ctx, api_ivf_pq_index_uri, upper_bound);
-        CHECK(b->upper_bound() == upper_bound);
-    }
+  SECTION("infinite") {
+    b = std::make_unique<IndexIVFPQ>(ctx, api_ivf_pq_index_uri);
+  }
+  SECTION("finite") {
+    size_t upper_bound = GENERATE(0, 500);
+    b = std::make_unique<IndexIVFPQ>(ctx, api_ivf_pq_index_uri, upper_bound);
+    CHECK(b->upper_bound() == upper_bound);
+  }
 
- // Make sure the same query results are returned for two different indexes.
+  // Make sure the same query results are returned for two different indexes.
   size_t nprobe = 5;
   auto&& [scores_1, ids_1] = a.query(query_set, k_nn, nprobe);
   auto&& [scores_2, ids_2] = b->query(query_set, k_nn, nprobe);
 
   CHECK(are_equal(scores_1, scores_2));
   CHECK(are_equal(ids_1, ids_2));
-  
+
   auto intersections_1 = count_intersections(ids_1, groundtruth_set, k_nn);
   auto intersections_2 = count_intersections(ids_2, groundtruth_set, k_nn);
   CHECK(num_vectors(ids_1) == num_vectors(ids_2));
-  auto recall = intersections_1 / static_cast<double>(num_vectors(ids_1) * k_nn);
+  auto recall =
+      intersections_1 / static_cast<double>(num_vectors(ids_1) * k_nn);
   CHECK(recall > 0.7);
 }
 
@@ -704,8 +695,7 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   index.add(training_vector_array);
   index.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, 99));
 
-  auto&& [scores, ids] =
-      index.query(training_vector_array, 1, 1);
+  auto&& [scores, ids] = index.query(training_vector_array, 1, 1);
 
   auto second_index = IndexIVFPQ(ctx, index_uri);
   auto&& [scores_finite, ids_finite] =
@@ -832,19 +822,15 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
-    auto&& [scores, ids] = index.query(FeatureVectorArray(queries), top_k, nprobe);
-    check_single_vector_equals(
-        scores, ids, {0, 0, 0, 0}, {1, 2, 3, 4});
+    auto&& [scores, ids] =
+        index.query(FeatureVectorArray(queries), top_k, nprobe);
+    check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {1, 2, 3, 4});
 
     float k_factor = 2.f;
     auto&& [scores_with_reranking, ids_with_reranking] =
-        index.query(
-            FeatureVectorArray(queries), top_k, nprobe, k_factor);
+        index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     check_single_vector_equals(
-        scores_with_reranking,
-        ids_with_reranking,
-        {0, 0, 0, 0},
-        {1, 2, 3, 4});
+        scores_with_reranking, ids_with_reranking, {0, 0, 0, 0}, {1, 2, 3, 4});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
@@ -876,7 +862,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
       size_t nprobe = 1;
       auto queries = ColMajorMatrix<feature_type_type>{
           {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
-      auto&& [scores, ids] = index.query(FeatureVectorArray(queries), top_k, nprobe);
+      auto&& [scores, ids] =
+          index.query(FeatureVectorArray(queries), top_k, nprobe);
       check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {1, 2, 3, 4});
 
       {
@@ -885,12 +872,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         auto&& [scores_finite, ids_finite] =
             index_finite.query(FeatureVectorArray(queries), top_k, nprobe);
         check_single_vector_equals(
-            scores_finite,
-            ids_finite,
-            {0, 0, 0, 0},
-            {1, 2, 3, 4});
+            scores_finite, ids_finite, {0, 0, 0, 0}, {1, 2, 3, 4});
       }
-
     }
 
     CHECK(index.temporal_policy().timestamp_start() == 0);
@@ -920,7 +903,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-    
+
     size_t top_k = 1;
     size_t nprobe = 1;
     auto queries = ColMajorMatrix<feature_type_type>{
@@ -928,10 +911,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto&& [scores, ids] =
         index.query(FeatureVectorArray(queries), top_k, nprobe);
     check_single_vector_equals(
-        scores,
-        ids,
-        {0, 0, 0, 0, 0},
-        {11, 22, 33, 44, 55});
+        scores, ids, {0, 0, 0, 0, 0}, {11, 22, 33, 44, 55});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
@@ -963,20 +943,22 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         std::vector<uint64_t>{99, 100}.begin()));
   }
 
-  // Load it at timestamp 99 and make sure we can query it correctly. Do this with both a finite and
-  // infinite index.
+  // Load it at timestamp 99 and make sure we can query it correctly. Do this
+  // with both a finite and infinite index.
   {
     auto temporal_policy = TemporalPolicy{TimeTravel, 99};
     std::unique_ptr<IndexIVFPQ> index;
     size_t upper_bound = 0;
     SECTION("infinite") {
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound, temporal_policy);
-        CHECK(index->upper_bound() == upper_bound);
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, upper_bound, temporal_policy);
+      CHECK(index->upper_bound() == upper_bound);
     }
     SECTION("finite") {
-        upper_bound = 2;
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound, temporal_policy);
-        CHECK(index->upper_bound() == upper_bound);
+      upper_bound = 2;
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, upper_bound, temporal_policy);
+      CHECK(index->upper_bound() == upper_bound);
     }
 
     CHECK(index->temporal_policy().timestamp_end() == 99);
@@ -992,21 +974,21 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto queries = ColMajorMatrix<feature_type_type>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
 
-    auto&& [scores, ids] = index->query(FeatureVectorArray(queries), top_k, nprobe);
+    auto&& [scores, ids] =
+        index->query(FeatureVectorArray(queries), top_k, nprobe);
     check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {1, 2, 3, 4});
-    
+
     float k_factor = 2.f;
-    auto&& [scores_with_reranking, ids_with_reranking] = index->query(FeatureVectorArray(queries), top_k, nprobe, k_factor  );
+    auto&& [scores_with_reranking, ids_with_reranking] =
+        index->query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     check_single_vector_equals(
-        scores_with_reranking,
-        ids_with_reranking,
-        {0, 0, 0, 0},
-        {1, 2, 3, 4});
+        scores_with_reranking, ids_with_reranking, {0, 0, 0, 0}, {1, 2, 3, 4});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
         id_type_type,
-        partitioning_index_type_type>(ctx, index_uri, upper_bound, temporal_policy);
+        partitioning_index_type_type>(
+        ctx, index_uri, upper_bound, temporal_policy);
     CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
@@ -1035,19 +1017,21 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
   // Load it at timestamp 5 (before ingestion) and make sure we can query and be
   // returned fill values.
-  { 
+  {
     auto temporal_policy = TemporalPolicy{TimeTravel, 0};
-    
+
     std::unique_ptr<IndexIVFPQ> index;
     size_t upper_bound = 0;
     SECTION("infinite") {
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound, temporal_policy);
-        CHECK(index->upper_bound() == upper_bound);
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, upper_bound, temporal_policy);
+      CHECK(index->upper_bound() == upper_bound);
     }
     SECTION("finite") {
-        upper_bound = 2;
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound, temporal_policy);
-        CHECK(index->upper_bound() == upper_bound);
+      upper_bound = 2;
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, upper_bound, temporal_policy);
+      CHECK(index->upper_bound() == upper_bound);
     }
 
     CHECK(index->temporal_policy().timestamp_start() == 0);
@@ -1081,7 +1065,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto typed_index = ivf_pq_index<
         feature_type_type,
         id_type_type,
-        partitioning_index_type_type>(ctx, index_uri, upper_bound, temporal_policy);
+        partitioning_index_type_type>(
+        ctx, index_uri, upper_bound, temporal_policy);
     CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
@@ -1120,24 +1105,26 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     IndexIVFPQ::clear_history(ctx, index_uri, 99);
 
     auto temporal_policy = TemporalPolicy{TimeTravel, 99};
-    
+
     std::unique_ptr<IndexIVFPQ> index;
     size_t upper_bound = 0;
     SECTION("infinite") {
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound, temporal_policy);
-        CHECK(index->upper_bound() == upper_bound);
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, upper_bound, temporal_policy);
+      CHECK(index->upper_bound() == upper_bound);
     }
     SECTION("finite") {
-        upper_bound = 3;
-        index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound, temporal_policy);
-        CHECK(index->upper_bound() == upper_bound);
+      upper_bound = 3;
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, upper_bound, temporal_policy);
+      CHECK(index->upper_bound() == upper_bound);
     }
 
     CHECK(index->temporal_policy().timestamp_end() == 99);
     CHECK(index->feature_type_string() == feature_type);
     CHECK(index->id_type_string() == id_type);
     CHECK(index->partitioning_index_type_string() == partitioning_index_type);
-    
+
     size_t top_k = 1;
     size_t nprobe = 1;
     float k_factor = 17.3f;
@@ -1153,8 +1140,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     auto&& [scores, ids] =
         index->query(FeatureVectorArray(queries), top_k, nprobe);
-    check_single_vector_equals(
-        scores, ids, expected_scores, expected_ids);
+    check_single_vector_equals(scores, ids, expected_scores, expected_ids);
     auto&& [scores_with_reranking, ids_with_reranking] =
         index->query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     check_single_vector_equals(
@@ -1166,7 +1152,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto typed_index = ivf_pq_index<
         feature_type_type,
         id_type_type,
-        partitioning_index_type_type>(ctx, index_uri, upper_bound, temporal_policy);
+        partitioning_index_type_type>(
+        ctx, index_uri, upper_bound, temporal_policy);
     CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);

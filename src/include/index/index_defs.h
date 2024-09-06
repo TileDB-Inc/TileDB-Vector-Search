@@ -58,8 +58,10 @@ enum class IndexKind { FlatL2, IVFFlat, Vamana, IVFPQ };
 enum class QueryType { FiniteRAM, InfiniteRAM };
 
 enum class IndexLoadStrategy {
-  // Used by Python to support `open_for_remote_query_execution`. In this case we don't want to load 
-  // any data, we just want to load metadata so that we can call index.dimensions() and other metadata getters.
+  // Used by Python to support `open_for_remote_query_execution`. In this case
+  // we don't want to load
+  // any data, we just want to load metadata so that we can call
+  // index.dimensions() and other metadata getters.
   ONLY_METADATA,
   // Load the index data as well as metadata. This is the default behavior.
   DEFAULT,

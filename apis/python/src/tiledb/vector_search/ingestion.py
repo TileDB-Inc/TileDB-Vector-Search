@@ -3071,6 +3071,8 @@ def ingest(
                 uri=index_group_uri, memory_budget=1000000, config=config
             )
         elif index_type == "IVF_PQ":
-            return ivf_pq_index.IVFPQIndex(uri=index_group_uri, memory_budget=1000000, config=config)
+            return ivf_pq_index.IVFPQIndex(
+                uri=index_group_uri, memory_budget=1000000, config=config
+            )
         else:
             raise ValueError(f"Not supported index_type {index_type}")

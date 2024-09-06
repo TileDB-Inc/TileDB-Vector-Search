@@ -40,8 +40,8 @@ class IVFPQIndex(index.Index):
     preload_k_factor_vectors: bool
         When using `k_factor` in a query, we first query for `k_factor * k` pq-encoded vectors,
         and then do a re-ranking step using the original input vectors for the top `k` vectors.
-        If `True`, we will load all the input vectors in main memory. This can only be used with 
-        `memory_budget` set to `-1`, and is useful when the input vectors are small enough to fit in 
+        If `True`, we will load all the input vectors in main memory. This can only be used with
+        `memory_budget` set to `-1`, and is useful when the input vectors are small enough to fit in
         memory and you want to speed up re-ranking.
     open_for_remote_query_execution: bool
         If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
@@ -82,13 +82,19 @@ class IVFPQIndex(index.Index):
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
         )
-        strategy = IndexLoadStrategy.PRELOAD_VECTORS_FOR_RERANKING if preload_k_factor_vectors else IndexLoadStrategy.ONLY_METADATA if open_for_remote_query_execution else IndexLoadStrategy.DEFAULT
+        strategy = (
+            IndexLoadStrategy.PRELOAD_VECTORS_FOR_RERANKING
+            if preload_k_factor_vectors
+            else IndexLoadStrategy.ONLY_METADATA
+            if open_for_remote_query_execution
+            else IndexLoadStrategy.DEFAULT
+        )
         self.index = vspy.IndexIVFPQ(
-            self.ctx, 
+            self.ctx,
             uri,
             strategy,
             0 if memory_budget == -1 else memory_budget,
-            to_temporal_policy(timestamp)
+            to_temporal_policy(timestamp),
         )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -148,7 +154,9 @@ class IVFPQIndex(index.Index):
         if not queries.flags.f_contiguous:
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
-        distances, ids = self.index.query(queries_feature_vector_array, k, k_factor, nprobe)
+        distances, ids = self.index.query(
+            queries_feature_vector_array, k, k_factor, nprobe
+        )
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
 
