@@ -304,9 +304,9 @@ def get_uri(tag):
 
 def cleanup_uri(index_uri):
     if REMOTE_URI_TYPE == RemoteURIType.TILEDB:
-        from common import delete_uri
-
-        delete_uri(uri=index_uri, config=tiledb.cloud.Config())
+        Index.delete_index(uri=index_uri, config=tiledb.cloud.Config())
+    else:
+        Index.delete_index(uri=index_uri)
 
 
 def benchmark_ivf_flat():
