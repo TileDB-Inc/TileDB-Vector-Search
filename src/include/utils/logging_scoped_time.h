@@ -27,6 +27,10 @@
  *
  * @section DESCRIPTION
  *
+ * This file contains a scoped timer class for logging timing data. It is
+ * thread-safe and will create a separate timing tree for each thread. Note
+ * there we use a lock when timers start and stop, so you should not use this in
+ * performance-critical code paths.
  */
 
 #ifndef TDB_LOGGING_SCOPED_TIME_H
