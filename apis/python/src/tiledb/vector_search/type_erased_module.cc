@@ -368,10 +368,8 @@ void init_type_erased_module(py::module_& m) {
       .def("dimensions", &IndexFlatL2::dimensions)
       .def(
           "query",
-          [](IndexFlatL2& index,
-             const FeatureVectorArray& vectors,
-             size_t top_k) {
-            auto r = index.query(vectors, top_k);
+          [](IndexFlatL2& index, const FeatureVectorArray& vectors, size_t k) {
+            auto r = index.query(vectors, k);
             return make_python_pair(std::move(r));
           });
 
@@ -422,13 +420,13 @@ void init_type_erased_module(py::module_& m) {
           "query",
           [](IndexVamana& index,
              const FeatureVectorArray& vectors,
-             size_t top_k,
+             size_t k,
              uint32_t l_search) {
-            auto r = index.query(vectors, top_k, l_search);
+            auto r = index.query(vectors, k, l_search);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
-          py::arg("top_k"),
+          py::arg("k"),
           py::arg("l_search"))
       .def(
           "write_index",
@@ -482,72 +480,71 @@ void init_type_erased_module(py::module_& m) {
           py::arg("group_uri"),
           py::arg("memory_budget") = 0,
           py::arg("temporal_policy") = std::nullopt,
-          py::arg("index_load_strategy") = IndexLoadStrategy::DEFAULT),
+          py::arg("index_load_strategy") = IndexLoadStrategy::DEFAULT)
       .def(
           "__init__",
           [](IndexIVFPQ& instance, py::kwargs kwargs) {
             auto args = kwargs_to_map(kwargs);
             new (&instance) IndexIVFPQ(args);
           })
-          .def(
-              "train",
-              [](IndexIVFPQ& index,
-                 const FeatureVectorArray& vectors,
-                 std::optional<size_t> nlist) { index.train(vectors, nlist); },
-              py::arg("vectors"),
-              py::arg("nlist") = std::nullopt)
-          .def(
-              "add",
-              [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
-                index.add(vectors);
-              },
-              py::arg("vectors"))
-          .def(
-              "query",
-              [](IndexIVFPQ& index,
-                 const FeatureVectorArray& vectors,
-                 size_t top_k,
-                 size_t nprobe,
-                 float k_factor) {
-                auto r = index.query(vectors, top_k, nprobe, k_factor);
-                return make_python_pair(std::move(r));
-              },
-              py::arg("vectors"),
-              py::arg("top_k"),
-              py::arg("nprobe"),
-              py::arg("k_factor") = 1.f)
-          .def(
-              "write_index",
-              [](IndexIVFPQ& index,
-                 const tiledb::Context& ctx,
-                 const std::string& group_uri,
-                 std::optional<TemporalPolicy> temporal_policy,
-                 const std::string& storage_version) {
-                index.write_index(
-                    ctx, group_uri, temporal_policy, storage_version);
-              },
-              py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
-              py::arg("ctx"),
-              py::arg("group_uri"),
-              py::arg("temporal_policy") = std::nullopt,
-              py::arg("storage_version") = "")
-          .def("feature_type_string", &IndexIVFPQ::feature_type_string)
-          .def("id_type_string", &IndexIVFPQ::id_type_string)
-          .def(
-              "partitioning_index_type_string",
-              &IndexIVFPQ::partitioning_index_type_string)
-          .def("dimensions", &IndexIVFPQ::dimensions)
-          .def_static(
-              "clear_history",
-              [](const tiledb::Context& ctx,
-                 const std::string& group_uri,
-                 uint64_t timestamp) {
-                IndexIVFPQ::clear_history(ctx, group_uri, timestamp);
-              },
-              py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
-              py::arg("ctx"),
-              py::arg("group_uri"),
-              py::arg("timestamp"));
+      .def(
+          "train",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             std::optional<size_t> nlist) { index.train(vectors, nlist); },
+          py::arg("vectors"),
+          py::arg("nlist") = std::nullopt)
+      .def(
+          "add",
+          [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
+            index.add(vectors);
+          },
+          py::arg("vectors"))
+      .def(
+          "query",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             size_t k,
+             size_t nprobe,
+             float k_factor) {
+            auto r = index.query(vectors, k, nprobe, k_factor);
+            return make_python_pair(std::move(r));
+          },
+          py::arg("vectors"),
+          py::arg("k"),
+          py::arg("nprobe"),
+          py::arg("k_factor") = 1.f)
+      .def(
+          "write_index",
+          [](IndexIVFPQ& index,
+             const tiledb::Context& ctx,
+             const std::string& group_uri,
+             std::optional<TemporalPolicy> temporal_policy,
+             const std::string& storage_version) {
+            index.write_index(ctx, group_uri, temporal_policy, storage_version);
+          },
+          py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg("temporal_policy") = std::nullopt,
+          py::arg("storage_version") = "")
+      .def("feature_type_string", &IndexIVFPQ::feature_type_string)
+      .def("id_type_string", &IndexIVFPQ::id_type_string)
+      .def(
+          "partitioning_index_type_string",
+          &IndexIVFPQ::partitioning_index_type_string)
+      .def("dimensions", &IndexIVFPQ::dimensions)
+      .def_static(
+          "clear_history",
+          [](const tiledb::Context& ctx,
+             const std::string& group_uri,
+             uint64_t timestamp) {
+            IndexIVFPQ::clear_history(ctx, group_uri, timestamp);
+          },
+          py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("group_uri"),
+          py::arg("timestamp"));
 
   py::class_<IndexIVFFlat>(m, "IndexIVFFlat")
       .def(
@@ -590,24 +587,24 @@ void init_type_erased_module(py::module_& m) {
           "query_infinite_ram",
           [](IndexIVFFlat& index,
              const FeatureVectorArray& query,
-             size_t top_k,
+             size_t k,
              size_t nprobe) {
-            auto r = index.query_infinite_ram(query, top_k, nprobe);
+            auto r = index.query_infinite_ram(query, k, nprobe);
             return make_python_pair(std::move(r));
-          })  //  , py::arg("vectors"), py::arg("top_k") = 1, py::arg("nprobe")
+          })  //  , py::arg("vectors"), py::arg("k") = 1, py::arg("nprobe")
               //  = 10)
       .def(
           "query_finite_ram",
           [](IndexIVFFlat& index,
              const FeatureVectorArray& query,
-             size_t top_k,
+             size_t k,
              size_t nprobe,
              size_t upper_bound) {
-            auto r = index.query_finite_ram(query, top_k, nprobe, upper_bound);
+            auto r = index.query_finite_ram(query, k, nprobe, upper_bound);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
-          py::arg("top_k") = 1,
+          py::arg("k") = 1,
           py::arg("nprobe") = 10,
           py::arg("upper_bound") = 0)
       .def("feature_type_string", &IndexIVFFlat::feature_type_string)

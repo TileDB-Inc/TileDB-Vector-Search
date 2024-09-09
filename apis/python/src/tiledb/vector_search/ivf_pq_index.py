@@ -92,9 +92,9 @@ class IVFPQIndex(index.Index):
         self.index = vspy.IndexIVFPQ(
             self.ctx,
             uri,
-            strategy,
             0 if memory_budget == -1 else memory_budget,
             to_temporal_policy(timestamp),
+            strategy,
         )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -155,7 +155,7 @@ class IVFPQIndex(index.Index):
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
         distances, ids = self.index.query(
-            queries_feature_vector_array, k, k_factor, nprobe
+            queries_feature_vector_array, k=k, nprobe=nprobe, k_factor=k_factor
         )
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
