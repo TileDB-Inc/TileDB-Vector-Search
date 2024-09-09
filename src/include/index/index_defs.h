@@ -59,13 +59,14 @@ enum class QueryType { FiniteRAM, InfiniteRAM };
 
 enum class IndexLoadStrategy {
   // Used by Python to support `open_for_remote_query_execution`. In this case
-  // we don't want to load
-  // any data, we just want to load metadata so that we can call
+  // we don't want to load any data, we just want to load metadata so that we
+  // can call
   // index.dimensions() and other metadata getters.
   ONLY_METADATA,
-  // Load the index data as well as metadata. This is the default behavior.
+  // Load the index data as well as metadata.
   DEFAULT,
-  // Here we preload the vectors for reranking.
+  // Load everything DEFAULT does, but also preload feature vectors for
+  // reranking.
   PRELOAD_VECTORS_FOR_RERANKING,
 };
 
