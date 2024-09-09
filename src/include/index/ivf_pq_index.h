@@ -1203,17 +1203,7 @@ class ivf_pq_index {
 
     // This function searches for the nearest neighbors using "infinite RAM". We
     // have already loaded the partitioned_pq_vectors_ into memory in the
-    // constructor, so we can just run the query. if (!partitioned_pq_vectors_
-    // || partitioned_pq_vectors_->num_vectors() == 0 ||
-    // partitioned_pq_vectors_->num_vectors() !=
-    // partitioned_pq_vectors_->total_num_vectors()) {
-    //   read_index_infinite();
-    // }
-    //    if (!partitioned_pq_vectors_ || partitioned_pq_vectors_->num_vectors()
-    //    == 0) {
-    //      return;
-    //    }
-
+    // constructor, so we can just run the query.
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
@@ -1244,6 +1234,7 @@ class ivf_pq_index {
         k_initial,
         k_nn);
   }
+
   auto rerank(
       ColMajorMatrix<float>&& initial_distances,
       ColMajorMatrix<id_type>&& initial_ids,

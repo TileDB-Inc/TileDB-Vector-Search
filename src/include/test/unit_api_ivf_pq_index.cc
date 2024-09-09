@@ -428,9 +428,7 @@ TEST_CASE(
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
     auto index = IndexIVFPQ(ctx, index_uri);
-
-    size_t upper_bound = GENERATE(450, 1000, 0);
-    auto index_finite = IndexIVFPQ(ctx, index_uri, upper_bound);
+    auto index_finite = IndexIVFPQ(ctx, index_uri, 450);
 
     for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
          std::vector<std::tuple<int, float, float>>{
@@ -454,23 +452,16 @@ TEST_CASE(
            static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >=
           expected_accuracy_with_reranking);
 
-      //    auto&& [distances_finite, ids_finite] = index_finite.query(
-      //        QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
-      //    CHECK(are_equal(ids_finite, ids));
-      //    CHECK(are_equal(distances_finite, distances));
-      //
-      //    auto&& [distances_finite_with_reranking, ids_finite_with_reranking]
-      //    =
-      //        index_finite.query(
-      //            QueryType::FiniteRAM,
-      //            query_set,
-      //            k_nn,
-      //            nprobe,
-      //            upper_bound,
-      //            k_factor);
-      //    CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
-      //    CHECK(are_equal(
-      //        distances_finite_with_reranking, distances_with_reranking));
+      auto&& [distances_finite, ids_finite] =
+          index_finite.query(query_set, k_nn, nprobe);
+      CHECK(are_equal(ids_finite, ids));
+      CHECK(are_equal(distances_finite, distances));
+
+      auto&& [distances_finite_with_reranking, ids_finite_with_reranking] =
+          index_finite.query(query_set, k_nn, nprobe, k_factor);
+      CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
+      CHECK(
+          are_equal(distances_finite_with_reranking, distances_with_reranking));
     }
   }
 }
