@@ -540,7 +540,6 @@ auto best_first_O4(
     uint32_t Lmax,
     bool skip_top_k = false,
     Distance&& distance = Distance{}) {
-  scoped_timer _{"best_first@best_first_O4"};
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
 

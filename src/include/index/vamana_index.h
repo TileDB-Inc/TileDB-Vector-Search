@@ -374,7 +374,6 @@ class vamana_index {
             r_max_degree_,
             distance_function_);
         {
-          scoped_timer ___("vamana_index@train@inner_loop@post_search_prune");
           for (auto&& [i, j] : graph_.out_edges(p)) {
             // @todo Do this without copying -- prune should take vector of
             //  tuples and p (it copies anyway) maybe scan for p and then only
