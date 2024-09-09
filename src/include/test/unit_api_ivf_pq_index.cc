@@ -347,8 +347,6 @@ TEST_CASE(
       size_t upper_bound = GENERATE(3, 4, 5, 100, 0);
       index = std::make_unique<IndexIVFPQ>(ctx, index_uri, upper_bound);
       CHECK(index->upper_bound() == upper_bound);
-      std::cout << "Executing finite test with upper bound " << upper_bound
-                << std::endl;
     }
 
     CHECK(index->feature_type_string() == feature_type);
@@ -945,29 +943,18 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
   // Load it at timestamp 99 and make sure we can query it correctly. Do this
   // with both a finite and infinite index.
-  {
+  for (auto upper_bound : std::vector<size_t>{0, 4}) {
     auto temporal_policy = TemporalPolicy{TimeTravel, 99};
-    std::unique_ptr<IndexIVFPQ> index;
-    size_t upper_bound = 0;
-    SECTION("infinite") {
-      index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, temporal_policy);
-      CHECK(index->upper_bound() == upper_bound);
-    }
-    SECTION("finite") {
-      upper_bound = 2;
-      index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, temporal_policy);
-      CHECK(index->upper_bound() == upper_bound);
-    }
+    auto index = IndexIVFPQ(ctx, index_uri, upper_bound, temporal_policy);
+    CHECK(index.upper_bound() == upper_bound);
 
-    CHECK(index->temporal_policy().timestamp_end() == 99);
-    CHECK(index->feature_type_string() == feature_type);
-    CHECK(index->id_type_string() == id_type);
-    CHECK(index->partitioning_index_type_string() == partitioning_index_type);
-    CHECK(index->max_iterations() == max_iterations);
-    CHECK(index->convergence_tolerance() == convergence_tolerance);
-    CHECK(index->reassign_ratio() == reassign_ratio);
+    CHECK(index.temporal_policy().timestamp_end() == 99);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.reassign_ratio() == reassign_ratio);
 
     size_t top_k = 1;
     size_t nprobe = 1;
@@ -975,12 +962,12 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
 
     auto&& [scores, ids] =
-        index->query(FeatureVectorArray(queries), top_k, nprobe);
+        index.query(FeatureVectorArray(queries), top_k, nprobe);
     check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {1, 2, 3, 4});
 
     float k_factor = 2.f;
     auto&& [scores_with_reranking, ids_with_reranking] =
-        index->query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
+        index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     check_single_vector_equals(
         scores_with_reranking, ids_with_reranking, {0, 0, 0, 0}, {1, 2, 3, 4});
 
@@ -1017,45 +1004,34 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
   // Load it at timestamp 5 (before ingestion) and make sure we can query and be
   // returned fill values.
-  {
+  for (auto upper_bound : std::vector<size_t>{0, 4}) {
     auto temporal_policy = TemporalPolicy{TimeTravel, 0};
 
-    std::unique_ptr<IndexIVFPQ> index;
-    size_t upper_bound = 0;
-    SECTION("infinite") {
-      index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, temporal_policy);
-      CHECK(index->upper_bound() == upper_bound);
-    }
-    SECTION("finite") {
-      upper_bound = 2;
-      index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, temporal_policy);
-      CHECK(index->upper_bound() == upper_bound);
-    }
+    auto index = IndexIVFPQ(ctx, index_uri, upper_bound, temporal_policy);
+    CHECK(index.upper_bound() == upper_bound);
 
-    CHECK(index->temporal_policy().timestamp_start() == 0);
-    CHECK(index->temporal_policy().timestamp_end() == 0);
-    CHECK(index->feature_type_string() == feature_type);
-    CHECK(index->id_type_string() == id_type);
-    CHECK(index->partitioning_index_type_string() == partitioning_index_type);
-    CHECK(index->max_iterations() == max_iterations);
-    CHECK(index->convergence_tolerance() == convergence_tolerance);
-    CHECK(index->reassign_ratio() == reassign_ratio);
+    CHECK(index.temporal_policy().timestamp_start() == 0);
+    CHECK(index.temporal_policy().timestamp_end() == 0);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.max_iterations() == max_iterations);
+    CHECK(index.convergence_tolerance() == convergence_tolerance);
+    CHECK(index.reassign_ratio() == reassign_ratio);
 
     size_t top_k = 1;
     size_t nprobe = 1;
     float k_factor = 1.9f;
     auto queries = ColMajorMatrix<feature_type_type>{{{1, 1, 1}}};
     auto&& [scores, ids] =
-        index->query(FeatureVectorArray(queries), top_k, nprobe);
+        index.query(FeatureVectorArray(queries), top_k, nprobe);
     check_single_vector_equals(
         scores,
         ids,
         {std::numeric_limits<float>::max()},
         {std::numeric_limits<uint32_t>::max()});
     auto&& [scores_with_reranking, ids_with_reranking] =
-        index->query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
+        index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     check_single_vector_equals(
         scores_with_reranking,
         ids_with_reranking,
@@ -1101,29 +1077,17 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
   // Clear history for <= 99 and then load at 99, then make sure we cannot
   // query.
-  {
-    IndexIVFPQ::clear_history(ctx, index_uri, 99);
-
+  IndexIVFPQ::clear_history(ctx, index_uri, 99);
+  for (auto upper_bound : std::vector<size_t>{0, 3}) {
     auto temporal_policy = TemporalPolicy{TimeTravel, 99};
 
-    std::unique_ptr<IndexIVFPQ> index;
-    size_t upper_bound = 0;
-    SECTION("infinite") {
-      index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, temporal_policy);
-      CHECK(index->upper_bound() == upper_bound);
-    }
-    SECTION("finite") {
-      upper_bound = 3;
-      index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, temporal_policy);
-      CHECK(index->upper_bound() == upper_bound);
-    }
+    auto index = IndexIVFPQ(ctx, index_uri, upper_bound, temporal_policy);
+    CHECK(index.upper_bound() == upper_bound);
 
-    CHECK(index->temporal_policy().timestamp_end() == 99);
-    CHECK(index->feature_type_string() == feature_type);
-    CHECK(index->id_type_string() == id_type);
-    CHECK(index->partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.temporal_policy().timestamp_end() == 99);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
     size_t top_k = 1;
     size_t nprobe = 1;
@@ -1139,10 +1103,10 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         std::vector<uint32_t>{default_id, default_id, default_id, default_id};
 
     auto&& [scores, ids] =
-        index->query(FeatureVectorArray(queries), top_k, nprobe);
+        index.query(FeatureVectorArray(queries), top_k, nprobe);
     check_single_vector_equals(scores, ids, expected_scores, expected_ids);
     auto&& [scores_with_reranking, ids_with_reranking] =
-        index->query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
+        index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     check_single_vector_equals(
         scores_with_reranking,
         ids_with_reranking,
