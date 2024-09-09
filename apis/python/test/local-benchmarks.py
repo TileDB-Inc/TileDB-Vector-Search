@@ -252,7 +252,7 @@ class TimerManager:
         plt.xlabel("Average Query Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title(f"Ingestion Time vs Average Query Accuracy {sift_string()}")
-        for idx, timer in self.timers:
+        for idx, timer in enumerate(self.timers):
             timer.add_data_to_ingestion_time_vs_average_query_accuracy(
                 markers[idx % len(markers)]
             )
@@ -265,7 +265,7 @@ class TimerManager:
         plt.xlabel("Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title(f"Query Time vs Accuracy {sift_string()}")
-        for idx, timer in self.timers:
+        for idx, timer in enumerate(self.timers):
             timer.add_data_to_query_time_vs_accuracy(markers[idx % len(markers)])
         plt.legend()
         plt.savefig(os.path.join(RESULTS_DIR, "query_time_vs_accuracy.png"))

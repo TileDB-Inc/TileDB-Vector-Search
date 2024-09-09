@@ -499,19 +499,22 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     a.train(training_set)
     a.add(training_set)
 
-    _, ids = a.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
+    _, ids = a.query(query_set, k_nn, nprobe)
+    accuracy = recall(ids, groundtruth_set, k_nn)
+    assert accuracy >= 0.87
 
     index_uri = os.path.join(tmp_path, "array")
     a.write_index(ctx, index_uri)
 
     b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
     _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
-    assert recall(ids_infinite, groundtruth_set, k_nn) >= 0.87
+    accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_infinite
 
     b_finite = vspy.IndexIVFPQ(ctx, index_uri, memory_budget=1000)
     _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
-    assert ids_finite == ids_infinite
+    accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_finite
 
 
 def test_inplace_build_query_IndexIVFPQ(tmp_path):
@@ -536,18 +539,21 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     a.add(training_set)
 
     _, ids = a.query(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
+    accuracy = recall(ids, groundtruth_set, k_nn)
+    assert accuracy >= 0.87
 
     index_uri = os.path.join(tmp_path, "array")
     a.write_index(ctx, index_uri)
 
     b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
     _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
-    assert recall(ids_infinite, groundtruth_set, k_nn) >= 0.87
+    accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_infinite
 
     b_finite = vspy.IndexIVFPQ(ctx, index_uri, memory_budget=999)
     _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
-    assert ids_finite == ids_infinite
+    accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_finite
 
 
 def test_construct_IndexIVFFlat():
