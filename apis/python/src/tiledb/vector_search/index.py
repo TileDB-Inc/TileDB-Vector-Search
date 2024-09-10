@@ -2,8 +2,9 @@ import concurrent.futures as futures
 import json
 import os
 import time
+from abc import ABCMeta
+from abc import abstractmethod
 from typing import Any, Mapping, Optional
-from abc import ABCMeta, abstractmethod
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
@@ -42,6 +43,7 @@ class Index(metaclass=ABCMeta):
         If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
         If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
+
     @abstractmethod
     def __init__(
         self,
