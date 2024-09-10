@@ -947,4 +947,5 @@ def open(
             **kwargs,
         )
     else:
+        group.close()
         raise ValueError(f"Unsupported index type {index_type}")
