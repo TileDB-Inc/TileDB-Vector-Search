@@ -51,6 +51,7 @@ class Index(metaclass=ABCMeta):
         open_for_remote_query_execution: bool = False,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        group: tiledb.Group = None,
     ):
         # If the user passes a tiledb python Config object convert to a dictionary
         if isinstance(config, tiledb.Config):
@@ -59,7 +60,10 @@ class Index(metaclass=ABCMeta):
         self.open_for_remote_query_execution = open_for_remote_query_execution
         self.config = config
         self.ctx = vspy.Ctx(config)
-        self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
+        if group is not None:
+            self.group = group
+        else:
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         try:
             self.distance_metric = vspy.DistanceMetric(
@@ -904,14 +908,15 @@ def open(
     from tiledb.vector_search.ivf_pq_index import IVFPQIndex
     from tiledb.vector_search.vamana_index import VamanaIndex
 
-    with tiledb.Group(uri, "r") as group:
-        index_type = group.meta["index_type"]
+    group = tiledb.Group(uri, "r")
+    index_type = group.meta["index_type"]
     if index_type == "FLAT":
         return FlatIndex(
             uri=uri,
             open_for_remote_query_execution=open_for_remote_query_execution,
             config=config,
             timestamp=timestamp,
+            group=group,
             **kwargs,
         )
     elif index_type == "IVF_FLAT":
@@ -920,6 +925,7 @@ def open(
             open_for_remote_query_execution=open_for_remote_query_execution,
             config=config,
             timestamp=timestamp,
+            group=group,
             **kwargs,
         )
     elif index_type == "VAMANA":
@@ -928,6 +934,7 @@ def open(
             open_for_remote_query_execution=open_for_remote_query_execution,
             config=config,
             timestamp=timestamp,
+            group=group,
             **kwargs,
         )
     elif index_type == "IVF_PQ":
@@ -936,6 +943,7 @@ def open(
             open_for_remote_query_execution=open_for_remote_query_execution,
             config=config,
             timestamp=timestamp,
+            group=group,
             **kwargs,
         )
     else:

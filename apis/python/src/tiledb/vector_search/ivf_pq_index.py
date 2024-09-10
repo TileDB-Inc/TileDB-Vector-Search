@@ -49,6 +49,7 @@ class IVFPQIndex(index.Index):
         timestamp=None,
         memory_budget: int = -1,
         open_for_remote_query_execution: bool = False,
+        group: tiledb.Group = None,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -64,6 +65,7 @@ class IVFPQIndex(index.Index):
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
+            group=group,
         )
         # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexIVFPQ(self.ctx, uri, to_temporal_policy(timestamp))

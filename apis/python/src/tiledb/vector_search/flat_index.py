@@ -46,6 +46,7 @@ class FlatIndex(index.Index):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         open_for_remote_query_execution: bool = False,
+        group: tiledb.Group = None,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -60,6 +61,7 @@ class FlatIndex(index.Index):
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
+            group=group,
         )
         self._index = None
         self.db_uri = self.group[
