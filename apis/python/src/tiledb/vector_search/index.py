@@ -3,6 +3,7 @@ import json
 import os
 import time
 from typing import Any, Mapping, Optional
+from abc import ABCMeta, abstractmethod
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
@@ -16,7 +17,7 @@ from tiledb.vector_search.utils import is_type_erased_index
 DATASET_TYPE = "vector_search"
 
 
-class Index:
+class Index(metaclass=ABCMeta):
     """
     Abstract Vector Index class.
 
@@ -41,7 +42,7 @@ class Index:
         If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
         If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
-
+    @abstractmethod
     def __init__(
         self,
         uri: str,
@@ -52,7 +53,6 @@ class Index:
         # If the user passes a tiledb python Config object convert to a dictionary
         if isinstance(config, tiledb.Config):
             config = dict(config)
-
         self.uri = uri
         self.open_for_remote_query_execution = open_for_remote_query_execution
         self.config = config
@@ -684,6 +684,7 @@ class Index:
                 raise ValueError(f"Unsupported index_type: {index_type}")
             group.close()
 
+    @abstractmethod
     def get_dimensions(self):
         """
         Abstract method implemented by all Vector Index implementations.
@@ -692,6 +693,7 @@ class Index:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def query_internal(self, queries: np.ndarray, k: int, **kwargs):
         """
         Abstract method implemented by all Vector Index implementations.
