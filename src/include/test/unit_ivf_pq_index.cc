@@ -751,7 +751,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
   float reassign_ratio = 0.09f;
 
   size_t nprobe = nlist;
-  size_t k_nn = 20;
+  size_t k_nn = 40;
   float k_factor = 2.f;
   size_t upper_bound = 350;
 
