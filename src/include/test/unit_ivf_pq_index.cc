@@ -839,7 +839,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
     // finite.
     {
-      size_t upper_bound = 275;
+      size_t upper_bound = 300;
       auto index_finite =
           ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri, upper_bound);
       CHECK(index_finite.num_vectors() == num_vectors);
