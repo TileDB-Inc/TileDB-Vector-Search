@@ -202,7 +202,7 @@ TEMPLATE_TEST_CASE(
     stdx::layout_left) {
   std::vector<MatrixWithIds<float, float, TestType>> v;
 
-  auto numIds = 3;
+  size_t numIds = 3;
   auto A = MatrixWithIds<float, float, TestType>{
       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}}, {0, 1, 2}};
   auto aptr = A.data();

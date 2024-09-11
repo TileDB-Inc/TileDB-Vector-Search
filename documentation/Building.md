@@ -13,7 +13,7 @@ cmake --build ./src/build -j3
 
 Then you can run the tests:
 
-```
+```bash
 cmake --build ./src/build --target check
 ```
 

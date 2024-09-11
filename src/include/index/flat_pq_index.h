@@ -200,8 +200,6 @@ class flat_pq_index {
       auto sub_begin = subspace * dimensions_ / num_subspaces_;
       auto sub_end = (subspace + 1) * dimensions_ / num_subspaces_;
 
-      auto local_sub_distance = SubDistance{sub_begin, sub_end};
-
       sub_kmeans_random_init(training_set, centroids_, sub_begin, sub_end);
       size_t iters;
       double conv;
