@@ -62,12 +62,12 @@ enum class IndexLoadStrategy {
   // we don't want to load any data, we just want to load metadata so that we
   // can call
   // index.dimensions() and other metadata getters.
-  ONLY_METADATA,
-  // Load the index data as well as metadata.
-  DEFAULT,
+  METADATA_ONLY,
+  // Load the PQ index data as well as metadata.
+  PQ_INDEX,
   // Load everything DEFAULT does, but also preload feature vectors for
   // reranking.
-  PRELOAD_VECTORS_FOR_RERANKING,
+  PQ_INDEX_AND_RERANKING_VECTORS,
 };
 
 /******************************************************************************

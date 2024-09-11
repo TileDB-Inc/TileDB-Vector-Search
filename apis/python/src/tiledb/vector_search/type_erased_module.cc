@@ -480,7 +480,7 @@ void init_type_erased_module(py::module_& m) {
           py::arg("group_uri"),
           py::arg("memory_budget") = 0,
           py::arg("temporal_policy") = std::nullopt,
-          py::arg("index_load_strategy") = IndexLoadStrategy::DEFAULT)
+          py::arg("index_load_strategy") = IndexLoadStrategy::PQ_INDEX)
       .def(
           "__init__",
           [](IndexIVFPQ& instance, py::kwargs kwargs) {

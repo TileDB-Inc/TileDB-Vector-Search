@@ -1098,11 +1098,11 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       .export_values();
 
   py::enum_<IndexLoadStrategy>(m, "IndexLoadStrategy")
-      .value("ONLY_METADATA", IndexLoadStrategy::ONLY_METADATA)
-      .value("DEFAULT", IndexLoadStrategy::DEFAULT)
+      .value("METADATA_ONLY", IndexLoadStrategy::METADATA_ONLY)
+      .value("PQ_INDEX", IndexLoadStrategy::PQ_INDEX)
       .value(
-          "PRELOAD_VECTORS_FOR_RERANKING",
-          IndexLoadStrategy::PRELOAD_VECTORS_FOR_RERANKING)
+          "PQ_INDEX_AND_RERANKING_VECTORS",
+          IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS)
       .export_values();
 
   /* === Module inits === */

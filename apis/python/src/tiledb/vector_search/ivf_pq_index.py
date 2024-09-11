@@ -83,11 +83,11 @@ class IVFPQIndex(index.Index):
             open_for_remote_query_execution=open_for_remote_query_execution,
         )
         strategy = (
-            IndexLoadStrategy.PRELOAD_VECTORS_FOR_RERANKING
+            vspy.IndexLoadStrategy.PQ_INDEX_AND_RERANKING_VECTORS
             if preload_k_factor_vectors
-            else IndexLoadStrategy.ONLY_METADATA
+            else vspy.IndexLoadStrategy.METADATA_ONLY
             if open_for_remote_query_execution
-            else IndexLoadStrategy.DEFAULT
+            else vspy.IndexLoadStrategy.PQ_INDEX
         )
         self.index = vspy.IndexIVFPQ(
             self.ctx,
@@ -223,7 +223,7 @@ def create(
         id_type=np.dtype(np.uint64).name,
         partitioning_index_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
-        n_list=partitions if (partitions is not None and partitions is not -1) else 0,
+        n_list=partitions if (partitions is not None and partitions != -1) else 0,
         num_subspaces=num_subspaces,
         distance_metric=int(distance_metric),
     )

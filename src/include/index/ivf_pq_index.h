@@ -192,7 +192,7 @@ class ivf_pq_index {
    ****************************************************************************/
   size_t upper_bound_{0};
   TemporalPolicy temporal_policy_;
-  IndexLoadStrategy index_load_strategy_{IndexLoadStrategy::DEFAULT};
+  IndexLoadStrategy index_load_strategy_{IndexLoadStrategy::PQ_INDEX};
   std::unique_ptr<ivf_pq_group<ivf_pq_index>> group_;
 
   /****************************************************************************
@@ -356,14 +356,14 @@ class ivf_pq_index {
       const std::string& uri,
       size_t upper_bound = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::DEFAULT)
+      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::PQ_INDEX)
       : upper_bound_{upper_bound}
       , temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , index_load_strategy_{index_load_strategy}
       , group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
     if (index_load_strategy_ ==
-            IndexLoadStrategy::PRELOAD_VECTORS_FOR_RERANKING &&
+            IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS &&
         upper_bound != 0) {
       throw std::runtime_error(
           "Can only preload feature vectors with an upper bound 0. It was " +
@@ -384,7 +384,7 @@ class ivf_pq_index {
     reassign_ratio_ = group_->get_reassign_ratio();
     distance_metric_ = group_->get_distance_metric();
 
-    if (index_load_strategy_ == IndexLoadStrategy::ONLY_METADATA) {
+    if (index_load_strategy_ == IndexLoadStrategy::METADATA_ONLY) {
       return;
     }
 
@@ -406,9 +406,7 @@ class ivf_pq_index {
             num_clusters_,
             temporal_policy_);
 
-    if (index_load_strategy_ ==
-            IndexLoadStrategy::PRELOAD_VECTORS_FOR_RERANKING ||
-        upper_bound == 0) {
+    if (upper_bound == 0) {
       // Read the the complete index arrays into ("infinite") memory. This will
       // read the centroids, indices, partitioned_ids, and and the complete set
       // of partitioned_pq_vectors, along with metadata from a group_uri. Load
@@ -432,20 +430,20 @@ class ivf_pq_index {
       if (::num_vectors(*partitioned_pq_vectors_) !=
           size(partitioned_pq_vectors_->ids())) {
         throw std::runtime_error(
-            "[ivf_flat_index@read_index_infinite] "
+            "[ivf_flat_index@ivf_pq_index] "
             "::num_vectors(*partitioned_pq_vectors_) != "
             "size(partitioned_pq_vectors_->ids())");
       }
       if (size(partitioned_pq_vectors_->indices()) !=
           ::num_vectors(flat_ivf_centroids_) + 1) {
         throw std::runtime_error(
-            "[ivf_flat_index@read_index_infinite] "
+            "[ivf_flat_index@ivf_pq_index] "
             "size(partitioned_pq_vectors_->indices()) != "
             "::num_vectors(flat_ivf_centroids_) + 1");
       }
     }
     if (index_load_strategy_ ==
-        IndexLoadStrategy::PRELOAD_VECTORS_FOR_RERANKING) {
+        IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS) {
       feature_vectors_ = tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
           group_->cached_ctx(),
           group_->feature_vectors_uri(),

@@ -146,7 +146,7 @@ class IndexIVFPQ {
       const URI& group_uri,
       size_t upper_bound = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::DEFAULT) {
+      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::PQ_INDEX) {
     read_types(
         ctx,
         group_uri,
