@@ -638,7 +638,7 @@ class Index:
             new_partition_history = []
             i = 0
             for ingestion_timestamp in ingestion_timestamps:
-                if ingestion_timestamp==0 or ingestion_timestamp > timestamp:
+                if ingestion_timestamp == 0 or ingestion_timestamp > timestamp:
                     new_ingestion_timestamps.append(ingestion_timestamp)
                     new_base_sizes.append(base_sizes[i])
                     new_partition_history.append(partition_history[i])
