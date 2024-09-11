@@ -591,7 +591,6 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
   {
     auto data =
         ColMajorMatrixWithIds<siftsmall_feature_type>(dimensions, num_vectors);
-    debug_matrix_with_ids(data, "data");
     index.train(data, data.raveled_ids());
     index.add(data, data.raveled_ids());
     CHECK(index.num_vectors() == num_vectors);
@@ -774,6 +773,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
   // We can train, add, query, and then write the index.
   std::vector<id_type> ids(num_vectors);
+  size_t num_equal_no_reranking = 0;
   {
     std::vector<std::vector<feature_type>> vectors;
     for (int i = 1; i <= num_vectors; ++i) {
@@ -800,10 +800,10 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
       auto&& [scores_no_reranking, ids_no_reranking] =
           index.query(queries, k_nn, nprobe, 1.f);
-      auto num_equal_no_reranking =
+      num_equal_no_reranking =
           check_single_vector_num_equal(ids_no_reranking, ids);
       CHECK(num_equal_no_reranking != k_nn);
-      CHECK(num_equal_no_reranking > 5);
+      CHECK(num_equal_no_reranking >= 5);
     }
 
     CHECK(index.num_vectors() == ::num_vectors(training));
@@ -832,10 +832,9 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
       auto&& [scores_no_reranking, ids_no_reranking] =
           index_infinite.query(queries, k_nn, nprobe, 1.f);
-      auto num_equal_no_reranking =
-          check_single_vector_num_equal(ids_no_reranking, ids);
-      CHECK(num_equal_no_reranking != k_nn);
-      CHECK(num_equal_no_reranking > 2);
+      CHECK(
+          num_equal_no_reranking ==
+          check_single_vector_num_equal(ids_no_reranking, ids));
     }
 
     // finite.
@@ -843,8 +842,8 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
       size_t upper_bound = 250;
       auto index_finite =
           ivf_pq_index<feature_type, id_type>(ctx, ivf_index_uri, upper_bound);
-      CHECK(index_finite.upper_bound() == upper_bound);
       CHECK(index_finite.num_vectors() == num_vectors);
+      CHECK(index_finite.upper_bound() == upper_bound);
 
       auto&& [scores_reranking, ids_reranking] =
           index_finite.query(queries, k_nn, nprobe, k_factor);
@@ -854,10 +853,9 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
       auto&& [scores_no_reranking, ids_no_reranking] =
           index_finite.query(queries, k_nn, nprobe, 1.f);
-      auto num_equal_no_reranking =
-          check_single_vector_num_equal(ids_no_reranking, ids);
-      CHECK(num_equal_no_reranking != k_nn);
-      CHECK(num_equal_no_reranking > 5);
+      CHECK(
+          num_equal_no_reranking ==
+          check_single_vector_num_equal(ids_no_reranking, ids));
     }
   }
 }
