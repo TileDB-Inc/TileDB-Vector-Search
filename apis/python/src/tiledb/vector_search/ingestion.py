@@ -218,6 +218,7 @@ def ingest(
     from tiledb.cloud.utilities import get_logger
     from tiledb.cloud.utilities import set_aws_context
     from tiledb.vector_search import flat_index
+    from tiledb.vector_search import index
     from tiledb.vector_search import ivf_flat_index
     from tiledb.vector_search import ivf_pq_index
     from tiledb.vector_search import vamana_index
@@ -3061,18 +3062,4 @@ def ingest(
             group.close()
 
         consolidate_and_vacuum(index_group_uri=index_group_uri, config=config)
-
-        if index_type == "FLAT":
-            return flat_index.FlatIndex(uri=index_group_uri, config=config)
-        elif index_type == "VAMANA":
-            return vamana_index.VamanaIndex(uri=index_group_uri, config=config)
-        elif index_type == "IVF_FLAT":
-            return ivf_flat_index.IVFFlatIndex(
-                uri=index_group_uri, memory_budget=1000000, config=config
-            )
-        elif index_type == "IVF_PQ":
-            return ivf_pq_index.IVFPQIndex(
-                uri=index_group_uri, memory_budget=1000000, config=config
-            )
-        else:
-            raise ValueError(f"Not supported index_type {index_type}")
+        return index.open(uri=index_group_uri, memory_budget=1000000, config=config)

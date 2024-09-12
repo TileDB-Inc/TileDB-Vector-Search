@@ -591,10 +591,10 @@ TEST_CASE("indices", "[ivf qv]") {
       (std::filesystem::temp_directory_path() / "ids").string();
 
   // Create the partitioned_matrix.
-  int num_vectors = GENERATE(37, 99, 377);
+  size_t num_vectors = GENERATE(37, 99, 377);
   uint64_t dimensions = 3;
-  int num_parts = num_vectors;
-  int num_queries = GENERATE(1, 9, 38);
+  size_t num_parts = num_vectors;
+  size_t num_queries = GENERATE(1, 9, 38);
   std::vector<part_index_type> indices;
   {
     auto training_set = ColMajorMatrix<feature_type>(dimensions, num_vectors);

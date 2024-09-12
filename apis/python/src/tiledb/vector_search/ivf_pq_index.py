@@ -56,6 +56,7 @@ class IVFPQIndex(index.Index):
         memory_budget: int = -1,
         preload_k_factor_vectors: bool = False,
         open_for_remote_query_execution: bool = False,
+        group: tiledb.Group = None,
         **kwargs,
     ):
         if preload_k_factor_vectors and memory_budget != -1:
@@ -81,6 +82,7 @@ class IVFPQIndex(index.Index):
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
+            group=group,
         )
         strategy = (
             vspy.IndexLoadStrategy.PQ_INDEX_AND_RERANKING_VECTORS
