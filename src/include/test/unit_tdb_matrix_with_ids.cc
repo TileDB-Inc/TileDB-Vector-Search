@@ -232,7 +232,7 @@ TEST_CASE("load from uri", "[tdb_matrix_with_ids]") {
   ck.load();
   CHECK(ck.num_ids() == num_sift_vectors);
 
-  auto num_queries = 10;
+  size_t num_queries = 10;
   auto qk = tdbColMajorMatrixWithIds<float>(
       ctx, sift_query_uri, sift_ids_uri, num_queries);
   load(qk);

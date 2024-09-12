@@ -81,8 +81,8 @@ TEST_CASE("partition_ivf_index", "[partition]") {
   // auto partition_ivf_index(
   //      auto&& centroids, auto&& query, size_t nprobe, size_t nthreads)
 
-  auto nprobe = GENERATE(1, 2, 3);
-  auto nthreads = GENERATE(3);
+  size_t nprobe = GENERATE(1, 2, 3);
+  size_t nthreads = GENERATE(3);
 
   auto&& [active_partitions, active_queries] =
       detail::ivf::partition_ivf_flat_index<uint32_t>(

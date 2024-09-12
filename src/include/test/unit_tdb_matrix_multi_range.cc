@@ -191,7 +191,6 @@ TEST_CASE("limit column_indices", "[tdb_matrix_multi_range]") {
   using T = float;
   using I = size_t;
   using LayoutPolicy = stdx::layout_left;
-  using IdsType = uint8_t;
 
   std::string tmp_matrix_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();

@@ -192,7 +192,7 @@ TEST_CASE("range_for_each", "[algorithm]") {
 
   // Test with both a vector (b/c it's simple) and matrix (b/c it's what we use
   // in practice).
-  std::vector<int> thread_used(num_vectors, 0);
+  std::vector<size_t> thread_used(num_vectors, 0);
   auto thread_used_matrix = ColMajorMatrix<float>(k, num_vectors);
 
   for (size_t num_threads = 1;
@@ -203,7 +203,7 @@ TEST_CASE("range_for_each", "[algorithm]") {
         queries,
         [&](auto&& vector, auto thread_index, auto index) {
           thread_used[index] = thread_index;
-          for (int j = 0; j < k; ++j) {
+          for (size_t j = 0; j < k; ++j) {
             thread_used_matrix[index][j] = thread_index;
           }
         });
