@@ -2,6 +2,8 @@ import concurrent.futures as futures
 import json
 import os
 import time
+from abc import ABCMeta
+from abc import abstractmethod
 from typing import Any, Mapping, Optional
 
 from tiledb.cloud.dag import Mode
@@ -16,7 +18,7 @@ from tiledb.vector_search.utils import is_type_erased_index
 DATASET_TYPE = "vector_search"
 
 
-class Index:
+class Index(metaclass=ABCMeta):
     """
     Abstract Vector Index class.
 
@@ -42,22 +44,26 @@ class Index:
         If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
+    @abstractmethod
     def __init__(
         self,
         uri: str,
-        open_for_remote_query_execution: bool,
+        open_for_remote_query_execution: bool = False,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        group: tiledb.Group = None,
     ):
         # If the user passes a tiledb python Config object convert to a dictionary
         if isinstance(config, tiledb.Config):
             config = dict(config)
-
         self.uri = uri
         self.open_for_remote_query_execution = open_for_remote_query_execution
         self.config = config
         self.ctx = vspy.Ctx(config)
-        self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
+        if group is not None:
+            self.group = group
+        else:
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         try:
             self.distance_metric = vspy.DistanceMetric(
@@ -688,6 +694,7 @@ class Index:
                 raise ValueError(f"Unsupported index_type: {index_type}")
             group.close()
 
+    @abstractmethod
     def get_dimensions(self):
         """
         Abstract method implemented by all Vector Index implementations.
@@ -696,6 +703,7 @@ class Index:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def query_internal(self, queries: np.ndarray, k: int, **kwargs):
         """
         Abstract method implemented by all Vector Index implementations.
@@ -868,3 +876,80 @@ def create_metadata(
         group.meta["has_updates"] = False
         group.meta["distance_metric"] = int(distance_metric)
         group.close()
+
+
+"""
+Factory method that opens a vector index.
+
+Retrieves the `index_type` from the index group metadata and instantiates the appropriate `Index` subclass.
+
+Parameters
+----------
+uri: str
+    URI of the index.
+config: Optional[Mapping[str, Any]]
+    TileDB config dictionary.
+timestamp: int or tuple(int)
+    If int, open the index at a given timestamp.
+    If tuple, open at the given start and end timestamps.
+open_for_remote_query_execution: bool
+    If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+    If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
+kwargs:
+    Additional arguments to be passed to the `Index` subclass constructor.
+"""
+
+
+def open(
+    uri: str,
+    open_for_remote_query_execution: bool = False,
+    config: Optional[Mapping[str, Any]] = None,
+    timestamp=None,
+    **kwargs,
+) -> Index:
+    from tiledb.vector_search.flat_index import FlatIndex
+    from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+    from tiledb.vector_search.ivf_pq_index import IVFPQIndex
+    from tiledb.vector_search.vamana_index import VamanaIndex
+
+    group = tiledb.Group(uri, "r")
+    index_type = group.meta["index_type"]
+    if index_type == "FLAT":
+        return FlatIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    elif index_type == "IVF_FLAT":
+        return IVFFlatIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    elif index_type == "VAMANA":
+        return VamanaIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    elif index_type == "IVF_PQ":
+        return IVFPQIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    else:
+        group.close()
+        raise ValueError(f"Unsupported index type {index_type}")

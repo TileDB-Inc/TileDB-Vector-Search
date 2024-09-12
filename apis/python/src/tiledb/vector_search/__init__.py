@@ -4,6 +4,7 @@ from tiledb.cloud.dag.mode import Mode
 from . import utils
 from .flat_index import FlatIndex
 from .index import Index
+from .index import open
 from .ingestion import ingest
 from .ivf_flat_index import IVFFlatIndex
 from .ivf_pq_index import IVFPQIndex
@@ -34,6 +35,7 @@ __all__ = [
     "VamanaIndex",
     "IVFPQIndex",
     "Mode",
+    "open",
     "load_as_array",
     "load_as_matrix",
     "ingest",
