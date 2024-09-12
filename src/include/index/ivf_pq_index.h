@@ -362,12 +362,13 @@ class ivf_pq_index {
       , index_load_strategy_{index_load_strategy}
       , group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
-    if (index_load_strategy_ ==
-            IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS &&
-        upper_bound != 0) {
+    if (upper_bound != 0 && index_load_strategy_ != IndexLoadStrategy::PQ_OOC) {
       throw std::runtime_error(
-          "Can only preload feature vectors with an upper bound 0. It was " +
-          std::to_string(upper_bound));
+          "With upper_bound > 0 you must use IndexLoadStrategy::PQ_OOC.");
+    }
+    if (upper_bound == 0 && index_load_strategy_ == IndexLoadStrategy::PQ_OOC) {
+      throw std::runtime_error(
+          "With IndexLoadStrategy::PQ_OOC you must have an upper_bound > 0.");
     }
     /**
      * Read the centroids. How the partitioned_pq_vectors_ are read in will be
@@ -383,10 +384,6 @@ class ivf_pq_index {
     convergence_tolerance_ = group_->get_convergence_tolerance();
     reassign_ratio_ = group_->get_reassign_ratio();
     distance_metric_ = group_->get_distance_metric();
-
-    if (index_load_strategy_ == IndexLoadStrategy::METADATA_ONLY) {
-      return;
-    }
 
     flat_ivf_centroids_ =
         tdbPreLoadMatrix<flat_vector_feature_type, stdx::layout_left>(

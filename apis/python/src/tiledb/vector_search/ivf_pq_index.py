@@ -85,8 +85,9 @@ class IVFPQIndex(index.Index):
         strategy = (
             vspy.IndexLoadStrategy.PQ_INDEX_AND_RERANKING_VECTORS
             if preload_k_factor_vectors
-            else vspy.IndexLoadStrategy.METADATA_ONLY
+            else vspy.IndexLoadStrategy.PQ_OOC
             if open_for_remote_query_execution
+            or (memory_budget != -1 and memory_budget != 0)
             else vspy.IndexLoadStrategy.PQ_INDEX
         )
         self.index = vspy.IndexIVFPQ(

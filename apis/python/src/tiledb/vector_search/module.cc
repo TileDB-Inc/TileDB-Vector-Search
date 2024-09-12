@@ -1098,7 +1098,7 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       .export_values();
 
   py::enum_<IndexLoadStrategy>(m, "IndexLoadStrategy")
-      .value("METADATA_ONLY", IndexLoadStrategy::METADATA_ONLY)
+      .value("PQ_OOC", IndexLoadStrategy::PQ_OOC)
       .value("PQ_INDEX", IndexLoadStrategy::PQ_INDEX)
       .value(
           "PQ_INDEX_AND_RERANKING_VECTORS",
