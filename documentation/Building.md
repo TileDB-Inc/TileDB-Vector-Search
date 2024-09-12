@@ -15,7 +15,7 @@ cmake --build ./src/build -j3
 cmake --build ./src/build --target check
 ```
 
-Though that makes it easy to build and run all tests, incremental rebuild will not work well. To get incremental rebuild working, we turn off Superbuild with `-DCMAKE_IDE=ON`. Note that unlike when using Superbuild (which is the default when `-DCMAKE_IDE=ON` is not set), you must pass `-DTileDB_DIR:PATH`.
+Though above makes it easy to build and run all tests, incremental rebuild will not work. To get incremental rebuild working, we turn off Superbuild with `-DCMAKE_IDE=ON`. Note that unlike when using Superbuild (which is the default when `-DCMAKE_IDE=ON` is not set), you must pass `-DTileDB_DIR:PATH`.
 
 ```bash
 # Configure:
