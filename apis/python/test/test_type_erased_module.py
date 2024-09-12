@@ -511,7 +511,12 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
     assert accuracy == accuracy_infinite
 
-    b_finite = vspy.IndexIVFPQ(ctx, index_uri, memory_budget=1000)
+    b_finite = vspy.IndexIVFPQ(
+        ctx,
+        index_uri,
+        memory_budget=1000,
+        index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+    )
     _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
     accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
     assert accuracy == accuracy_finite
@@ -550,7 +555,12 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
     assert accuracy == accuracy_infinite
 
-    b_finite = vspy.IndexIVFPQ(ctx, index_uri, memory_budget=999)
+    b_finite = vspy.IndexIVFPQ(
+        ctx,
+        index_uri,
+        memory_budget=999,
+        index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+    )
     _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
     accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
     assert accuracy == accuracy_finite
