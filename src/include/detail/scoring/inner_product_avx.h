@@ -41,6 +41,7 @@
 
 #include <immintrin.h>
 #include "concepts.h"
+#include "detail/linalg/vector.h"
 
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
@@ -96,22 +97,30 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const auto* a_ptr = a.data();
+  const float* a_ptr = a.data();
+  // Can be uint8_t* or int8_t*.
   const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
     // Load 8 floats
-    __m256 a_floats = _mm256_loadu_ps(a_ptr + i + 0);
+    __m256 a_floats = _mm256_loadu_ps(a_ptr + i);
 
-    // Load 8 bytes
+    // Load 8 bytes (uint8_t or int8_t)
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
-    __m256i b_ints = _mm256_cvtepu8_epi32(vec_b);
+    // Conditionally convert based on the type of W::value_type
+    __m256i b_ints;
+    if constexpr (std::same_as<typename W::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      b_ints = _mm256_cvtepu8_epi32(vec_b);
+    } else if constexpr (std::same_as<typename W::value_type, int8_t>) {
+      // Sign extend int8_t to int32_t
+      b_ints = _mm256_cvtepi8_epi32(vec_b);
+    }
 
-    // Convert signed integers to floats
+    // Convert the 32-bit integers to floats
     __m256 b_floats = _mm256_cvtepi32_ps(b_ints);
 
     // Multiply and accumulate
@@ -146,25 +155,33 @@ template <feature_vector V, feature_vector W>
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
-  const size_t size_a = size(a);
+  const size_t size_a = a.size();
   const size_t stop = size_a - (size_a % 8);
 
+    // Could be uint8_t* or int8_t*
   const auto* a_ptr = a.data();
-  const auto* b_ptr = b.data();
+  const float* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
-    // Load 8 bytes == 64 bits -- zeros out top 8 bytes
+    // Load 8 bytes (either uint8_t or int8_t)
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
 
-    // Load 8 floats
-    __m256 b_floats = _mm256_loadu_ps(b_ptr + i + 0);
+    // Load 8 floats from vector b
+    __m256 b_floats = _mm256_loadu_ps(b_ptr + i);
 
-    // Zero extend 8bit to 32bit ints
-    __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
+    // Conditionally convert based on the type of V::value_type
+    __m256i a_ints;
+    if constexpr (std::same_as<typename V::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      a_ints = _mm256_cvtepu8_epi32(vec_a);
+    } else if constexpr (std::same_as<typename V::value_type, int8_t>) {
+      // Sign extend int8_t to int32_t
+      a_ints = _mm256_cvtepi8_epi32(vec_a);
+    }
 
-    // Convert signed integers to floats
+    // Convert the 32-bit integers to floats
     __m256 a_floats = _mm256_cvtepi32_ps(a_ints);
 
     // Multiply and accumulate
@@ -200,24 +217,40 @@ template <feature_vector V, feature_vector W>
 inline float avx2_inner_product(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
-  const size_t size_a = size(a);
+  const size_t size_a = a.size();
   const size_t stop = size_a - (size_a % 8);
 
-  const auto* a_ptr = a.data();
-  const auto* b_ptr = b.data();
+  const auto* a_ptr = a.data();  // Can be either uint8_t* or int8_t*
+  const auto* b_ptr = b.data();  // Can be either uint8_t* or int8_t*
 
   __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
-    // Load 8 bytes == 64 bits -- zeros out top 8 bytes
+    // Load 8 bytes (uint8_t or int8_t) from both vectors
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
-    __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
-    __m256i b_ints = _mm256_cvtepu8_epi32(vec_b);
+    // Conditionally convert based on the type of V::value_type
+    __m256i a_ints;
+    if constexpr (std::same_as<typename V::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      a_ints = _mm256_cvtepu8_epi32(vec_a);
+    } else if constexpr (std::same_as<typename V::value_type, int8_t>) {
+      // Sign extend int8_t to int32_t
+      a_ints = _mm256_cvtepi8_epi32(vec_a);
+    }
 
-    // Convert signed integers to floats
+    // Conditionally convert based on the type of W::value_type
+    __m256i b_ints;
+    if constexpr (std::same_as<typename W::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      b_ints = _mm256_cvtepu8_epi32(vec_b);
+    } else if constexpr (std::same_as<typename W::value_type, int8_t>) {
+      // Sign extend int8_t to int32_t
+      b_ints = _mm256_cvtepi8_epi32(vec_b);
+    }
+
+    // Convert the 32-bit integers to floats for both vectors
     __m256 a_floats = _mm256_cvtepi32_ps(a_ints);
     __m256 b_floats = _mm256_cvtepi32_ps(b_ints);
 
