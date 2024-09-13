@@ -84,6 +84,7 @@ class IVFFlatIndex(index.Index):
         timestamp=None,
         memory_budget: int = -1,
         open_for_remote_query_execution: bool = False,
+        group: tiledb.Group = None,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -99,6 +100,7 @@ class IVFFlatIndex(index.Index):
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
+            group=group,
         )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -427,8 +429,7 @@ class IVFFlatIndex(index.Index):
                 k_nn=k_nn,
                 ctx=Ctx(config),
                 timestamp=timestamp,
-                # TODO(nikos) add this after the library change gets released in TileDB cloud
-                # upper_bound=0 if memory_budget == -1 else memory_budget,
+                upper_bound=0 if memory_budget == -1 else memory_budget,
             )
             results = []
             for q in range(len(r)):

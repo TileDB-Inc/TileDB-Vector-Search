@@ -46,6 +46,7 @@ TEST_CASE("init constructor", "[api_ivf_pq_index]") {
         a.partitioning_index_type_string() ==
         datatype_to_string(TILEDB_UINT32));
     CHECK(dimensions(a) == 0);
+    CHECK(a.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   SECTION("float uint32 uint32") {
@@ -185,6 +186,9 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     vfs.remove_dir(index_uri);
   }
 
+  auto queries = ColMajorMatrix<feature_type_type>{
+      {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
+
   {
     auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
         {{"feature_type", feature_type},
@@ -202,6 +206,28 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
+
+    // Make sure we can query with k_factor > 1 on an empty index that is not
+    // loaded by URI.
+    size_t top_k = 1;
+    size_t nprobe = 1;
+    size_t upper_bound = 0;
+    float k_factor = 2.f;
+    auto&& [scores_vector_array, ids_vector_array] = index.query(
+        QueryType::InfiniteRAM,
+        FeatureVectorArray(queries),
+        top_k,
+        nprobe,
+        upper_bound,
+        k_factor);
+    auto default_score = std::numeric_limits<float>::max();
+    auto default_id = std::numeric_limits<uint32_t>::max();
+    check_single_vector_equals(
+        scores_vector_array,
+        ids_vector_array,
+        {default_score, default_score, default_score, default_score},
+        {default_id, default_id, default_id, default_id});
   }
 
   {
@@ -222,8 +248,6 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
-    auto queries = ColMajorMatrix<feature_type_type>{
-        {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
@@ -242,6 +266,7 @@ TEST_CASE(
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
   uint32_t num_subspaces = 1;
+  auto distance_metric = DistanceMetric::L2;
 
   std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -251,13 +276,14 @@ TEST_CASE(
   }
 
   {
-    auto index = IndexIVFPQ(std::make_optional<IndexOptions>({
-        {"feature_type", feature_type},
-        {"id_type", id_type},
-        {"partitioning_index_type", partitioning_index_type},
-        {"dimensions", std::to_string(dimensions)},
-        {"num_subspaces", std::to_string(num_subspaces)},
-    }));
+    auto index = IndexIVFPQ(std::make_optional<IndexOptions>(
+        {{"feature_type", feature_type},
+         {"id_type", id_type},
+         {"partitioning_index_type", partitioning_index_type},
+         {"dimensions", std::to_string(dimensions)},
+         {"num_subspaces", std::to_string(num_subspaces)},
+         {"distance_metric",
+          std::to_string(static_cast<size_t>(distance_metric))}}));
 
     size_t num_vectors = 0;
     auto empty_training_vector_array =
@@ -271,6 +297,7 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
   }
 
   {
@@ -281,6 +308,7 @@ TEST_CASE(
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
     auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
 
@@ -292,6 +320,9 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
@@ -338,10 +369,11 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "create empty index and then train and query with sift",
+    "query finite & infinite, with re-ranking and without",
     "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
+  size_t n_list = 100;
   auto feature_type = "float32";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
@@ -358,6 +390,7 @@ TEST_CASE(
         {{"feature_type", feature_type},
          {"id_type", id_type},
          {"partitioning_index_type", partitioning_index_type},
+         {"n_list", std::to_string(n_list)},
          {"num_subspaces", std::to_string(siftsmall_dimensions / 4)}}));
 
     size_t num_vectors = 0;
@@ -370,6 +403,7 @@ TEST_CASE(
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
   }
 
   {
@@ -393,31 +427,57 @@ TEST_CASE(
     auto&& [scores, ids] =
         index.query(QueryType::InfiniteRAM, query_set, k_nn, 5);
     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-    auto num_ids = num_vectors(ids);
-    auto recall = intersections / static_cast<double>(num_ids * k_nn);
-    CHECK(recall > 0.7);
+    CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) > 0.7);
   }
 
   {
     auto index = IndexIVFPQ(ctx, index_uri);
-    size_t nprobe = 5;
+    float k_factor = 20.f;
 
     auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-    for (auto upper_bound : {400, 1000, 0}) {
-      auto&& [_, ids] =
+
+    for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
+         std::vector<std::tuple<int, float, float>>{
+             {1, .4f, .45f},
+             {2, .5f, .6f},
+             {5, .7f, .7f},
+             {10, .75f, .9f},
+             {100, .8f, 1.f}}) {
+      auto&& [distances, ids] =
           index.query(QueryType::InfiniteRAM, query_set, k_nn, nprobe);
       auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-      auto num_ids = num_vectors(ids);
-      auto recall = intersections / static_cast<double>(num_ids * k_nn);
-      CHECK(recall > 0.7);
+      CHECK(
+          (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
+          expected_accuracy);
 
-      auto&& [__, ids_finite] = index.query(
-          QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
-      intersections = count_intersections(ids_finite, groundtruth_set, k_nn);
-      num_ids = num_vectors(ids_finite);
-      recall = intersections / static_cast<double>(num_ids * k_nn);
-      CHECK(recall > 0.7);
+      auto&& [distances_with_reranking, ids_with_reranking] = index.query(
+          QueryType::InfiniteRAM, query_set, k_nn, nprobe, 0, k_factor);
+      auto intersections_with_reranking =
+          count_intersections(ids_with_reranking, groundtruth_set, k_nn);
+      CHECK(
+          (intersections_with_reranking /
+           static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >=
+          expected_accuracy_with_reranking);
+
+      for (auto upper_bound : {450, 1000, 0}) {
+        auto&& [distances_finite, ids_finite] = index.query(
+            QueryType::FiniteRAM, query_set, k_nn, nprobe, upper_bound);
+        CHECK(are_equal(ids_finite, ids));
+        CHECK(are_equal(distances_finite, distances));
+
+        auto&& [distances_finite_with_reranking, ids_finite_with_reranking] =
+            index.query(
+                QueryType::FiniteRAM,
+                query_set,
+                k_nn,
+                nprobe,
+                upper_bound,
+                k_factor);
+        CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
+        CHECK(are_equal(
+            distances_finite_with_reranking, distances_with_reranking));
+      }
     }
   }
 }
@@ -761,10 +821,19 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     auto queries = ColMajorMatrix<feature_type_type>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
-    auto&& [scores_vector_array, ids_vector_array] =
-        index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
+    auto&& [scores_vector_array, ids_vector_array] = index.query(
+        QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0);
     check_single_vector_equals(
         scores_vector_array, ids_vector_array, {0, 0, 0, 0}, {1, 2, 3, 4});
+
+    auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
+    check_single_vector_equals(
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
+        {0, 0, 0, 0},
+        {1, 2, 3, 4});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
@@ -899,10 +968,27 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         ids_vector_array_finite,
         {0, 0, 0, 0},
         {1, 2, 3, 4});
+    auto&& [scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking] =
+        index.query(
+            QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
+    check_single_vector_equals(
+        scores_vector_array_finite_with_reranking,
+        ids_vector_array_finite_with_reranking,
+        {0, 0, 0, 0},
+        {1, 2, 3, 4});
+
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
         scores_vector_array, ids_vector_array, {0, 0, 0, 0}, {1, 2, 3, 4});
+    auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 2.f);
+    check_single_vector_equals(
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
+        {0, 0, 0, 0},
+        {1, 2, 3, 4});
 
     auto typed_index = ivf_pq_index<
         feature_type_type,
@@ -957,11 +1043,28 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         ids_vector_array,
         {std::numeric_limits<float>::max()},
         {std::numeric_limits<uint32_t>::max()});
+    auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 1.9f);
+    check_single_vector_equals(
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
+        {std::numeric_limits<float>::max()},
+        {std::numeric_limits<uint32_t>::max()});
+
     auto&& [scores_vector_array_finite, ids_vector_array_finite] =
         index.query(QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 4);
     check_single_vector_equals(
         scores_vector_array_finite,
         ids_vector_array_finite,
+        {std::numeric_limits<float>::max()},
+        {std::numeric_limits<uint32_t>::max()});
+    auto&& [scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking] =
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 4, 1.9f);
+    check_single_vector_equals(
+        scores_vector_array_finite_with_reranking,
+        ids_vector_array_finite_with_reranking,
         {std::numeric_limits<float>::max()},
         {std::numeric_limits<uint32_t>::max()});
 
@@ -1019,20 +1122,39 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     auto default_score = std::numeric_limits<float>::max();
     auto default_id = std::numeric_limits<uint32_t>::max();
+    auto expected_scores = std::vector<float>{
+        default_score, default_score, default_score, default_score};
+    auto expected_ids =
+        std::vector<uint32_t>{default_id, default_id, default_id, default_id};
+
     auto&& [scores_vector_array_finite, ids_vector_array_finite] =
         index.query(QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0);
     check_single_vector_equals(
         scores_vector_array_finite,
         ids_vector_array_finite,
-        {default_score, default_score, default_score, default_score},
-        {default_id, default_id, default_id, default_id});
+        expected_scores,
+        expected_ids);
+    auto&& [scores_vector_array_finite_with_reranking, ids_vector_array_finite_with_reranking] =
+        index.query(
+            QueryType::FiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 20.f);
+    check_single_vector_equals(
+        scores_vector_array_finite_with_reranking,
+        ids_vector_array_finite_with_reranking,
+        expected_scores,
+        expected_ids);
+
     auto&& [scores_vector_array, ids_vector_array] =
         index.query(QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1);
     check_single_vector_equals(
-        scores_vector_array,
-        ids_vector_array,
-        {default_score, default_score, default_score, default_score},
-        {default_id, default_id, default_id, default_id});
+        scores_vector_array, ids_vector_array, expected_scores, expected_ids);
+    auto&& [scores_vector_array_with_reranking, ids_vector_array_with_reranking] =
+        index.query(
+            QueryType::InfiniteRAM, FeatureVectorArray(queries), 1, 1, 0, 20.f);
+    check_single_vector_equals(
+        scores_vector_array_with_reranking,
+        ids_vector_array_with_reranking,
+        expected_scores,
+        expected_ids);
 
     auto typed_index = ivf_pq_index<
         feature_type_type,

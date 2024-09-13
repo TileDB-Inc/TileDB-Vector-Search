@@ -12,13 +12,11 @@ from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import ivf_pq_index
+from tiledb.vector_search import open
 from tiledb.vector_search import vamana_index
-from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import DATASET_TYPE
 from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
-from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
@@ -329,6 +327,9 @@ def test_ivf_pq_index(tmp_path):
     assert distances[0][0] == MAX_FLOAT32
     assert ids[0][0] == MAX_UINT64
     query_and_check_distances(index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]])
+    query_and_check_distances(
+        index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]], k_factor=2.0
+    )
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "IVF_PQ")
 
     update_vectors = np.empty([5], dtype=object)
@@ -343,6 +344,14 @@ def test_ivf_pq_index(tmp_path):
     )
     query_and_check_distances(
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
+    )
+    query_and_check_distances(
+        index,
+        np.array([[2, 2, 2]], dtype=np.float32),
+        2,
+        [[0, 3]],
+        [[2, 1]],
+        k_factor=2.0,
     )
 
     index = index.consolidate_updates()
@@ -366,6 +375,14 @@ def test_ivf_pq_index(tmp_path):
             [[0], [0]],
             [[i], [i]],
         )
+        query_and_check_distances(
+            index,
+            np.array([[i, i, i], [i, i, i]], dtype=np.float32),
+            1,
+            [[0], [0]],
+            [[i], [i]],
+            k_factor=2.0,
+        )
 
     # Test that we can query with k > 1.
     query_and_check_distances(
@@ -379,6 +396,14 @@ def test_ivf_pq_index(tmp_path):
         2,
         [[0, 3], [0, 3]],
         [[0, 1], [4, 3]],
+    )
+    query_and_check_distances(
+        index,
+        np.array([[0, 0, 0], [4, 4, 4]], dtype=np.float32),
+        2,
+        [[0, 3], [0, 3]],
+        [[0, 1], [4, 3]],
+        k_factor=2.0,
     )
 
     vfs = tiledb.VFS()
@@ -396,9 +421,8 @@ def test_delete_index(tmp_path):
     vfs = tiledb.VFS()
 
     indexes = ["FLAT", "IVF_FLAT", "VAMANA", "IVF_PQ"]
-    index_classes = [FlatIndex, IVFFlatIndex, VamanaIndex, IVFPQIndex]
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
-    for index_type, index_class in zip(indexes, index_classes):
+    for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         ingest(
             index_type=index_type,
@@ -409,7 +433,7 @@ def test_delete_index(tmp_path):
         Index.delete_index(uri=index_uri, config={})
         assert vfs.dir_size(index_uri) == 0
         with pytest.raises(tiledb.TileDBError) as error:
-            index_class(uri=index_uri)
+            open(uri=index_uri)
         assert "does not exist" in str(error.value)
 
 

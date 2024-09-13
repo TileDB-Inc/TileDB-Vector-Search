@@ -394,12 +394,17 @@ def setUpCloudToken():
     tiledb.cloud.login(token=token)
 
 
-def create_cloud_uri(name):
+def create_cloud_uri(name, folder_name=None, aws_uri=False):
     namespace, storage_path, _ = groups._default_ns_path_cred()
     storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
-    rand_name = random_name("vector_search")
-    test_path = f"tiledb://{namespace}/{storage_path}/{rand_name}"
-    return f"{test_path}/{name}"
+
+    if not folder_name:
+        folder_name = random_name("vector_search")
+
+    if aws_uri:
+        return f"{storage_path}/{folder_name}/{name}"
+    else:
+        return f"tiledb://{namespace}/{storage_path}/{folder_name}/{name}"
 
 
 def delete_uri(uri, config):
@@ -450,3 +455,24 @@ def query_and_check(index, queries, k, expected, expected_distances=None, **kwar
                     atol=1e-5,
                     err_msg=f"Distance mismatch for ID {id}",
                 )
+
+
+def sum_of_squares_distance(a, b):
+    return np.sum((a - b) ** 2)
+
+
+def cosine_distance(a, b):
+    return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+
+def l2_distance(a, b):
+    return np.sqrt(np.sum((a - b) ** 2))
+
+
+def normalize_vectors(vectors):
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    return vectors / norms
+
+
+def normalize_vector(vector):
+    return vector / np.linalg.norm(vector)

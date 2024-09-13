@@ -159,6 +159,10 @@ class PartitionedMatrixWrapper {
     return num_parts_;
   }
 
+  size_t local_index_to_global(size_t i) const {
+    return i;
+  }
+
   auto& parts() const {
     return parts_.get();
   }

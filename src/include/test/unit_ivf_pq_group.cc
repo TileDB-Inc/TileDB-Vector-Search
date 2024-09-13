@@ -113,8 +113,8 @@ TEST_CASE("write constructor - create and read", "[ivf_pq_group]") {
 
   {
     uint64_t dimensions = 10;
-    auto num_clusters = 11;
-    auto num_subspaces = 12;
+    uint32_t num_clusters = 11;
+    uint32_t num_subspaces = 12;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
         ctx,
         tmp_uri,

@@ -158,7 +158,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const size_t size_a = a.size();
   const size_t stop = size_a - (size_a % 8);
 
-    // Could be uint8_t* or int8_t*
+  // Could be uint8_t* or int8_t*
   const auto* a_ptr = a.data();
   const float* b_ptr = b.data();
 
