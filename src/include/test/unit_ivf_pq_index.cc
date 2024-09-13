@@ -637,11 +637,7 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
     size_t upper_bound = 11;
     auto index_finite =
         ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
-            ctx,
-            ivf_index_uri,
-            upper_bound,
-            std::nullopt,
-            IndexLoadStrategy::PQ_OOC);
+            ctx, ivf_index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
     CHECK(index_finite.num_vectors() == num_vectors);
     size_t k_nn = 1;
     auto&& [scores, ids] = index_finite.query(queries, k_nn, nlist, 9);
@@ -720,11 +716,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     SECTION("finite") {
       size_t upper_bound = 97;
       index2 = std::make_unique<ivf_pq_index<feature_type, id_type>>(
-          ctx,
-          ivf_index_uri,
-          upper_bound,
-          std::nullopt,
-          IndexLoadStrategy::PQ_OOC);
+          ctx, ivf_index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
       CHECK(index2->upper_bound() == upper_bound);
     }
     CHECK(index2->num_vectors() == 4);
@@ -849,11 +841,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
     {
       size_t upper_bound = 300;
       auto index_finite = ivf_pq_index<feature_type, id_type>(
-          ctx,
-          ivf_index_uri,
-          upper_bound,
-          std::nullopt,
-          IndexLoadStrategy::PQ_OOC);
+          ctx, ivf_index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
       CHECK(index_finite.num_vectors() == num_vectors);
       CHECK(index_finite.upper_bound() == upper_bound);
 
@@ -938,7 +926,7 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
           feature_type_type,
           id_type_type,
           partitioning_index_type_type>>(
-          ctx, index_uri, upper_bound, std::nullopt, IndexLoadStrategy::PQ_OOC);
+          ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
       CHECK(index->upper_bound() == upper_bound);
     }
     auto queries = ColMajorMatrix<feature_type_type>{

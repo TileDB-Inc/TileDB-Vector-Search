@@ -465,22 +465,22 @@ void init_type_erased_module(py::module_& m) {
           [](IndexIVFPQ& instance,
              const tiledb::Context& ctx,
              const std::string& group_uri,
+             IndexLoadStrategy index_load_strategy,
              size_t memory_budget,
-             std::optional<TemporalPolicy> temporal_policy,
-             IndexLoadStrategy index_load_strategy) {
+             std::optional<TemporalPolicy> temporal_policy) {
             new (&instance) IndexIVFPQ(
                 ctx,
                 group_uri,
+                index_load_strategy,
                 memory_budget,
-                temporal_policy,
-                index_load_strategy);
+                temporal_policy);
           },
           py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
+          py::arg("index_load_strategy") = IndexLoadStrategy::PQ_INDEX,
           py::arg("memory_budget") = 0,
-          py::arg("temporal_policy") = std::nullopt,
-          py::arg("index_load_strategy") = IndexLoadStrategy::PQ_INDEX)
+          py::arg("temporal_policy") = std::nullopt)
       .def(
           "__init__",
           [](IndexIVFPQ& instance, py::kwargs kwargs) {

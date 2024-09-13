@@ -514,8 +514,8 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     b_finite = vspy.IndexIVFPQ(
         ctx,
         index_uri,
-        memory_budget=1000,
         index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+        memory_budget=1000,
     )
     _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
     accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
@@ -558,8 +558,8 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     b_finite = vspy.IndexIVFPQ(
         ctx,
         index_uri,
-        memory_budget=999,
         index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+        memory_budget=999,
     )
     _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
     accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)

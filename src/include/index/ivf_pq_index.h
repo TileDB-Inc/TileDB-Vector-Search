@@ -354,9 +354,9 @@ class ivf_pq_index {
   ivf_pq_index(
       const tiledb::Context& ctx,
       const std::string& uri,
+      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::PQ_INDEX,
       size_t upper_bound = 0,
-      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::PQ_INDEX)
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt)
       : upper_bound_{upper_bound}
       , temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , index_load_strategy_{index_load_strategy}

@@ -95,9 +95,9 @@ class IVFPQIndex(index.Index):
         self.index = vspy.IndexIVFPQ(
             self.ctx,
             uri,
+            strategy,
             0 if memory_budget == -1 else memory_budget,
             to_temporal_policy(timestamp),
-            strategy,
         )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]

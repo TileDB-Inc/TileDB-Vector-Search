@@ -226,28 +226,16 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
 
   // Check IndexLoadStrategy.
   {
-    CHECK_THROWS(
-        IndexIVFPQ(ctx, index_uri, 0, std::nullopt, IndexLoadStrategy::PQ_OOC));
-    CHECK_NOTHROW(IndexIVFPQ(
-        ctx, index_uri, 10, std::nullopt, IndexLoadStrategy::PQ_OOC));
+    CHECK_THROWS(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 0));
+    CHECK_NOTHROW(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 10));
+
+    CHECK_NOTHROW(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0));
+    CHECK_THROWS(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 10));
 
     CHECK_NOTHROW(IndexIVFPQ(
-        ctx, index_uri, 0, std::nullopt, IndexLoadStrategy::PQ_INDEX));
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS, 0));
     CHECK_THROWS(IndexIVFPQ(
-        ctx, index_uri, 10, std::nullopt, IndexLoadStrategy::PQ_INDEX));
-
-    CHECK_NOTHROW(IndexIVFPQ(
-        ctx,
-        index_uri,
-        0,
-        std::nullopt,
-        IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS));
-    CHECK_THROWS(IndexIVFPQ(
-        ctx,
-        index_uri,
-        10,
-        std::nullopt,
-        IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS));
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS, 10));
   }
 
   // We can open, train, and query an infinite index.
@@ -259,7 +247,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     SECTION("finite") {
       size_t upper_bound = 97;
       index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, std::nullopt, IndexLoadStrategy::PQ_OOC);
+          ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
       CHECK(index->upper_bound() == upper_bound);
     }
 
@@ -373,7 +361,7 @@ TEST_CASE(
     SECTION("finite") {
       size_t upper_bound = GENERATE(3, 4, 5, 100);
       index = std::make_unique<IndexIVFPQ>(
-          ctx, index_uri, upper_bound, std::nullopt, IndexLoadStrategy::PQ_OOC);
+          ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
       CHECK(index->upper_bound() == upper_bound);
     }
 
@@ -456,8 +444,8 @@ TEST_CASE(
     auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
     auto index = IndexIVFPQ(ctx, index_uri);
-    auto index_finite = IndexIVFPQ(
-        ctx, index_uri, 450, std::nullopt, IndexLoadStrategy::PQ_OOC);
+    auto index_finite =
+        IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 450);
 
     for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
          std::vector<std::tuple<int, float, float>>{
@@ -600,11 +588,7 @@ TEST_CASE("read index and query", "[api_ivf_pq_index]") {
   SECTION("finite") {
     size_t upper_bound = GENERATE(500, 1000);
     b = std::make_unique<IndexIVFPQ>(
-        ctx,
-        api_ivf_pq_index_uri,
-        upper_bound,
-        std::nullopt,
-        IndexLoadStrategy::PQ_OOC);
+        ctx, api_ivf_pq_index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
     CHECK(b->upper_bound() == upper_bound);
   }
 
@@ -891,12 +875,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
       {
         size_t upper_bound = 5;
-        auto index_finite = IndexIVFPQ(
-            ctx,
-            index_uri,
-            upper_bound,
-            std::nullopt,
-            IndexLoadStrategy::PQ_OOC);
+        auto index_finite =
+            IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
         auto&& [scores_finite, ids_finite] =
             index_finite.query(FeatureVectorArray(queries), top_k, nprobe);
         check_single_vector_equals(
@@ -978,7 +958,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto load_strategy = upper_bound == 0 ? IndexLoadStrategy::PQ_INDEX :
                                             IndexLoadStrategy::PQ_OOC;
     auto index =
-        IndexIVFPQ(ctx, index_uri, upper_bound, temporal_policy, load_strategy);
+        IndexIVFPQ(ctx, index_uri, load_strategy, upper_bound, temporal_policy);
     CHECK(index.upper_bound() == upper_bound);
 
     CHECK(index.temporal_policy().timestamp_end() == 99);
@@ -1008,7 +988,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         feature_type_type,
         id_type_type,
         partitioning_index_type_type>(
-        ctx, index_uri, upper_bound, temporal_policy, load_strategy);
+        ctx, index_uri, load_strategy, upper_bound, temporal_policy);
     CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
@@ -1043,7 +1023,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
                                             IndexLoadStrategy::PQ_OOC;
 
     auto index =
-        IndexIVFPQ(ctx, index_uri, upper_bound, temporal_policy, load_strategy);
+        IndexIVFPQ(ctx, index_uri, load_strategy, upper_bound, temporal_policy);
     CHECK(index.upper_bound() == upper_bound);
 
     CHECK(index.temporal_policy().timestamp_start() == 0);
@@ -1078,7 +1058,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         feature_type_type,
         id_type_type,
         partitioning_index_type_type>(
-        ctx, index_uri, upper_bound, temporal_policy, load_strategy);
+        ctx, index_uri, load_strategy, upper_bound, temporal_policy);
     CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
@@ -1120,7 +1100,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
                                             IndexLoadStrategy::PQ_OOC;
 
     auto index =
-        IndexIVFPQ(ctx, index_uri, upper_bound, temporal_policy, load_strategy);
+        IndexIVFPQ(ctx, index_uri, load_strategy, upper_bound, temporal_policy);
     CHECK(index.upper_bound() == upper_bound);
 
     CHECK(index.temporal_policy().timestamp_end() == 99);
@@ -1156,7 +1136,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         feature_type_type,
         id_type_type,
         partitioning_index_type_type>(
-        ctx, index_uri, upper_bound, temporal_policy, load_strategy);
+        ctx, index_uri, load_strategy, upper_bound, temporal_policy);
     CHECK(typed_index.group().get_dimensions() == dimensions);
     CHECK(typed_index.group().get_temp_size() == 0);
     CHECK(typed_index.group().get_history_index() == 0);
