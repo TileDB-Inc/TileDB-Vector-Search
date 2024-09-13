@@ -243,7 +243,7 @@ TEMPLATE_TEST_CASE(
 
 #ifdef __AVX2__
   {
-    auto a = avxs_inner_product(x, y);
+    auto a = avx2_inner_product(x, y);
     CHECK(std::abs(a - 785444.4375) < 0.07);
 
     auto ax = avx2_inner_product(y, x);
