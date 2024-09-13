@@ -33,6 +33,7 @@
 #include <iomanip>
 #include "detail/linalg/vector.h"
 #include "detail/scoring/inner_product.h"
+#include "detail/scoring/inner_product_avx.h"
 
 TEST_CASE("simple vectors", "[inner_product_distance]") {
   auto u = std::vector<uint8_t>{1, 2, 3, 4};
@@ -125,7 +126,7 @@ TEST_CASE("negative values", "[inner_product_distance]") {
   debug_vector(y, "y");
   auto n = x.size();
   float manual = 0.f;
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     manual += x[i] * y[i];
   }
   std::cout << "manual: " << manual << std::endl;
@@ -150,18 +151,18 @@ TEST_CASE("simple longer vectors", "[inner_product_distance]") {
 
   size_t n = 100;
   auto x = std::vector<float>(n);
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     x[i] = i * 1.1f;
   }
   auto y = std::vector<float>(n);
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     y[i] = i * 10.f;
   }
   debug_vector(x, "x");
   debug_vector(y, "y");
 
   float manual = 0.f;
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     manual += x[i] * y[i];
   }
   std::cout << "manual:  " << manual << std::endl;
