@@ -87,7 +87,6 @@ TEMPLATE_TEST_CASE("simple sum_of_squares", "[l2_distance]", int8_t, uint8_t) {
   }
 
   {
-    // Mixed vector types: u (integers) and x (floats)
     float expected_ux = 542.8275146f;
 
     auto naive_ux = naive_sum_of_squares(u, x);

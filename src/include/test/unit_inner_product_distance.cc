@@ -30,8 +30,6 @@
  * Test the inner product distance functions
  */
 #include <catch2/catch_all.hpp>
-#include <iomanip>
-#include "detail/linalg/vector.h"
 #include "detail/scoring/inner_product.h"
 #include "detail/scoring/inner_product_avx.h"
 
@@ -111,6 +109,7 @@ TEST_CASE("simple longer vectors", "[inner_product_distance]") {
 
 #ifdef __AVX2__
   auto avx2_xy = avx2_inner_product(x, y);
+  CHECK(std::abs(avx2_xy - manual) < 0.01);
 #endif
 }
 
@@ -199,10 +198,10 @@ TEMPLATE_TEST_CASE(
     CHECK(std::abs(unroll4_yv - expected) < 0.05);
 
 #ifdef __AVX2__
-    auto avx2_ux = avx2_inner_product(u, x);
-    CHECK(std::abs(avx2_ux - expected) < 0.05);
+    auto avx2_vy = avx2_inner_product(v, y);
+    CHECK(std::abs(avx2_vy - expected) < 0.05);
 
-    CHECK(avx2_ux == avx2_inner_product(x, u));
+    CHECK(avx2_vy == avx2_inner_product(y, v));
 #endif
   }
 

@@ -41,7 +41,6 @@
 
 #include <immintrin.h>
 #include "concepts.h"
-#include "detail/linalg/vector.h"
 
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
@@ -52,8 +51,8 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const auto* a_ptr = a.data();
-  const auto* b_ptr = b.data();
+  const float* a_ptr = a.data();
+  const float* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -98,7 +97,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const size_t stop = size_a - (size_a % 8);
 
   const float* a_ptr = a.data();
-  // Can be uint8_t* or int8_t*.
+  // Can be uint8_t* or int8_t*
   const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
@@ -158,9 +157,9 @@ inline float avx2_inner_product(const V& a, const W& b) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  // Could be uint8_t* or int8_t*
+  // Can be uint8_t* or int8_t*
   const auto* a_ptr = a.data();
-  const auto* b_ptr = b.data();
+  const float* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -171,7 +170,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
     // Load 8 floats
     __m256 b_floats = _mm256_loadu_ps(b_ptr + i + 0);
 
-    // Conditionally convert based on the type of V::value_type
+    // Extend 8 bit to 32 bit ints
     __m256i a_ints;
     if constexpr (std::same_as<typename V::value_type, uint8_t>) {
       // Zero extend uint8_t to int32_t
@@ -232,7 +231,7 @@ inline float avx2_inner_product(const V& a, const W& b) {
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-    // Conditionally convert based on the type of V::value_type
+    // Extend 8 bit to 32 bit ints
     __m256i a_ints;
     if constexpr (std::same_as<typename V::value_type, uint8_t>) {
       // Zero extend uint8_t to int32_t

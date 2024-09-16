@@ -56,8 +56,8 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const auto* a_ptr = a.data();
-  const auto* b_ptr = b.data();
+  const float* a_ptr = a.data();
+  const float* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -117,7 +117,7 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const auto* a_ptr = a.data();
+  const float* a_ptr = a.data();
   const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
@@ -129,13 +129,13 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
     // Load 8 bytes
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
+    // Extend 8 bit to 32 bit ints
     __m256i b_ints;
     if constexpr (std::same_as<typename W::value_type, uint8_t>) {
-      // Zero-extend for uint8_t.
+      // Zero extend uint8_t to int32_t
       b_ints = _mm256_cvtepu8_epi32(vec_b);
     } else {
-      // Sign-extend for int8_t.
+      // Sign extend int8_t to int32_t
       b_ints = _mm256_cvtepi8_epi32(vec_b);
     }
 
@@ -185,7 +185,7 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
   const size_t stop = size_a - (size_a % 8);
 
   const auto* a_ptr = a.data();
-  const auto* b_ptr = b.data();
+  const float* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -196,10 +196,10 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
 
     __m256i a_ints;
     if constexpr (std::same_as<typename V::value_type, uint8_t>) {
-      // Zero-extend for uint8_t.
+      // Zero extend uint8_t to int32_t
       a_ints = _mm256_cvtepu8_epi32(vec_a);
     } else {
-      // Sign-extend for int8_t.
+      // Sign extend int8_t to int32_t
       a_ints = _mm256_cvtepi8_epi32(vec_a);
     }
 
@@ -259,21 +259,21 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
+    // Extend 8 bit to 32 bit ints
     __m256i a_ints, b_ints;
     if constexpr (std::same_as<typename V::value_type, uint8_t>) {
-      // Zero-extend for uint8_t.
+      // Zero extend uint8_t to int32_t
       a_ints = _mm256_cvtepu8_epi32(vec_a);
     } else {
-      // Sign-extend for int8_t.
+      // Sign extend int8_t to int32_t
       a_ints = _mm256_cvtepi8_epi32(vec_a);
     }
 
     if constexpr (std::same_as<typename W::value_type, uint8_t>) {
-      // Zero-extend for uint8_t.
+      // Zero extend uint8_t to int32_t
       b_ints = _mm256_cvtepu8_epi32(vec_b);
     } else {
-      // Sign-extend for int8_t.
+      // Sign extend int8_t to int32_t
       b_ints = _mm256_cvtepi8_epi32(vec_b);
     }
 
@@ -316,7 +316,7 @@ inline float avx2_sum_of_squares(const V& a) {
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const auto* a_ptr = a.data();
+  const float* a_ptr = a.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -370,13 +370,13 @@ inline float avx2_sum_of_squares(const V& a) {
     // Load 8 bytes == 64 bits -- zeros out top 8 bytes
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
+    // Extend 8 bit to 32 bit ints
     __m256i a_ints;
     if constexpr (std::same_as<typename V::value_type, uint8_t>) {
-      // Zero-extend for uint8_t.
+      // Zero extend uint8_t to int32_t
       a_ints = _mm256_cvtepu8_epi32(vec_a);
     } else {
-      // Sign-extend for int8_t.
+      // Sign extend int8_t to int32_t
       a_ints = _mm256_cvtepi8_epi32(vec_a);
     }
 
