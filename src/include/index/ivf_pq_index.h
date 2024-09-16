@@ -108,6 +108,7 @@
 #include "detail/ivf/partition.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/tdb_matrix_multi_range.h"
+#include "detail/linalg/tdb_matrix_with_ids.h"
 
 #include <tiledb/tiledb>
 #include <type_traits>
@@ -189,7 +190,9 @@ class ivf_pq_index {
   /****************************************************************************
    * Index group information
    ****************************************************************************/
+  size_t upper_bound_{0};
   TemporalPolicy temporal_policy_;
+  IndexLoadStrategy index_load_strategy_{IndexLoadStrategy::PQ_INDEX};
   std::unique_ptr<ivf_pq_group<ivf_pq_index>> group_;
 
   /****************************************************************************
@@ -198,6 +201,7 @@ class ivf_pq_index {
 
   // Cached information about the partitioned vectors in the index
   uint64_t dimensions_{0};
+  uint64_t num_vectors_{0};
   uint64_t num_partitions_{0};
 
   // Cached information about the pq encoding
@@ -350,16 +354,29 @@ class ivf_pq_index {
   ivf_pq_index(
       const tiledb::Context& ctx,
       const std::string& uri,
+      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::PQ_INDEX,
+      size_t upper_bound = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
-      : temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
+      : upper_bound_{upper_bound}
+      , temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
+      , index_load_strategy_{index_load_strategy}
       , group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
             ctx, uri, TILEDB_READ, temporal_policy_)} {
+    if (upper_bound != 0 && index_load_strategy_ != IndexLoadStrategy::PQ_OOC) {
+      throw std::runtime_error(
+          "With upper_bound > 0 you must use IndexLoadStrategy::PQ_OOC.");
+    }
+    if (upper_bound == 0 && index_load_strategy_ == IndexLoadStrategy::PQ_OOC) {
+      throw std::runtime_error(
+          "With IndexLoadStrategy::PQ_OOC you must have an upper_bound > 0.");
+    }
     /**
      * Read the centroids. How the partitioned_pq_vectors_ are read in will be
      * determined by the type of query we are doing. But they will be read
      * in at this same timestamp.
      */
     dimensions_ = group_->get_dimensions();
+    num_vectors_ = group_->get_base_size();
     num_partitions_ = group_->get_num_partitions();
     num_subspaces_ = group_->get_num_subspaces();
     sub_dimensions_ = dimensions_ / num_subspaces_;
@@ -385,6 +402,54 @@ class ivf_pq_index {
             std::nullopt,
             num_clusters_,
             temporal_policy_);
+
+    if (upper_bound == 0) {
+      // Read the the complete index arrays into ("infinite") memory. This will
+      // read the centroids, indices, partitioned_ids, and and the complete set
+      // of partitioned_pq_vectors, along with metadata from a group_uri. Load
+      // all partitions for infinite query Note that the constructor will move
+      // the infinite_parts vector
+      auto infinite_parts =
+          std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
+      std::iota(begin(infinite_parts), end(infinite_parts), 0);
+      partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
+          group_->cached_ctx(),
+          group_->pq_ivf_vectors_uri(),
+          group_->pq_ivf_indices_uri(),
+          group_->get_num_partitions() + 1,
+          group_->pq_ivf_ids_uri(),
+          infinite_parts,
+          0,
+          temporal_policy_);
+
+      partitioned_pq_vectors_->load();
+
+      if (::num_vectors(*partitioned_pq_vectors_) !=
+          size(partitioned_pq_vectors_->ids())) {
+        throw std::runtime_error(
+            "[ivf_flat_index@ivf_pq_index] "
+            "::num_vectors(*partitioned_pq_vectors_) != "
+            "size(partitioned_pq_vectors_->ids())");
+      }
+      if (size(partitioned_pq_vectors_->indices()) !=
+          ::num_vectors(flat_ivf_centroids_) + 1) {
+        throw std::runtime_error(
+            "[ivf_flat_index@ivf_pq_index] "
+            "size(partitioned_pq_vectors_->indices()) != "
+            "::num_vectors(flat_ivf_centroids_) + 1");
+      }
+    }
+    if (index_load_strategy_ ==
+        IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS) {
+      feature_vectors_ = tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
+          group_->cached_ctx(),
+          group_->feature_vectors_uri(),
+          group_->ids_uri(),
+          dimensions_,
+          num_vectors_,
+          0,
+          temporal_policy_);
+    }
   }
 
   /****************************************************************************
@@ -608,7 +673,7 @@ class ivf_pq_index {
       const V& training_set, kmeans_init init = kmeans_init::random) {
     dimensions_ = ::dimensions(training_set);
     if (num_partitions_ == 0) {
-      num_partitions_ = std::sqrt(num_vectors(training_set));
+      num_partitions_ = std::sqrt(::num_vectors(training_set));
     }
 
     flat_ivf_centroids_ =
@@ -678,6 +743,8 @@ class ivf_pq_index {
       const Array& training_set,
       const Vector& training_set_ids,
       Distance distance = Distance{}) {
+    num_vectors_ = ::num_vectors(training_set);
+
     // 1. Fill in cluster_centroids_.
     // cluster_centroids_ holds the num_clusters_ (256) centroids for each
     // subspace.
@@ -774,9 +841,9 @@ class ivf_pq_index {
       class Distance = uncached_sub_sum_of_squares_distance>
   auto pq_encode(const U& training_set, Distance distance = Distance{}) const {
     auto pq_vectors =
-        std::make_unique<Matrix>(num_subspaces_, num_vectors(training_set));
+        std::make_unique<Matrix>(num_subspaces_, ::num_vectors(training_set));
     auto& pqv = *pq_vectors;
-    for (size_t i = 0; i < num_vectors(training_set); ++i) {
+    for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
       pq_encode_one(training_set[i], pqv[i], distance);
     }
     return pq_vectors;
@@ -810,10 +877,10 @@ class ivf_pq_index {
     // vector, the distance from the second subspace to each of the pq
     // centroids.
     auto pq_vectors = std::make_unique<Matrix>(
-        num_subspaces_ * num_clusters_, num_vectors(query_vectors));
+        num_subspaces_ * num_clusters_, ::num_vectors(query_vectors));
     auto& pqv = *pq_vectors;
     auto local_distance = Distance{};
-    for (size_t i = 0; i < num_vectors(query_vectors); ++i) {
+    for (size_t i = 0; i < ::num_vectors(query_vectors); ++i) {
       auto sub_begin = 0;
       auto sub_id = 0;
       for (size_t subspace = 0; subspace < num_subspaces_; ++subspace) {
@@ -832,105 +899,6 @@ class ivf_pq_index {
       }
     }
     return pq_vectors;
-  }
-
-  /*****************************************************************************
-   * Methods for reading and reading the index from a group.
-   *****************************************************************************/
-
-  /**
-   * @brief Read the the complete index arrays into ("infinite") memory.
-   * This will read the centroids, indices, partitioned_ids, and
-   * and the complete set of partitioned_pq_vectors, along with metadata
-   * from a group_uri.
-   */
-  auto read_index_infinite() {
-    if (!group_) {
-      if (!partitioned_pq_vectors_) {
-        throw std::runtime_error(
-            "[ivf_pq_index@read_index_infinite] Neither partitioned_pq_vectors "
-            "nor the group have been initialized");
-      }
-      // If we have created an empty index and then try to query it,
-      // partitioned_pq_vectors_ will be empty so we will try to read here, but
-      // we won't have a group_. Just return and leave partitioned_pq_vectors_
-      // empty.
-      return;
-    }
-
-    // Load all partitions for infinite query
-    // Note that the constructor will move the infinite_parts vector
-    auto infinite_parts =
-        std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
-    std::iota(begin(infinite_parts), end(infinite_parts), 0);
-    partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
-        group_->cached_ctx(),
-        group_->pq_ivf_vectors_uri(),
-        group_->pq_ivf_indices_uri(),
-        group_->get_num_partitions() + 1,
-        group_->pq_ivf_ids_uri(),
-        infinite_parts,
-        0,
-        temporal_policy_);
-
-    partitioned_pq_vectors_->load();
-
-    if (::num_vectors(*partitioned_pq_vectors_) !=
-        size(partitioned_pq_vectors_->ids())) {
-      throw std::runtime_error(
-          "[ivf_flat_index@read_index_infinite] "
-          "::num_vectors(*partitioned_pq_vectors_) != "
-          "size(partitioned_pq_vectors_->ids())");
-    }
-    if (size(partitioned_pq_vectors_->indices()) !=
-        ::num_vectors(flat_ivf_centroids_) + 1) {
-      throw std::runtime_error(
-          "[ivf_flat_index@read_index_infinite] "
-          "size(partitioned_pq_vectors_->indices()) != "
-          "::num_vectors(flat_ivf_centroids_) + 1");
-    }
-  }
-
-  /**
-   * @brief Open the index from the arrays contained in the group_uri.
-   * The "finite" queries only load as much data (ids and vectors) as are
-   * necessary for a given query -- so we can't load any data until we
-   * know what the query is. So, here we would have read the centroids and
-   * indices into memory, when creating the index but would not have read
-   * the partitioned_ids or partitioned_pq_vectors.
-   *
-   * @param group_uri
-   * @return bool indicating success or failure of read
-   */
-  template <feature_vector_array Q>
-  auto read_index_finite(
-      const Q& query_vectors, size_t nprobe, size_t upper_bound) {
-    if (!group_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@read_index_finite] group_ is not initialized. This "
-          "happens if you do not load an index by URI. Please close the index "
-          "and re-open it by URI.");
-    }
-
-    auto&& [active_partitions, active_queries] =
-        detail::ivf::partition_ivf_flat_index<indices_type>(
-            flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
-    auto partitioned_pq_vectors = std::make_unique<tdb_pq_storage_type>(
-        group_->cached_ctx(),
-        group_->pq_ivf_vectors_uri(),
-        group_->pq_ivf_indices_uri(),
-        group_->get_num_partitions() + 1,
-        group_->pq_ivf_ids_uri(),
-        active_partitions,
-        upper_bound,
-        temporal_policy_);
-
-    // NB: We don't load the partitioned_pq_vectors here. We will load them
-    // when we do the query.
-    return std::make_tuple(
-        std::move(active_partitions),
-        std::move(active_queries),
-        std::move(partitioned_pq_vectors));
   }
 
   /**
@@ -1140,48 +1108,25 @@ class ivf_pq_index {
    *
    ****************************************************************************/
 
-  template <feature_vector_array Q>
-  auto query(
-      QueryType queryType,
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0,
-      float k_factor = 1.f) {
-    switch (queryType) {
-      case QueryType::InfiniteRAM:
-        return query_infinite_ram(query_vectors, k_nn, nprobe, k_factor);
-      case QueryType::FiniteRAM:
-        return query_finite_ram(
-            query_vectors, k_nn, nprobe, upper_bound, k_factor);
-      default:
-        throw std::runtime_error("Invalid query type");
-    }
-  }
-
   /**
    * @brief Perform a query on the index, returning the nearest neighbors
    * and distances. The function returns a matrix containing k_nn nearest
    * neighbors for each given query and a matrix containing the distances
    * corresponding to each returned neighbor.
    *
-   * This function searches for the nearest neighbors using "infinite RAM",
-   * that is, it loads the entire IVF index into memory and then applies the
-   * query.
-   *
    * @tparam Q Type of query vectors.
    * @param query_vectors Array of (uncompressed) vectors to query.
    * @param k_nn Number of nearest neighbors to return.
+   * @param nprobe Number of centroids to search.
    * @param k_factor Specifies the multiplier on k_nn for the initial IVF_PQ
    * query, after which re-ranking is run.
-   * @param nprobe Number of centroids to search.
    *
    * @return A tuple containing a matrix of nearest neighbors and a matrix
    * of the corresponding distances.
    *
    */
   template <feature_vector_array Q>
-  auto query_infinite_ram(
+  auto query(
       const Q& query_vectors,
       size_t k_nn,
       size_t nprobe,
@@ -1192,13 +1137,68 @@ class ivf_pq_index {
     if (::num_vectors(flat_ivf_centroids_) < nprobe) {
       nprobe = ::num_vectors(flat_ivf_centroids_);
     }
-    if (!partitioned_pq_vectors_ ||
-        partitioned_pq_vectors_->num_vectors() == 0 ||
-        partitioned_pq_vectors_->num_vectors() !=
-            partitioned_pq_vectors_->total_num_vectors()) {
-      read_index_infinite();
+
+    if (upper_bound_ > 0) {
+      // Searches for the nearest neighbors using "finite RAM",
+      // that is, it only loads that portion of the IVF index into memory that
+      // is necessary for the given query. In addition, it supports out of core
+      // operation, meaning that only a subset of the necessary partitions are
+      // loaded into memory at any one time.
+      if (!group_) {
+        throw std::runtime_error(
+            "[ivf_pq_index@read_index_finite] group_ is not initialized. This "
+            "happens if you do not load an index by URI. Please close the "
+            "index "
+            "and re-open it by URI.");
+      }
+
+      // Open the index from the arrays contained in the group_uri.
+      // The "finite" queries only load as much data (ids and vectors) as are
+      // necessary for a given query -- so we can't load any data until we
+      // know what the query is. So, here we would have read the centroids and
+      // indices into memory, when creating the index but would not have read
+      // the partitioned_ids or partitioned_pq_vectors.
+      auto&& [active_partitions, active_queries] =
+          detail::ivf::partition_ivf_flat_index<indices_type>(
+              flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
+      auto partitioned_pq_vectors = std::make_unique<tdb_pq_storage_type>(
+          group_->cached_ctx(),
+          group_->pq_ivf_vectors_uri(),
+          group_->pq_ivf_indices_uri(),
+          group_->get_num_partitions() + 1,
+          group_->pq_ivf_ids_uri(),
+          active_partitions,
+          upper_bound_,
+          temporal_policy_);
+
+      auto query_to_pq_centroid_distance_tables =
+          std::move(*generate_query_to_pq_centroid_distance_tables<
+                    Q,
+                    ColMajorMatrix<float>>(query_vectors));
+      size_t k_initial = static_cast<size_t>(k_nn * k_factor);
+      auto&& [initial_distances, initial_ids, initial_indices] =
+          detail::ivf::query_finite_ram(
+              *partitioned_pq_vectors,
+              query_to_pq_centroid_distance_tables,
+              active_queries,
+              k_initial,
+              upper_bound_,
+              num_threads_,
+              make_pq_distance_query_to_pq_centroid_distance_tables<
+                  std::span<float>,
+                  decltype(pq_storage_type{}[0])>());
+      return rerank(
+          std::move(initial_distances),
+          std::move(initial_ids),
+          std::move(initial_indices),
+          query_vectors,
+          k_initial,
+          k_nn);
     }
 
+    // This function searches for the nearest neighbors using "infinite RAM". We
+    // have already loaded the partitioned_pq_vectors_ into memory in the
+    // constructor, so we can just run the query.
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
@@ -1221,78 +1221,6 @@ class ivf_pq_index {
                 std::span<float>,
                 decltype(pq_storage_type{}[0])>());
 
-    return rerank(
-        std::move(initial_distances),
-        std::move(initial_ids),
-        std::move(initial_indices),
-        query_vectors,
-        k_initial,
-        k_nn);
-  }
-
-  /**
-   * @brief Perform a query on the index, returning the nearest neighbors
-   * and distances. The function returns a matrix containing k_nn nearest
-   * neighbors for each given query and a matrix containing the distances
-   * corresponding to each returned neighbor.
-   *
-   * This function searches for the nearest neighbors using "finite RAM",
-   * that is, it only loads that portion of the IVF index into memory that
-   * is necessary for the given query. In addition, it supports out of core
-   * operation, meaning that only a subset of the necessary partitions are
-   * loaded into memory at any one time.
-   *
-   * See the documentation for that function in detail/ivf/qv.h
-   * for more details.
-   *
-   * @tparam Q Type of query vectors. Must meet requirements of
-   * `feature_vector_array`
-   * @param query_vectors Array of (uncompressed) vectors to query.
-   * @param k_nn Number of nearest neighbors to return.
-   * @param k_factor Specifies the multipler on k_nn for the initial IVF_PQ
-   * query, after which re-ranking is run.
-   * @param nprobe Number of centroids to search.
-   *
-   * @return A tuple containing a matrix of nearest neighbors and a matrix
-   * of the corresponding distances.
-   */
-  template <feature_vector_array Q>
-  auto query_finite_ram(
-      const Q& query_vectors,
-      size_t k_nn,
-      size_t nprobe,
-      size_t upper_bound = 0,
-      float k_factor = 1.f) {
-    if (!group_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@query_finite_ram] Query with finite RAM can only be "
-          "run if you're loading the index by URI. Please open it by URI and "
-          "try again. If you just wrote the index, open it up again by URI.");
-    }
-    if (k_factor < 1.f) {
-      throw std::runtime_error("k_factor must be >= 1");
-    }
-    if (::num_vectors(flat_ivf_centroids_) < nprobe) {
-      nprobe = ::num_vectors(flat_ivf_centroids_);
-    }
-    auto&& [active_partitions, active_queries, partitioned_pq_vectors] =
-        read_index_finite(query_vectors, nprobe, upper_bound);
-    auto query_to_pq_centroid_distance_tables =
-        std::move(*generate_query_to_pq_centroid_distance_tables<
-                  Q,
-                  ColMajorMatrix<float>>(query_vectors));
-    size_t k_initial = static_cast<size_t>(k_nn * k_factor);
-    auto&& [initial_distances, initial_ids, initial_indices] =
-        detail::ivf::query_finite_ram(
-            *partitioned_pq_vectors,
-            query_to_pq_centroid_distance_tables,
-            active_queries,
-            k_initial,
-            upper_bound,
-            num_threads_,
-            make_pq_distance_query_to_pq_centroid_distance_tables<
-                std::span<float>,
-                decltype(pq_storage_type{}[0])>());
     return rerank(
         std::move(initial_distances),
         std::move(initial_ids),
@@ -1428,6 +1356,14 @@ class ivf_pq_index {
     return dimensions_;
   }
 
+  uint64_t num_vectors() const {
+    return num_vectors_;
+  }
+
+  size_t upper_bound() const {
+    return upper_bound_;
+  }
+
   auto num_partitions() const {
     if (num_partitions_ != ::num_vectors(flat_ivf_centroids_)) {
       throw std::runtime_error(
@@ -1500,7 +1436,7 @@ class ivf_pq_index {
     double total_distance = 0.0;
     double total_normalizer = 0.0;
 
-    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
+    for (size_t i = 0; i < ::num_vectors(feature_vectors); ++i) {
       if (debug) {
         std::cout << "-------------------" << std::endl;
       }
@@ -1588,8 +1524,8 @@ class ivf_pq_index {
       }
     }
 
-    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+    for (size_t i = 0; i < ::num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < ::num_vectors(feature_vectors); ++j) {
         auto real_distance =
             l2_distance(feature_vectors[i], feature_vectors[j]);
         total_normalizer += real_distance;
@@ -1616,8 +1552,8 @@ class ivf_pq_index {
 
     score_type diff_max = 0.0;
     score_type vec_max = 0.0;
-    for (size_t i = 0; i < num_vectors(feature_vectors); ++i) {
-      for (size_t j = i + 1; j < num_vectors(feature_vectors); ++j) {
+    for (size_t i = 0; i < ::num_vectors(feature_vectors); ++i) {
+      for (size_t j = i + 1; j < ::num_vectors(feature_vectors); ++j) {
         auto real_distance =
             l2_distance(feature_vectors[i], feature_vectors[j]);
         total_normalizer += real_distance;
@@ -1667,6 +1603,9 @@ class ivf_pq_index {
    */
   bool compare_cached_metadata(const ivf_pq_index& rhs) const {
     if (dimensions_ != rhs.dimensions_) {
+      return false;
+    }
+    if (num_vectors_ != rhs.num_vectors_) {
       return false;
     }
     if (num_partitions_ != rhs.num_partitions_) {

@@ -22,7 +22,10 @@ import tiledb
 from tiledb.vector_search.index import Index
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
+from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 from tiledb.vector_search.utils import load_fvecs
+from tiledb.vector_search.vamana_index import VamanaIndex
 
 
 class RemoteURIType(Enum):
@@ -252,7 +255,7 @@ class TimerManager:
         plt.xlabel("Average Query Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title(f"Ingestion Time vs Average Query Accuracy {sift_string()}")
-        for idx, timer in self.timers:
+        for idx, timer in enumerate(self.timers):
             timer.add_data_to_ingestion_time_vs_average_query_accuracy(
                 markers[idx % len(markers)]
             )
@@ -265,7 +268,7 @@ class TimerManager:
         plt.xlabel("Accuracy")
         plt.ylabel("Time (seconds)")
         plt.title(f"Query Time vs Accuracy {sift_string()}")
-        for idx, timer in self.timers:
+        for idx, timer in enumerate(self.timers):
             timer.add_data_to_query_time_vs_accuracy(markers[idx % len(markers)])
         plt.legend()
         plt.savefig(os.path.join(RESULTS_DIR, "query_time_vs_accuracy.png"))
@@ -295,6 +298,7 @@ config = {}
 
 
 def get_uri(tag):
+    global config
     index_name = f"index_{tag.replace('=', '_')}"
     index_uri = ""
     if REMOTE_URI_TYPE == RemoteURIType.LOCAL:
@@ -346,7 +350,7 @@ def benchmark_ivf_flat():
         index_uri = get_uri(tag)
 
         timer.start(tag, TimerMode.INGESTION)
-        index = ingest(
+        ingest(
             index_type=index_type,
             index_uri=index_uri,
             source_uri=SIFT_BASE_PATH,
@@ -355,6 +359,10 @@ def benchmark_ivf_flat():
             training_sampling_policy=TrainingSamplingPolicy.RANDOM,
         )
         ingest_time = timer.stop(tag, TimerMode.INGESTION)
+
+        # The index returned by ingest() automatically has memory_budget=1000000 set. Open
+        # a fresh index so it's clear what config is being used.
+        index = IVFFlatIndex(index_uri, config)
 
         for nprobe in [1, 2, 3, 4, 5, 10, 20]:
             timer.start(tag, TimerMode.QUERY)
@@ -386,7 +394,7 @@ def benchmark_vamana():
             index_uri = get_uri(tag)
 
             timer.start(tag, TimerMode.INGESTION)
-            index = ingest(
+            ingest(
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=SIFT_BASE_PATH,
@@ -396,6 +404,8 @@ def benchmark_vamana():
                 training_sampling_policy=TrainingSamplingPolicy.RANDOM,
             )
             ingest_time = timer.stop(tag, TimerMode.INGESTION)
+
+            index = VamanaIndex(index_uri, config)
 
             for l_search in [k, k + 50, k + 100, k + 200, k + 400]:
                 timer.start(tag, TimerMode.QUERY)
@@ -429,7 +439,7 @@ def benchmark_ivf_pq():
                 index_uri = get_uri(tag)
 
                 timer.start(tag, TimerMode.INGESTION)
-                index = ingest(
+                ingest(
                     index_type=index_type,
                     index_uri=index_uri,
                     source_uri=SIFT_BASE_PATH,
@@ -439,6 +449,10 @@ def benchmark_ivf_pq():
                     num_subspaces=num_subspaces,
                 )
                 ingest_time = timer.stop(tag, TimerMode.INGESTION)
+
+                # The index returned by ingest() automatically has memory_budget=1000000 set. Open
+                # a fresh index so it's clear what config is being used.
+                index = IVFPQIndex(index_uri, config)
 
                 for nprobe in [5, 10, 20, 40, 60]:
                     timer.start(tag, TimerMode.QUERY)

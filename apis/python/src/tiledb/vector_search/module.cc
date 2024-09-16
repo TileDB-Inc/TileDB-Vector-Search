@@ -18,6 +18,7 @@
 #include "detail/linalg/tdb_matrix.h"
 #include "detail/linalg/tdb_partitioned_matrix.h"
 #include "detail/time/temporal_policy.h"
+#include "index/index_defs.h"
 #include "utils/seeder.h"
 
 namespace py = pybind11;
@@ -1094,6 +1095,14 @@ PYBIND11_MODULE(_tiledbvspy, m) {
       .value("INNER_PRODUCT", DistanceMetric::INNER_PRODUCT)
       .value("COSINE", DistanceMetric::COSINE)
       .value("L2", DistanceMetric::L2)
+      .export_values();
+
+  py::enum_<IndexLoadStrategy>(m, "IndexLoadStrategy")
+      .value("PQ_OOC", IndexLoadStrategy::PQ_OOC)
+      .value("PQ_INDEX", IndexLoadStrategy::PQ_INDEX)
+      .value(
+          "PQ_INDEX_AND_RERANKING_VECTORS",
+          IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS)
       .export_values();
 
   /* === Module inits === */

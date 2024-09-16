@@ -192,6 +192,7 @@ class Index(metaclass=ABCMeta):
         def query_udf(index_type, index_open_kwargs, query_kwargs):
             from tiledb.vector_search.flat_index import FlatIndex
             from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+            from tiledb.vector_search.ivf_pq_index import IVFPQIndex
             from tiledb.vector_search.vamana_index import VamanaIndex
 
             # Open index
@@ -199,8 +200,12 @@ class Index(metaclass=ABCMeta):
                 index = FlatIndex(**index_open_kwargs)
             elif index_type == "IVF_FLAT":
                 index = IVFFlatIndex(**index_open_kwargs)
+            elif index_type == "IVF_PQ":
+                index = IVFPQIndex(**index_open_kwargs)
             elif index_type == "VAMANA":
                 index = VamanaIndex(**index_open_kwargs)
+            else:
+                raise ValueError(f"Unsupported index_type: {index_type}")
 
             # Query index
             return index.query(**query_kwargs)

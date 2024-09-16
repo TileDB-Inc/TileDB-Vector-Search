@@ -63,6 +63,7 @@ class CloudTests(unittest.TestCase):
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
+            verbose=True,
         )
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
 
