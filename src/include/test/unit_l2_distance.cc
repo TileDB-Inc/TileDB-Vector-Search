@@ -33,6 +33,7 @@
 #include <catch2/catch_all.hpp>
 #include <iomanip>
 #include "detail/scoring/l2_distance.h"
+#include "detail/scoring/l2_distance_avx.h"
 
 TEMPLATE_TEST_CASE("simple sum_of_squares", "[l2_distance]", int8_t, uint8_t) {
   std::cout << std::fixed << std::setprecision(7);
