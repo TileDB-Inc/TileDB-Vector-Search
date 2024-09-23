@@ -70,6 +70,11 @@ inline std::string array_name_to_uri(
       .string();
 }
 
+inline std::string array_name_to_temp_uri(
+    const std::string& group_uri, const std::string& temp_group_name, const std::string& array_name) {
+  return (std::filesystem::path{group_uri} / std::filesystem::path{temp_group_name} / std::filesystem::path{array_name})
+      .string();
+}
 template <class index_type>
 class base_index_group {
   using group_type = index_type::group_type;
@@ -99,6 +104,7 @@ class base_index_group {
   // `tiledb://foo/edc4656a-3f45-43a1-8ee5-fa692a015c53` which cannot have the
   // array name added as a suffix.
   std::unordered_map<std::string, std::string> array_name_to_uri_;
+  std::unordered_map<std::string, std::string> array_name_to_temp_uri_;
 
   /** Lookup an array name given an array key */
   constexpr auto array_key_to_array_name(const std::string& array_key) const {
@@ -115,11 +121,14 @@ class base_index_group {
       throw std::runtime_error("Version not set.");
     }
     for (auto&& [array_key, array_name] : storage_formats[version_]) {
+      // std::cout << "[index_group@init_valid_array_names] array_key: " << array_key << " array_name: " << array_name << std::endl;
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
       array_name_to_uri_[array_name] =
           array_name_to_uri(group_uri_, array_name);
+      array_name_to_temp_uri_[array_name] =
+          array_name_to_temp_uri(group_uri_, storage_formats[version_]["partial_write_array_dir"], array_name);
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
   }
@@ -261,11 +270,23 @@ class base_index_group {
     auto name = array_key_to_array_name(array_key);
     if (array_name_to_uri_.find(name) == array_name_to_uri_.end()) {
       throw std::runtime_error(
-          "Invalid key when getting the URI: " + array_key +
+          "[index_group@array_key_to_uri] Invalid key when getting the URI: " + array_key +
           ". Name does not exist: " + name);
     }
 
     return array_name_to_uri_.at(name);
+  }
+
+  constexpr std::string array_key_to_temp_uri(const std::string& array_key) const {
+    auto name = array_key_to_array_name(array_key);
+    // std::cout << "[index_group@array_key_to_temp_uri] name: " << name << std::endl;
+    if (array_name_to_temp_uri_.find(name) == array_name_to_temp_uri_.end()) {
+      throw std::runtime_error(
+          "[index_group@array_key_to_temp_uri] Invalid key when getting the URI: " + array_key +
+          ". Name does not exist: " + name);
+    }
+
+    return array_name_to_temp_uri_.at(name);
   }
 
   /**
@@ -453,22 +474,49 @@ class base_index_group {
   [[nodiscard]] std::string ids_uri() const {
     return array_key_to_uri("ids_array_name");
   }
+  [[nodiscard]] std::string ids_temp_uri() const {
+    return array_key_to_temp_uri("ids_array_name");
+  }
   [[nodiscard]] std::string ids_array_name() const {
     return array_key_to_array_name("ids_array_name");
   }
+  
   [[nodiscard]] std::string feature_vectors_uri() const {
     return array_key_to_uri("parts_array_name");
+  }
+  [[nodiscard]] std::string feature_vectors_temp_uri() const {
+    return array_key_to_temp_uri("parts_array_name");
   }
   [[nodiscard]] std::string feature_vectors_array_name() const {
     return array_key_to_array_name("parts_array_name");
   }
 
-  [[nodiscard]] const std::reference_wrapper<const tiledb::Context> cached_ctx()
-      const {
+  [[nodiscard]] std::string feature_vectors_index_uri() const {
+    return array_key_to_uri("index_array_name");
+  }
+  [[nodiscard]] std::string feature_vectors_index_temp_uri() const {
+    return array_key_to_temp_uri("index_array_name");
+  }
+  [[nodiscard]] std::string feature_vectors_index_name() const {
+    return array_key_to_array_name("index_array_name");
+  }
+
+  [[nodiscard]] std::string temp_data_uri() const {
+    return array_key_to_uri("partial_write_array_dir");
+  }
+  [[nodiscard]] std::string temp_data_name() const {
+    return array_key_to_array_name("partial_write_array_dir");
+  }
+
+  [[nodiscard]] tiledb::Context &cached_ctx() {
     return cached_ctx_;
   }
-  [[nodiscard]] std::reference_wrapper<const tiledb::Context> cached_ctx() {
+  [[nodiscard]] const tiledb::Context &cached_ctx() const {
     return cached_ctx_;
+  }
+
+  const std::string &storage_version() const {
+    return version_;
   }
 
   /**************************************************************************

@@ -221,20 +221,32 @@ def create(
         raise ValueError(
             f"Distance metric {distance_metric} is not supported in IVF_PQ"
         )
-    index = vspy.IndexIVFPQ(
+    vspy.IndexIVFPQ.create(
+        ctx=ctx,
+        group_uri=uri,
+        dimensions=dimensions,
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         partitioning_index_type=np.dtype(np.uint64).name,
-        dimensions=dimensions,
-        n_list=partitions if (partitions is not None and partitions != -1) else 0,
+        partitions=partitions if (partitions is not None and partitions != -1) else 0,
         num_subspaces=num_subspaces,
-        distance_metric=int(distance_metric),
-    )
-    # TODO(paris): Run all of this with a single C++ call.
-    empty_vector = vspy.FeatureVectorArray(
-        dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name
-    )
-    index.train(empty_vector)
-    index.add(empty_vector)
-    index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
+        temporal_policy=vspy.TemporalPolicy(0),
+        distance_metric=distance_metric,
+        storage_version=storage_version)
+    # index = vspy.IndexIVFPQ(
+    #     feature_type=np.dtype(vector_type).name,
+    #     id_type=np.dtype(np.uint64).name,
+    #     partitioning_index_type=np.dtype(np.uint64).name,
+    #     dimensions=dimensions,
+    #     n_list=partitions if (partitions is not None and partitions != -1) else 0,
+    #     num_subspaces=num_subspaces,
+    #     distance_metric=int(distance_metric),
+    # )
+    # # TODO(paris): Run all of this with a single C++ call.
+    # empty_vector = vspy.FeatureVectorArray(
+    #     dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name
+    # )
+    # index.train(empty_vector)
+    # index.add(empty_vector)
+    # index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
     return IVFPQIndex(uri=uri, config=config)

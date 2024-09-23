@@ -58,44 +58,21 @@ template <typename FeatureType, class IdsType, class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<FeatureType>& input_vectors,  // IN
-    const std::vector<IdsType>& external_ids,          // IN
-    const std::vector<IdsType>& deleted_ids,           // IN
-    const std::string& centroids_uri,  // IN (from array centroids_uri)
+    const std::span<IdsType>& external_ids,          // IN
+    const std::span<IdsType>& deleted_ids,           // IN
+    const ColMajorMatrix<CentroidsType> &centroids,    // IN
     const std::string& parts_uri,      // OUT (to array at parts_uri)
     const std::string& index_uri,      // OUT (to array at index_uri)
     const std::string& id_uri,         // OUT (to array at id_uri)
     size_t start_pos,
     size_t end_pos,
     size_t nthreads,
-    uint64_t timestamp,
+    TemporalPolicy temporal_policy,
     size_t partition_start = 0) {
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
-  // NOTE(paris): Is it correct to do `TimestampStartEnd, timestamp, timestamp`?
-  auto centroid_read_temporal_policy =
-      (timestamp == 0) ?
-          TemporalPolicy() :
-          TemporalPolicy(TimestampStartEnd, timestamp, timestamp);
-  tiledb::Array array(
-      ctx,
-      centroids_uri,
-      TILEDB_READ,
-      centroid_read_temporal_policy.to_tiledb_temporal_policy());
-  auto non_empty = array.non_empty_domain<int32_t>();
-  auto partitions = non_empty[1].second.second + 1;
 
-  // Read all rows from column 0 -> `partitions`. Set no upper_bound.
-  auto centroids = tdbColMajorMatrix<CentroidsType>(
-      ctx,
-      centroids_uri,
-      0,
-      std::nullopt,
-      0,
-      partitions,
-      0,
-      centroid_read_temporal_policy);
-  centroids.load();
   // Find the centroid that is closest to each input vector.
   auto parts = detail::flat::qv_partition(centroids, input_vectors, nthreads);
   {
@@ -136,18 +113,22 @@ int ivf_index(
     // parallelize, because of the random access to the indices array.
     if (deleted_ids.empty()) {
       for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+        // First get the centroid that this vector is in.
         size_t bin = parts[i];
+        // Then find where in the shuffled data this vector will go.
         size_t ibin = indices[bin];
-
-        shuffled_ids[ibin] = external_ids[i];
-
         if (ibin >= shuffled_input_vectors.num_cols()) {
           throw std::runtime_error(
               "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
         }
+
+        // Copy over the id and the vector.
+        shuffled_ids[ibin] = external_ids[i];
         for (size_t j = 0; j < input_vectors.num_rows(); ++j) {
           shuffled_input_vectors(j, ibin) = input_vectors(j, i);
         }
+
+        // Increment indices so that the next vector in this bin goes to the next spot.
         ++indices[bin];
       }
     } else {
@@ -155,13 +136,12 @@ int ivf_index(
         if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
           size_t bin = parts[i];
           size_t ibin = indices[bin];
-
-          shuffled_ids[ibin] = external_ids[i];
-
           if (ibin >= shuffled_input_vectors.num_cols()) {
             throw std::runtime_error(
                 "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
           }
+
+          shuffled_ids[ibin] = external_ids[i];
           for (size_t j = 0; j < input_vectors.num_rows(); ++j) {
             shuffled_input_vectors(j, ibin) = input_vectors(j, i);
           }
@@ -178,10 +158,8 @@ int ivf_index(
     }
 
     // Write out the arrays
-    TemporalPolicy temporal_policy = (timestamp == 0) ?
-                                         TemporalPolicy() :
-                                         TemporalPolicy(TimeTravel, timestamp);
     if (!parts_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to parts_uri: " << parts_uri << " start_pos: " << start_pos << std::endl;
       write_matrix<FeatureType, stdx::layout_left, size_t>(
           ctx,
           shuffled_input_vectors,
@@ -191,16 +169,82 @@ int ivf_index(
           temporal_policy);
     }
     if (!index_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to index_uri: " << index_uri << " partition_start: " << partition_start << std::endl;
       write_vector(
           ctx, indices, index_uri, partition_start, false, temporal_policy);
     }
     if (!id_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to id_uri: " << id_uri << " start_pos: " << start_pos << std::endl;
       write_vector(
           ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
     }
   }
   return 0;
 }
+
+/**
+ * Partitions a set of vectors, given a set of centroids.
+ * @return
+ */
+template <typename FeatureType, class IdsType, class CentroidsType>
+int ivf_index(
+    tiledb::Context& ctx,
+    const ColMajorMatrix<FeatureType>& input_vectors,  // IN
+    const std::vector<IdsType>& external_ids,          // IN
+    const std::vector<IdsType>& deleted_ids,           // IN
+    const std::string& centroids_uri,  // IN (from array centroids_uri)
+    const std::string& parts_uri,      // OUT (to array at parts_uri)
+    const std::string& index_uri,      // OUT (to array at index_uri)
+    const std::string& id_uri,         // OUT (to array at id_uri)
+    size_t start_pos,
+    size_t end_pos,
+    size_t nthreads,
+    uint64_t timestamp,
+    size_t partition_start = 0) {
+    // NOTE(paris): Is it correct to do `TimestampStartEnd, timestamp, timestamp`?
+    auto centroid_read_temporal_policy =
+        (timestamp == 0) ?
+            TemporalPolicy() :
+            TemporalPolicy(TimestampStartEnd, timestamp, timestamp);
+    tiledb::Array array(
+        ctx,
+        centroids_uri,
+        TILEDB_READ,
+        centroid_read_temporal_policy.to_tiledb_temporal_policy());
+    auto non_empty = array.non_empty_domain<int32_t>();
+    auto partitions = non_empty[1].second.second + 1;
+
+    // Read all rows from column 0 -> `partitions`. Set no upper_bound.
+    auto centroids = tdbColMajorMatrix<CentroidsType>(
+        ctx,
+        centroids_uri,
+        0,
+        std::nullopt,
+        0,
+        partitions,
+        0,
+        centroid_read_temporal_policy);
+    centroids.load();
+
+    TemporalPolicy temporal_policy = (timestamp == 0) ?
+                                      TemporalPolicy() :
+                                      TemporalPolicy(TimeTravel, timestamp);
+
+    return ivf_index<FeatureType, IdsType, CentroidsType>(
+        ctx,
+        input_vectors,
+        external_ids,
+        deleted_ids,
+        centroids,
+        parts_uri,
+        index_uri,
+        id_uri,
+        start_pos,
+        end_pos,
+        nthreads,
+        temporal_policy,
+        partition_start);
+  }
 
 /**
  * Open db and set up external ids to either be a contiguous set of integers

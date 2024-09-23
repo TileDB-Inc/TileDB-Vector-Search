@@ -54,6 +54,9 @@
          {"pq_ivf_indices_array_name", "partitioned_pq_vector_indexes"},
          {"pq_ivf_ids_array_name", "partitioned_pq_vector_ids"},
          {"pq_ivf_vectors_array_name", "partitioned_pq_vectors"},
+
+          // The partitioned non-PQ-encoded vectors.
+          {"partitioned_vectors_array_name", "partitioned_vectors"},
      }}};
 
 template <class index_type>
@@ -62,6 +65,7 @@ class ivf_pq_group : public base_index_group<index_type> {
 
   using Base::array_key_to_array_name_;
   using Base::array_name_to_uri_;
+  using Base::array_name_to_temp_uri_;
   using Base::cached_ctx_;
   using Base::group_uri_;
   using Base::metadata_;
@@ -73,6 +77,8 @@ class ivf_pq_group : public base_index_group<index_type> {
   static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
   static const int32_t default_tile_extent{100'000};
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
+  int32_t tile_size{0};
+  tiledb_filter_type_t default_compression;
 
  public:
   ivf_pq_group(
@@ -97,6 +103,14 @@ class ivf_pq_group : public base_index_group<index_type> {
             "num_subspaces must be specified when creating a new group.");
       }
     }
+
+    if (empty(this->version_)) {
+      this->version_ = current_storage_version;
+    }
+
+    tile_size = (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimensions());
+    default_compression = string_to_filter(storage_formats[this->version_]["default_attr_filters"]);
+
     set_num_clusters(num_clusters);
     set_num_subspaces(num_subspaces);
     Base::load();
@@ -109,6 +123,8 @@ class ivf_pq_group : public base_index_group<index_type> {
       array_key_to_array_name_[array_key] = array_name;
       array_name_to_uri_[array_name] =
           array_name_to_uri(group_uri_, array_name);
+      array_name_to_temp_uri_[array_name] =
+          array_name_to_temp_uri(group_uri_, storage_formats[version_]["partial_write_array_dir"], array_name);
     }
   }
 
@@ -166,30 +182,42 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto cluster_centroids_uri() const {
     return this->array_key_to_uri("cluster_centroids_array_name");
   }
-  [[nodiscard]] auto flat_ivf_centroids_uri() const {
-    return this->array_key_to_uri("flat_ivf_centroids_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_indices_uri() const {
-    return this->array_key_to_uri("pq_ivf_indices_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_ids_uri() const {
-    return this->array_key_to_uri("pq_ivf_ids_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_vectors_uri() const {
-    return this->array_key_to_uri("pq_ivf_vectors_array_name");
-  }
-
   [[nodiscard]] auto cluster_centroids_array_name() const {
     return this->array_key_to_array_name("cluster_centroids_array_name");
+  }
+  
+  [[nodiscard]] auto flat_ivf_centroids_uri() const {
+    return this->array_key_to_uri("flat_ivf_centroids_array_name");
   }
   [[nodiscard]] auto flat_ivf_centroids_array_name() const {
     return this->array_key_to_array_name("flat_ivf_centroids_array_name");
   }
+
+  [[nodiscard]] auto pq_ivf_indices_uri() const {
+    return this->array_key_to_uri("pq_ivf_indices_array_name");
+  }
+  [[nodiscard]] auto pq_ivf_indices_temp_uri() const {
+    return this->array_key_to_temp_uri("pq_ivf_indices_array_name");
+  }
   [[nodiscard]] auto pq_ivf_indices_array_name() const {
     return this->array_key_to_array_name("pq_ivf_indices_array_name");
   }
+  
+  [[nodiscard]] auto pq_ivf_ids_uri() const {
+    return this->array_key_to_uri("pq_ivf_ids_array_name");
+  }
+  [[nodiscard]] auto pq_ivf_ids_temp_uri() const {
+    return this->array_key_to_temp_uri("pq_ivf_ids_array_name");
+  }
   [[nodiscard]] auto pq_ivf_ids_array_name() const {
     return this->array_key_to_array_name("pq_ivf_ids_array_name");
+  }
+
+  [[nodiscard]] auto pq_ivf_vectors_uri() const {
+    return this->array_key_to_uri("pq_ivf_vectors_array_name");
+  }
+  [[nodiscard]] auto pq_ivf_vectors_temp_uri() const {
+    return this->array_key_to_temp_uri("pq_ivf_vectors_array_name");
   }
   [[nodiscard]] auto pq_ivf_vectors_array_name() const {
     return this->array_key_to_array_name("pq_ivf_vectors_array_name");
@@ -205,6 +233,9 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
+  uint32_t get_sub_dimensions() const {
+    return metadata_.sub_dimensions_;
+  }
   void set_sub_dimensions(uint32_t sub_dimensions) {
     metadata_.sub_dimensions_ = sub_dimensions;
   }
@@ -245,16 +276,15 @@ class ivf_pq_group : public base_index_group<index_type> {
    * Create a ready-to-use group with default arrays
    ****************************************************************************/
   void create_default_impl() {
-    if (empty(this->version_)) {
-      this->version_ = current_storage_version;
-    }
+    std::cout << "[ivf_pq_group@create_default_impl] tile_size: " << tile_size<< std::endl;
+
     this->init_valid_array_names();
 
-    static const int32_t tile_size{
-        (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
-                  this->get_dimensions())};
-    static const tiledb_filter_type_t default_compression{
-        string_to_filter(storage_formats[version_]["default_attr_filters"])};
+    // static const int32_t tile_size{
+    //     (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
+    //               this->get_dimensions())};
+    // static const tiledb_filter_type_t default_compression{
+    //     string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
     tiledb::Group::create(cached_ctx_, group_uri_);
     auto write_group = tiledb::Group(
@@ -292,29 +322,13 @@ class ivf_pq_group : public base_index_group<index_type> {
     // - cluster_centroids
     // - flat_ivf_centroids
     // - pq_ivf_vectors (i.e. the indices, IDs, and vectors)
-    create_empty_for_matrix<
-        typename index_type::feature_type,
-        stdx::layout_left>(
-        cached_ctx_,
-        this->feature_vectors_uri(),
-        this->get_dimensions(),
-        default_domain,
-        this->get_dimensions(),
-        default_tile_extent,
-        default_compression);
-    tiledb_helpers::add_to_group(
-        write_group,
-        this->feature_vectors_uri(),
-        this->feature_vectors_array_name());
+    create_feature_vectors_matrix(write_group, this->feature_vectors_uri());
+    create_ids_vector(write_group, this->ids_uri(), this->ids_array_name());
+    create_indices_vector(write_group, this->feature_vectors_index_uri(), this->feature_vectors_index_name());
 
-    create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_,
-        this->ids_uri(),
-        default_domain,
-        tile_size,
-        default_compression);
-    tiledb_helpers::add_to_group(
-        write_group, this->ids_uri(), this->ids_array_name());
+    create_pq_ivf_vectors_matrix(write_group, pq_ivf_vectors_uri());
+    create_ids_vector(write_group, pq_ivf_ids_uri(), this->pq_ivf_ids_array_name());
+    create_indices_vector(write_group, pq_ivf_indices_uri(), this->pq_ivf_indices_array_name());
 
     create_empty_for_matrix<
         typename index_type::flat_vector_feature_type,
@@ -342,37 +356,86 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, flat_ivf_centroids_uri(), flat_ivf_centroids_array_name());
 
-    create_empty_for_vector<typename index_type::indices_type>(
+    // Store the metadata if all the arrays were created successfully
+    metadata_.store_metadata(write_group);
+  }
+
+  void create_temp_data_group() {
+    auto write_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
+
+    // First remove the temp_data group if it exists. This can happen if we ingest multiple times.
+    if (tiledb::Object::object(cached_ctx_, this->temp_data_uri()).type() == tiledb::Object::Type::Group) {
+      tiledb::Object::remove(cached_ctx_, this->temp_data_uri());
+    }
+    
+    // Then create the new temp data group.
+    tiledb::Group::create(cached_ctx_, this->temp_data_uri());
+    tiledb_helpers::add_to_group(write_group, this->temp_data_uri(), this->temp_data_name());
+
+    // Finally create the array's in the temp data group that we will need during ingestion.
+    auto temp_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
+
+    create_feature_vectors_matrix(temp_group, this->feature_vectors_temp_uri());
+    create_ids_vector(temp_group, this->ids_temp_uri(), this->ids_array_name());
+    create_indices_vector(temp_group, this->feature_vectors_index_temp_uri(), this->feature_vectors_index_name());
+    
+    create_pq_ivf_vectors_matrix(temp_group, pq_ivf_vectors_temp_uri());
+    create_ids_vector(temp_group, pq_ivf_ids_temp_uri(), this->pq_ivf_ids_array_name());
+    create_indices_vector(temp_group, pq_ivf_indices_temp_uri(), this->pq_ivf_indices_array_name());
+  }
+private:
+  void create_feature_vectors_matrix(tiledb::Group &group, const std::string &uri) {
+     create_empty_for_matrix<
+        typename index_type::feature_type,
+        stdx::layout_left>(
         cached_ctx_,
-        pq_ivf_indices_uri(),
+        uri,
+        this->get_dimensions(),
         default_domain,
+        this->get_dimensions(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, pq_ivf_indices_uri(), pq_ivf_indices_array_name());
-    create_empty_for_vector<typename index_type::id_type>(
-        cached_ctx_,
-        pq_ivf_ids_uri(),
-        default_domain,
-        tile_size,
-        default_compression);
-    tiledb_helpers::add_to_group(
-        write_group, pq_ivf_ids_uri(), pq_ivf_ids_array_name());
+        group,
+        uri,
+        this->feature_vectors_array_name());
+  }
+
+  void create_pq_ivf_vectors_matrix(tiledb::Group &group, const std::string &uri) {
     create_empty_for_matrix<
         typename index_type::pq_code_type,
         stdx::layout_left>(
         cached_ctx_,
-        pq_ivf_vectors_uri(),
+        uri,
         this->get_num_subspaces(),
         default_domain,
         this->get_num_subspaces(),
         default_tile_extent,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, pq_ivf_vectors_uri(), pq_ivf_vectors_array_name());
+        group, uri, this->pq_ivf_vectors_array_name());
+  }
 
-    // Store the metadata if all the arrays were created successfully
-    metadata_.store_metadata(write_group);
+  void create_ids_vector(tiledb::Group &group, const std::string &uri, const std::string &name) {
+    create_empty_for_vector<typename index_type::id_type>(
+        cached_ctx_,
+        uri,
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        group, uri, name);
+  }
+
+  void create_indices_vector(tiledb::Group &group, const std::string &uri, const std::string &name) {
+    create_empty_for_vector<typename index_type::indices_type>(
+        cached_ctx_,
+        uri,
+        default_domain,
+        default_tile_extent,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        group, uri, name);
   }
 };
 
