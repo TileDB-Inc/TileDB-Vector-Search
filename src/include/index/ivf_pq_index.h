@@ -902,6 +902,7 @@ class ivf_pq_index {
       size_t start, 
       size_t end, 
       size_t partition_start,
+      TemporalPolicy temporal_policy,
       Distance distance = Distance{}) {
     std::cout << "[index@ivf_pq_index@ingest_parts]" << std::endl;
     // 3. pq-encode the vectors.
@@ -1172,8 +1173,8 @@ class ivf_pq_index {
       feature_vector_array Array,
       feature_vector Vector,
       class Distance = sum_of_squares_distance>
-  void ingest(const Array& training_set, const Vector& training_set_ids, const Vector& deleted_ids = {}, Distance distance = Distance{}) {
-    ingest_parts(training_set, training_set_ids, deleted_ids, 0, ::num_vectors(training_set), 0, distance);
+  void ingest(const Array& training_set, const Vector& training_set_ids, const Vector& deleted_ids = {}, TemporalPolicy temporal_policy, Distance distance = Distance{}) {
+    ingest_parts(training_set, training_set_ids, deleted_ids, 0, ::num_vectors(training_set), 0, temporal_policy, distance);
     consolidate_partitions(num_partitions_, 1, 0, num_partitions_, 100, true);
   }
 

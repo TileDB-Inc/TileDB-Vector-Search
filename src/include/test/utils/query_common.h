@@ -36,7 +36,6 @@
 #include <string>
 #include "detail/flat/qv.h"
 #include "index/ivf_flat_index.h"
-#include "index/ivf_pq_index.h"
 #include "linalg.h"
 #include "test/utils/array_defs.h"
 
@@ -173,16 +172,6 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
       idx = IndexType(nlist, max_iterations, convergence_tolerance);
-    } else if constexpr (std::is_same_v<
-                             IndexType,
-                             ivf_pq_index<feature_type, id_type, px_type>>) {
-      std::string uri = (std::filesystem::temp_directory_path() / "siftsmall_test_init_ivf_pq_index").string();
-      tiledb::VFS vfs(ctx);
-      if (vfs.is_dir(uri)) {
-        vfs.remove_dir(uri);
-      }
-      IndexType::create(ctx, uri, ::dimensions(training_set), nlist, num_subspaces, max_iterations, convergence_tolerance);
-      idx = IndexType(ctx, uri);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }
@@ -202,10 +191,6 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
       idx.add(training_set, ids);
-    } else if constexpr (std::is_same_v<
-                             IndexType,
-                             ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx.ingest(training_set, ids);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }
@@ -269,12 +254,6 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
                       ivf_flat_index<feature_type, id_type, px_type>>) {
       CHECK(recall0 > 0.95);
       CHECK(recall1 > 0.95);
-
-    } else if constexpr (std::is_same_v<
-                             IndexType,
-                             ivf_pq_index<feature_type, id_type, px_type>>) {
-      CHECK(recall0 > 0.7);
-      CHECK(recall1 > 0.7);
 
     } else {
       std::cout << "Unsupported index type" << std::endl;

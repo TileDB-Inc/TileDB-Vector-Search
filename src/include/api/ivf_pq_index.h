@@ -231,7 +231,7 @@ class IndexIVFPQ {
    * @param deleted_ids The ids of vectors to delete from the index.
    * 
    */
-  void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) {
+  void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start, TemporalPolicy temporal_policy) {
     if (feature_datatype_ != input_vectors.feature_type()) {
       throw std::runtime_error(
           "[ivf_pq_index@ingest_parts] Feature datatype mismatch: " +
