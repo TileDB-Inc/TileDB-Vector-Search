@@ -315,11 +315,14 @@ def ingest(
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[storage_version][
         "EXTERNAL_IDS_ARRAY_NAME"
     ]
-    PARTIAL_WRITE_ARRAY_DIR = (
-        storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
-        + "_"
-        + "".join(random.choices(string.ascii_letters, k=10))
-    )
+    if index_type == "IVF_PQ":
+        PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
+    else:
+        PARTIAL_WRITE_ARRAY_DIR = (
+            storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
+            + "_"
+            + "".join(random.choices(string.ascii_letters, k=10))
+        )
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
 
     # This is used to auto-configure `input_vectors_per_work_item`

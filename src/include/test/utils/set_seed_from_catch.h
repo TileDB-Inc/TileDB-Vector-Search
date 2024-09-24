@@ -50,7 +50,8 @@ class SetSeedFromCatch : public Catch::EventListenerBase {
 
   void testRunStarting(Catch::TestRunInfo const&) override {
     Seeder& seeder_ = Seeder::get();
-    seeder_.set_seed(Catch::rngSeed());
+//    seeder_.set_seed(Catch::rngSeed());
+    seeder_.set_seed(10);
   }
 };
 

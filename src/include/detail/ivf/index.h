@@ -58,8 +58,8 @@ template <typename FeatureType, class IdsType, class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<FeatureType>& input_vectors,  // IN
-    const std::span<IdsType>& external_ids,          // IN
-    const std::span<IdsType>& deleted_ids,           // IN
+    const std::vector<IdsType>& external_ids,          // IN
+    const std::vector<IdsType>& deleted_ids,           // IN
     const ColMajorMatrix<CentroidsType> &centroids,    // IN
     const std::string& parts_uri,      // OUT (to array at parts_uri)
     const std::string& index_uri,      // OUT (to array at index_uri)

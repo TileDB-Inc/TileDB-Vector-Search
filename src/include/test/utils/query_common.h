@@ -176,8 +176,13 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     } else if constexpr (std::is_same_v<
                              IndexType,
                              ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx = IndexType(
-          nlist, num_subspaces, max_iterations, convergence_tolerance);
+      std::string uri = (std::filesystem::temp_directory_path() / "siftsmall_test_init_ivf_pq_index").string();
+      tiledb::VFS vfs(ctx);
+      if (vfs.is_dir(uri)) {
+        vfs.remove_dir(uri);
+      }
+      IndexType::create(ctx, uri, ::dimensions(training_set), nlist, num_subspaces, max_iterations, convergence_tolerance);
+      idx = IndexType(ctx, uri);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }
@@ -192,18 +197,18 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
         training_set, query_set, k_nn, 1, sum_of_squares_distance{});
 
+    idx.train(training_set);
     if constexpr (std::is_same_v<
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
-      idx.train(training_set);
+      idx.add(training_set, ids);
     } else if constexpr (std::is_same_v<
                              IndexType,
                              ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx.train_ivf(training_set);
+      idx.ingest(training_set, ids);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }
-    idx.add(training_set, ids);
   }
 
   auto get_write_read_idx() {

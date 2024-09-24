@@ -733,10 +733,11 @@ class ivf_pq_index {
    * @param training_set_ids IDs for each vector.
    */
   template <
-      feature_vector_array Array,
+      // feature_vector_array Array,
       class Distance = sum_of_squares_distance>
   void train(
-      const Array& training_set,
+      const ColMajorMatrix<partitioned_pq_vectors_feature_type>& training_set,
+      // const Array& training_set,
       Distance distance = Distance{}) {
     std::cout << "[index@ivf_pq_index@train]" << std::endl;
     if (num_subspaces_ <= 0) {
@@ -888,13 +889,16 @@ class ivf_pq_index {
    * @todo Create and write index that is larger than RAM
    */
   template <
-      feature_vector_array Array,
-      feature_vector Vector,
+      // feature_vector_array Array,
+      // feature_vector Vector,
       class Distance = sum_of_squares_distance>
   void ingest_parts(
-      const Array& training_set,
-      const Vector& training_set_ids,
-      const Vector& deleted_ids, 
+      // const Array& training_set,
+      // const Vector& training_set_ids,
+      // const Vector& deleted_ids, 
+      const ColMajorMatrix<partitioned_pq_vectors_feature_type>& training_set,
+      const std::vector<partitioned_ids_type>& training_set_ids,
+      const std::vector<partitioned_ids_type>& deleted_ids,
       size_t start, 
       size_t end, 
       size_t partition_start,
@@ -907,7 +911,7 @@ class ivf_pq_index {
     // that we don't actually need this as a member variable, but do so for unit
     // tests.
     unpartitioned_pq_vectors_ =
-        pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(
+        pq_encode<ColMajorMatrix<partitioned_pq_vectors_feature_type>, ColMajorMatrixWithIds<pq_code_type, id_type>>(
             training_set);
     // std::copy(
     //     training_set_ids.begin(),
@@ -938,7 +942,7 @@ class ivf_pq_index {
         num_threads_,
         temporal_policy_,
         partition_start);
-    return;
+    
     detail::ivf::ivf_index<pq_code_type, partitioned_ids_type, flat_vector_feature_type>(
         group_->cached_ctx(),
         *unpartitioned_pq_vectors_,
@@ -954,7 +958,6 @@ class ivf_pq_index {
         num_threads_,
         temporal_policy_,
         partition_start);
-
 
     // // 4. Assign each vector to a centroid.
     // // flat_ivf_centroids_ holds the uncompressed centroids for the uncompressed
@@ -1002,8 +1005,163 @@ class ivf_pq_index {
     size_t work_items, 
     size_t partition_id_start, 
     size_t partition_id_end, 
-    size_t batch) {
+    size_t batch,
+    bool use_temp_index_array = false
+    ) {
       std::cout << "[index@ivf_pq_index@consolidate_partitions]" << std::endl;
+
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] partitions: " << partitions << std::endl;
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] work_items: " << work_items << std::endl;
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] partition_id_start: " << partition_id_start << std::endl;
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] partition_id_end: " << partition_id_end << std::endl;
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] batch: " << batch << std::endl;
+
+      std::vector<std::vector<std::pair<uint64_t, uint64_t>>> partition_slices(partitions);
+      // debug_vector_of_vectors(partition_slices, "[index@ivf_pq_index@consolidate_partitions] partition_slices");
+      for (int i = 0; i < partition_slices.size(); ++i) {
+          for (int j = 0; j < partition_slices[0].size(); ++j) {
+              std::cout << "[index@ivf_pq_index@consolidate_partitions] partition_slices[" << i << "][" << j << "]: " << partition_slices[i][j].first << ", " << partition_slices[i][j].second << std::endl;
+          }
+      }
+
+      auto total_partitions = work_items * (partitions + 1);
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] total_partitions: " << total_partitions << std::endl;
+      std::vector<partitioning_indices_type> partial_indexes = read_vector<partitioning_indices_type>(
+          group_->cached_ctx(),
+          group_->feature_vectors_index_temp_uri(),
+          0,
+          total_partitions,
+          temporal_policy_);
+      debug_vector(partial_indexes, "[index@ivf_pq_index@consolidate_partitions] partial_indexes", 500);
+
+      std::vector<partitioning_indices_type> index_array = read_vector<partitioning_indices_type>(
+          group_->cached_ctx(),
+          // NOTE: This should be group_->feature_vectors_index_uri(). 
+          // But that that won't work unless compute_partition_indexes_udf() is writte in c++.
+          // So instead we use the temp uri for now.
+          // group_->feature_vectors_index_uri(),
+          use_temp_index_array ? group_->feature_vectors_index_temp_uri() : group_->feature_vectors_index_uri(),
+          0,
+          total_partitions,
+          temporal_policy_);
+      debug_vector(index_array, "[index@ivf_pq_index@consolidate_partitions] index_array", 500);
+
+      size_t i = 0;
+      uint64_t prev_index = 0;
+      for (size_t work_item_id = 0; work_item_id < work_items; ++work_item_id) {
+          prev_index = partial_indexes[i++];
+          for (size_t partition_id = 0; partition_id < partitions; ++partition_id) {
+              auto slice = std::make_pair(prev_index, partial_indexes[i++] - 1);
+              if (slice.first <= slice.second && slice.first != std::numeric_limits<uint64_t>::max()) {
+                  partition_slices[partition_id].push_back(slice);
+              }
+              prev_index = partial_indexes[i - 1];
+          }
+      }
+      for (int a = 0; a < partition_slices.size(); ++a) {
+          for (int j = 0; j < partition_slices[a].size(); ++j) {
+            std::cout << "[index@ivf_pq_index@consolidate_partitions] partition_slices[" << a << "][" << j << "]: " << partition_slices[a][j].first << ", " << partition_slices[a][j].second << std::endl;
+          }
+      }
+
+      for (size_t part = partition_id_start; part < partition_id_end; part += batch) {
+        size_t part_end = std::min(part + batch, partition_id_end);
+        std::cout << "[index@ivf_pq_index@consolidate_partitions] Consolidating partitions start: " << part << ", end: " << part_end << std::endl;
+
+        std::vector<std::pair<uint64_t, uint64_t>> read_slices;
+        size_t total_slices_size = 0;
+        for (size_t p = part; p < part_end; ++p) {
+            for (const auto& partition_slice : partition_slices[p]) {
+                read_slices.push_back(partition_slice);
+                total_slices_size += partition_slice.second - partition_slice.first + 1;
+            }
+        }
+        for (int a = 0; a < read_slices.size(); ++a) {
+            std::cout << "[index@ivf_pq_index@consolidate_partitions] read_slices[" << a << "]: " << read_slices[a].first << ", " << read_slices[a].second << std::endl;
+        }
+
+        // Read from index array
+        uint64_t start_pos = index_array[part];
+        uint64_t end_pos = index_array[part_end];
+        std::cout << "[index@ivf_pq_index@consolidate_partitions] start_pos: " << start_pos << std::endl;
+        std::cout << "[index@ivf_pq_index@consolidate_partitions] end_pos: " << end_pos << std::endl;
+
+       if (read_slices.empty()) {
+           if (start_pos != end_pos) {
+               throw std::runtime_error("Incorrect partition size.");
+           }
+           continue;
+       }
+       // Read data
+       std::vector<partitioned_ids_type> ids = read_vector<partitioned_ids_type>(
+            group_->cached_ctx(),
+            group_->pq_ivf_ids_temp_uri(),
+            read_slices,
+            total_slices_size,
+            temporal_policy_);
+        debug_vector(ids, "[index@ivf_pq_index@consolidate_partitions] ids", 500);
+       
+       auto vectors =
+          tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
+              group_->cached_ctx(),
+              group_->feature_vectors_temp_uri(),
+              dimensions_,
+              read_slices,
+              total_slices_size,
+              0,
+              temporal_policy_);
+        vectors.load();
+        debug_matrix(vectors, "[index@ivf_pq_index@consolidate_partitions] vectors", 500);
+
+        auto pq_vectors = tdbColMajorMatrixMultiRange<pq_code_type, uint64_t>(
+            group_->cached_ctx(),
+            group_->pq_ivf_vectors_temp_uri(),
+            num_subspaces_,
+            read_slices,
+            total_slices_size,
+            0,
+            temporal_policy_);
+        pq_vectors.load();
+
+        if (ids.size() != end_pos - start_pos) {
+            throw std::runtime_error("Incorrect partition size.");
+        }
+
+        // Write data to the arrays
+        // parts_array[start_pos:end_pos] = vectors;
+        // ids_array[start_pos:end_pos] = ids;
+        write_vector(
+            group_->cached_ctx(),
+            ids,
+            group_->ids_uri(),
+            start_pos,
+            false,
+            temporal_policy_);
+
+        write_vector(
+            group_->cached_ctx(),
+            ids,
+            group_->pq_ivf_ids_uri(),
+            start_pos,
+            false,
+            temporal_policy_);
+
+        write_matrix(
+            group_->cached_ctx(),
+            vectors,
+            group_->feature_vectors_uri(),
+            start_pos,
+            false,
+            temporal_policy_);
+
+        write_matrix(
+            group_->cached_ctx(),
+            pq_vectors,
+            group_->pq_ivf_vectors_uri(),
+            start_pos,
+            false,
+            temporal_policy_);
+    }
 
       std::cout << "[index@ivf_pq_index@consolidate_partitions] done" << std::endl;
     }
@@ -1014,9 +1172,9 @@ class ivf_pq_index {
       feature_vector_array Array,
       feature_vector Vector,
       class Distance = sum_of_squares_distance>
-  void ingest(const Array& training_set, const Vector& training_set_ids, const Vector& deleted_ids, Distance distance = Distance{}) {
+  void ingest(const Array& training_set, const Vector& training_set_ids, const Vector& deleted_ids = {}, Distance distance = Distance{}) {
     ingest_parts(training_set, training_set_ids, deleted_ids, 0, ::num_vectors(training_set), 0, distance);
-    // TODO: consoliate_partitions().
+    consolidate_partitions(num_partitions_, 1, 0, num_partitions_, 100, true);
   }
 
   template <
@@ -1477,8 +1635,8 @@ class ivf_pq_index {
           tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
               group_->cached_ctx(),
               group_->feature_vectors_uri(),
-              vector_indices,
               dimensions_,
+              vector_indices,
               0,
               temporal_policy_);
       feature_vectors.load();

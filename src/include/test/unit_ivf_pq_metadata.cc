@@ -127,9 +127,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     // and num_edges_history. We rely on this when creating an index from Python
     // during the initial ingest() so that we end up with the same metadata as
     // when creating with Python.
-    auto training_vectors = tdbColMajorPreLoadMatrixWithIds<
-        siftsmall_feature_type,
-        siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
+    auto training_vectors = tdbColMajorPreLoadMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
 
     idx.train(training_vectors);
     idx.ingest(training_vectors, training_vectors.raveled_ids(), {});
