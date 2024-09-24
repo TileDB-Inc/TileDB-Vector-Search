@@ -244,6 +244,19 @@ class IndexIVFPQ {
     index_->ingest_parts(input_vectors, external_ids, deleted_ids, start, end, partition_start);
   }
 
+  void ingest(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, TemporalPolicy temporal_policy = {}) {
+    if (feature_datatype_ != input_vectors.feature_type()) {
+      throw std::runtime_error(
+          "[ivf_pq_index@ingest] Feature datatype mismatch: " +
+          datatype_to_string(feature_datatype_) +
+          " != " + datatype_to_string(input_vectors.feature_type()));
+    }
+    if (!index_) {
+      throw std::runtime_error("Cannot ingest() because there is no index.");
+    }
+    index_->ingest(input_vectors, external_ids, deleted_ids);
+  }
+
   void consolidate_partitions(
             size_t partitions, 
             size_t work_items, 
@@ -407,6 +420,7 @@ class IndexIVFPQ {
     virtual void train(const FeatureVectorArray& training_set) = 0;
 
     virtual void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) = 0;
+    virtual void ingest(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids) = 0;
 
     virtual void consolidate_partitions(
             size_t partitions, 
@@ -510,6 +524,21 @@ class IndexIVFPQ {
       auto external_ids_span = std::span<id_type>((id_type*)external_ids.data(), external_ids.dimensions());
       auto deleted_ids_span = std::span<id_type>((id_type*)deleted_ids.data(), deleted_ids.dimensions());
       impl_index_.ingest_parts(fspan, ids, deleted_ids_span, start, end, partition_start);
+    }
+
+    void ingest(
+      const FeatureVectorArray& input_vectors, 
+      const FeatureVector& external_ids, 
+      const FeatureVector& deleted_ids) override {
+      using feature_type = typename T::feature_type;
+      using id_type = typename T::id_type;
+      auto fspan = MatrixView<feature_type, stdx::layout_left>{
+          (feature_type*)input_vectors.data(),
+          extents(input_vectors)[0],
+          extents(input_vectors)[1]};
+      auto external_ids_span = std::span<id_type>((id_type*)external_ids.data(), external_ids.dimensions());
+      auto deleted_ids_span = std::span<id_type>((id_type*)deleted_ids.data(), deleted_ids.dimensions());
+      impl_index_.ingest(fspan, ids, deleted_ids_span);
     }
 
     void consolidate_partitions(
