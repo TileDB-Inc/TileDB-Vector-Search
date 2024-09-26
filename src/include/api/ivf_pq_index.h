@@ -181,7 +181,8 @@ class IndexIVFPQ {
   // @todo -- infer feature type from input
   void train(
       const FeatureVectorArray& training_set,
-      std::optional<size_t> n_list = std::nullopt) {
+      std::optional<size_t> n_list = std::nullopt,
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {
@@ -215,7 +216,7 @@ class IndexIVFPQ {
     //              std::nullopt,
     //     distance_metric_);
 
-    index_->train(training_set);
+    index_->train(training_set, temporal_policy);
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -231,7 +232,7 @@ class IndexIVFPQ {
    * @param deleted_ids The ids of vectors to delete from the index.
    * 
    */
-  void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start, TemporalPolicy temporal_policy) {
+  void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) {
     if (feature_datatype_ != input_vectors.feature_type()) {
       throw std::runtime_error(
           "[ivf_pq_index@ingest_parts] Feature datatype mismatch: " +
@@ -244,7 +245,7 @@ class IndexIVFPQ {
     index_->ingest_parts(input_vectors, external_ids, deleted_ids, start, end, partition_start);
   }
 
-  void ingest(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, TemporalPolicy temporal_policy = {}) {
+  void ingest(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids) {
     if (feature_datatype_ != input_vectors.feature_type()) {
       throw std::runtime_error(
           "[ivf_pq_index@ingest] Feature datatype mismatch: " +
@@ -417,7 +418,7 @@ class IndexIVFPQ {
   struct index_base {
     virtual ~index_base() = default;
 
-    virtual void train(const FeatureVectorArray& training_set) = 0;
+    virtual void train(const FeatureVectorArray& training_set, std::optional<TemporalPolicy> temporal_policy = std::nullopt) = 0;
 
     virtual void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) = 0;
     virtual void ingest(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids) = 0;
@@ -489,13 +490,13 @@ class IndexIVFPQ {
               temporal_policy) {
     }
 
-    void train(const FeatureVectorArray& training_set) override {
+    void train(const FeatureVectorArray& training_set, std::optional<TemporalPolicy> temporal_policy = std::nullopt) override {
       using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)training_set.data(),
           extents(training_set)[0],
           extents(training_set)[1]};
-      impl_index_.train(fspan);
+      impl_index_.train(fspan, temporal_policy);
       // using id_type = typename T::id_type;
       // if (num_ids(training_set) > 0) {
       //   auto ids = std::span<id_type>(

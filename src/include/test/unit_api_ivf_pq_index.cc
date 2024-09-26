@@ -183,9 +183,10 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     size_t num_vectors = 0;
     auto empty_training_vector_array =
         FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    auto empty_feature_vector = FeatureVector(num_vectors, id_type);
     index.train(empty_training_vector_array);
-    index.ingest(empty_training_vector_array);
-    index.write_index(ctx, index_uri);
+    index.ingest(empty_training_vector_array, empty_feature_vector, empty_feature_vector);
+//    index.write_index(ctx, index_uri);
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);

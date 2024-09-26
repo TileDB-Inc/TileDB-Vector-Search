@@ -204,6 +204,8 @@ void write_matrix(
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri, TILEDB_FILTER_NONE);
   }
 
+  std::cout << "[write_matrix] A.num_rows(): " << A.num_rows() << " A.num_cols(): " << A.num_cols() << std::endl;
+
   if (A.num_rows() == 0 || A.num_cols() == 0) {
     return;
   }
@@ -390,6 +392,9 @@ std::vector<T> read_vector(
     const std::vector<std::pair<Slice, Slice>> &slices,
     size_t total_slices_size,
     TemporalPolicy temporal_policy = {}) {
+  if (total_slices_size == 0) {
+    return {};
+  }
   scoped_timer _{tdb_func__ + " " + std::string{uri}};
 
   auto array_ = tiledb_helpers::open_array(

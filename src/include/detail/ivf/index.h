@@ -54,12 +54,12 @@ namespace detail::ivf {
  * Partitions a set of vectors, given a set of centroids.
  * @return
  */
-template <typename FeatureType, class IdsType, class CentroidsType>
+template <typename FeatureType, class IdsType, class IndicesType, class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<FeatureType>& input_vectors,  // IN
-    const std::vector<IdsType>& external_ids,          // IN
-    const std::vector<IdsType>& deleted_ids,           // IN
+    const std::span<IdsType>& external_ids,          // IN
+    const std::span<IdsType>& deleted_ids,           // IN
     const ColMajorMatrix<CentroidsType> &centroids,    // IN
     const std::string& parts_uri,      // OUT (to array at parts_uri)
     const std::string& index_uri,      // OUT (to array at index_uri)
@@ -96,7 +96,7 @@ int ivf_index(
     }
 
     // The starting index of each partition in the shuffled data.
-    std::vector<IdsType> indices(centroids.num_cols() + 1);
+    std::vector<IndicesType> indices(centroids.num_cols() + 1);
     indices[0] = 0;
     std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
 
@@ -230,7 +230,7 @@ int ivf_index(
                                       TemporalPolicy() :
                                       TemporalPolicy(TimeTravel, timestamp);
 
-    return ivf_index<FeatureType, IdsType, CentroidsType>(
+    return ivf_index<FeatureType, IdsType, IdsType, CentroidsType>(
         ctx,
         input_vectors,
         external_ids,
