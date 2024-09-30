@@ -50,6 +50,188 @@
 
 namespace detail::ivf {
 
+namespace {
+  // Compute indices.
+  template <typename FeatureType, class IdsType, class IndicesType, class CentroidsType>
+  std::vector<IndicesType> compute_indices(
+      const ColMajorMatrix<FeatureType>& input_vectors,  // IN
+      const std::span<IdsType>& external_ids,          // IN
+      const std::unordered_set<IdsType> &deleted_ids_set,           // IN
+      const ColMajorMatrix<CentroidsType> &centroids,    // IN
+      const std::vector<size_t>& parts) {
+    // The number of vectors assigned to each centroid.
+    std::vector<size_t> degrees(centroids.num_cols());
+    if (deleted_ids_set.empty()) {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+        auto j = parts[i];
+        ++degrees[j];
+      }
+    } else {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+        if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
+          auto j = parts[i];
+          ++degrees[j];
+        }
+      }
+    }
+
+    // The starting index of each partition in the shuffled data.
+    std::vector<IndicesType> indices(centroids.num_cols() + 1);
+    indices[0] = 0;
+    std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
+
+    return indices;
+  }
+
+}
+
+/**
+ * Partitions a set of vectors, given a set of centroids.
+ * @return
+ */
+template <typename FeatureType, typename PQFeatureType, class IdsType, class IndicesType, class CentroidsType>
+int ivf_pq_index(
+    tiledb::Context& ctx,
+    const ColMajorMatrix<FeatureType>& input_vectors,  // IN
+    const ColMajorMatrix<PQFeatureType>& input_pq_vectors,  // IN
+    const std::span<IdsType>& external_ids,          // IN
+    const std::span<IdsType>& deleted_ids,           // IN
+    const ColMajorMatrix<CentroidsType> &centroids,    // IN
+    const std::string& parts_uri,      // OUT (to array at parts_uri)
+    const std::string& index_uri,      // OUT (to array at index_uri)
+    const std::string& id_uri,         // OUT (to array at id_uri)
+    const std::string& pq_parts_uri,      // OUT (to array at parts_uri)
+    const std::string& pq_index_uri,      // OUT (to array at index_uri)
+    const std::string& pq_id_uri,         // OUT (to array at id_uri)
+    size_t start_pos,
+    size_t end_pos,
+    size_t nthreads,
+    TemporalPolicy temporal_policy,
+    size_t partition_start = 0) {
+  if (nthreads == 0) {
+    nthreads = std::thread::hardware_concurrency();
+  }
+
+  // Find the centroid that is closest to each input vector.
+  auto parts = detail::flat::qv_partition(centroids, input_vectors, nthreads);
+  {
+    scoped_timer _{"shuffling data"};
+    std::unordered_set<IdsType> deleted_ids_set(
+        deleted_ids.begin(), deleted_ids.end());
+    auto indices = compute_indices<FeatureType, IdsType, IndicesType, CentroidsType>(
+        input_vectors, external_ids, deleted_ids_set, centroids, parts);
+
+    // Array for storing the shuffled data
+    auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
+        input_vectors.num_rows(), input_vectors.num_cols()};
+    auto shuffled_pq_input_vectors = ColMajorMatrix<PQFeatureType>{
+        input_pq_vectors.num_rows(), input_pq_vectors.num_cols()};
+    std::vector shuffled_ids = std::vector<IdsType>(input_vectors.num_cols());
+
+    // @todo parallelize
+    // Unfortunately this variant of the algorithm is not parallelizable.
+    // The other approach involves doing parallel sort on the indices,
+    // which will group them nicely -- but a distributed parallel sort may
+    // be difficult to implement.  Even this algorithm is not trivial to
+    // parallelize, because of the random access to the indices array.
+    if (deleted_ids.empty()) {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+        // First get the centroid that this vector is in.
+        size_t bin = parts[i];
+        // Then find where in the shuffled data this vector will go.
+        size_t ibin = indices[bin];
+        if (ibin >= shuffled_input_vectors.num_cols()) {
+          throw std::runtime_error(
+              "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
+        }
+
+        // Copy over the id and the vector.
+        shuffled_ids[ibin] = external_ids[i];
+        for (size_t j = 0; j < input_vectors.num_rows(); ++j) {
+          shuffled_input_vectors(j, ibin) = input_vectors(j, i);
+        }
+        for (size_t j = 0; j < input_pq_vectors.num_rows(); ++j) {
+          shuffled_pq_input_vectors(j, ibin) = input_pq_vectors(j, i);
+        }
+
+        // Increment indices so that the next vector in this bin goes to the next spot.
+        ++indices[bin];
+      }
+    } else {
+      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+        if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
+          size_t bin = parts[i];
+          size_t ibin = indices[bin];
+          if (ibin >= shuffled_input_vectors.num_cols()) {
+            throw std::runtime_error(
+                "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
+          }
+
+          shuffled_ids[ibin] = external_ids[i];
+          for (size_t j = 0; j < input_vectors.num_rows(); ++j) {
+            shuffled_input_vectors(j, ibin) = input_vectors(j, i);
+          }
+          for (size_t j = 0; j < input_pq_vectors.num_rows(); ++j) {
+            shuffled_pq_input_vectors(j, ibin) = input_pq_vectors(j, i);
+          }
+          ++indices[bin];
+        }
+      }
+    }
+
+    std::shift_right(begin(indices), end(indices), 1);
+    indices[0] = 0;
+
+    for (size_t i = 0; i < size(indices); ++i) {
+      indices[i] = indices[i] + start_pos;
+    }
+
+    // Write out the arrays
+    if (!parts_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to parts_uri: " << parts_uri << " start_pos: " << start_pos << std::endl;
+      write_matrix<FeatureType, stdx::layout_left, size_t>(
+          ctx,
+          shuffled_input_vectors,
+          parts_uri,
+          start_pos,
+          false,
+          temporal_policy);
+    }
+    if (!index_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to index_uri: " << index_uri << " partition_start: " << partition_start << std::endl;
+      write_vector(
+          ctx, indices, index_uri, partition_start, false, temporal_policy);
+    }
+    if (!id_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to id_uri: " << id_uri << " start_pos: " << start_pos << std::endl;
+      write_vector(
+          ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
+    }
+    
+    if (!pq_parts_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to pq_parts_uri: " << pq_parts_uri << " start_pos: " << start_pos << std::endl;
+      write_matrix<PQFeatureType, stdx::layout_left, size_t>(
+          ctx,
+          shuffled_pq_input_vectors,
+          pq_parts_uri,
+          start_pos,
+          false,
+          temporal_policy);
+    }
+    if (!pq_index_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to pq_index_uri: " << pq_index_uri << " partition_start: " << partition_start << std::endl;
+      write_vector(
+          ctx, indices, pq_index_uri, partition_start, false, temporal_policy);
+    }
+    if (!pq_id_uri.empty()) {
+      std::cout << "[index@ivf_index] writing to pq_id_uri: " << pq_id_uri << " start_pos: " << start_pos << std::endl;
+      write_vector(
+          ctx, shuffled_ids, pq_id_uri, start_pos, false, temporal_policy);
+    }
+  }
+  return 0;
+}
+
 /**
  * Partitions a set of vectors, given a set of centroids.
  * @return
@@ -79,27 +261,10 @@ int ivf_index(
     scoped_timer _{"shuffling data"};
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
-    // The number of vectors assigned to each centroid.
-    std::vector<size_t> degrees(centroids.num_cols());
-    if (deleted_ids.empty()) {
-      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
-        auto j = parts[i];
-        ++degrees[j];
-      }
-    } else {
-      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
-        if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
-          auto j = parts[i];
-          ++degrees[j];
-        }
-      }
-    }
 
-    // The starting index of each partition in the shuffled data.
-    std::vector<IndicesType> indices(centroids.num_cols() + 1);
-    indices[0] = 0;
-    std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
-
+    auto indices = compute_indices<FeatureType, IdsType, IndicesType, CentroidsType>(
+        input_vectors, external_ids, deleted_ids_set, centroids, parts);
+    
     // Array for storing the shuffled data
     auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
         input_vectors.num_rows(), input_vectors.num_cols()};
