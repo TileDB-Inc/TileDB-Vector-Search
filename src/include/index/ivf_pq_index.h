@@ -468,9 +468,9 @@ class ivf_pq_index {
           std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
       std::iota(begin(infinite_parts), end(infinite_parts), 0);
 
-      std::cout << "[ivf_pq_index@query] group_->get_num_partitions(): " << group_->get_num_partitions() << std::endl;
-      std::cout << "[ivf_pq_index@query] infinite_parts.size(): " << infinite_parts.size() << std::endl;
-      std::cout << "[ivf_pq_index@query] upper_bound_: " << upper_bound_ << std::endl;
+      std::cout << "[ivf_pq_index@read_index_infinite] group_->get_num_partitions(): " << group_->get_num_partitions() << std::endl;
+      std::cout << "[ivf_pq_index@read_index_infinite] infinite_parts.size(): " << infinite_parts.size() << std::endl;
+      std::cout << "[ivf_pq_index@read_index_infinite] upper_bound_: " << upper_bound_ << std::endl;
 
       partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
           group_->cached_ctx(),
@@ -484,19 +484,19 @@ class ivf_pq_index {
 
       partitioned_pq_vectors_->load();
 
-      debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@query] partitioned_pq_vectors", 500);
+      debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@read_index_infinite] partitioned_pq_vectors", 500);
 
       if (::num_vectors(*partitioned_pq_vectors_) !=
           size(partitioned_pq_vectors_->ids())) {
         throw std::runtime_error(
-            "[ivf_flat_index@ivf_pq_index] "
+            "[ivf_flat_index@read_index_infinite] "
             "::num_vectors(*partitioned_pq_vectors_) != "
             "size(partitioned_pq_vectors_->ids())");
       }
       if (size(partitioned_pq_vectors_->indices()) !=
           ::num_vectors(flat_ivf_centroids_) + 1) {
         throw std::runtime_error(
-            "[ivf_flat_index@ivf_pq_index] "
+            "[ivf_flat_index@read_index_infinite] "
             "size(partitioned_pq_vectors_->indices()) != "
             "::num_vectors(flat_ivf_centroids_) + 1");
       }
@@ -747,14 +747,15 @@ class ivf_pq_index {
    * @param training_set_ids IDs for each vector.
    */
   template <
-      // feature_vector_array Array,
+      feature_vector_array Array,
       class Distance = sum_of_squares_distance>
   void train(
-      const ColMajorMatrix<partitioned_pq_vectors_feature_type>& training_set,
+      const Array& training_set,
       // const Array& training_set,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       Distance distance = Distance{}) {
     std::cout << "[index@ivf_pq_index@train]" << std::endl;
+    debug_matrix(training_set, "[index@ivf_pq_index@train] training_set");
     if (num_subspaces_ <= 0) {
       throw std::runtime_error(
           "num_subspaces (" + std::to_string(num_subspaces_) +
@@ -911,14 +912,13 @@ class ivf_pq_index {
    * @todo Create and write index that is larger than RAM
    */
   template <
-      // feature_vector_array Array,
+      feature_vector_array Array,
       // feature_vector Vector,
       class Distance = sum_of_squares_distance>
   void ingest_parts(
-      // const Array& training_set,
+      const Array& training_set,
       // const Vector& training_set_ids,
-      // const Vector& deleted_ids, 
-      const ColMajorMatrix<partitioned_pq_vectors_feature_type>& training_set,
+      // const Vector& deleted_ids,
       const std::span<partitioned_ids_type>& training_set_ids,
       const std::span<partitioned_ids_type>& deleted_ids,
       size_t start, 
@@ -933,10 +933,11 @@ class ivf_pq_index {
     // dimensions, and 2 num_subspaces_, we store 16 columns and 2 rows. Note
     // that we don't actually need this as a member variable, but do so for unit
     // tests.
-    unpartitioned_pq_vectors_ =
-        pq_encode<ColMajorMatrix<partitioned_pq_vectors_feature_type>, ColMajorMatrixWithIds<pq_code_type, id_type>>(
-            training_set);
-    debug_matrix(*unpartitioned_pq_vectors_, "[index@ivf_pq_index@ingest_parts] unpartitioned_pq_vectors_");
+    // unpartitioned_pq_vectors_ =
+    //     pq_encode<ColMajorMatrix<feature_type>, ColMajorMatrixWithIds<pq_code_type, id_type>>(
+    //         training_set);
+    unpartitioned_pq_vectors_ = pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(training_set);
+    debug_matrix_with_ids(*unpartitioned_pq_vectors_, "[index@ivf_pq_index@ingest_parts] unpartitioned_pq_vectors_");
     // std::copy(
     //     training_set_ids.begin(),
     //     training_set_ids.end(),
@@ -981,7 +982,7 @@ class ivf_pq_index {
     //     temporal_policy_,
     //     partition_start);
 
-    detail::ivf::ivf_pq_index<partitioned_pq_vectors_feature_type, pq_code_type, partitioned_ids_type, partitioning_indices_type, flat_vector_feature_type>(
+    detail::ivf::ivf_pq_index<Array, partitioned_pq_vectors_feature_type, pq_code_type, partitioned_ids_type, partitioning_indices_type, flat_vector_feature_type>(
         group_->cached_ctx(),
         training_set,
         *unpartitioned_pq_vectors_,
@@ -1213,9 +1214,13 @@ class ivf_pq_index {
   // Note that we will write using the temporal_policy set in train(), and if that was not set, in the construtor.
   template <
       feature_vector_array Array,
-//      feature_vector Vector,
+    //  feature_vector Vector,
       class Distance = sum_of_squares_distance>
   void ingest(const Array& vectors, const std::span<partitioned_ids_type>& external_ids, const std::span<partitioned_ids_type>& deleted_ids = {}, Distance distance = Distance{}) {
+      debug_matrix(vectors, "[index@ivf_pq_index@ingest] vectors");
+      debug_vector(external_ids, "[index@ivf_pq_index@ingest] external_ids");
+      debug_vector(deleted_ids, "[index@ivf_pq_index@ingest] deleted_ids");
+      
       ingest_parts(vectors, external_ids, deleted_ids, 0, ::num_vectors(vectors), 0, distance, false);
       // consolidate_partitions(num_partitions_, 1, 0, num_partitions_, 100, true);
 
@@ -1250,15 +1255,19 @@ class ivf_pq_index {
         write_group.append_num_partitions(num_partitions_);
       }
 
+      std::cout << "[index@ivf_pq_index@ingest] write_group.get_previous_ingestion_timestamp(): " << write_group.get_previous_ingestion_timestamp() << std::endl;
+      std::cout << "[index@ivf_pq_index@ingest] write_group.get_previous_base_size(): " << write_group.get_previous_base_size() << std::endl;
+      std::cout << "[index@ivf_pq_index@ingest] write_group.get_previous_num_partitions(): " << write_group.get_previous_num_partitions() << std::endl;
+
       write_group.store_metadata();
   }
 
   template <
-      feature_vector V,
-      feature_vector W,
+      feature_vector Vector,
+      feature_vector PQVector,
       class SubDistance = uncached_sub_sum_of_squares_distance>
   auto pq_encode_one(
-      const V& v, W&& pq, SubDistance sub_distance = SubDistance{}) const {
+      const Vector& v, PQVector&& pq, SubDistance sub_distance = SubDistance{}) const {
     // We have broken the vector into num_subspaces_ subspaces, and we will look
     // in cluster_centroids_ and find the closest cluster_centroids_ to that
     // chunk of the vector.
@@ -1280,12 +1289,12 @@ class ivf_pq_index {
   }
 
   template <
-      feature_vector_array U,
-      class Matrix,
+      feature_vector_array Array,
+      feature_vector_array PQArray,
       class Distance = uncached_sub_sum_of_squares_distance>
-  auto pq_encode(const U& training_set, Distance distance = Distance{}) const {
+  auto pq_encode(const Array& training_set, Distance distance = Distance{}) const {
     auto pq_vectors =
-        std::make_unique<Matrix>(num_subspaces_, ::num_vectors(training_set));
+        std::make_unique<PQArray>(num_subspaces_, ::num_vectors(training_set));
     auto& pqv = *pq_vectors;
     for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
       pq_encode_one(training_set[i], pqv[i], distance);

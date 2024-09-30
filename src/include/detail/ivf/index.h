@@ -54,7 +54,6 @@ namespace {
   // Compute indices.
   template <typename FeatureType, class IdsType, class IndicesType, class CentroidsType>
   std::vector<IndicesType> compute_indices(
-      const ColMajorMatrix<FeatureType>& input_vectors,  // IN
       const std::span<IdsType>& external_ids,          // IN
       const std::unordered_set<IdsType> &deleted_ids_set,           // IN
       const ColMajorMatrix<CentroidsType> &centroids,    // IN
@@ -62,12 +61,12 @@ namespace {
     // The number of vectors assigned to each centroid.
     std::vector<size_t> degrees(centroids.num_cols());
     if (deleted_ids_set.empty()) {
-      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+      for (size_t i = 0; i < external_ids.size(); ++i) {
         auto j = parts[i];
         ++degrees[j];
       }
     } else {
-      for (size_t i = 0; i < input_vectors.num_cols(); ++i) {
+      for (size_t i = 0; i < external_ids.size(); ++i) {
         if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
           auto j = parts[i];
           ++degrees[j];
@@ -89,10 +88,10 @@ namespace {
  * Partitions a set of vectors, given a set of centroids.
  * @return
  */
-template <typename FeatureType, typename PQFeatureType, class IdsType, class IndicesType, class CentroidsType>
+template <typename MatrixType, typename FeatureType, typename PQFeatureType, class IdsType, class IndicesType, class CentroidsType>
 int ivf_pq_index(
     tiledb::Context& ctx,
-    const ColMajorMatrix<FeatureType>& input_vectors,  // IN
+    const MatrixType& input_vectors,  // IN
     const ColMajorMatrix<PQFeatureType>& input_pq_vectors,  // IN
     const std::span<IdsType>& external_ids,          // IN
     const std::span<IdsType>& deleted_ids,           // IN
@@ -108,6 +107,15 @@ int ivf_pq_index(
     size_t nthreads,
     TemporalPolicy temporal_policy,
     size_t partition_start = 0) {
+  if (input_vectors.num_cols() != input_pq_vectors.num_cols()) {
+    throw std::runtime_error(
+        "[index@ivf_pq_index] input_vectors.num_cols() != input_pq_vectors.num_cols()");
+  }
+  if (input_vectors.num_cols() != external_ids.size()) {
+    throw std::runtime_error(
+        "[index@ivf_pq_index] input_vectors.num_cols() != external_ids.size()");
+  }
+
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -119,7 +127,7 @@ int ivf_pq_index(
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
     auto indices = compute_indices<FeatureType, IdsType, IndicesType, CentroidsType>(
-        input_vectors, external_ids, deleted_ids_set, centroids, parts);
+        external_ids, deleted_ids_set, centroids, parts);
 
     // Array for storing the shuffled data
     auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
@@ -142,7 +150,7 @@ int ivf_pq_index(
         size_t ibin = indices[bin];
         if (ibin >= shuffled_input_vectors.num_cols()) {
           throw std::runtime_error(
-              "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
+              "[index@ivf_index] ibin >= shuffled_input_vectors.num_cols()");
         }
 
         // Copy over the id and the vector.
@@ -164,7 +172,7 @@ int ivf_pq_index(
           size_t ibin = indices[bin];
           if (ibin >= shuffled_input_vectors.num_cols()) {
             throw std::runtime_error(
-                "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
+                "[index@ivf_index] ibin >= shuffled_input_vectors.num_cols()");
           }
 
           shuffled_ids[ibin] = external_ids[i];
@@ -251,6 +259,10 @@ int ivf_index(
     size_t nthreads,
     TemporalPolicy temporal_policy,
     size_t partition_start = 0) {
+  if (input_vectors.num_cols() != external_ids.size()) {
+    throw std::runtime_error(
+        "[index@ivf_index] input_vectors.num_cols() != external_ids.size()");
+  }
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -263,7 +275,7 @@ int ivf_index(
         deleted_ids.begin(), deleted_ids.end());
 
     auto indices = compute_indices<FeatureType, IdsType, IndicesType, CentroidsType>(
-        input_vectors, external_ids, deleted_ids_set, centroids, parts);
+        external_ids, deleted_ids_set, centroids, parts);
     
     // Array for storing the shuffled data
     auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
@@ -284,7 +296,7 @@ int ivf_index(
         size_t ibin = indices[bin];
         if (ibin >= shuffled_input_vectors.num_cols()) {
           throw std::runtime_error(
-              "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
+              "[index@ivf_index] ibin >= shuffled_input_vectors.num_cols()");
         }
 
         // Copy over the id and the vector.
@@ -303,7 +315,7 @@ int ivf_index(
           size_t ibin = indices[bin];
           if (ibin >= shuffled_input_vectors.num_cols()) {
             throw std::runtime_error(
-                "[ivf_index] ibin >= shuffled_input_vectors.num_cols()");
+                "[index@ivf_index] ibin >= shuffled_input_vectors.num_cols()");
           }
 
           shuffled_ids[ibin] = external_ids[i];
