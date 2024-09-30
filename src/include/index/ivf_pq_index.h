@@ -1753,7 +1753,7 @@ class ivf_pq_index {
       }
 
       auto all_feature_vectors =
-          tdbColMajorMatrixWithIds<feature_type, uint32>(
+          tdbColMajorMatrixWithIds<feature_type, uint32_t>(
               group_->cached_ctx(),
               group_->feature_vectors_uri(),
               group_->ids_uri(),

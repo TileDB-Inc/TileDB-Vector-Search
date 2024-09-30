@@ -104,11 +104,9 @@ class ivf_pq_group : public base_index_group<index_type> {
       }
     }
 
-    if (empty(this->version_)) {
-      this->version_ = current_storage_version;
-    }
-
     tile_size = (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimensions());
+    std::cout << "[ivf_pq_group@constructor] tile_size: " << tile_size << std::endl;
+    std::cout << "[ivf_pq_group@constructor] this->version_: " << this->version_ << std::endl;
     default_compression = string_to_filter(storage_formats[this->version_]["default_attr_filters"]);
 
     set_num_clusters(num_clusters);
