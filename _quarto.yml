@@ -33,14 +33,23 @@ quartodoc:
   package: tiledb.vector_search
   dir: "documentation/reference"
   sections:
-    - title: "tiledb.vector_search"
+    - title: "Vector API"
       desc: ""
       contents:
         - index.Index
         - flat_index
         - ivf_flat_index
         - vamana_index
+        - ivf_pq_index
         - ingestion
+    - title: "Object API"
+      desc: ""
+      contents:
+        - object_api.ObjectIndex
+        - object_api.ingest_embeddings_with_driver
+        - embeddings.ObjectEmbedding
+        - object_readers.ObjectReader
+        - object_readers.ObjectPartition
 
 website:
   favicon: "documentation/assets/tiledb.ico"

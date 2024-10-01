@@ -29,6 +29,85 @@ def ingest_embeddings_with_driver(
     environment_variables: Dict = {},
     **kwargs,
 ):
+    """
+    Ingest embeddings into a TileDB vector search index using a driver function.
+
+    This function orchestrates the embedding ingestion process by creating and executing
+    a TileDB Cloud DAG (Directed Acyclic Graph). The DAG consists of two main stages:
+
+    1. **Embeddings Generation:** This stage is responsible for computing embeddings
+       for the objects to be indexed. It can be executed in one of three modes:
+
+       - **LOCAL:** Embeddings are generated locally within the current process.
+       - **REALTIME:** Embeddings are generated using a TileDB Cloud REALTIME TaskGraph.
+       - **BATCH:** Embeddings are generated using a TileDB Cloud BATCH TaskGraph.
+
+    2. **Vector Indexing:** This stage is responsible for ingesting the generated
+       embeddings into the TileDB vector search index. It can be executed in one of
+       three modes:
+
+       - **LOCAL:** Embeddings are ingested locally within the current process.
+       - **REALTIME:** Embeddings are ingested using a TileDB Cloud REALTIME TaskGraph.
+       - **BATCH:** Embeddings are ingested using a TileDB Cloud BATCH TaskGraph.
+
+    The `ingest_embeddings_with_driver` function provides flexibility in configuring
+    the execution environment for both stages. Users can specify the number of workers,
+    resources, Docker images, and extra modules for both the driver and worker nodes.
+
+    Parameters
+    ----------
+    object_index_uri: str
+        The URI of the TileDB vector search index.
+    use_updates_array: bool
+        Whether to use the updates array for ingesting embeddings.
+    embeddings_array_uri: str, optional
+        The URI of the array to store the generated embeddings. This parameter is
+        required if `use_updates_array` is set to `False`.
+    metadata_array_uri: str, optional
+        The URI of the array to store object metadata.
+    index_timestamp: int, optional
+        The timestamp to use for the ingestion. If not specified, the current time
+        will be used.
+    workers: int, optional
+        The number of workers to use for the ingestion. If not specified, the default
+        number of workers will be used.
+    worker_resources: Dict, optional
+        A dictionary specifying the resources to allocate for each worker node.
+    worker_image: str, optional
+        The name of the Docker image to use for the worker nodes.
+    extra_worker_modules: List[str], optional
+        A list of extra Python modules to install on the worker nodes.
+    driver_resources: Dict, optional
+        A dictionary specifying the resources to allocate for the driver node.
+    driver_image: str, optional
+        The name of the Docker image to use for the driver node.
+    extra_driver_modules: List[str], optional
+        A list of extra Python modules to install on the driver node.
+    worker_access_credentials_name: str, optional
+        The name of the TileDB Cloud access credentials to use for the worker nodes.
+    max_tasks_per_stage: int, optional
+        The maximum number of tasks to run per stage.
+    verbose: bool, optional
+        Whether to enable verbose logging.
+    trace_id: str, optional
+        A unique identifier for tracing the execution of the ingestion process.
+    embeddings_generation_mode: Mode, optional
+        The mode to use for generating embeddings. Defaults to `Mode.LOCAL`.
+    embeddings_generation_driver_mode: Mode, optional
+        The mode to use for running the embeddings generation driver function.
+        Defaults to `Mode.LOCAL`.
+    vector_indexing_mode: Mode, optional
+        The mode to use for indexing the generated vectors. Defaults to `Mode.LOCAL`.
+    config: Mapping[str, Any], optional
+        A dictionary containing TileDB configuration parameters.
+    namespace: str, optional
+        The TileDB Cloud namespace to use for the ingestion.
+    environment_variables: Dict, optional
+        Environment variables to set for the object reader and embedding function.
+    **kwargs
+        Additional keyword arguments to pass to the ingestion function.
+    """
+
     def ingest_embeddings(
         object_index_uri: str,
         use_updates_array: bool,
