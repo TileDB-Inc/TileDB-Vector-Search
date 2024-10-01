@@ -36,17 +36,21 @@ quartodoc:
     - title: "Vector API"
       desc: ""
       contents:
+        - open
+        - ingestion
         - index.Index
+    - subtitle: "Algorithms"
+      desc: ""
+      contents:
         - flat_index
         - ivf_flat_index
         - vamana_index
         - ivf_pq_index
-        - ingestion
     - title: "Object API"
       desc: ""
       contents:
+        - object_api.create
         - object_api.ObjectIndex
-        - object_api.ingest_embeddings_with_driver
         - embeddings.ObjectEmbedding
         - object_readers.ObjectReader
         - object_readers.ObjectPartition

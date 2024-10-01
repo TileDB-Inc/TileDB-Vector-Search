@@ -36,19 +36,16 @@ def ingest_embeddings_with_driver(
     a TileDB Cloud DAG (Directed Acyclic Graph). The DAG consists of two main stages:
 
     1. **Embeddings Generation:** This stage is responsible for computing embeddings
-       for the objects to be indexed. It can be executed in one of three modes:
-
-       - **LOCAL:** Embeddings are generated locally within the current process.
-       - **REALTIME:** Embeddings are generated using a TileDB Cloud REALTIME TaskGraph.
-       - **BATCH:** Embeddings are generated using a TileDB Cloud BATCH TaskGraph.
+    for the objects to be indexed.
 
     2. **Vector Indexing:** This stage is responsible for ingesting the generated
-       embeddings into the TileDB vector search index. It can be executed in one of
-       three modes:
+    embeddings into the TileDB vector search index.
 
-       - **LOCAL:** Embeddings are ingested locally within the current process.
-       - **REALTIME:** Embeddings are ingested using a TileDB Cloud REALTIME TaskGraph.
-       - **BATCH:** Embeddings are ingested using a TileDB Cloud BATCH TaskGraph.
+    Both stages can be be executed in one of three modes:
+
+    - **LOCAL:** Embeddings are ingested locally within the current process.
+    - **REALTIME:** Embeddings are ingested using a TileDB Cloud REALTIME TaskGraph.
+    - **BATCH:** Embeddings are ingested using a TileDB Cloud BATCH TaskGraph.
 
     The `ingest_embeddings_with_driver` function provides flexibility in configuring
     the execution environment for both stages. Users can specify the number of workers,

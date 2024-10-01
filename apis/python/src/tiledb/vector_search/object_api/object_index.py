@@ -375,7 +375,7 @@ class ObjectIndex:
             group.meta["object_reader_kwargs"] = self.object_reader_kwargs
             group.close()
 
-    def create_embeddings_partitioned_array(self) -> (str, str):
+    def _create_embeddings_partitioned_array(self) -> (str, str):
         """
         Creates a partitioned array for storing embeddings.
 
@@ -477,15 +477,12 @@ class ObjectIndex:
         a TileDB Cloud DAG (Directed Acyclic Graph). The DAG consists of two main stages:
 
         1. **Embeddings Generation:** This stage is responsible for computing embeddings
-        for the objects to be indexed. It can be executed in one of three modes:
-
-        - **LOCAL:** Embeddings are generated locally within the current process.
-        - **REALTIME:** Embeddings are generated using a TileDB Cloud REALTIME TaskGraph.
-        - **BATCH:** Embeddings are generated using a TileDB Cloud BATCH TaskGraph.
+        for the objects to be indexed.
 
         2. **Vector Indexing:** This stage is responsible for ingesting the generated
-        embeddings into the TileDB vector search index. It can be executed in one of
-        three modes:
+        embeddings into the TileDB vector search index.
+
+        Both stages can be be executed in one of three modes:
 
         - **LOCAL:** Embeddings are ingested locally within the current process.
         - **REALTIME:** Embeddings are ingested using a TileDB Cloud REALTIME TaskGraph.
@@ -549,7 +546,7 @@ class ObjectIndex:
                 (
                     temp_dir_name,
                     embeddings_array_uri,
-                ) = self.create_embeddings_partitioned_array()
+                ) = self._create_embeddings_partitioned_array()
                 use_updates_array = False
 
             storage_formats[self.index.storage_version]["EXTERNAL_IDS_ARRAY_NAME"]
