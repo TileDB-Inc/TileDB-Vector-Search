@@ -800,6 +800,10 @@ class Index(metaclass=ABCMeta):
             self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
 
     def _consolidate_update_fragments(self):
+        # Disable update fragment consolidation for TileDB Cloud URIs
+        # as this is not supported.
+        if self.uri.startswith("tiledb://"):
+            return
         with tiledb.scope_ctx(ctx_or_config=self.config):
             fragments_info = tiledb.array_fragments(self.updates_array_uri)
         count_fragments = 0
