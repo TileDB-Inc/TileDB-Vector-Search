@@ -59,6 +59,7 @@ def test_vamana_ingestion_u8(tmp_path):
         l_build=l_build,
         r_max_degree=r_max_degree,
     )
+    index.vacuum()
 
     # This is not a public API, but we directly load the C++ type-erased index to test it. If you
     # are a library user, you should not do this yourself, as the API may change.
@@ -96,6 +97,7 @@ def test_flat_ingestion_u8(tmp_path):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
     )
+    index.vacuum()
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -120,6 +122,7 @@ def test_flat_ingestion_f32(tmp_path):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
     )
+    index.vacuum()
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -150,6 +153,7 @@ def test_flat_ingestion_external_id_u8(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
         external_ids=external_ids,
     )
+    index.vacuum()
     _, result = index.query(queries, k=k)
     assert (
         accuracy(result, gt_i, external_ids_offset=external_ids_offset)
@@ -186,6 +190,7 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
+    index.vacuum()
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -233,6 +238,7 @@ def test_ivf_pq_ingestion_u8(tmp_path):
         input_vectors_per_work_item=int(size / 10),
         num_subspaces=32,
     )
+    index.vacuum()
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -295,6 +301,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
             input_vectors_per_work_item=int(size / 10),
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
@@ -346,6 +353,7 @@ def test_ingestion_fvec(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -400,6 +408,7 @@ def test_ingestion_numpy(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -455,6 +464,7 @@ def test_ingestion_numpy_i8(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -508,6 +518,7 @@ def test_ingestion_multiple_workers(tmp_path):
             max_tasks_per_stage=4,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -568,6 +579,7 @@ def test_ingestion_external_ids_numpy(tmp_path):
             external_ids=external_ids,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, external_ids_offset) > minimum_accuracy
 
@@ -590,13 +602,14 @@ def test_ingestion_timetravel(tmp_path):
         default_result_i = [[np.iinfo(np.uint64).max], [np.iinfo(np.uint64).max]]
 
         # We ingest at timestamp 10.
-        ingest(
+        index = ingest(
             index_type=index_type,
             index_uri=index_uri,
             input_vectors=data,
             index_timestamp=10,
             num_subspaces=2,
         )
+        index.vacuum()
 
         # If we load the index with any timestamp < 10, then we have no data and so have no results.
         query_and_check_equals(
@@ -673,6 +686,7 @@ def test_ingestion_timetravel(tmp_path):
         )
 
         index = index.consolidate_updates()
+        index.vacuum()
 
         # We still have no results before timestamp 10.
         query_and_check_equals(
@@ -866,6 +880,7 @@ def test_ingestion_with_updates(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert base_sizes == [1000]
@@ -954,6 +969,7 @@ def test_ingestion_with_batch_updates(tmp_path):
             input_vectors_per_work_item=int(size / 10),
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -1018,6 +1034,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             index_timestamp=1,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert ingestion_timestamps == [1]
@@ -1102,6 +1119,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         # Consolidate updates
         index = index.consolidate_updates()
+        index.vacuum()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert ingestion_timestamps == [1, timestamp_end]
@@ -1290,6 +1308,7 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
             index_timestamp=1,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -1364,6 +1383,7 @@ def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
                 input_vectors_per_work_item_during_sampling=input_vectors_per_work_item_during_sampling,
                 use_sklearn=True,
             )
+            index.vacuum()
 
             check_training_input_vectors(
                 index_uri=index_uri,
@@ -1403,6 +1423,7 @@ def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
         training_sample_size=training_sample_size,
         input_vectors_per_work_item=1000,
     )
+    index.vacuum()
 
     check_training_input_vectors(
         index_uri=index_uri,
@@ -1451,6 +1472,7 @@ def test_storage_versions(tmp_path):
                 storage_version="Foo",
                 num_subspaces=num_subspaces,
             )
+            index.vacuum()
         assert "Invalid storage version" in str(error.value)
 
         with pytest.raises(ValueError) as error:
@@ -1474,6 +1496,7 @@ def test_storage_versions(tmp_path):
                 storage_version=storage_version,
                 num_subspaces=num_subspaces,
             )
+            index.vacuum()
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i) >= minimum_accuracy
 
@@ -1556,6 +1579,7 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
         copy_centroids_uri=centroids_uri,
         partitions=centroids_in_size,
     )
+    index.vacuum()
 
     # Query the index.
     queries = np.array([data[4]], dtype=np.float32)
@@ -1691,6 +1715,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
         training_source_uri=os.path.join(dataset_dir, "training_data.f32bin"),
     )
+    index.vacuum()
 
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(
@@ -1754,6 +1779,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
             source_uri=os.path.join(dataset_dir, "data.tdb"),
             training_source_uri=os.path.join(dataset_dir, "training_data_invalid.tdb"),
         )
+        index.vacuum()
     assert "training data dimensions" in str(error.value)
 
     ################################################################################################
@@ -1766,6 +1792,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.tdb"),
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
     )
+    index.vacuum()
 
     queries = np.array([data.transpose()[1]], dtype=np.float32)
     query_and_check_equals(
@@ -1849,6 +1876,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
         training_source_type="TILEDB_ARRAY",
     )
+    index.vacuum()
 
 
 def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
@@ -1878,6 +1906,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
             input_vectors=data,
             training_input_vectors=training_data_invalid,
         )
+        index.vacuum()
     assert "training data dimensions" in str(error.value)
 
     ################################################################################################
@@ -1890,6 +1919,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
         input_vectors=data,
         training_input_vectors=training_data,
     )
+    index.vacuum()
 
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(
@@ -1975,6 +2005,7 @@ def test_ivf_flat_taskgraph_query(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
+    index.vacuum()
     _, result = index._taskgraph_query(
         queries, k=k, nprobe=nprobe, nthreads=8, mode=Mode.LOCAL, num_partitions=10
     )

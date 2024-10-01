@@ -528,7 +528,6 @@ class Index(metaclass=ABCMeta):
             conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
             conf["sm.consolidation.timestamp_end"] = max_timestamp
             tiledb.consolidate(self.updates_array_uri, config=conf)
-            tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         should_pass_copy_centroids_uri = (
@@ -561,6 +560,27 @@ class Index(metaclass=ABCMeta):
             **kwargs,
         )
         return new_index
+
+    def vacuum(self):
+        """
+        The vacuuming process permanently deletes index files that are consolidated through the consolidation
+        process. TileDB separates consolidation from vacuuming, in order to make consolidation process-safe
+        in the presence of concurrent reads and writes.
+
+        Note:
+
+        1. Vacuuming is not process-safe and you should take extra care when invoking it.
+        2. Vacuuming may affect the granularity of the time traveling functionality.
+
+        The Index class vacuums consolidated fragments of the `updates` array.
+        """
+        if self.has_updates:
+            if not self.updates_array_uri.startswith("tiledb://"):
+                conf = tiledb.Config(self.config)
+                mode = "fragments"
+                conf["sm.consolidation.mode"] = mode
+                conf["sm.vacuum.mode"] = mode
+                tiledb.vacuum(self.updates_array_uri, config=conf)
 
     @staticmethod
     def delete_index(
@@ -810,7 +830,6 @@ class Index(metaclass=ABCMeta):
             conf = tiledb.Config(self.config)
             conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
             tiledb.consolidate(self.updates_array_uri, config=conf)
-            tiledb.vacuum(self.updates_array_uri, config=conf)
 
     def _open_updates_array(self, timestamp: int = None):
         with tiledb.scope_ctx(ctx_or_config=self.config):

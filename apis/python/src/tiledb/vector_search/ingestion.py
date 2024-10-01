@@ -2706,9 +2706,7 @@ def ingest(
                     ids_uri = group[IDS_ARRAY_NAME].uri
                     parts_uri = group[PARTS_ARRAY_NAME].uri
                     tiledb.consolidate(parts_uri, config=conf)
-                    tiledb.vacuum(parts_uri, config=conf)
                     tiledb.consolidate(ids_uri, config=conf)
-                    tiledb.vacuum(ids_uri, config=conf)
 
             partial_write_array_exists = PARTIAL_WRITE_ARRAY_DIR in group
         if partial_write_array_exists:

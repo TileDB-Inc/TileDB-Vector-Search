@@ -65,6 +65,7 @@ class CloudTests(unittest.TestCase):
             mode=Mode.BATCH,
             verbose=True,
         )
+        index.vacuum()
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
 
         # Test without loading index data into memory.
@@ -199,6 +200,7 @@ class CloudTests(unittest.TestCase):
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
+        index.vacuum()
 
         check_training_input_vectors(
             index_uri=index_uri,
