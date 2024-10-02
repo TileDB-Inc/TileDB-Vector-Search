@@ -8,14 +8,12 @@ from common import *
 from common import load_metadata
 
 from tiledb.vector_search import Index
-from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import ivf_pq_index
 from tiledb.vector_search import open
 from tiledb.vector_search import vamana_index
 from tiledb.vector_search.index import DATASET_TYPE
-from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
