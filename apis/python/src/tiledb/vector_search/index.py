@@ -2,6 +2,7 @@ import concurrent.futures as futures
 import json
 import os
 import time
+import warnings
 from abc import ABCMeta
 from abc import abstractmethod
 from typing import Any, Mapping, Optional
@@ -803,6 +804,13 @@ class Index(metaclass=ABCMeta):
         # Disable update fragment consolidation for TileDB Cloud URIs
         # as this is not supported.
         if self.uri.startswith("tiledb://"):
+            warnings.warn(
+                "Update fragment consolidation is not supported for `tiledb://` URIs."
+                "Executing multiple updates without consolidating the update fragments can"
+                "result in poor search performance. Please make sure that you periodically"
+                "execute `_consolidate_update_fragments` using the storage filesystem URI.",
+                stacklevel=2,
+            )
             return
         with tiledb.scope_ctx(ctx_or_config=self.config):
             fragments_info = tiledb.array_fragments(self.updates_array_uri)
