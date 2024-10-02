@@ -14,7 +14,8 @@ It enables:
 
 import enum
 from functools import partial
-from typing import Any, Mapping, Optional, Tuple
+from threading import Thread
+from typing import Any, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -24,6 +25,7 @@ from tiledb.vector_search._tiledbvspy import *
 from tiledb.vector_search.storage_formats import STORAGE_VERSION
 from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import create_array_and_add_to_group
 from tiledb.vector_search.utils import is_type_erased_index
 from tiledb.vector_search.utils import normalize_vectors
 from tiledb.vector_search.utils import to_temporal_policy
@@ -611,6 +613,7 @@ def ingest(
         dimensions: int,
         filters: Any,
         create_index_array: bool,
+        asset_creation_threads: Sequence[Thread],
     ) -> str:
         tile_size = int(
             ivf_flat_index.TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions
@@ -640,12 +643,17 @@ def ingest(
                 cell_order="col-major",
                 tile_order="col-major",
             )
-            tiledb.Array.create(partial_write_array_index_uri, index_schema)
-            add_to_group(
-                temp_data_group,
-                partial_write_array_index_uri,
-                INDEX_ARRAY_NAME,
+            thread = Thread(
+                target=create_array_and_add_to_group,
+                kwargs={
+                    "array_uri": partial_write_array_index_uri,
+                    "array_name": INDEX_ARRAY_NAME,
+                    "group": temp_data_group,
+                    "schema": index_schema,
+                },
             )
+            thread.start()
+            asset_creation_threads.append(thread)
 
         if not tiledb.array_exists(partial_write_array_ids_uri):
             logger.debug("Creating temp ids array")
@@ -670,12 +678,17 @@ def ingest(
                 tile_order="col-major",
             )
             logger.debug(ids_schema)
-            tiledb.Array.create(partial_write_array_ids_uri, ids_schema)
-            add_to_group(
-                temp_data_group,
-                partial_write_array_ids_uri,
-                IDS_ARRAY_NAME,
+            thread = Thread(
+                target=create_array_and_add_to_group,
+                kwargs={
+                    "array_uri": partial_write_array_ids_uri,
+                    "array_name": IDS_ARRAY_NAME,
+                    "group": temp_data_group,
+                    "schema": ids_schema,
+                },
             )
+            thread.start()
+            asset_creation_threads.append(thread)
 
         if not tiledb.array_exists(partial_write_array_parts_uri):
             logger.debug("Creating temp parts array")
@@ -702,12 +715,17 @@ def ingest(
             )
             logger.debug(parts_schema)
             logger.debug(partial_write_array_parts_uri)
-            tiledb.Array.create(partial_write_array_parts_uri, parts_schema)
-            add_to_group(
-                temp_data_group,
-                partial_write_array_parts_uri,
-                PARTS_ARRAY_NAME,
+            thread = Thread(
+                target=create_array_and_add_to_group,
+                kwargs={
+                    "array_uri": partial_write_array_parts_uri,
+                    "array_name": PARTS_ARRAY_NAME,
+                    "group": temp_data_group,
+                    "schema": parts_schema,
+                },
             )
+            thread.start()
+            asset_creation_threads.append(thread)
         return partial_write_array_index_uri
 
     def create_arrays(
@@ -720,6 +738,7 @@ def ingest(
         vector_type: np.dtype,
         logger: logging.Logger,
         storage_version: str,
+        asset_creation_threads: Sequence[Thread],
     ) -> None:
         if index_type == "FLAT":
             if not arrays_created:
@@ -728,9 +747,11 @@ def ingest(
                     dimensions=dimensions,
                     vector_type=vector_type,
                     group_exists=True,
+                    group=group,
                     config=config,
                     storage_version=storage_version,
                     distance_metric=distance_metric,
+                    asset_creation_threads=asset_creation_threads,
                 )
         elif index_type == "IVF_FLAT":
             if not arrays_created:
@@ -739,9 +760,11 @@ def ingest(
                     dimensions=dimensions,
                     vector_type=vector_type,
                     group_exists=True,
+                    group=group,
                     config=config,
                     storage_version=storage_version,
                     distance_metric=distance_metric,
+                    asset_creation_threads=asset_creation_threads,
                 )
             create_partial_write_array_group(
                 temp_data_group=temp_data_group,
@@ -749,6 +772,7 @@ def ingest(
                 dimensions=dimensions,
                 filters=DEFAULT_ATTR_FILTERS,
                 create_index_array=True,
+                asset_creation_threads=asset_creation_threads,
             )
 
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
@@ -1539,13 +1563,17 @@ def ingest(
 
             temp_data_group_uri = f"{index_group_uri}/{PARTIAL_WRITE_ARRAY_DIR}"
             temp_data_group = tiledb.Group(temp_data_group_uri, "w")
+            asset_creation_threads = []
             create_partial_write_array_group(
                 temp_data_group=temp_data_group,
                 vector_type=vector_type,
                 dimensions=dimensions,
                 filters=storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"],
                 create_index_array=False,
+                asset_creation_threads=asset_creation_threads,
             )
+            for thread in asset_creation_threads:
+                thread.join()
             temp_data_group.close()
             temp_data_group = tiledb.Group(temp_data_group_uri)
             ids_array_uri = temp_data_group[IDS_ARRAY_NAME].uri
@@ -2942,6 +2970,7 @@ def ingest(
 
         logger.debug("Creating arrays")
         group = tiledb.Group(index_group_uri, "w")
+        asset_creation_threads = []
         temp_data_group = create_temp_data_group(group=group)
         create_arrays(
             group=group,
@@ -2953,6 +2982,7 @@ def ingest(
             vector_type=vector_type,
             logger=logger,
             storage_version=storage_version,
+            asset_creation_threads=asset_creation_threads,
         )
 
         if (
@@ -2996,6 +3026,9 @@ def ingest(
         else:
             if external_ids_type is None:
                 external_ids_type = "U64BIN"
+
+        for thread in asset_creation_threads:
+            thread.join()
         temp_data_group.close()
         group.meta["temp_size"] = size
         group.close()

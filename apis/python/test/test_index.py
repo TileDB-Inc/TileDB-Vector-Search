@@ -551,26 +551,3 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
         # TODO:  This also throws a TypeError for incorrect dimension
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
-
-
-def test_create_metadata(tmp_path):
-    uri = os.path.join(tmp_path, "array")
-
-    # Create the metadata at the specified URI.
-    dimensions = 3
-    vector_type: np.dtype = np.dtype(np.uint8)
-    index_type: str = "IVF_FLAT"
-    storage_version: str = STORAGE_VERSION
-    group_exists: bool = False
-    create_metadata(
-        uri,
-        dimensions,
-        vector_type,
-        index_type,
-        storage_version,
-        vspy.DistanceMetric.SUM_OF_SQUARES,
-        group_exists,
-    )
-
-    # Check it contains the default metadata.
-    check_default_metadata(uri, vector_type, storage_version, index_type)

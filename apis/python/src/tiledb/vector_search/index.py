@@ -853,34 +853,25 @@ class Index(metaclass=ABCMeta):
 
 
 def create_metadata(
-    uri: str,
+    group: tiledb.Group,
     dimensions: int,
     vector_type: np.dtype,
     index_type: str,
     storage_version: str,
     distance_metric: vspy.DistanceMetric,
-    group_exists: bool = False,
-    config: Optional[Mapping[str, Any]] = None,
 ):
     """
     Creates the index group adding index metadata.
     """
-    with tiledb.scope_ctx(ctx_or_config=config):
-        if not group_exists:
-            try:
-                tiledb.group_create(uri)
-            except tiledb.TileDBError as err:
-                raise err
-        group = tiledb.Group(uri, "w")
-        group.meta["dataset_type"] = DATASET_TYPE
-        group.meta["dtype"] = np.dtype(vector_type).name
-        group.meta["storage_version"] = storage_version
-        group.meta["index_type"] = index_type
-        group.meta["base_sizes"] = json.dumps([0])
-        group.meta["ingestion_timestamps"] = json.dumps([0])
-        group.meta["has_updates"] = False
-        group.meta["distance_metric"] = int(distance_metric)
-        group.close()
+    group.meta["dataset_type"] = DATASET_TYPE
+    group.meta["dtype"] = np.dtype(vector_type).name
+    group.meta["dimensions"] = dimensions
+    group.meta["storage_version"] = storage_version
+    group.meta["index_type"] = index_type
+    group.meta["base_sizes"] = json.dumps([0])
+    group.meta["ingestion_timestamps"] = json.dumps([0])
+    group.meta["has_updates"] = False
+    group.meta["distance_metric"] = int(distance_metric)
 
 
 """
