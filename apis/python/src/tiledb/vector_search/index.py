@@ -805,9 +805,9 @@ class Index(metaclass=ABCMeta):
         # as this is not supported.
         if self.uri.startswith("tiledb://"):
             warnings.warn(
-                "Update fragment consolidation is not supported for `tiledb://` URIs."
-                "Executing multiple updates without consolidating the update fragments can"
-                "result in poor search performance. Please make sure that you periodically"
+                "Update fragment consolidation is not supported for `tiledb://` URIs. "
+                "Executing multiple updates without consolidating the update fragments can "
+                "result in poor search performance. Please make sure that you periodically "
                 "execute `_consolidate_update_fragments` using the storage filesystem URI.",
                 stacklevel=2,
             )
