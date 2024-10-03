@@ -145,6 +145,30 @@ class FlatIndex(index.Index):
 
         return np.transpose(np.array(d)), np.transpose(np.array(i))
 
+    def vacuum(self):
+        """
+        The vacuuming process permanently deletes index files that are consolidated through the consolidation
+        process. TileDB separates consolidation from vacuuming, in order to make consolidation process-safe
+        in the presence of concurrent reads and writes.
+
+        Note:
+
+        1. Vacuuming is not process-safe and you should take extra care when invoking it.
+        2. Vacuuming may affect the granularity of the time traveling functionality.
+
+        The Flat class vacuums consolidated fragment, array metadata and commits for the `db`
+        and `ids` arrays.
+        """
+        super().vacuum()
+        if not self.uri.startswith("tiledb://"):
+            modes = ["fragment_meta", "commits", "array_meta"]
+            for mode in modes:
+                conf = tiledb.Config(self.config)
+                conf["sm.consolidation.mode"] = mode
+                conf["sm.vacuum.mode"] = mode
+                tiledb.vacuum(self.db_uri, config=conf)
+                tiledb.vacuum(self.ids_uri, config=conf)
+
 
 def create(
     uri: str,
