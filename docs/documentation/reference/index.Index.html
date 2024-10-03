@@ -194,6 +194,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#tiledb.vector_search.index.Index.query_internal" id="toc-tiledb.vector_search.index.Index.query_internal" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.query_internal">query_internal</a></li>
   <li><a href="#tiledb.vector_search.index.Index.update" id="toc-tiledb.vector_search.index.Index.update" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.update">update</a></li>
   <li><a href="#tiledb.vector_search.index.Index.update_batch" id="toc-tiledb.vector_search.index.Index.update_batch" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.update_batch">update_batch</a></li>
+  <li><a href="#tiledb.vector_search.index.Index.vacuum" id="toc-tiledb.vector_search.index.Index.vacuum" class="nav-link" data-scroll-target="#tiledb.vector_search.index.Index.vacuum">vacuum</a></li>
   </ul></li>
   </ul></li>
   </ul>
@@ -305,6 +306,10 @@ ul.task-list li input[type="checkbox"] {
 <tr class="even">
 <td><a href="#tiledb.vector_search.index.Index.update_batch">update_batch</a></td>
 <td>Updates a set <code>vectors</code> by their <code>external_ids</code>.</td>
+</tr>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.index.Index.vacuum">vacuum</a></td>
+<td>The vacuuming process permanently deletes index files that are consolidated through the consolidation</td>
 </tr>
 </tbody>
 </table>
@@ -710,9 +715,20 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
-
-
 </section>
+</section>
+<section id="tiledb.vector_search.index.Index.vacuum" class="level3">
+<h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.vacuum">vacuum</h3>
+<p><code>vector_search.index.Index.vacuum()</code></p>
+<p>The vacuuming process permanently deletes index files that are consolidated through the consolidation process. TileDB separates consolidation from vacuuming, in order to make consolidation process-safe in the presence of concurrent reads and writes.</p>
+<p>Note:</p>
+<ol type="1">
+<li>Vacuuming is not process-safe and you should take extra care when invoking it.</li>
+<li>Vacuuming may affect the granularity of the time traveling functionality.</li>
+</ol>
+<p>The Index class vacuums consolidated fragments of the <code>updates</code> array.</p>
+
+
 </section>
 </section>
 </section>

@@ -311,6 +311,10 @@ ul.task-list li input[type="checkbox"] {
 <td><a href="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.query_internal">query_internal</a></td>
 <td>Queries an <code>IVFFlatIndex</code>.</td>
 </tr>
+<tr class="odd">
+<td><a href="#tiledb.vector_search.ivf_flat_index.IVFFlatIndex.vacuum">vacuum</a></td>
+<td>The vacuuming process permanently deletes index files that are consolidated through the consolidation</td>
+</tr>
 </tbody>
 </table>
 <section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.get_dimensions" class="level5">
@@ -403,6 +407,17 @@ ul.task-list li input[type="checkbox"] {
 </tbody>
 </table>
 </section>
+</section>
+<section id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.vacuum" class="level5">
+<h5 class="anchored" data-anchor-id="tiledb.vector_search.ivf_flat_index.IVFFlatIndex.vacuum">vacuum</h5>
+<p><code>vector_search.ivf_flat_index.IVFFlatIndex.vacuum()</code></p>
+<p>The vacuuming process permanently deletes index files that are consolidated through the consolidation process. TileDB separates consolidation from vacuuming, in order to make consolidation process-safe in the presence of concurrent reads and writes.</p>
+<p>Note:</p>
+<ol type="1">
+<li>Vacuuming is not process-safe and you should take extra care when invoking it.</li>
+<li>Vacuuming may affect the granularity of the time traveling functionality.</li>
+</ol>
+<p>The IVFFlat class vacuums consolidated fragment, array metadata and commits for the <code>db</code> and <code>ids</code> arrays.</p>
 </section>
 </section>
 </section>
