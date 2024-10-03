@@ -22,14 +22,13 @@ DATASET_TYPE = "vector_search"
 class Index(metaclass=ABCMeta):
     """
     Abstract Vector Index class.
+    Do not use this directly but rather use the `open` factory method.
 
     All Vector Index algorithm implementations are instantiations of this class. Apart
     from the abstract method interfaces, `Index` provides implementations for common
     tasks i.e. supporting updates, time-traveling and metadata management.
 
     Opens an `Index` reading metadata and applying time-traveling options.
-
-    Do not use this directly but rather instantiate the concrete Index classes.
 
     Parameters
     ----------
@@ -895,28 +894,6 @@ def create_metadata(
         group.close()
 
 
-"""
-Factory method that opens a vector index.
-
-Retrieves the `index_type` from the index group metadata and instantiates the appropriate `Index` subclass.
-
-Parameters
-----------
-uri: str
-    URI of the index.
-config: Optional[Mapping[str, Any]]
-    TileDB config dictionary.
-timestamp: int or tuple(int)
-    If int, open the index at a given timestamp.
-    If tuple, open at the given start and end timestamps.
-open_for_remote_query_execution: bool
-    If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
-    If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
-kwargs:
-    Additional arguments to be passed to the `Index` subclass constructor.
-"""
-
-
 def open(
     uri: str,
     open_for_remote_query_execution: bool = False,
@@ -924,6 +901,26 @@ def open(
     timestamp=None,
     **kwargs,
 ) -> Index:
+    """
+    Factory method that opens a vector index.
+
+    Retrieves the `index_type` from the index group metadata and instantiates the appropriate `Index` subclass.
+
+    Parameters
+    ----------
+    uri: str
+        URI of the index.
+    config: Optional[Mapping[str, Any]]
+        TileDB config dictionary.
+    timestamp: int or tuple(int)
+        If int, open the index at a given timestamp.
+        If tuple, open at the given start and end timestamps.
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
+    kwargs:
+        Additional arguments to be passed to the `Index` subclass constructor.
+    """
     from tiledb.vector_search.flat_index import FlatIndex
     from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
     from tiledb.vector_search.ivf_pq_index import IVFPQIndex
