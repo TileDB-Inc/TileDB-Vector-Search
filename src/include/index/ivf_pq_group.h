@@ -137,9 +137,9 @@ class ivf_pq_group : public base_index_group<index_type> {
         cached_ctx_, flat_ivf_centroids_uri(), 0, timestamp);
 
     tiledb::Array::delete_fragments(
-        cached_ctx_, pq_ivf_indices_uri(), 0, timestamp);
+        cached_ctx_, this->feature_vectors_index_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
-        cached_ctx_, pq_ivf_ids_uri(), 0, timestamp);
+        cached_ctx_, this->ids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
   }
@@ -191,25 +191,25 @@ class ivf_pq_group : public base_index_group<index_type> {
     return this->array_key_to_array_name("flat_ivf_centroids_array_name");
   }
 
-  [[nodiscard]] auto pq_ivf_indices_uri() const {
-    return this->array_key_to_uri("pq_ivf_indices_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_indices_temp_uri() const {
-    return this->array_key_to_temp_uri("pq_ivf_indices_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_indices_array_name() const {
-    return this->array_key_to_array_name("pq_ivf_indices_array_name");
-  }
+  // [[nodiscard]] auto pq_ivf_indices_uri() const {
+  //   return this->array_key_to_uri("pq_ivf_indices_array_name");
+  // }
+  // [[nodiscard]] auto pq_ivf_indices_temp_uri() const {
+  //   return this->array_key_to_temp_uri("pq_ivf_indices_array_name");
+  // }
+  // [[nodiscard]] auto pq_ivf_indices_array_name() const {
+  //   return this->array_key_to_array_name("pq_ivf_indices_array_name");
+  // }
   
-  [[nodiscard]] auto pq_ivf_ids_uri() const {
-    return this->array_key_to_uri("pq_ivf_ids_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_ids_temp_uri() const {
-    return this->array_key_to_temp_uri("pq_ivf_ids_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_ids_array_name() const {
-    return this->array_key_to_array_name("pq_ivf_ids_array_name");
-  }
+  // [[nodiscard]] auto pq_ivf_ids_uri() const {
+  //   return this->array_key_to_uri("pq_ivf_ids_array_name");
+  // }
+  // [[nodiscard]] auto pq_ivf_ids_temp_uri() const {
+  //   return this->array_key_to_temp_uri("pq_ivf_ids_array_name");
+  // }
+  // [[nodiscard]] auto pq_ivf_ids_array_name() const {
+  //   return this->array_key_to_array_name("pq_ivf_ids_array_name");
+  // }
 
   [[nodiscard]] auto pq_ivf_vectors_uri() const {
     return this->array_key_to_uri("pq_ivf_vectors_array_name");
@@ -325,8 +325,8 @@ class ivf_pq_group : public base_index_group<index_type> {
     create_indices_vector(write_group, this->feature_vectors_index_uri(), this->feature_vectors_index_name());
 
     create_pq_ivf_vectors_matrix(write_group, pq_ivf_vectors_uri());
-    create_ids_vector(write_group, pq_ivf_ids_uri(), this->pq_ivf_ids_array_name());
-    create_indices_vector(write_group, pq_ivf_indices_uri(), this->pq_ivf_indices_array_name());
+    // create_ids_vector(write_group, pq_ivf_ids_uri(), this->pq_ivf_ids_array_name());
+    // create_indices_vector(write_group, pq_ivf_indices_uri(), this->pq_ivf_indices_array_name());
 
     create_empty_for_matrix<
         typename index_type::flat_vector_feature_type,
@@ -378,8 +378,10 @@ class ivf_pq_group : public base_index_group<index_type> {
     create_indices_vector(temp_group, this->feature_vectors_index_temp_uri(), this->feature_vectors_index_name());
     
     create_pq_ivf_vectors_matrix(temp_group, pq_ivf_vectors_temp_uri());
-    create_ids_vector(temp_group, pq_ivf_ids_temp_uri(), this->pq_ivf_ids_array_name());
-    create_indices_vector(temp_group, pq_ivf_indices_temp_uri(), this->pq_ivf_indices_array_name());
+//    create_ids_vector(temp_group, pq_ivf_ids_temp_uri(), this->pq_ivf_ids_array_name());
+//    create_indices_vector(temp_group, pq_ivf_indices_temp_uri(), this->pq_ivf_indices_array_name());
+
+    std::cout << "[ivf_pq_group@create_temp_data_group] Created temp data group: " << temp_group.dump(true) << std::endl;
   }
 private:
   void create_feature_vectors_matrix(tiledb::Group &group, const std::string &uri) {

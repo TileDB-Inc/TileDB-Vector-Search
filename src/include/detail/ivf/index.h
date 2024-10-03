@@ -100,8 +100,8 @@ int ivf_pq_index(
     const std::string& index_uri,      // OUT (to array at index_uri)
     const std::string& id_uri,         // OUT (to array at id_uri)
     const std::string& pq_parts_uri,      // OUT (to array at parts_uri)
-    const std::string& pq_index_uri,      // OUT (to array at index_uri)
-    const std::string& pq_id_uri,         // OUT (to array at id_uri)
+//    const std::string& pq_index_uri,      // OUT (to array at index_uri)
+//    const std::string& pq_id_uri,         // OUT (to array at id_uri)
     size_t start_pos,
     size_t end_pos,
     size_t nthreads,
@@ -226,16 +226,18 @@ int ivf_pq_index(
           false,
           temporal_policy);
     }
-    if (!pq_index_uri.empty()) {
-      std::cout << "[index@ivf_index] writing to pq_index_uri: " << pq_index_uri << " partition_start: " << partition_start << std::endl;
-      write_vector(
-          ctx, indices, pq_index_uri, partition_start, false, temporal_policy);
-    }
-    if (!pq_id_uri.empty()) {
-      std::cout << "[index@ivf_index] writing to pq_id_uri: " << pq_id_uri << " start_pos: " << start_pos << std::endl;
-      write_vector(
-          ctx, shuffled_ids, pq_id_uri, start_pos, false, temporal_policy);
-    }
+//    if (!pq_index_uri.empty()) {
+//      std::cout << "[index@ivf_index] writing to pq_index_uri: " << pq_index_uri << " partition_start: " << partition_start << std::endl;
+//      debug_vector(indices);
+//      write_vector(
+//          ctx, indices, pq_index_uri, partition_start, false, temporal_policy);
+//    }
+//    if (!pq_id_uri.empty()) {
+//      std::cout << "[index@ivf_index] writing to pq_id_uri: " << pq_id_uri << " start_pos: " << start_pos << std::endl;
+//      debug_vector(shuffled_ids);
+//      write_vector(
+//          ctx, shuffled_ids, pq_id_uri, start_pos, false, temporal_policy);
+//    }
   }
   return 0;
 }

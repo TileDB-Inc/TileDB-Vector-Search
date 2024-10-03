@@ -1211,7 +1211,13 @@ def ingest(
         trace_id: Optional[str] = None,
     ):
         ctx = vspy.Ctx(config)
-        index = vspy.IndexIVFPQ(ctx, index_group_uri)
+        index = vspy.IndexIVFPQ(
+            ctx, 
+            index_group_uri,
+            vspy.IndexLoadStrategy.PQ_INDEX,
+            0,
+            to_temporal_policy(index_timestamp)
+        )
         
         sample_vectors = read_sample_vectors(
             source_uri=source_uri,
@@ -1784,8 +1790,8 @@ def ingest(
                 logger.debug("Start indexing")
                 if index_type == "IVF_PQ":
                     input_vectors = vspy.FeatureVectorArray(ctx, source_uri)
-                    external_ids = vspy.FeatureVector(ctx, external_ids)
-                    deleted_ids = vspy.FeatureVector(ctx, updated_ids)
+                    external_ids = vspy.FeatureVector(ctx, external_ids_uri)
+                    deleted_ids = vspy.FeatureVector(updated_ids)
                     index.ingest_parts(
                         input_vectors=input_vectors,
                         external_ids=external_ids,
@@ -1917,10 +1923,16 @@ def ingest(
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
         if index_type == "IVF_PQ":
             ctx = vspy.Ctx(config)
-            index = vspy.IndexIVFPQ(ctx, index_group_uri)
-            input_vectors = vspy.FeatureVectorArray(ctx, np.transpose(additions_vectors).astype(vector_type))
-            external_ids = vspy.FeatureVectorArray(ctx, additions_external_ids)
-            deleted_ids = vspy.FeatureVectorArray(ctx, np.array([], np.uint64))
+            index = vspy.IndexIVFPQ(
+                ctx, 
+                index_group_uri, 
+                vspy.IndexLoadStrategy.PQ_INDEX,
+                0,
+                to_temporal_policy(index_timestamp)
+            )
+            input_vectors = vspy.FeatureVectorArray(np.transpose(additions_vectors).astype(vector_type))
+            external_ids = vspy.FeatureVectorArray(additions_external_ids)
+            deleted_ids = vspy.FeatureVectorArray(np.array([], np.uint64))
             index.ingest(
                 input_vectors=input_vectors,
                 external_ids=external_ids,
@@ -2018,7 +2030,13 @@ def ingest(
         config: Optional[Mapping[str, Any]] = None,
     ):
         ctx = vspy.Ctx(config)
-        index = vspy.IndexIVFPQ(ctx, index_group_uri)
+        index = vspy.IndexIVFPQ(
+            ctx, 
+            index_group_uri,
+            vspy.IndexLoadStrategy.PQ_INDEX,
+            0,
+            to_temporal_policy(index_timestamp)
+        )
         index.consolidate_partitions(partitions, work_items, partition_id_start, partition_id_end, batch)
 
     # Reads from a set of input ranges and writes a set of output ranges. For every array you need 

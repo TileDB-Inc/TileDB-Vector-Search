@@ -475,9 +475,9 @@ class ivf_pq_index {
       partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
           group_->cached_ctx(),
           group_->pq_ivf_vectors_uri(),
-          group_->pq_ivf_indices_uri(),
+          group_->feature_vectors_index_uri(),
           group_->get_num_partitions() + 1,
-          group_->pq_ivf_ids_uri(),
+          group_->ids_uri(),
           infinite_parts,
           0,
           temporal_policy_);
@@ -995,8 +995,8 @@ class ivf_pq_index {
         write_to_temp_arrays ? write_group.feature_vectors_index_temp_uri() : write_group.feature_vectors_index_uri(),
         write_to_temp_arrays ? write_group.ids_temp_uri() : write_group.ids_uri(),
         write_to_temp_arrays ? write_group.pq_ivf_vectors_temp_uri() : write_group.pq_ivf_vectors_uri(),
-        write_to_temp_arrays ? write_group.pq_ivf_indices_temp_uri() : write_group.pq_ivf_indices_uri(),
-        write_to_temp_arrays ? write_group.pq_ivf_ids_temp_uri() : write_group.pq_ivf_ids_uri(),
+//        write_to_temp_arrays ? write_group.pq_ivf_indices_temp_uri() : write_group.pq_ivf_indices_uri(),
+//        write_to_temp_arrays ? write_group.pq_ivf_ids_temp_uri() : write_group.pq_ivf_ids_uri(),
         start,
         end,
         num_threads_,
@@ -1135,7 +1135,7 @@ class ivf_pq_index {
        // Read data
        std::vector<partitioned_ids_type> ids = read_vector<partitioned_ids_type>(
             group_->cached_ctx(),
-            group_->pq_ivf_ids_temp_uri(),
+            group_->ids_temp_uri(),
             read_slices,
             total_slices_size,
             temporal_policy_);
@@ -1182,7 +1182,7 @@ class ivf_pq_index {
         write_vector(
             group_->cached_ctx(),
             ids,
-            group_->pq_ivf_ids_uri(),
+            group_->ids_uri(),
             start_pos,
             false,
             temporal_policy_);
@@ -1656,9 +1656,9 @@ class ivf_pq_index {
       auto partitioned_pq_vectors = std::make_unique<tdb_pq_storage_type>(
           group_->cached_ctx(),
           group_->pq_ivf_vectors_uri(),
-          group_->pq_ivf_indices_uri(),
+          group_->feature_vectors_index_uri(),
           group_->get_num_partitions() + 1,
-          group_->pq_ivf_ids_uri(),
+          group_->ids_uri(),
           active_partitions,
           upper_bound_,
           temporal_policy_);
