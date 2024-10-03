@@ -894,6 +894,8 @@ class ivf_pq_index {
     write_group.create_temp_data_group();
 
     std::cout << "[index@ivf_pq_index@train] done" << std::endl;
+
+    partitioned_pq_vectors_ = nullptr;
   }
 
   /**
@@ -1047,8 +1049,8 @@ class ivf_pq_index {
     size_t work_items, 
     size_t partition_id_start, 
     size_t partition_id_end, 
-    size_t batch,
-    bool use_temp_index_array = false
+    size_t batch
+    // bool use_temp_index_array = false
     ) {
       std::cout << "[index@ivf_pq_index@consolidate_partitions]" << std::endl;
 
@@ -1078,11 +1080,7 @@ class ivf_pq_index {
 
       std::vector<partitioning_indices_type> index_array = read_vector<partitioning_indices_type>(
           group_->cached_ctx(),
-          // NOTE: This should be group_->feature_vectors_index_uri(). 
-          // But that that won't work unless compute_partition_indexes_udf() is writte in c++.
-          // So instead we use the temp uri for now.
-          // group_->feature_vectors_index_uri(),
-          use_temp_index_array ? group_->feature_vectors_index_temp_uri() : group_->feature_vectors_index_uri(),
+          group_->feature_vectors_index_uri(),
           0,
           total_partitions,
           temporal_policy_);
@@ -1167,7 +1165,7 @@ class ivf_pq_index {
         debug_matrix(pq_vectors, "[index@ivf_pq_index@consolidate_partitions] pq_vectors", 500);
 
         if (ids.size() != end_pos - start_pos) {
-            throw std::runtime_error("Incorrect partition size.");
+            throw std::runtime_error("[index@ivf_pq_index@consolidate_partitions] Incorrect partition size (ids is " + std::to_string(ids.size()) + ", but expected " + std::to_string(end_pos - start_pos) + ")");
         }
 
         // Write data to the arrays
@@ -1205,6 +1203,44 @@ class ivf_pq_index {
             false,
             temporal_policy_);
     }
+
+    // Now update the metadata.
+      auto write_group = ivf_pq_group<ivf_pq_index>(
+          group_->cached_ctx(),
+          group_uri_,
+          TILEDB_WRITE,
+          temporal_policy_,
+          group_->storage_version(),
+          dimensions_,
+          num_clusters_,
+          num_subspaces_);
+
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] write_group.get_all_ingestion_timestamps().size(): " << write_group.get_all_ingestion_timestamps().size() << std::endl;
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] write_group.get_previous_ingestion_timestamp(): " << write_group.get_previous_ingestion_timestamp() << std::endl;
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] write_group.get_all_base_sizes().size(): " << write_group.get_all_base_sizes().size() << std::endl;
+      std::cout << "[index@ivf_pq_index@consolidate_partitions] write_group.get_previous_base_size(): " << write_group.get_previous_base_size() << std::endl;
+
+      
+      if (write_group.get_all_ingestion_timestamps().size() == 1 &&
+        write_group.get_previous_ingestion_timestamp() == 0 &&
+        write_group.get_all_base_sizes().size() == 1 &&
+        write_group.get_previous_base_size() == 0) {
+        std::cout << "[index@ivf_pq_index@consolidate_partitions] Setting ingestion timestamp and base size" << std::endl;
+        write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
+        write_group.set_base_size(write_group.get_temp_size());
+        write_group.set_num_partitions(num_partitions_);
+      } else {
+        std::cout << "[index@ivf_pq_index@consolidate_partitions] Appending ingestion timestamp and base size" << std::endl;
+        write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
+        write_group.append_base_size(write_group.get_temp_size());
+        write_group.append_num_partitions(num_partitions_);
+      }
+
+      std::cout << "[index@ivf_pq_index@ingest] write_group.get_previous_ingestion_timestamp(): " << write_group.get_previous_ingestion_timestamp() << std::endl;
+      std::cout << "[index@ivf_pq_index@ingest] write_group.get_previous_base_size(): " << write_group.get_previous_base_size() << std::endl;
+      std::cout << "[index@ivf_pq_index@ingest] write_group.get_previous_num_partitions(): " << write_group.get_previous_num_partitions() << std::endl;
+
+      write_group.store_metadata();
 
       std::cout << "[index@ivf_pq_index@consolidate_partitions] done" << std::endl;
     }
@@ -1626,8 +1662,6 @@ class ivf_pq_index {
           active_partitions,
           upper_bound_,
           temporal_policy_);
-      // partitioned_pq_vectors->load();
-      // partitioned_pq_vectors->debug_tdb_partitioned_matrix("[ivf_pq_index@query] partitioned_pq_vectors");
 
       auto query_to_pq_centroid_distance_tables =
           std::move(*generate_query_to_pq_centroid_distance_tables<
@@ -1674,7 +1708,6 @@ class ivf_pq_index {
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
     debug_vector(active_partitions, "[ivf_pq_index@query] active_partitions");
     debug_vector_of_vectors(active_queries, "[ivf_pq_index@query] active_queries");
-    
     debug_partitioned_matrix(*partitioned_pq_vectors_, "[ivf_pq_index@query] partitioned_pq_vectors_", 500);
     
     auto query_to_pq_centroid_distance_tables =

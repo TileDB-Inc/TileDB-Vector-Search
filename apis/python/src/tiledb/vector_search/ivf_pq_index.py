@@ -223,7 +223,7 @@ def create(
         )
     vspy.IndexIVFPQ.create(
         ctx=ctx,
-        group_uri=uri,
+        index_uri=uri,
         dimensions=dimensions,
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,

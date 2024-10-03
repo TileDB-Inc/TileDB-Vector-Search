@@ -435,37 +435,60 @@ def test_inplace_build_query_IndexVamana():
     assert recall == 1.0
 
 
-def test_construct_IndexIVFPQ():
-    a = vspy.IndexIVFPQ()
-    assert a.feature_type_string() == "any"
-    assert a.id_type_string() == "uint32"
-    assert a.partitioning_index_type_string() == "uint32"
-    assert a.dimensions() == 0
-
-    a = vspy.IndexIVFPQ(feature_type="float32")
-    assert a.feature_type_string() == "float32"
-    assert a.id_type_string() == "uint32"
-    assert a.partitioning_index_type_string() == "uint32"
-    assert a.dimensions() == 0
-
-    a = vspy.IndexIVFPQ(
-        feature_type="uint8", id_type="uint64", partitioning_index_type="int64"
+def test_construct_IndexIVFPQ(tmp_path):
+    index_uri = os.path.join(tmp_path, "array")
+    if os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+    vspy.IndexIVFPQ.create(
+        ctx=ctx,
+        index_uri=index_uri,
+        dimensions=9,
+        feature_type="float32"
     )
+    a = vspy.IndexIVFPQ(ctx, index_uri)
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "uint64"
+    assert a.partitioning_index_type_string() == "uint64"
+    assert a.dimensions() == 9
+    
+    if os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+    vspy.IndexIVFPQ.create(
+        ctx=ctx,
+        index_uri=index_uri,
+        dimensions=99,
+        feature_type="uint8", 
+        id_type="uint64", 
+        partitioning_index_type="uint64"
+    )
+    a = vspy.IndexIVFPQ(ctx, index_uri)
     assert a.feature_type_string() == "uint8"
     assert a.id_type_string() == "uint64"
-    assert a.partitioning_index_type_string() == "int64"
-    assert a.dimensions() == 0
-
-    a = vspy.IndexIVFPQ(
-        feature_type="float32", id_type="int64", partitioning_index_type="uint64"
-    )
-    assert a.feature_type_string() == "float32"
-    assert a.id_type_string() == "int64"
     assert a.partitioning_index_type_string() == "uint64"
-    assert a.dimensions() == 0
+    assert a.dimensions() == 99
+
+    if os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+    vspy.IndexIVFPQ.create(
+        ctx=ctx,
+        index_uri=index_uri,
+        dimensions=999,
+        feature_type="float32", 
+        id_type="uint32", 
+        partitioning_index_type="uint64"
+    )
+    a = vspy.IndexIVFPQ(ctx, index_uri)
+    assert a.feature_type_string() == "float32"
+    assert a.id_type_string() == "uint32"
+    assert a.partitioning_index_type_string() == "uint64"
+    assert a.dimensions() == 999
 
 
 def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
+    index_uri = os.path.join(tmp_path, "array")
+    if os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+
     nprobe = 100
     k_nn = 10
     index_uri = os.path.join(tmp_path, "array")
@@ -475,17 +498,20 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     partitioning_index_type = "uint64"
 
     # First create an empty index.
-    a = vspy.IndexIVFPQ(
+    vspy.IndexIVFPQ.create(
+        ctx=ctx,
+        index_uri=index_uri,
+        dimensions=dimensions,
         feature_type=feature_type,
         id_type=id_type,
         partitioning_index_type=partitioning_index_type,
-        dimensions=dimensions,
-        num_subspaces=dimensions / 2,
+        partitions=100,
+        num_subspaces=int(dimensions / 2),
     )
+    a = vspy.IndexIVFPQ(ctx, index_uri)
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
     a.train(empty_vector)
-    a.add(empty_vector)
-    a.write_index(ctx, index_uri)
+    a.ingest(empty_vector)
 
     # Then load it again, retrain, and query.
     a = vspy.IndexIVFPQ(ctx, index_uri)
@@ -497,14 +523,11 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     assert groundtruth_set.feature_type_string() == "uint64"
 
     a.train(training_set)
-    a.add(training_set)
+    a.ingest(training_set)
 
     _, ids = a.query(query_set, k_nn, nprobe)
     accuracy = recall(ids, groundtruth_set, k_nn)
     assert accuracy >= 0.87
-
-    index_uri = os.path.join(tmp_path, "array")
-    a.write_index(ctx, index_uri)
 
     b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
     _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
@@ -523,15 +546,24 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
 
 
 def test_inplace_build_query_IndexIVFPQ(tmp_path):
+    index_uri = os.path.join(tmp_path, "array")
+    if os.path.exists(index_uri):
+        shutil.rmtree(index_uri)
+
     nprobe = 100
     k_nn = 10
 
-    a = vspy.IndexIVFPQ(
+    vspy.IndexIVFPQ.create(
+        ctx=ctx,
+        index_uri=index_uri,
+        dimensions=siftsmall_dimensions,
         id_type="uint32",
         partitioning_index_type="uint32",
         feature_type="float32",
-        num_subspaces=siftsmall_dimensions / 2,
+        partitions=100,
+        num_subspaces=int(siftsmall_dimensions / 2),
     )
+    a = vspy.IndexIVFPQ(ctx, index_uri)
 
     training_set = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert training_set.feature_type_string() == "float32"
@@ -541,14 +573,11 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     assert groundtruth_set.feature_type_string() == "uint64"
 
     a.train(training_set)
-    a.add(training_set)
+    a.ingest(training_set)
 
     _, ids = a.query(query_set, k_nn, nprobe)
     accuracy = recall(ids, groundtruth_set, k_nn)
     assert accuracy >= 0.87
-
-    index_uri = os.path.join(tmp_path, "array")
-    a.write_index(ctx, index_uri)
 
     b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
     _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)

@@ -1144,16 +1144,89 @@ def ingest(
                 f"The random sampling within a batch ran into an issue: num_sampled ({num_sampled}) != random_sample_size ({random_sample_size})"
             )
 
+    def read_sample_vectors(
+        source_uri: str,
+        source_type: str,
+        vector_type: np.dtype,
+        dimensions: int,
+        training_sample_size: int,
+        training_source_uri: Optional[str],
+        training_source_type: Optional[str],
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+        trace_id: Optional[str] = None,
+    ):
+        if training_source_uri:
+            if training_source_type is None:
+                training_source_type = autodetect_source_type(
+                    source_uri=training_source_uri
+                )
+            (
+                training_in_size,
+                training_dimensions,
+                training_vector_type,
+            ) = read_source_metadata(
+                source_uri=training_source_uri, source_type=training_source_type
+            )
+            if dimensions != training_dimensions:
+                raise ValueError(
+                    f"When training centroids, the index data dimensions ({dimensions}) != the training data dimensions ({training_dimensions})"
+                )
+            return read_input_vectors(
+                source_uri=training_source_uri,
+                source_type=training_source_type,
+                vector_type=training_vector_type,
+                dimensions=dimensions,
+                start_pos=0,
+                end_pos=training_in_size,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+        else:
+            return read_input_vectors(
+                source_uri=source_uri,
+                source_type=source_type,
+                vector_type=vector_type,
+                dimensions=dimensions,
+                start_pos=0,
+                end_pos=training_sample_size,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+
+
     def ivf_pq_train_udf(
         index_group_uri: str,
         source_uri: str,
-        partitions: int,
-        config: Optional[Mapping[str, Any]] = None
+        source_type: str,
+        vector_type: np.dtype,
+        dimensions: int,
+        training_sample_size: int,
+        training_source_uri: Optional[str],
+        training_source_type: Optional[str],
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+        trace_id: Optional[str] = None,
     ):
         ctx = vspy.Ctx(config)
         index = vspy.IndexIVFPQ(ctx, index_group_uri)
-        sample_vectors = vspy.FeatureVectorArray(ctx, source_uri)
-        index.train(sample_vectors, partitions)
+        
+        sample_vectors = read_sample_vectors(
+            source_uri=source_uri,
+            source_type=source_type,
+            vector_type=vector_type,
+            dimensions=dimensions,
+            training_sample_size=training_sample_size,
+            training_source_uri=training_source_uri,
+            training_source_type=training_source_type,
+            config=config,
+            verbose=verbose,
+            trace_id=trace_id,
+        )
+        sample_vectors_array = vspy.FeatureVectorArray(sample_vectors)
+        index.train(sample_vectors_array, to_temporal_policy(index_timestamp))
 
     def centralised_kmeans_udf(
         index_group_uri: str,
@@ -1182,45 +1255,18 @@ def ingest(
             group = tiledb.Group(index_group_uri)
             centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             if training_sample_size >= partitions:
-                if training_source_uri:
-                    if training_source_type is None:
-                        training_source_type = autodetect_source_type(
-                            source_uri=training_source_uri
-                        )
-                    (
-                        training_in_size,
-                        training_dimensions,
-                        training_vector_type,
-                    ) = read_source_metadata(
-                        source_uri=training_source_uri, source_type=training_source_type
-                    )
-                    if dimensions != training_dimensions:
-                        raise ValueError(
-                            f"When training centroids, the index data dimensions ({dimensions}) != the training data dimensions ({training_dimensions})"
-                        )
-                    sample_vectors = read_input_vectors(
-                        source_uri=training_source_uri,
-                        source_type=training_source_type,
-                        vector_type=training_vector_type,
-                        dimensions=dimensions,
-                        start_pos=0,
-                        end_pos=training_in_size,
-                        config=config,
-                        verbose=verbose,
-                        trace_id=trace_id,
-                    ).astype(np.float32)
-                else:
-                    sample_vectors = read_input_vectors(
-                        source_uri=source_uri,
-                        source_type=source_type,
-                        vector_type=vector_type,
-                        dimensions=dimensions,
-                        start_pos=0,
-                        end_pos=training_sample_size,
-                        config=config,
-                        verbose=verbose,
-                        trace_id=trace_id,
-                    ).astype(np.float32)
+                sample_vectors = read_sample_vectors(
+                    source_uri=source_uri,
+                    source_type=source_type,
+                    vector_type=vector_type,
+                    dimensions=dimensions,
+                    training_sample_size=training_sample_size,
+                    training_source_uri=training_source_uri,
+                    training_source_type=training_source_type,
+                    config=config,
+                    verbose=verbose,
+                    trace_id=trace_id,
+                ).astype(np.float32)
 
                 logger.debug("Start kmeans training")
                 if use_sklearn:
@@ -1711,7 +1757,13 @@ def ingest(
 
         # start=0, end=100, batch=10
         ctx = vspy.Ctx(config) if index_type == "IVF_PQ" else None
-        index = vspy.IndexIVFPQ(ctx, index_group_uri) if index_type == "IVF_PQ" else None
+        index = vspy.IndexIVFPQ(
+            ctx, 
+            index_group_uri,
+            vspy.IndexLoadStrategy.PQ_INDEX,
+            0,
+            to_temporal_policy(index_timestamp)
+        ) if index_type == "IVF_PQ" else None
 
         for part in range(start, end, batch):
             part_end = part + batch
@@ -1786,9 +1838,9 @@ def ingest(
                 )
                 logger.debug("Start indexing")
                 if index_type == "IVF_PQ":
-                    input_vectors = vspy.FeatureVectorArray(ctx, np.transpose(in_vectors).astype(vector_type))
-                    external_ids = vspy.FeatureVector(ctx, external_ids)
-                    deleted_ids = vspy.FeatureVector(ctx, updated_ids)
+                    input_vectors = vspy.FeatureVectorArray(np.transpose(in_vectors).astype(vector_type))
+                    external_ids = vspy.FeatureVector(external_ids)
+                    deleted_ids = vspy.FeatureVector(updated_ids)
                     index.ingest_parts(
                         input_vectors=input_vectors,
                         external_ids=external_ids,
@@ -2512,9 +2564,20 @@ def ingest(
                         centroids_node = submit(
                             ivf_pq_train_udf,
                             index_group_uri=index_group_uri,
-                            source_uri=training_source_uri if training_source_uri else source_uri,
-                            partitions=partitions,
+                            source_uri=source_uri,
+                            source_type=source_type,
+                            vector_type=vector_type,
+                            dimensions=dimensions,
+                            training_sample_size=training_sample_size,
+                            training_source_uri=training_source_uri,
+                            training_source_type=training_source_type,
                             config=config,
+                            verbose=verbose,
+                            trace_id=trace_id,
+                            name="ivf_pq_train_udf",
+                            resources=kmeans_resources,
+                            image_name=DEFAULT_IMG_NAME,
+                            **kwargs,
                         )
                     else:
                         centroids_node = submit(
@@ -2658,6 +2721,7 @@ def ingest(
                     end = size
                 ingest_node = submit(
                     ingest_vectors_udf,
+                    index_type=index_type,
                     index_group_uri=index_group_uri,
                     source_uri=source_uri,
                     source_type=source_type,
@@ -2876,7 +2940,7 @@ def ingest(
                             uri=index_group_uri,
                             dimensions=dimensions,
                             vector_type=vector_type,
-                            num_subspaces=num_subspaces,
+                            num_subspaces=int(num_subspaces),
                             partitions=partitions,
                             config=config,
                             storage_version=storage_version,

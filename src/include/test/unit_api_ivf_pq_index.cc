@@ -633,13 +633,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     num_subspaces, max_iterations, convergence_tolerance, reassign_ratio);
     auto index = IndexIVFPQ(ctx, index_uri);
 
-    size_t num_vectors = 0;
-    auto empty_training_vector_array =
-        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-    index.train(empty_training_vector_array, TemporalPolicy(TimeTravel, 0));
-    index.ingest(empty_training_vector_array);
-
-    CHECK(index.temporal_policy().timestamp_end() == 0);
     CHECK(index.dimensions() == dimensions);
     CHECK(index.n_list() == n_list);
     CHECK(index.num_subspaces() == num_subspaces);

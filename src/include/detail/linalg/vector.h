@@ -165,7 +165,7 @@ void debug_vector(
     const V& v, const std::string& msg = "", size_t max_size = 10) {
   size_t end = std::min(max_size, dimensions(v));
   if (!msg.empty()) {
-    std::cout << msg << ": ";
+    std::cout << msg << "(" << dimensions(v) << " items): ";
   }
   std::cout << "[";
   for (size_t i = 0; i < end; ++i) {
@@ -185,7 +185,7 @@ void debug_vector(
     const V& v, const std::string& msg = "", size_t max_size = 10) {
   size_t end = std::min(max_size, dimensions(v));
   if (!msg.empty()) {
-    std::cout << msg << ": ";
+    std::cout << msg << "(" << dimensions(v) << " items): ";
   }
   std::cout << "[";
   size_t idx = 0;

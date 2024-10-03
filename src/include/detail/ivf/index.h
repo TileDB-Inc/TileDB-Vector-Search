@@ -52,9 +52,9 @@ namespace detail::ivf {
 
 namespace {
   // Compute indices.
-  template <typename FeatureType, class IdsType, class IndicesType, class CentroidsType>
+  template <typename FeatureType, class Vector, class IdsType, class IndicesType, class CentroidsType>
   std::vector<IndicesType> compute_indices(
-      const std::span<IdsType>& external_ids,          // IN
+      const Vector& external_ids,          // IN
       const std::unordered_set<IdsType> &deleted_ids_set,           // IN
       const ColMajorMatrix<CentroidsType> &centroids,    // IN
       const std::vector<size_t>& parts) {
@@ -126,7 +126,7 @@ int ivf_pq_index(
     scoped_timer _{"shuffling data"};
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
-    auto indices = compute_indices<FeatureType, IdsType, IndicesType, CentroidsType>(
+    auto indices = compute_indices<FeatureType, std::span<IdsType>, IdsType, IndicesType, CentroidsType>(
         external_ids, deleted_ids_set, centroids, parts);
 
     // Array for storing the shuffled data
@@ -248,8 +248,8 @@ template <typename FeatureType, class IdsType, class IndicesType, class Centroid
 int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<FeatureType>& input_vectors,  // IN
-    const std::span<IdsType>& external_ids,          // IN
-    const std::span<IdsType>& deleted_ids,           // IN
+    const std::vector<IdsType>& external_ids,          // IN
+    const std::vector<IdsType>& deleted_ids,           // IN
     const ColMajorMatrix<CentroidsType> &centroids,    // IN
     const std::string& parts_uri,      // OUT (to array at parts_uri)
     const std::string& index_uri,      // OUT (to array at index_uri)
@@ -274,7 +274,7 @@ int ivf_index(
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
 
-    auto indices = compute_indices<FeatureType, IdsType, IndicesType, CentroidsType>(
+    auto indices = compute_indices<FeatureType, std::vector<IdsType>, IdsType, IndicesType, CentroidsType>(
         external_ids, deleted_ids_set, centroids, parts);
     
     // Array for storing the shuffled data

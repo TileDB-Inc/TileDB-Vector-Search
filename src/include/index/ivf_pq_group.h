@@ -371,7 +371,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(write_group, this->temp_data_uri(), this->temp_data_name());
 
     // Finally create the array's in the temp data group that we will need during ingestion.
-    auto temp_group = tiledb::Group(cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
+    auto temp_group = tiledb::Group(cached_ctx_, this->temp_data_uri(), TILEDB_WRITE, cached_ctx_.config());
 
     create_feature_vectors_matrix(temp_group, this->feature_vectors_temp_uri());
     create_ids_vector(temp_group, this->ids_temp_uri(), this->ids_array_name());
