@@ -182,7 +182,11 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#python" id="toc-python" class="nav-link active" data-scroll-target="#python">Python</a>
   <ul class="collapse">
-  <li><a href="#tiledb.vector_search" id="toc-tiledb.vector_search" class="nav-link" data-scroll-target="#tiledb.vector_search">tiledb.vector_search</a></li>
+  <li><a href="#vector-api" id="toc-vector-api" class="nav-link" data-scroll-target="#vector-api">Vector API</a>
+  <ul class="collapse">
+  <li><a href="#algorithms" id="toc-algorithms" class="nav-link" data-scroll-target="#algorithms">Algorithms</a></li>
+  </ul></li>
+  <li><a href="#object-api" id="toc-object-api" class="nav-link" data-scroll-target="#object-api">Object API</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/edit/main/documentation/reference/index.qmd" class="toc-action"><i class="bi bi-github"></i>Edit this page</a></li><li><a href="https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
@@ -195,29 +199,71 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="python" class="level1">
 <h1>Python</h1>
-<section id="tiledb.vector_search" class="level2">
-<h2 class="anchored" data-anchor-id="tiledb.vector_search">tiledb.vector_search</h2>
+<section id="vector-api" class="level2">
+<h2 class="anchored" data-anchor-id="vector-api">Vector API</h2>
 <table class="caption-top table">
 <tbody>
+<tr class="odd">
+<td><a href="../../documentation/reference/open.html#tiledb.vector_search.open">open</a></td>
+<td>Factory method that opens a vector index.</td>
+</tr>
+<tr class="even">
+<td><a href="../../documentation/reference/ingestion.html#tiledb.vector_search.ingestion">ingestion</a></td>
+<td>Vector Search ingestion Utilities</td>
+</tr>
 <tr class="odd">
 <td><a href="../../documentation/reference/index.Index.html#tiledb.vector_search.index.Index">index.Index</a></td>
 <td>Abstract Vector Index class.</td>
 </tr>
-<tr class="even">
+</tbody>
+</table>
+<section id="algorithms" class="level3">
+<h3 class="anchored" data-anchor-id="algorithms">Algorithms</h3>
+<table class="caption-top table">
+<tbody>
+<tr class="odd">
 <td><a href="../../documentation/reference/flat_index.html#tiledb.vector_search.flat_index">flat_index</a></td>
 <td>FlatIndex implementation.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="../../documentation/reference/ivf_flat_index.html#tiledb.vector_search.ivf_flat_index">ivf_flat_index</a></td>
 <td>IVFFlat Index implementation.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="../../documentation/reference/vamana_index.html#tiledb.vector_search.vamana_index">vamana_index</a></td>
 <td>Vamana Index implementation.</td>
 </tr>
+<tr class="even">
+<td><a href="../../documentation/reference/ivf_pq_index.html#tiledb.vector_search.ivf_pq_index">ivf_pq_index</a></td>
+<td>IVFPQ Index implementation.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="object-api" class="level2">
+<h2 class="anchored" data-anchor-id="object-api">Object API</h2>
+<table class="caption-top table">
+<tbody>
 <tr class="odd">
-<td><a href="../../documentation/reference/ingestion.html#tiledb.vector_search.ingestion">ingestion</a></td>
-<td>Vector Search ingestion Utilities</td>
+<td><a href="../../documentation/reference/object_api.create.html#tiledb.vector_search.object_api.create">object_api.create</a></td>
+<td>Creates a new ObjectIndex.</td>
+</tr>
+<tr class="even">
+<td><a href="../../documentation/reference/object_api.ObjectIndex.html#tiledb.vector_search.object_api.ObjectIndex">object_api.ObjectIndex</a></td>
+<td>An ObjectIndex represents a TileDB Vector Search index that is associated with a</td>
+</tr>
+<tr class="odd">
+<td><a href="../../documentation/reference/embeddings.ObjectEmbedding.html#tiledb.vector_search.embeddings.ObjectEmbedding">embeddings.ObjectEmbedding</a></td>
+<td>Abstract class that can be used to create embeddings for Objects of a specific format.</td>
+</tr>
+<tr class="even">
+<td><a href="../../documentation/reference/object_readers.ObjectReader.html#tiledb.vector_search.object_readers.ObjectReader">object_readers.ObjectReader</a></td>
+<td>Abstract class that can be used to read Objects from different sources and formats.</td>
+</tr>
+<tr class="odd">
+<td><a href="../../documentation/reference/object_readers.ObjectPartition.html#tiledb.vector_search.object_readers.ObjectPartition">object_readers.ObjectPartition</a></td>
+<td>Abstract class for capturing object partitions</td>
 </tr>
 </tbody>
 </table>
