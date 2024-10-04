@@ -374,16 +374,16 @@ ul.task-list li input[type="checkbox"] {
 </table>
 <section id="tiledb.vector_search.flat_index.create" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.flat_index.create">create</h3>
-<p><code>vector_search.flat_index.create(uri, dimensions, vector_type, group_exists=False, config=None, storage_version=STORAGE_VERSION, distance_metric=vspy.DistanceMetric.SUM_OF_SQUARES, **kwargs)</code></p>
+<p><code>vector_search.flat_index.create(uri, dimensions, vector_type, group_exists=False, group=None, config=None, storage_version=STORAGE_VERSION, distance_metric=vspy.DistanceMetric.SUM_OF_SQUARES, asset_creation_threads=None, **kwargs)</code></p>
 <p>Creates an empty FlatIndex.</p>
 <section id="parameters-2" class="level4">
 <h4 class="anchored" data-anchor-id="parameters-2">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 15%">
+<col style="width: 11%">
+<col style="width: 14%">
 <col style="width: 57%">
-<col style="width: 18%">
+<col style="width: 16%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -435,6 +435,18 @@ ul.task-list li input[type="checkbox"] {
 <td>vspy.DistanceMetric</td>
 <td>Distance metric to use for the index. If not provided, use L2 distance.</td>
 <td><code>vspy.DistanceMetric.SUM_OF_SQUARES</code></td>
+</tr>
+<tr class="even">
+<td><code>group</code></td>
+<td>tiledb.Group</td>
+<td>TileDB group open in write mode. Internal, this is used to avoid opening the group multiple times during ingestion.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>asset_creation_threads</code></td>
+<td>Sequence[Thread]</td>
+<td>List of asset creation threads to append new threads. Internal, this is used to parallelize all asset creation during ingestion.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>
