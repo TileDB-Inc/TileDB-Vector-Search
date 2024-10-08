@@ -325,19 +325,13 @@ class IVFFlatIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int,
-        driver_mode: Mode = None,
-        driver_resources: Optional[str] = None,
-        driver_access_credentials_name: Optional[str] = None,
         **kwargs,
     ):
         if self.distance_metric == vspy.DistanceMetric.COSINE:
             queries = normalize_vectors(queries)
         return super().query(
-            queries,
-            k,
-            driver_mode,
-            driver_resources,
-            driver_access_credentials_name,
+            queries=queries,
+            k=k,
             **kwargs,
         )
 
