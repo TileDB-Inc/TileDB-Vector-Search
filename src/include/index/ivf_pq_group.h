@@ -354,6 +354,8 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, flat_ivf_centroids_uri(), flat_ivf_centroids_array_name());
 
+    create_temp_data_group();
+
     // Store the metadata if all the arrays were created successfully
     metadata_.store_metadata(write_group);
   }

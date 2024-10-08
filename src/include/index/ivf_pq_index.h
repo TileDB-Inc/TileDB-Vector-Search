@@ -247,8 +247,7 @@ class ivf_pq_index {
   // sections, and for each section we find the closest centroid from
   // cluster_centroids_ and appen that index as the next number in the
   // pq_vector.
-  std::unique_ptr<ColMajorMatrixWithIds<pq_code_type, id_type>>
-      unpartitioned_pq_vectors_;
+  std::unique_ptr<ColMajorMatrix<pq_code_type>> unpartitioned_pq_vectors_;
   // Or should these just be
   // pq_storage_type partitioned_pq_vectors_;
   // flat_storage_type unpartitioned_pq_vectors_;
@@ -891,7 +890,7 @@ class ivf_pq_index {
     // }
     // tiledb::Group::create(group_->cached_ctx(), temp_data_uri);
     // tiledb_helpers::add_to_group(write_group, write_group.temp_data_uri(), write_group.temp_data_name());
-    write_group.create_temp_data_group();
+    // write_group.create_temp_data_group();
 
     std::cout << "[index@ivf_pq_index@train] done" << std::endl;
 
@@ -938,8 +937,8 @@ class ivf_pq_index {
     // unpartitioned_pq_vectors_ =
     //     pq_encode<ColMajorMatrix<feature_type>, ColMajorMatrixWithIds<pq_code_type, id_type>>(
     //         training_set);
-    unpartitioned_pq_vectors_ = pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(training_set);
     debug_matrix_with_ids(*unpartitioned_pq_vectors_, "[index@ivf_pq_index@ingest_parts] unpartitioned_pq_vectors_");
+    unpartitioned_pq_vectors_ = pq_encode<Array, ColMajorMatrix<pq_code_type>>(training_set);
     // std::copy(
     //     training_set_ids.begin(),
     //     training_set_ids.end(),
@@ -1062,11 +1061,11 @@ class ivf_pq_index {
 
       std::vector<std::vector<std::pair<uint64_t, uint64_t>>> partition_slices(partitions);
       // debug_vector_of_vectors(partition_slices, "[index@ivf_pq_index@consolidate_partitions] partition_slices");
-      for (int i = 0; i < partition_slices.size(); ++i) {
-          for (int j = 0; j < partition_slices[0].size(); ++j) {
-              std::cout << "[index@ivf_pq_index@consolidate_partitions] partition_slices[" << i << "][" << j << "]: " << partition_slices[i][j].first << ", " << partition_slices[i][j].second << std::endl;
-          }
-      }
+      // for (int i = 0; i < partition_slices.size(); ++i) {
+      //     for (int j = 0; j < partition_slices[0].size(); ++j) {
+      //         std::cout << "[index@ivf_pq_index@consolidate_partitions] partition_slices[" << i << "][" << j << "]: " << partition_slices[i][j].first << ", " << partition_slices[i][j].second << std::endl;
+      //     }
+      // }
 
       auto total_partitions = work_items * (partitions + 1);
       std::cout << "[index@ivf_pq_index@consolidate_partitions] total_partitions: " << total_partitions << std::endl;
@@ -1164,9 +1163,9 @@ class ivf_pq_index {
         pq_vectors.load();
         debug_matrix(pq_vectors, "[index@ivf_pq_index@consolidate_partitions] pq_vectors", 500);
 
-        if (ids.size() != end_pos - start_pos) {
-            throw std::runtime_error("[index@ivf_pq_index@consolidate_partitions] Incorrect partition size (ids is " + std::to_string(ids.size()) + ", but expected " + std::to_string(end_pos - start_pos) + ")");
-        }
+        // if (ids.size() != end_pos - start_pos) {
+        //     throw std::runtime_error("[index@ivf_pq_index@consolidate_partitions] Incorrect partition size (ids is " + std::to_string(ids.size()) + ", but expected " + std::to_string(end_pos - start_pos) + ")");
+        // }
 
         // Write data to the arrays
         // parts_array[start_pos:end_pos] = vectors;

@@ -668,7 +668,7 @@ TEST_CASE("temporal_policy", "[api]") {
   // Read the data at timestamp 99.
   {
     auto feature_vector_array = FeatureVectorArray(
-        ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 99));
+        ctx, feature_vectors_uri, ids_uri, 0, 0, TemporalPolicy(TimeTravel, 99));
     auto data = MatrixView<FeatureType, stdx::layout_left>{
         (FeatureType*)feature_vector_array.data(),
         extents(feature_vector_array)[0],
@@ -689,7 +689,7 @@ TEST_CASE("temporal_policy", "[api]") {
   // Read the data at timestamp 50.
   {
     auto feature_vector_array = FeatureVectorArray(
-        ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 50));
+        ctx, feature_vectors_uri, ids_uri, 0, 0, TemporalPolicy(TimeTravel, 50));
     CHECK(extents(feature_vector_array)[0] == 0);
     CHECK(extents(feature_vector_array)[1] == 0);
     CHECK(feature_vector_array.num_vectors() == 0);

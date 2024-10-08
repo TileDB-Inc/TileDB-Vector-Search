@@ -378,7 +378,7 @@ TEST_CASE(
 
     auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
     index.train(training_set);
-    index.ingest(training_set);
+    index.ingest(training_set, FeatureVector(0, id_type));
 
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);

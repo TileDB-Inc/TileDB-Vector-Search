@@ -1699,7 +1699,7 @@ def ingest(
 
         ctx = vspy.Ctx(config)
         data = vspy.FeatureVectorArray(
-            ctx, parts_array_uri, ids_array_uri, 0, to_temporal_policy(index_timestamp)
+            ctx, parts_array_uri, ids_array_uri, 0, 0, to_temporal_policy(index_timestamp)
         )
         index = vspy.IndexVamana(ctx, index_group_uri)
         index.train(data)
@@ -1789,8 +1789,8 @@ def ingest(
             if source_type == "TILEDB_ARRAY":
                 logger.debug("Start indexing")
                 if index_type == "IVF_PQ":
-                    input_vectors = vspy.FeatureVectorArray(ctx, source_uri)
-                    external_ids = vspy.FeatureVector(ctx, external_ids_uri)
+                    input_vectors = vspy.FeatureVectorArray(ctx, source_uri, "", part, part_end, to_temporal_policy(index_timestamp))
+                    external_ids = vspy.FeatureVector(ctx, external_ids_uri, part, part_end, to_temporal_policy(index_timestamp)) if external_ids_uri else vspy.FeatureVector(0, np.dtype(np.uint64).name)
                     deleted_ids = vspy.FeatureVector(updated_ids)
                     index.ingest_parts(
                         input_vectors=input_vectors,
