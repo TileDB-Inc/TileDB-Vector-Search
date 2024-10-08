@@ -515,7 +515,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="tiledb.vector_search.index.Index.query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.index.Index.query">query</h3>
-<p><code>vector_search.index.Index.query(queries, k, driver_mode=None, driver_resources=None, driver_access_credentials_name=None, **kwargs)</code></p>
+<p><code>vector_search.index.Index.query(queries, k, driver_mode=None, driver_resource_class=None, driver_resources=None, driver_access_credentials_name=None, **kwargs)</code></p>
 <p>Queries an index with a set of query vectors, retrieving the <code>k</code> most similar vectors for each query.</p>
 <p>This provides an algorithm-agnostic implementation for updates:</p>
 <ul>
@@ -528,9 +528,9 @@ ul.task-list li input[type="checkbox"] {
 <h4 class="anchored" data-anchor-id="parameters-6">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 19%">
-<col style="width: 10%">
-<col style="width: 63%">
+<col style="width: 17%">
+<col style="width: 16%">
+<col style="width: 59%">
 <col style="width: 6%">
 </colgroup>
 <thead>
@@ -561,18 +561,24 @@ ul.task-list li input[type="checkbox"] {
 <td><code>None</code></td>
 </tr>
 <tr class="even">
-<td><code>driver_resources</code></td>
+<td><code>driver_resource_class</code></td>
 <td>Optional[str]</td>
-<td>If <code>driver_mode</code> was not <code>None</code>, the resources to use for the driver execution.</td>
+<td>If <code>driver_mode</code> was <code>REALTIME</code>, the resources class (<code>standard</code> or <code>large</code>) to use for the driver execution.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
+<td><code>driver_resources</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>If <code>driver_mode</code> was <code>BATCH</code>, the resources to use for the driver execution. Example <code>{"cpu": "1", "memory": "4Gi"}</code></td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td><code>driver_access_credentials_name</code></td>
 <td>Optional[str]</td>
 <td>If <code>driver_mode</code> was not <code>None</code>, the access credentials name to use for the driver execution.</td>
 <td><code>None</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>**kwargs</code></td>
 <td></td>
 <td>Extra kwargs passed here are passed to the <code>query_internal</code> implementation of the concrete index class.</td>

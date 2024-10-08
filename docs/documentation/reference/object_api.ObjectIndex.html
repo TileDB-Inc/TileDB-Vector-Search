@@ -234,7 +234,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="tiledb.vector_search.object_api.ObjectIndex" class="level1">
 <h1>object_api.ObjectIndex</h1>
-<p><code>vector_search.object_api.ObjectIndex(self, uri, config=None, timestamp=None, load_embedding=True, load_metadata_in_memory=True, environment_variables={}, **kwargs)</code></p>
+<p><code>vector_search.object_api.ObjectIndex(self, uri, config=None, timestamp=None, open_for_remote_query_execution=False, open_vector_index_for_remote_query_execution=False, load_embedding=True, load_metadata_in_memory=True, environment_variables={}, **kwargs)</code></p>
 <p>An ObjectIndex represents a TileDB Vector Search index that is associated with a user-defined object reader and embedding function. This allows users to easily create and query TileDB Vector Search indexes that are backed by arbitrary data.</p>
 <p>For example, an ObjectIndex can be used to create a TileDB Vector Search index that is backed by a collection of images. The object reader would be responsible for loading the images from disk, and the embedding function would be responsible for generating embeddings for the images.</p>
 <p>Once the ObjectIndex is created, it can be queried using the <code>query()</code> method. The <code>query()</code> method takes a list of query objects and returns a list of the nearest neighbors for each query object.</p>
@@ -243,10 +243,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 18%">
-<col style="width: 22%">
-<col style="width: 51%">
+<col style="width: 12%">
 <col style="width: 8%">
+<col style="width: 75%">
+<col style="width: 3%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -280,6 +280,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>bool</td>
 <td>Whether to load the embedding function into memory.</td>
 <td><code>True</code></td>
+</tr>
+<tr class="odd">
+<td><code>open_for_remote_query_execution</code></td>
+<td>bool</td>
+<td>If <code>True</code>, do not load the embedding model and any index data locally, and instead perform all query functionality in a TileDB Cloud taskgraph.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td><code>open_vector_index_for_remote_query_execution</code></td>
+<td>bool</td>
+<td>If <code>True</code>, do not load any index data in main memory locally, and instead load index data and perform vector queries in a TileDB Cloud taskgraph. Compared to <code>open_for_remote_query_execution</code>, this loads the object embedding function and computes query object embeddings locally.</td>
+<td><code>False</code></td>
 </tr>
 <tr class="odd">
 <td><code>load_metadata_in_memory</code></td>
@@ -328,7 +340,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <section id="tiledb.vector_search.object_api.ObjectIndex.query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.object_api.ObjectIndex.query">query</h3>
-<p><code>vector_search.object_api.ObjectIndex.query(query_objects, k, query_metadata=None, metadata_array_cond=None, metadata_df_filter_fn=None, return_objects=True, return_metadata=True, **kwargs)</code></p>
+<p><code>vector_search.object_api.ObjectIndex.query(query_objects, k, query_metadata=None, metadata_array_cond=None, metadata_df_filter_fn=None, return_objects=True, return_metadata=True, driver_mode=Mode.REALTIME, driver_resource_class=None, driver_resources=None, extra_driver_modules=None, driver_access_credentials_name=None, **kwargs)</code></p>
 <p>Queries the index and returns the nearest neighbors for each query object.</p>
 <p>The query objects can be any type of object that is supported by the object reader. For example, if the object reader is configured to read images, then the query objects should be images.</p>
 <p>The <code>k</code> parameter specifies the number of nearest neighbors to return for each query object.</p>
@@ -342,10 +354,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="anchored" data-anchor-id="parameters-1">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 12%">
-<col style="width: 12%">
-<col style="width: 69%">
-<col style="width: 6%">
+<col style="width: 15%">
+<col style="width: 14%">
+<col style="width: 62%">
+<col style="width: 7%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -399,6 +411,36 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>True</code></td>
 </tr>
 <tr class="even">
+<td><code>driver_mode</code></td>
+<td>Optional[Mode]</td>
+<td>If not <code>None</code>, the query will be executed in a TileDB cloud taskgraph using the driver mode specified.</td>
+<td><code>Mode.REALTIME</code></td>
+</tr>
+<tr class="odd">
+<td><code>driver_resource_class</code></td>
+<td>Optional[str]</td>
+<td>If <code>driver_mode</code> was <code>REALTIME</code>, the resources class (<code>standard</code> or <code>large</code>) to use for the driver execution.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>driver_resources</code></td>
+<td>Optional[Mapping[str, Any]]</td>
+<td>If <code>driver_mode</code> was <code>BATCH</code>, the resources to use for the driver execution. Example <code>{"cpu": "1", "memory": "4Gi"}</code></td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>extra_driver_modules</code></td>
+<td>Optional[List[str]]</td>
+<td>A list of extra Python modules to install on the driver node.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td><code>driver_access_credentials_name</code></td>
+<td>Optional[str]</td>
+<td>If <code>driver_mode</code> was not <code>None</code>, the access credentials name to use for the driver execution.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
 <td><code>**kwargs</code></td>
 <td></td>
 <td>Keyword arguments to pass to the index query method.</td>
