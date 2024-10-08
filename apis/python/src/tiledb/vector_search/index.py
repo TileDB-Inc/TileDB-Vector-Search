@@ -183,11 +183,15 @@ class Index(metaclass=ABCMeta):
         queries: np.ndarray,
         k: int,
         driver_mode=None,
-        driver_resources=None,
+        driver_resource_class: Optional[str] = None,
+        driver_resources: Optional[Mapping[str, Any]] = None,
         driver_access_credentials_name=None,
         **kwargs,
     ):
         from tiledb.cloud import dag
+
+        if driver_resource_class and driver_resources:
+            raise TypeError("Cannot provide both resource_class and resources")
 
         def query_udf(index_type, index_open_kwargs, query_kwargs):
             from tiledb.vector_search.flat_index import FlatIndex
@@ -226,6 +230,9 @@ class Index(metaclass=ABCMeta):
             self.index_open_kwargs,
             query_kwargs,
             name="vector-query-driver",
+            resource_class="large"
+            if (not driver_resources and not driver_resource_class)
+            else driver_resource_class,
             resources=driver_resources,
             image_name="vectorsearch",
             access_credentials_name=driver_access_credentials_name,
@@ -239,7 +246,8 @@ class Index(metaclass=ABCMeta):
         queries: np.ndarray,
         k: int,
         driver_mode: Optional[Mode] = None,
-        driver_resources: Optional[str] = None,
+        driver_resource_class: Optional[str] = None,
+        driver_resources: Optional[Mapping[str, Any]] = None,
         driver_access_credentials_name: Optional[str] = None,
         **kwargs,
     ):
@@ -265,8 +273,11 @@ class Index(metaclass=ABCMeta):
             Number of results to return per query vector.
         driver_mode: Mode
             If not `None`, the query will be executed in a TileDB cloud taskgraph using the driver mode specified.
+        driver_resource_class: Optional[str]
+            If `driver_mode` was `REALTIME`, the resources class (`standard` or `large`) to use for the driver execution.
         driver_resources: Optional[str]
-            If `driver_mode` was not `None`, the resources to use for the driver execution.
+            If `driver_mode` was `BATCH`, the resources to use for the driver execution.
+            Example `{"cpu": "1", "memory": "4Gi"}`
         driver_access_credentials_name: Optional[str]
             If `driver_mode` was not `None`, the access credentials name to use for the driver execution.
         **kwargs
@@ -307,11 +318,12 @@ class Index(metaclass=ABCMeta):
                     "Cannot pass driver_mode=Mode.LOCAL to query() - use driver_mode=None to query locally."
                 )
             results, indexes = self._query_with_driver(
-                queries,
-                k,
-                driver_mode,
-                driver_resources,
-                driver_access_credentials_name,
+                queries=queries,
+                k=k,
+                driver_mode=driver_mode,
+                driver_resources=driver_resources,
+                driver_resource_class=driver_resource_class,
+                driver_access_credentials_name=driver_access_credentials_name,
                 **kwargs,
             )
             if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
