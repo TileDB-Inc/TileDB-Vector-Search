@@ -94,7 +94,6 @@ class IndexIVFPQ {
       tiledb_datatype_t feature_datatype = TILEDB_UINT32,
       tiledb_datatype_t id_datatype = TILEDB_UINT32,
       tiledb_datatype_t partitioning_index_datatype = TILEDB_UINT32,
-      size_t nlist = 0,
       uint32_t num_subspaces = 16,
       uint32_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
@@ -116,7 +115,6 @@ class IndexIVFPQ {
         ctx,
         group_uri,
         dimensions,
-        nlist,
         num_subspaces,
         max_iterations,
         convergence_tolerance,
@@ -188,6 +186,7 @@ class IndexIVFPQ {
   // @todo -- infer feature type from input
   void train(
       const FeatureVectorArray& training_set,
+      size_t nlist = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
@@ -222,7 +221,8 @@ class IndexIVFPQ {
     //              std::nullopt,
     //     distance_metric_);
 
-    index_->train(training_set, temporal_policy);
+    index_->train(training_set, nlist, temporal_policy);
+    n_list_ = index_->nlist();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -439,7 +439,7 @@ class IndexIVFPQ {
 
     virtual void create_temp_data_group() = 0;
 
-    virtual void train(const FeatureVectorArray& training_set, std::optional<TemporalPolicy> temporal_policy = std::nullopt) = 0;
+    virtual void train(const FeatureVectorArray& training_set, size_t nlist, std::optional<TemporalPolicy> temporal_policy) = 0;
 
     virtual void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) = 0;
     // virtual void ingest(const FeatureVectorArray& input_vectors) = 0;
@@ -516,13 +516,13 @@ class IndexIVFPQ {
       impl_index_.create_temp_data_group();
     }
 
-    void train(const FeatureVectorArray& training_set, std::optional<TemporalPolicy> temporal_policy = std::nullopt) override {
+    void train(const FeatureVectorArray& training_set, size_t nlist, std::optional<TemporalPolicy> temporal_policy) override {
       using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)training_set.data(),
           extents(training_set)[0],
           extents(training_set)[1]};
-      impl_index_.train(fspan, temporal_policy);
+      impl_index_.train(fspan, nlist, temporal_policy);
 //      using id_type = typename T::id_type;
 //      if (num_ids(training_set) > 0) {
 //        auto ids = std::span<id_type>(
@@ -713,7 +713,7 @@ class IndexIVFPQ {
   };
 
   // clang-format off
-  using create_constructor_function = std::function<void(const tiledb::Context&, const std::string &, uint64_t, size_t, uint32_t, uint32_t, float, float, std::optional<TemporalPolicy>, DistanceMetric, const std::string &)>;
+  using create_constructor_function = std::function<void(const tiledb::Context&, const std::string &, uint64_t, uint32_t, uint32_t, float, float, std::optional<TemporalPolicy>, DistanceMetric, const std::string &)>;
   using create_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, create_constructor_function>;
   static const create_table_type create_dispatch_table;
 
@@ -742,18 +742,18 @@ class IndexIVFPQ {
 
 // clang-format off
 const IndexIVFPQ::create_table_type IndexIVFPQ::create_dispatch_table = {
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint32_t, uint32_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint32_t, uint32_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint32_t, uint32_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint32_t, uint64_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint32_t, uint64_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint32_t, uint64_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint64_t, uint32_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint64_t, uint32_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint64_t, uint32_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint64_t, uint64_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint64_t, uint64_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, size_t nlist, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint64_t, uint64_t>::create(ctx, group_uri, dimensions, nlist, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint32_t, uint32_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint32_t, uint32_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint32_t, uint32_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint32_t, uint64_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint32_t, uint64_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint32_t, uint64_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint64_t, uint32_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint64_t, uint32_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint64_t, uint32_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<int8_t,  uint64_t, uint64_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<uint8_t, uint64_t, uint64_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string &group_uri, uint64_t dimensions, uint32_t num_subspaces, uint32_t max_iterations, float convergence_tolerance, float reassign_ratio, std::optional<TemporalPolicy> temporal_policy, DistanceMetric distance_metric, const std::string &storage_version) { return ivf_pq_index<float,   uint64_t, uint64_t>::create(ctx, group_uri, dimensions, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, temporal_policy, distance_metric, storage_version); }},
 };
 
 const IndexIVFPQ::uri_table_type IndexIVFPQ::uri_dispatch_table = {

@@ -108,6 +108,7 @@ class IVFPQIndex(index.Index):
         self.memory_budget = memory_budget
 
         self.dimensions = self.index.dimensions()
+        self.partitions  = self.index.partitions()
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
         self.size = self.base_size
 
@@ -170,7 +171,6 @@ def create(
     num_subspaces: int,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
-    partitions: Optional[int] = None,
     distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     **kwargs,
 ) -> IVFPQIndex:
@@ -194,9 +194,6 @@ def create(
     storage_version: str
         The TileDB vector search storage version to use.
         If not provided, use the latest stable storage version.
-    partitions: int
-        Number of partitions to load the data with, if not provided, is auto-configured
-        based on the dataset size.
     """
     warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
@@ -228,25 +225,8 @@ def create(
         feature_type=np.dtype(vector_type).name,
         id_type=np.dtype(np.uint64).name,
         partitioning_index_type=np.dtype(np.uint64).name,
-        partitions=partitions if (partitions is not None and partitions != -1) else 0,
         num_subspaces=num_subspaces,
         temporal_policy=vspy.TemporalPolicy(0),
         distance_metric=distance_metric,
         storage_version=storage_version)
-    # index = vspy.IndexIVFPQ(
-    #     feature_type=np.dtype(vector_type).name,
-    #     id_type=np.dtype(np.uint64).name,
-    #     partitioning_index_type=np.dtype(np.uint64).name,
-    #     dimensions=dimensions,
-    #     n_list=partitions if (partitions is not None and partitions != -1) else 0,
-    #     num_subspaces=num_subspaces,
-    #     distance_metric=int(distance_metric),
-    # )
-    # # TODO(paris): Run all of this with a single C++ call.
-    # empty_vector = vspy.FeatureVectorArray(
-    #     dimensions, 0, np.dtype(vector_type).name, np.dtype(np.uint64).name
-    # )
-    # index.train(empty_vector)
-    # index.add(empty_vector)
-    # index.write_index(ctx, uri, vspy.TemporalPolicy(0), storage_version)
     return IVFPQIndex(uri=uri, config=config)

@@ -443,6 +443,7 @@ def test_construct_IndexIVFPQ(tmp_path):
         ctx=ctx,
         index_uri=index_uri,
         dimensions=9,
+        num_subspaces=3,
         feature_type="float32"
     )
     a = vspy.IndexIVFPQ(ctx, index_uri)
@@ -457,6 +458,7 @@ def test_construct_IndexIVFPQ(tmp_path):
         ctx=ctx,
         index_uri=index_uri,
         dimensions=99,
+        num_subspaces=33,
         feature_type="uint8", 
         id_type="uint64", 
         partitioning_index_type="uint64"
@@ -473,6 +475,7 @@ def test_construct_IndexIVFPQ(tmp_path):
         ctx=ctx,
         index_uri=index_uri,
         dimensions=999,
+        num_subspaces=333,
         feature_type="float32", 
         id_type="uint32", 
         partitioning_index_type="uint64"
@@ -493,6 +496,7 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     k_nn = 10
     index_uri = os.path.join(tmp_path, "array")
     dimensions = 128
+    partitions= 100
     feature_type = "float32"
     id_type = "uint64"
     partitioning_index_type = "uint64"
@@ -505,12 +509,11 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
         feature_type=feature_type,
         id_type=id_type,
         partitioning_index_type=partitioning_index_type,
-        partitions=100,
         num_subspaces=int(dimensions / 2),
     )
     a = vspy.IndexIVFPQ(ctx, index_uri)
     empty_vector = vspy.FeatureVectorArray(dimensions, 0, feature_type, id_type)
-    a.train(empty_vector)
+    a.train(empty_vector, partitions)
     a.ingest(empty_vector)
 
     # Then load it again, retrain, and query.
@@ -552,6 +555,7 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
 
     nprobe = 100
     k_nn = 10
+    partitions=100
 
     vspy.IndexIVFPQ.create(
         ctx=ctx,
@@ -560,7 +564,6 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
         id_type="uint32",
         partitioning_index_type="uint32",
         feature_type="float32",
-        partitions=100,
         num_subspaces=int(siftsmall_dimensions / 2),
     )
     a = vspy.IndexIVFPQ(ctx, index_uri)
@@ -572,14 +575,17 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     groundtruth_set = vspy.FeatureVectorArray(ctx, siftsmall_groundtruth_uri)
     assert groundtruth_set.feature_type_string() == "uint64"
 
-    a.train(training_set)
+    a.train(training_set, partitions)
+    assert a.partitions() == partitions
     a.ingest(training_set)
+    assert a.partitions() == partitions
 
     _, ids = a.query(query_set, k_nn, nprobe)
     accuracy = recall(ids, groundtruth_set, k_nn)
     assert accuracy >= 0.87
 
     b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
+    assert b_infinite.partitions() == partitions
     _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
     accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
     assert accuracy == accuracy_infinite
@@ -590,6 +596,7 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
         index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
         memory_budget=999,
     )
+    assert b_finite.partitions() == partitions
     _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
     accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
     assert accuracy == accuracy_finite

@@ -307,7 +307,6 @@ class ivf_pq_index {
     const tiledb::Context& ctx,
       const std::string &group_uri,
       uint64_t dimensions,
-      size_t nlist = 0,
       uint32_t num_subspaces = 16,
       uint32_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
@@ -345,7 +344,7 @@ class ivf_pq_index {
           "bits_per_subspace_");
     }
     auto temporal_policy = optional_temporal_policy.has_value() ? *optional_temporal_policy : TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())};
-    
+
     auto sub_dimensions = dimensions / num_subspaces;
     auto write_group = ivf_pq_group<ivf_pq_index>(
         ctx,
@@ -368,7 +367,7 @@ class ivf_pq_index {
 
     write_group.append_ingestion_timestamp(0);
     write_group.append_base_size(0);
-    write_group.append_num_partitions(nlist);
+    write_group.append_num_partitions(0);
 
     write_group.store_metadata();
   }
@@ -771,6 +770,7 @@ class ivf_pq_index {
   void train(
       const Array& training_set,
       // const Array& training_set,
+      size_t num_partitions = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       Distance distance = Distance{}) {
     std::cout << "[index@ivf_pq_index@train]" << std::endl;
@@ -787,6 +787,9 @@ class ivf_pq_index {
 
     // dimensions_ = ::dimensions(training_set);
     // sub_dimensions_ = dimensions_ / num_subspaces_;
+    if (num_partitions != 0) {
+      num_partitions_ = num_partitions;
+    }
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(::num_vectors(training_set));
     }
@@ -819,6 +822,9 @@ class ivf_pq_index {
     // We compute num_partitions_ centroids and store in flat_ivf_centroids_.
     // This is the same as IVF_FLAT and has nothing to do with PQ.
     train_ivf(training_set);
+    
+    // Need so that we can keep using the index without re-opening the group.
+    group_->set_num_partitions(num_partitions_);
 
     // 3. Update our metadata.
     auto write_group = ivf_pq_group<ivf_pq_index>(
@@ -2356,6 +2362,7 @@ class ivf_pq_index {
   }
 
   auto set_flat_ivf_centroids(const ColMajorMatrix<feature_type>& centroids) {
+    num_partitions_ = centroids.num_cols();
     flat_ivf_centroids_ = flat_ivf_centroid_storage_type(
         ::dimensions(centroids), ::num_vectors(centroids));
     std::copy(

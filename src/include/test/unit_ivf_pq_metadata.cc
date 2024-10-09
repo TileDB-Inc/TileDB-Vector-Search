@@ -85,7 +85,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
 
   {
     // Check the metadata after an initial write_index().
-    ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>::create(ctx, uri, 128, 0, 16, 2, 2.5E-05, 0.075F, std::nullopt, DistanceMetric::COSINE);
+    ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>::create(ctx, uri, 128, 16, 2, 2.5E-05, 0.075F, std::nullopt, DistanceMetric::COSINE);
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
@@ -129,7 +129,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
     // when creating with Python.
     auto training_vectors = tdbColMajorPreLoadMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 222);
 
-    idx.train(training_vectors, TemporalPolicy(TimeTravel, 2));
+    idx.train(training_vectors, 0, TemporalPolicy(TimeTravel, 2));
     idx.ingest(training_vectors, training_vectors.raveled_ids(), {});
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);
     std::vector<std::tuple<std::string, std::string>> expected_str{
@@ -161,7 +161,7 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
         siftsmall_feature_type,
         siftsmall_ids_type>(ctx, siftsmall_inputs_uri, siftsmall_ids_uri, 333);
 
-    idx.train(training_vectors, TemporalPolicy(TimeTravel, 3));
+    idx.train(training_vectors, 0, TemporalPolicy(TimeTravel, 3));
     idx.ingest(training_vectors, training_vectors.raveled_ids(), {});
 
     auto read_group = tiledb::Group(ctx, uri, TILEDB_READ, cfg);

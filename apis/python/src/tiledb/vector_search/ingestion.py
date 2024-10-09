@@ -1212,6 +1212,7 @@ def ingest(
         source_type: str,
         vector_type: np.dtype,
         dimensions: int,
+        partitions: int,
         training_sample_size: int,
         training_source_uri: Optional[str],
         training_source_type: Optional[str],
@@ -1241,7 +1242,7 @@ def ingest(
             config=config,
             verbose=verbose,
             trace_id=trace_id,
-        )
+        ) if training_sample_size > 0 else np.empty((0, dimensions), dtype=vector_type)
 
         additions_vectors, _ = read_additions(
             updates_uri=updates_uri,
@@ -1255,7 +1256,7 @@ def ingest(
             sample_vectors = np.concatenate((sample_vectors, additions_vectors))
         
         sample_vectors_array = vspy.FeatureVectorArray(sample_vectors)
-        index.train(sample_vectors_array, to_temporal_policy(index_timestamp))
+        index.train(sample_vectors_array, partitions, to_temporal_policy(index_timestamp))
 
     def centralised_kmeans_udf(
         index_group_uri: str,
@@ -1282,7 +1283,6 @@ def ingest(
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
-            centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             if training_sample_size >= partitions:
                 sample_vectors = read_sample_vectors(
                     source_uri=source_uri,
@@ -1325,7 +1325,8 @@ def ingest(
                 # TODO(paris): Should we instead take the first training_sample_size vectors and then fill in random for the rest? Or raise an error like this:
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
-
+            
+            centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
@@ -2056,8 +2057,8 @@ def ingest(
         index = vspy.IndexIVFPQ(
             ctx, 
             index_group_uri,
-            vspy.IndexLoadStrategy.PQ_INDEX,
-            0,
+            vspy.IndexLoadStrategy.PQ_OOC,
+            1,
             to_temporal_policy(index_timestamp)
         )
         index.consolidate_partitions(partitions, work_items, partition_id_start, partition_id_end, batch)
@@ -2608,6 +2609,7 @@ def ingest(
                             source_uri=source_uri,
                             source_type=source_type,
                             vector_type=vector_type,
+                            partitions=partitions,
                             dimensions=dimensions,
                             training_sample_size=training_sample_size,
                             training_source_uri=training_source_uri,

@@ -494,22 +494,14 @@ void init_type_erased_module(py::module_& m) {
              const std::string &feature_type,
              const std::string &id_type,
              const std::string &partitioning_index_type,
-            // tiledb_datatype_t feature_datatype,
-            // tiledb_datatype_t id_datatype,
-            // tiledb_datatype_t partitioning_index_datatype,
-             size_t partitions, // = 0,
-             uint32_t num_subspaces, // = 16,
-             uint32_t max_iterations, // = 2,
-             float convergence_tolerance, // = 0.000025f,
-             float reassign_ratio, // = 0.075f,
-             std::optional<TemporalPolicy> temporal_policy, // = std::nullopt,
-             DistanceMetric distance_metric, // = DistanceMetric::SUM_OF_SQUARES,
+             uint32_t num_subspaces,
+             uint32_t max_iterations,
+             float convergence_tolerance, 
+             float reassign_ratio, 
+             std::optional<TemporalPolicy> temporal_policy, 
+             DistanceMetric distance_metric,
              const std::string& storage_version
-              // = ""
              ) {
-            // auto feature_datatype = feature_type.empty() ? TILEDB_ANY : string_to_datatype(feature_type);
-            // auto id_datatype = id_type.empty() ? TILEDB_UINT64 : string_to_datatype(id_type);
-            // auto partitioning_index_datatype = partitioning_index_type.empty() ? TILEDB_UINT64 : string_to_datatype(partitioning_index_type);
             IndexIVFPQ::create(
                 ctx,
                 index_uri,
@@ -517,7 +509,6 @@ void init_type_erased_module(py::module_& m) {
                 string_to_datatype(feature_type),
                 string_to_datatype(id_type),
                 string_to_datatype(partitioning_index_type),
-                partitions,
                 num_subspaces,
                 max_iterations,
                 convergence_tolerance,
@@ -530,13 +521,9 @@ void init_type_erased_module(py::module_& m) {
           py::arg("ctx"),
           py::arg("index_uri"),
           py::arg("dimensions"),
-          // py::arg("feature_type"),
-          // py::arg("id_type") = TILEDB_UINT64,
-          // py::arg("partitioning_index_type") = TILEDB_UINT64,
           py::arg("feature_type"),
           py::arg("id_type") = "uint64",
           py::arg("partitioning_index_type") = "uint64",
-          py::arg("partitions") = 0,
           py::arg("num_subspaces") = 16,
           py::arg("max_iterations") = 2,
           py::arg("convergence_tolerance") = 0.000025f,
@@ -578,10 +565,12 @@ void init_type_erased_module(py::module_& m) {
         "train",
         [](IndexIVFPQ& index,
             const FeatureVectorArray& vectors,
+            size_t partitions,
             std::optional<TemporalPolicy> temporal_policy = std::nullopt) { 
-              index.train(vectors, temporal_policy); 
+              index.train(vectors, partitions, temporal_policy); 
             },
         py::arg("vectors"),
+        py::arg("partitions") = 0,
         py::arg("temporal_policy") = std::nullopt)
        .def(
         "ingest",
