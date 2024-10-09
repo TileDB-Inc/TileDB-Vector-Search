@@ -332,6 +332,18 @@ class ivf_pq_index {
           "num_subspaces (" + std::to_string(num_subspaces) +
           ") must be greater than zero");
     }
+     if (dimensions % num_subspaces != 0) {
+      throw std::runtime_error(
+          "Dimension must be divisible by the number of subspaces - "
+          "dimensions: " +
+          std::to_string(dimensions) +
+          ", num_subspaces: " + std::to_string(num_subspaces));
+    }
+    if (num_clusters_ != 1 << bits_per_subspace_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] num_clusters_ != 1 << "
+          "bits_per_subspace_");
+    }
     auto temporal_policy = optional_temporal_policy.has_value() ? *optional_temporal_policy : TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())};
     
     auto sub_dimensions = dimensions / num_subspaces;
@@ -359,6 +371,14 @@ class ivf_pq_index {
     write_group.append_num_partitions(nlist);
 
     write_group.store_metadata();
+  }
+
+  void create_temp_data_group() {
+    std::cout << "[index@ivf_pq_index@create_temp_data_group]" << std::endl;
+    auto write_group = ivf_pq_group<ivf_pq_index>(group_->cached_ctx(), group_uri_, TILEDB_WRITE, temporal_policy_, group_->storage_version(), dimensions_, num_clusters_, num_subspaces_);
+    std::cout << "[index@ivf_pq_index@create_temp_data_group] have group" << std::endl;
+    write_group.create_temp_data_group();
+    std::cout << "[index@ivf_pq_index@create_temp_data_group] done" << std::endl;
   }
 
   /**
@@ -765,30 +785,30 @@ class ivf_pq_index {
       temporal_policy_ = *temporal_policy;
     }
 
-    dimensions_ = ::dimensions(training_set);
-    sub_dimensions_ = dimensions_ / num_subspaces_;
+    // dimensions_ = ::dimensions(training_set);
+    // sub_dimensions_ = dimensions_ / num_subspaces_;
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(::num_vectors(training_set));
     }
-    if (dimensions_ % num_subspaces_ != 0) {
-      throw std::runtime_error(
-          "Dimension must be divisible by the number of subspaces - "
-          "dimensions: " +
-          std::to_string(dimensions_) +
-          ", num_subspaces: " + std::to_string(num_subspaces_));
-    }
-    if (num_subspaces_ * sub_dimensions_ != dimensions_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@write_index] num_subspaces_ * sub_dimensions_ != "
-          "dimensions_");
-    }
-    // The code below checks if the number of clusters is equal to
-    // 2^bits_per_subspace_.
-    if (num_clusters_ != 1 << bits_per_subspace_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@write_index] num_clusters_ != 1 << "
-          "bits_per_subspace_");
-    }
+    // if (dimensions_ % num_subspaces_ != 0) {
+    //   throw std::runtime_error(
+    //       "Dimension must be divisible by the number of subspaces - "
+    //       "dimensions: " +
+    //       std::to_string(dimensions_) +
+    //       ", num_subspaces: " + std::to_string(num_subspaces_));
+    // }
+    // if (num_subspaces_ * sub_dimensions_ != dimensions_) {
+    //   throw std::runtime_error(
+    //       "[ivf_pq_index@write_index] num_subspaces_ * sub_dimensions_ != "
+    //       "dimensions_");
+    // }
+    // // The code below checks if the number of clusters is equal to
+    // // 2^bits_per_subspace_.
+    // if (num_clusters_ != 1 << bits_per_subspace_) {
+    //   throw std::runtime_error(
+    //       "[ivf_pq_index@write_index] num_clusters_ != 1 << "
+    //       "bits_per_subspace_");
+    // }
 
     // 1. Fill in cluster_centroids_.
     // cluster_centroids_ holds the num_clusters_ (256) centroids for each
@@ -810,6 +830,8 @@ class ivf_pq_index {
         dimensions_,
         num_clusters_,
         num_subspaces_);
+
+    write_group.set_num_partitions(num_partitions_);
     // write_group.set_dimensions(dimensions_);
     // write_group.set_num_subspaces(num_subspaces_);
     // write_group.set_sub_dimensions(sub_dimensions_);
@@ -844,7 +866,9 @@ class ivf_pq_index {
     //   write_group.append_num_partitions(num_partitions_);
     // }
 
-    // write_group.store_metadata();
+    write_group.store_metadata();
+
+    // write_group.create_temp_data_group();
 
     // 4. Write the centroids.
     write_matrix(
@@ -1697,7 +1721,6 @@ class ivf_pq_index {
       read_index_infinite();
     }
 
-    
     // This function searches for the nearest neighbors using "infinite RAM". We
     // have already loaded the partitioned_pq_vectors_ into memory in the
     // constructor, so we can just run the query.
@@ -1785,7 +1808,7 @@ class ivf_pq_index {
       }
 
       auto all_feature_vectors =
-          tdbColMajorMatrixWithIds<feature_type, uint32_t>(
+          tdbColMajorMatrixWithIds<feature_type, id_type>(
               group_->cached_ctx(),
               group_->feature_vectors_uri(),
               group_->ids_uri(),

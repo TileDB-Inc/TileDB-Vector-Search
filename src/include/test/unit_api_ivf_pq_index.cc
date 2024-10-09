@@ -1036,3 +1036,92 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         std::vector<uint64_t>{100}.begin()));
   }
 }
+
+TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  // std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  std::string index_uri = "/tmp/api_ivf_pq_index";
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
+
+  using feature_type = float;
+  
+  uint64_t dimensions = 4;
+  size_t n_list = 0;
+  uint32_t num_subspaces = 2;
+
+  IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32,  n_list, num_subspaces);
+
+  auto temporal_policy = TemporalPolicy{TimeTravel, 100};
+  auto vectors = ColMajorMatrix<feature_type>{{{1.0f, 1.1f, 1.2f, 1.3f}, {2.0f, 2.1f, 2.2f, 2.3f}}};
+  
+  {
+    std::cout << "index() ==============================================" << std::endl;
+    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    std::cout << "index.train() ==============================================" << std::endl;
+    index.train(FeatureVectorArray(vectors), temporal_policy);
+  }
+  {
+    std::cout << "index() ==============================================" << std::endl;
+    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    size_t part = 0;
+    size_t part_end = 2;
+    size_t part_id = 0;
+    std::cout << "index.ingest_parts() ==============================================" << std::endl;
+    index.ingest_parts(FeatureVectorArray(vectors), FeatureVector(0, "uint64"), FeatureVector(0, "uint64"), part, part_end, part_id);
+  }
+  {
+    // Here is where Python does compute_partition_indexes_udf. We simulate that by copying the indices from temp to permanent.
+    auto group = ivf_pq_group<ivf_pq_index<feature_type>>(ctx, index_uri, TILEDB_READ, temporal_policy);
+    auto total_partitions = 2;
+    std::cout << "read_vector() ==============================================" << std::endl;
+    auto indexes = read_vector<uint32_t>(
+          ctx,
+          group.feature_vectors_index_temp_uri(),
+          0,
+          total_partitions,
+          temporal_policy);
+    debug_vector(indexes, "indexes");
+    std::cout << "write_vector() ==============================================" << std::endl;
+    write_vector(
+          ctx,
+          indexes,
+          group.feature_vectors_index_uri(),
+          0,
+          false,
+          temporal_policy);
+  }
+
+  {
+    std::cout << "index() ==============================================" << std::endl;
+    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    size_t partitions = 1;
+    size_t work_items = 1;
+    size_t partition_id_start = 0;
+    size_t partition_id_end = 1;
+    size_t batch = 33554432;
+    std::cout << "index.consolidate_partitions() ==============================================" << std::endl;
+    index.consolidate_partitions(partitions, work_items, partition_id_start, partition_id_end, batch);
+  }
+
+  {
+    std::cout << "index() ==============================================" << std::endl;
+    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0);
+    std::cout << "index.query() ==============================================" << std::endl;
+    auto&& [scores, ids] = index.query(FeatureVectorArray(vectors), 1, 1);
+    check_single_vector_equals(scores, ids, {0, 0}, {0, 1});
+  }
+
+  {
+    // If we are to re-ingest, Python will delete the temp data group. Do that here.
+  }
+
+  {
+    std::cout << "index() ==============================================" << std::endl;
+    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0);
+    std::cout << "index.create_temp_data_group() ==============================================" << std::endl;
+    index.create_temp_data_group();
+  }
+}

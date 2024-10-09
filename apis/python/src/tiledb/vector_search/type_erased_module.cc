@@ -571,6 +571,9 @@ void init_type_erased_module(py::module_& m) {
       //       auto args = kwargs_to_map(kwargs);
       //       new (&instance) IndexIVFPQ(args);
       //     })
+      .def("create_temp_data_group", [](IndexIVFPQ& index) { 
+            index.create_temp_data_group(); 
+        })
       .def(
         "train",
         [](IndexIVFPQ& index,
@@ -680,6 +683,7 @@ void init_type_erased_module(py::module_& m) {
           "partitioning_index_type_string",
           &IndexIVFPQ::partitioning_index_type_string)
       .def("dimensions", &IndexIVFPQ::dimensions)
+      .def("partitions", &IndexIVFPQ::n_list)
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,

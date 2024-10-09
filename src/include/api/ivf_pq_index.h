@@ -172,6 +172,13 @@ class IndexIVFPQ {
     dimensions_ = index_->dimensions();
   }
 
+  void create_temp_data_group() {
+    if (!index_) {
+      throw std::runtime_error("Cannot create_temp_data_group() because there is no index.");
+    }
+    index_->create_temp_data_group();
+  }
+
   /**
    * @brief Train the index based on the given training set.
    * @param training_set The training input vectors.
@@ -430,6 +437,8 @@ class IndexIVFPQ {
   struct index_base {
     virtual ~index_base() = default;
 
+    virtual void create_temp_data_group() = 0;
+
     virtual void train(const FeatureVectorArray& training_set, std::optional<TemporalPolicy> temporal_policy = std::nullopt) = 0;
 
     virtual void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) = 0;
@@ -501,6 +510,10 @@ class IndexIVFPQ {
               index_load_strategy,
               upper_bound,
               temporal_policy) {
+    }
+
+    void create_temp_data_group() override {
+      impl_index_.create_temp_data_group();
     }
 
     void train(const FeatureVectorArray& training_set, std::optional<TemporalPolicy> temporal_policy = std::nullopt) override {

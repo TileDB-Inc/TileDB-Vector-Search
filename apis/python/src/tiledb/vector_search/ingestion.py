@@ -753,7 +753,16 @@ def ingest(
                 filters=DEFAULT_ATTR_FILTERS,
                 create_index_array=True,
             )
-
+        elif index_type == "IVF_PQ":
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexIVFPQ(
+                ctx, 
+                index_group_uri,
+                vspy.IndexLoadStrategy.PQ_INDEX,
+                0,
+                to_temporal_policy(index_timestamp)
+            )
+            index.create_temp_data_group()
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
         elif not is_type_erased_index(index_type):
@@ -1206,6 +1215,8 @@ def ingest(
         training_sample_size: int,
         training_source_uri: Optional[str],
         training_source_type: Optional[str],
+        updates_uri: Optional[str],
+        normalized: bool = False,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1231,6 +1242,18 @@ def ingest(
             verbose=verbose,
             trace_id=trace_id,
         )
+
+        additions_vectors, _ = read_additions(
+            updates_uri=updates_uri,
+            config=config,
+            verbose=verbose,
+            trace_id=trace_id,
+        )
+        if (distance_metric == vspy.DistanceMetric.COSINE and not normalized):
+            additions_vectors = normalize_vectors(additions_vectors)
+        if additions_vectors is not None:
+            sample_vectors = np.concatenate((sample_vectors, additions_vectors))
+        
         sample_vectors_array = vspy.FeatureVectorArray(sample_vectors)
         index.train(sample_vectors_array, to_temporal_policy(index_timestamp))
 
@@ -1914,7 +1937,7 @@ def ingest(
             return
 
         if (
-            index_type == "IVF_FLAT"
+            (index_type == "IVF_FLAT" or index_type == "IVF_PQ")
             and distance_metric == vspy.DistanceMetric.COSINE
             and not normalized
         ):
@@ -1931,9 +1954,9 @@ def ingest(
                 to_temporal_policy(index_timestamp)
             )
             input_vectors = vspy.FeatureVectorArray(np.transpose(additions_vectors).astype(vector_type))
-            external_ids = vspy.FeatureVectorArray(additions_external_ids)
-            deleted_ids = vspy.FeatureVectorArray(np.array([], np.uint64))
-            index.ingest(
+            external_ids = vspy.FeatureVector(additions_external_ids)
+            deleted_ids = vspy.FeatureVector(np.array([], np.uint64))
+            index.ingest_parts(
                 input_vectors=input_vectors,
                 external_ids=external_ids,
                 deleted_ids=deleted_ids,
@@ -2589,6 +2612,8 @@ def ingest(
                             training_sample_size=training_sample_size,
                             training_source_uri=training_source_uri,
                             training_source_type=training_source_type,
+                            updates_uri=updates_uri,
+                            normalized=normalized,
                             config=config,
                             verbose=verbose,
                             trace_id=trace_id,
