@@ -247,10 +247,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="c" class="level2">
 <h2 class="anchored" data-anchor-id="c">C++</h2>
 <p>To build for C++, run:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">-S</span> ./src <span class="at">-B</span> ./src/build <span class="at">-DCMAKE_BUILD_TYPE</span><span class="op">=</span>Debug</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> ./src/build <span class="at">-j3</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Then you can run the tests:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> ./src/build <span class="at">--target</span> check</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Configure:</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">-S</span> ./src <span class="at">-B</span> ./src/build <span class="at">-DCMAKE_BUILD_TYPE</span><span class="op">=</span>Debug</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Build:</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> ./src/build <span class="at">-j3</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Run tests:</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> ./src/build <span class="at">--target</span> check</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Though above makes it easy to build and run all tests, incremental rebuild will not work. To get incremental rebuild working, we turn off Superbuild with <code>-DCMAKE_IDE=ON</code>. Note that unlike when using Superbuild (which is the default when <code>-DCMAKE_IDE=ON</code> is not set), you must pass <code>-DTileDB_DIR:PATH</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Configure:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">-S</span> ./src <span class="at">-B</span> ./src/build  <span class="at">-DCMAKE_BUILD_TYPE</span><span class="op">=</span>Debug <span class="at">-DCMAKE_IDE</span><span class="op">=</span>ON <span class="at">-DTileDB_DIR:PATH</span><span class="op">=</span>/Users/<span class="op">&lt;</span>name<span class="op">&gt;</span>/repo/tileDB/build/dist</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Build everything:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> ./src/build <span class="at">-j3</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Build a single unit test:</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> ./src/build <span class="at">--target</span> unit_tdb_partitioned_matrix</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Run that single unit test:</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="ex">./src/build/include/test/unit_tdb_partitioned_matrix</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Alternatively, you can setup CLion, which is the suggested way to develop C++ in this project. To set up CLion:</p>
 <ul>
 <li>Open up CLion to the root directory of this repo.</li>
