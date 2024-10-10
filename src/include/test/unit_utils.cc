@@ -116,3 +116,27 @@ TEST_CASE("test", "[utils]") {
   CHECK(!is_local_array("http://www.tiledb.com/index.html"));
   CHECK(!is_local_array("https://www.tiledb.com/index.html"));
 }
+
+TEST_CASE("format_duration_ns", "[utils]") {
+  {
+    REQUIRE(format_duration_ns(500) == "500.00 ns");
+    REQUIRE(format_duration_ns(999.99) == "999.99 ns");
+  }
+
+  {
+    REQUIRE(format_duration_ns(1000) == "1.00 µs");
+    REQUIRE(format_duration_ns(1500) == "1.50 µs");
+    REQUIRE(format_duration_ns(9900) == "9.90 µs");
+  }
+
+  {
+    REQUIRE(format_duration_ns(1000000) == "1.00 ms");
+    REQUIRE(format_duration_ns(1500000) == "1.50 ms");
+  }
+
+  {
+    REQUIRE(format_duration_ns(1000000000) == "1.00 s");
+    REQUIRE(format_duration_ns(1500000000) == "1.50 s");
+    REQUIRE(format_duration_ns(1234567890.123) == "1.23 s");
+  }
+}

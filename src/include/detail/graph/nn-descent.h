@@ -402,8 +402,6 @@ auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
     });
   }
 
-  t.stop();
-
   std::cout << num_visited << ", " << num_updates << ", " << num_candidates
             << std::endl;
 
@@ -443,8 +441,6 @@ auto nn_descent_step_full_all(
       }
     });
   }
-
-  t.stop();
 
   std::cout << num_visited << ", " << num_updates << ", " << num_candidates
             << std::endl;

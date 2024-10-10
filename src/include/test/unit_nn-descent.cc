@@ -86,7 +86,6 @@ TEMPLATE_TEST_CASE(
                   << std::endl;
       }
     }
-    _.stop();
   }
 }
 

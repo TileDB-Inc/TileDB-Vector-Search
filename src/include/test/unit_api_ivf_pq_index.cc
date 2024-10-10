@@ -1161,4 +1161,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         all_ingestion_timestamps.end(),
         std::vector<uint64_t>{100}.begin()));
   }
+
+  std::string path =
+      (std::filesystem::temp_directory_path() / "dump_logs_file.txt").string();
+  dump_logs(path, "IVF_PQ", 1, 2, 3, 4, 5.5f);
 }
