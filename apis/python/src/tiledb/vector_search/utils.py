@@ -16,6 +16,11 @@ def is_type_erased_index(index_type: str) -> bool:
     return index_type == "VAMANA" or index_type == "IVF_PQ"
 
 
+def create_array_and_add_to_group(array_uri, array_name, schema, group):
+    tiledb.Array.create(array_uri, schema)
+    add_to_group(group, array_uri, name=array_name)
+
+
 def add_to_group(group, uri, name):
     """
     Adds an object to a group. Automatically infers whether to use a relative path or absolute path.

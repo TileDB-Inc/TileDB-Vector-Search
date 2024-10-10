@@ -85,8 +85,8 @@ class tdbBlockedMatrixWithIds
 
   /**
    * @brief Construct a new tdbBlockedMatrixWithIds object, limited to
-   * `upper_bound` vectors. In this case, the `Matrix` is row-major, so the
-   * number of vectors is the number of rows.
+   * `upper_bound` vectors. In this case, the `Matrix` is column-major, so the
+   * number of vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
@@ -142,7 +142,7 @@ class tdbBlockedMatrixWithIds
       size_t first_col,
       std::optional<size_t> last_col,
       size_t upper_bound,
-      TemporalPolicy temporal_policy)  // noexcept
+      TemporalPolicy temporal_policy)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(
             ctx,

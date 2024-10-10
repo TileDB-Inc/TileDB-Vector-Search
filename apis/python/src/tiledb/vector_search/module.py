@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict, Mapping, Optional
 
 import numpy as np
@@ -274,7 +273,7 @@ def ivf_query_ram(
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
 ):
     """
     Run IVF vector query using infinite RAM
@@ -355,7 +354,7 @@ def ivf_query(
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
     timestamp: int = 0,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
 ):
     """
     Run IVF vector query using a memory budget
@@ -407,9 +406,9 @@ def ivf_query(
         ]
     )
 
-    logging.info(
-        f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
-    )
+    # logging.info(
+    #     f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
+    # )
 
     if dtype == np.float32:
         if use_nuv_implementation:

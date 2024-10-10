@@ -25,7 +25,8 @@ Queries can be run in multiple modes:
 """
 import json
 import multiprocessing
-from typing import Any, Mapping
+from threading import Thread
+from typing import Any, Mapping, Sequence
 
 import numpy as np
 
@@ -38,7 +39,7 @@ from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_INT32
 from tiledb.vector_search.utils import MAX_UINT64
-from tiledb.vector_search.utils import add_to_group
+from tiledb.vector_search.utils import create_array_and_add_to_group
 from tiledb.vector_search.utils import normalize_vector
 from tiledb.vector_search.utils import normalize_vectors
 
@@ -84,6 +85,7 @@ class IVFFlatIndex(index.Index):
         timestamp=None,
         memory_budget: int = -1,
         open_for_remote_query_execution: bool = False,
+        group: tiledb.Group = None,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -99,6 +101,7 @@ class IVFFlatIndex(index.Index):
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
+            group=group,
         )
         self.db_uri = self.group[
             storage_formats[self.storage_version]["PARTS_ARRAY_NAME"]
@@ -322,19 +325,13 @@ class IVFFlatIndex(index.Index):
         self,
         queries: np.ndarray,
         k: int,
-        driver_mode: Mode = None,
-        driver_resources: Optional[str] = None,
-        driver_access_credentials_name: Optional[str] = None,
         **kwargs,
     ):
         if self.distance_metric == vspy.DistanceMetric.COSINE:
             queries = normalize_vectors(queries)
         return super().query(
-            queries,
-            k,
-            driver_mode,
-            driver_resources,
-            driver_access_credentials_name,
+            queries=queries,
+            k=k,
             **kwargs,
         )
 
@@ -350,7 +347,7 @@ class IVFFlatIndex(index.Index):
         num_partitions: int = -1,
         num_workers: int = -1,
         config: Optional[Mapping[str, Any]] = None,
-        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+        distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     ):
         """
         Query an IVF_FLAT index using TileDB cloud taskgraphs
@@ -427,8 +424,7 @@ class IVFFlatIndex(index.Index):
                 k_nn=k_nn,
                 ctx=Ctx(config),
                 timestamp=timestamp,
-                # TODO(nikos) add this after the library change gets released in TileDB cloud
-                # upper_bound=0 if memory_budget == -1 else memory_budget,
+                upper_bound=0 if memory_budget == -1 else memory_budget,
             )
             results = []
             for q in range(len(r)):
@@ -528,6 +524,30 @@ class IVFFlatIndex(index.Index):
             results_per_query_i.append(np.array(tmp, dtype=np.uint64)[:, 1])
         return np.array(results_per_query_d), np.array(results_per_query_i)
 
+    def vacuum(self):
+        """
+        The vacuuming process permanently deletes index files that are consolidated through the consolidation
+        process. TileDB separates consolidation from vacuuming, in order to make consolidation process-safe
+        in the presence of concurrent reads and writes.
+
+        Note:
+
+        1. Vacuuming is not process-safe and you should take extra care when invoking it.
+        2. Vacuuming may affect the granularity of the time traveling functionality.
+
+        The IVFFlat class vacuums consolidated fragment, array metadata and commits for the `db`
+        and `ids` arrays.
+        """
+        super().vacuum()
+        if not self.uri.startswith("tiledb://"):
+            modes = ["fragment_meta", "commits", "array_meta"]
+            for mode in modes:
+                conf = tiledb.Config(self.config)
+                conf["sm.consolidation.mode"] = mode
+                conf["sm.vacuum.mode"] = mode
+                tiledb.vacuum(self.db_uri, config=conf)
+                tiledb.vacuum(self.ids_uri, config=conf)
+
 
 def create(
     uri: str,
@@ -536,7 +556,9 @@ def create(
     group_exists: bool = False,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
+    group: tiledb.Group = None,
+    asset_creation_threads: Sequence[Thread] = None,
     **kwargs,
 ) -> IVFFlatIndex:
     """
@@ -559,30 +581,58 @@ def create(
     storage_version: str
         The TileDB vector search storage version to use.
         If not provided, use the latest stable storage version.
+    group: tiledb.Group
+        TileDB group open in write mode.
+        Internal, this is used to avoid opening the group multiple times during
+        ingestion.
+    asset_creation_threads: Sequence[Thread]
+        List of asset creation threads to append new threads.
+        Internal, this is used to parallelize all asset creation during
+        ingestion.
+
     """
     validate_storage_version(storage_version)
     if (
-        distance_metric != vspy.DistanceMetric.L2
+        distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES
+        and distance_metric != vspy.DistanceMetric.L2
         and distance_metric != vspy.DistanceMetric.COSINE
     ):
         raise ValueError(
             f"Distance metric {distance_metric} is not supported in IVF_FLAT"
         )
 
-    index.create_metadata(
-        uri=uri,
-        dimensions=dimensions,
-        vector_type=vector_type,
-        index_type=INDEX_TYPE,
-        storage_version=storage_version,
-        distance_metric=distance_metric,
-        group_exists=group_exists,
-        config=config,
-    )
+    if group is None != asset_creation_threads is not None:
+        raise ValueError(
+            "Can't pass `asset_creation_threads` without a `group` argument."
+        )
+
     with tiledb.scope_ctx(ctx_or_config=config):
-        group = tiledb.Group(uri, "w")
+        if not group_exists:
+            try:
+                tiledb.group_create(uri)
+            except tiledb.TileDBError as err:
+                raise err
+        if group is None:
+            grp = tiledb.Group(uri, "w")
+        else:
+            grp = group
+
+        if asset_creation_threads is not None:
+            threads = asset_creation_threads
+        else:
+            threads = []
+
+        index.create_metadata(
+            group=grp,
+            dimensions=dimensions,
+            vector_type=vector_type,
+            index_type=INDEX_TYPE,
+            storage_version=storage_version,
+            distance_metric=distance_metric,
+        )
+
         tile_size = int(TILE_SIZE_BYTES / np.dtype(vector_type).itemsize / dimensions)
-        group.meta["partition_history"] = json.dumps([0])
+        grp.meta["partition_history"] = json.dumps([0])
         centroids_array_name = storage_formats[storage_version]["CENTROIDS_ARRAY_NAME"]
         index_array_name = storage_formats[storage_version]["INDEX_ARRAY_NAME"]
         ids_array_name = storage_formats[storage_version]["IDS_ARRAY_NAME"]
@@ -621,8 +671,17 @@ def create(
             cell_order="col-major",
             tile_order="col-major",
         )
-        tiledb.Array.create(centroids_uri, centroids_schema)
-        add_to_group(group, centroids_uri, name=centroids_array_name)
+        thread = Thread(
+            target=create_array_and_add_to_group,
+            kwargs={
+                "array_uri": centroids_uri,
+                "array_name": centroids_array_name,
+                "group": grp,
+                "schema": centroids_schema,
+            },
+        )
+        thread.start()
+        threads.append(thread)
 
         index_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -643,8 +702,17 @@ def create(
             cell_order="col-major",
             tile_order="col-major",
         )
-        tiledb.Array.create(index_array_uri, index_schema)
-        add_to_group(group, index_array_uri, name=index_array_name)
+        thread = Thread(
+            target=create_array_and_add_to_group,
+            kwargs={
+                "array_uri": index_array_uri,
+                "array_name": index_array_name,
+                "group": grp,
+                "schema": index_schema,
+            },
+        )
+        thread.start()
+        threads.append(thread)
 
         ids_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -665,8 +733,17 @@ def create(
             cell_order="col-major",
             tile_order="col-major",
         )
-        tiledb.Array.create(ids_uri, ids_schema)
-        add_to_group(group, ids_uri, name=ids_array_name)
+        thread = Thread(
+            target=create_array_and_add_to_group,
+            kwargs={
+                "array_uri": ids_uri,
+                "array_name": ids_array_name,
+                "group": grp,
+                "schema": ids_schema,
+            },
+        )
+        thread.start()
+        threads.append(thread)
 
         parts_array_rows_dim = tiledb.Dim(
             name="rows",
@@ -693,8 +770,17 @@ def create(
             cell_order="col-major",
             tile_order="col-major",
         )
-        tiledb.Array.create(parts_uri, parts_schema)
-        add_to_group(group, parts_uri, name=parts_array_name)
+        thread = Thread(
+            target=create_array_and_add_to_group,
+            kwargs={
+                "array_uri": parts_uri,
+                "array_name": parts_array_name,
+                "group": grp,
+                "schema": parts_schema,
+            },
+        )
+        thread.start()
+        threads.append(thread)
 
         external_id_dim = tiledb.Dim(
             name="external_id",
@@ -709,8 +795,23 @@ def create(
             attrs=[vector_attr],
             allows_duplicates=False,
         )
-        tiledb.Array.create(updates_array_uri, updates_schema)
-        add_to_group(group, updates_array_uri, name=updates_array_name)
+        thread = Thread(
+            target=create_array_and_add_to_group,
+            kwargs={
+                "array_uri": updates_array_uri,
+                "array_name": updates_array_name,
+                "group": grp,
+                "schema": updates_schema,
+            },
+        )
+        thread.start()
+        threads.append(thread)
 
-        group.close()
-        return IVFFlatIndex(uri=uri, config=config, memory_budget=1000000)
+        if asset_creation_threads is None:
+            for thread in threads:
+                thread.join()
+        if group is None:
+            grp.close()
+            return IVFFlatIndex(uri=uri, config=config, memory_budget=1000000)
+        else:
+            return None

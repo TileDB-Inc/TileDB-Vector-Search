@@ -355,6 +355,7 @@ class TileDBLoader:
             handlers={
                 "application/pdf": PyMuPDFParser(),
                 "text/plain": TextParser(),
+                "text/markdown": TextParser(),
                 "text/html": BS4HTMLParser(),
                 "application/msword": MsWordParser(),
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
@@ -384,6 +385,9 @@ class TileDBLoader:
         else:
             mime_type = mimetypes.guess_type(self.uri)[0]
             f = vfs.open(self.uri)
+
+        if mime_type is None or mime_type.startswith("text"):
+            mime_type = "text/plain"
 
         if mime_type.startswith("image/"):
             from langchain_community.document_loaders import UnstructuredFileIOLoader

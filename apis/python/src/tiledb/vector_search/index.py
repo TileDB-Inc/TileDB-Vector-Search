@@ -2,6 +2,9 @@ import concurrent.futures as futures
 import json
 import os
 import time
+import warnings
+from abc import ABCMeta
+from abc import abstractmethod
 from typing import Any, Mapping, Optional
 
 from tiledb.cloud.dag import Mode
@@ -16,17 +19,16 @@ from tiledb.vector_search.utils import is_type_erased_index
 DATASET_TYPE = "vector_search"
 
 
-class Index:
+class Index(metaclass=ABCMeta):
     """
     Abstract Vector Index class.
+    Do not use this directly but rather use the `open` factory method.
 
     All Vector Index algorithm implementations are instantiations of this class. Apart
     from the abstract method interfaces, `Index` provides implementations for common
     tasks i.e. supporting updates, time-traveling and metadata management.
 
     Opens an `Index` reading metadata and applying time-traveling options.
-
-    Do not use this directly but rather instantiate the concrete Index classes.
 
     Parameters
     ----------
@@ -42,31 +44,38 @@ class Index:
         If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
     """
 
+    @abstractmethod
     def __init__(
         self,
         uri: str,
-        open_for_remote_query_execution: bool,
+        open_for_remote_query_execution: bool = False,
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
+        group: tiledb.Group = None,
     ):
         # If the user passes a tiledb python Config object convert to a dictionary
         if isinstance(config, tiledb.Config):
             config = dict(config)
-
         self.uri = uri
         self.open_for_remote_query_execution = open_for_remote_query_execution
         self.config = config
         self.ctx = vspy.Ctx(config)
-        self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
+        if group is not None:
+            self.group = group
+        else:
+            self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(config))
         self.storage_version = self.group.meta.get("storage_version", "0.1")
         try:
             self.distance_metric = vspy.DistanceMetric(
-                self.group.meta.get("distance_metric", vspy.DistanceMetric.L2)
+                self.group.meta.get(
+                    "distance_metric", vspy.DistanceMetric.SUM_OF_SQUARES
+                )
             )
         except ValueError:
             raise ValueError(
                 f"Invalid distance metric in metadata: {self.group.meta.get('distance_metric')}."
             )
+
         if (
             not storage_formats[self.storage_version]["SUPPORT_TIMETRAVEL"]
             and timestamp is not None
@@ -174,15 +183,20 @@ class Index:
         queries: np.ndarray,
         k: int,
         driver_mode=None,
-        driver_resources=None,
+        driver_resource_class: Optional[str] = None,
+        driver_resources: Optional[Mapping[str, Any]] = None,
         driver_access_credentials_name=None,
         **kwargs,
     ):
         from tiledb.cloud import dag
 
+        if driver_resource_class and driver_resources:
+            raise TypeError("Cannot provide both resource_class and resources")
+
         def query_udf(index_type, index_open_kwargs, query_kwargs):
             from tiledb.vector_search.flat_index import FlatIndex
             from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+            from tiledb.vector_search.ivf_pq_index import IVFPQIndex
             from tiledb.vector_search.vamana_index import VamanaIndex
 
             # Open index
@@ -190,8 +204,12 @@ class Index:
                 index = FlatIndex(**index_open_kwargs)
             elif index_type == "IVF_FLAT":
                 index = IVFFlatIndex(**index_open_kwargs)
+            elif index_type == "IVF_PQ":
+                index = IVFPQIndex(**index_open_kwargs)
             elif index_type == "VAMANA":
                 index = VamanaIndex(**index_open_kwargs)
+            else:
+                raise ValueError(f"Unsupported index_type: {index_type}")
 
             # Query index
             return index.query(**query_kwargs)
@@ -212,6 +230,9 @@ class Index:
             self.index_open_kwargs,
             query_kwargs,
             name="vector-query-driver",
+            resource_class="large"
+            if (not driver_resources and not driver_resource_class)
+            else driver_resource_class,
             resources=driver_resources,
             image_name="vectorsearch",
             access_credentials_name=driver_access_credentials_name,
@@ -225,7 +246,8 @@ class Index:
         queries: np.ndarray,
         k: int,
         driver_mode: Optional[Mode] = None,
-        driver_resources: Optional[str] = None,
+        driver_resource_class: Optional[str] = None,
+        driver_resources: Optional[Mapping[str, Any]] = None,
         driver_access_credentials_name: Optional[str] = None,
         **kwargs,
     ):
@@ -251,8 +273,11 @@ class Index:
             Number of results to return per query vector.
         driver_mode: Mode
             If not `None`, the query will be executed in a TileDB cloud taskgraph using the driver mode specified.
+        driver_resource_class: Optional[str]
+            If `driver_mode` was `REALTIME`, the resources class (`standard` or `large`) to use for the driver execution.
         driver_resources: Optional[str]
-            If `driver_mode` was not `None`, the resources to use for the driver execution.
+            If `driver_mode` was `BATCH`, the resources to use for the driver execution.
+            Example `{"cpu": "1", "memory": "4Gi"}`
         driver_access_credentials_name: Optional[str]
             If `driver_mode` was not `None`, the access credentials name to use for the driver execution.
         **kwargs
@@ -293,11 +318,12 @@ class Index:
                     "Cannot pass driver_mode=Mode.LOCAL to query() - use driver_mode=None to query locally."
                 )
             results, indexes = self._query_with_driver(
-                queries,
-                k,
-                driver_mode,
-                driver_resources,
-                driver_access_credentials_name,
+                queries=queries,
+                k=k,
+                driver_mode=driver_mode,
+                driver_resources=driver_resources,
+                driver_resource_class=driver_resource_class,
+                driver_access_credentials_name=driver_access_credentials_name,
                 **kwargs,
             )
             if self.distance_metric == vspy.DistanceMetric.INNER_PRODUCT:
@@ -514,7 +540,6 @@ class Index:
             conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
             conf["sm.consolidation.timestamp_end"] = max_timestamp
             tiledb.consolidate(self.updates_array_uri, config=conf)
-            tiledb.vacuum(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         should_pass_copy_centroids_uri = (
@@ -538,6 +563,7 @@ class Index:
             external_ids_type="TILEDB_ARRAY",
             updates_uri=self.updates_array_uri,
             index_timestamp=max_timestamp,
+            distance_metric=self.distance_metric,
             storage_version=self.storage_version,
             copy_centroids_uri=self.centroids_uri
             if should_pass_copy_centroids_uri
@@ -546,6 +572,27 @@ class Index:
             **kwargs,
         )
         return new_index
+
+    def vacuum(self):
+        """
+        The vacuuming process permanently deletes index files that are consolidated through the consolidation
+        process. TileDB separates consolidation from vacuuming, in order to make consolidation process-safe
+        in the presence of concurrent reads and writes.
+
+        Note:
+
+        1. Vacuuming is not process-safe and you should take extra care when invoking it.
+        2. Vacuuming may affect the granularity of the time traveling functionality.
+
+        The Index class vacuums consolidated fragments of the `updates` array.
+        """
+        if self.has_updates:
+            if not self.updates_array_uri.startswith("tiledb://"):
+                conf = tiledb.Config(self.config)
+                mode = "fragments"
+                conf["sm.consolidation.mode"] = mode
+                conf["sm.vacuum.mode"] = mode
+                tiledb.vacuum(self.updates_array_uri, config=conf)
 
     @staticmethod
     def delete_index(
@@ -634,7 +681,7 @@ class Index:
             new_partition_history = []
             i = 0
             for ingestion_timestamp in ingestion_timestamps:
-                if ingestion_timestamp > timestamp:
+                if ingestion_timestamp == 0 or ingestion_timestamp > timestamp:
                     new_ingestion_timestamps.append(ingestion_timestamp)
                     new_base_sizes.append(base_sizes[i])
                     new_partition_history.append(partition_history[i])
@@ -684,6 +731,7 @@ class Index:
                 raise ValueError(f"Unsupported index_type: {index_type}")
             group.close()
 
+    @abstractmethod
     def get_dimensions(self):
         """
         Abstract method implemented by all Vector Index implementations.
@@ -692,6 +740,7 @@ class Index:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def query_internal(self, queries: np.ndarray, k: int, **kwargs):
         """
         Abstract method implemented by all Vector Index implementations.
@@ -783,6 +832,17 @@ class Index:
             self.group = tiledb.Group(self.uri, "r", ctx=tiledb.Ctx(self.config))
 
     def _consolidate_update_fragments(self):
+        # Disable update fragment consolidation for TileDB Cloud URIs
+        # as this is not supported.
+        if self.uri.startswith("tiledb://"):
+            warnings.warn(
+                "Update fragment consolidation is not supported for `tiledb://` URIs. "
+                "Executing multiple updates without consolidating the update fragments can "
+                "result in poor search performance. Please make sure that you periodically "
+                "execute `_consolidate_update_fragments` using the storage filesystem URI.",
+                stacklevel=2,
+            )
+            return
         with tiledb.scope_ctx(ctx_or_config=self.config):
             fragments_info = tiledb.array_fragments(self.updates_array_uri)
         count_fragments = 0
@@ -793,7 +853,6 @@ class Index:
             conf = tiledb.Config(self.config)
             conf["sm.consolidation.timestamp_start"] = self.latest_ingestion_timestamp
             tiledb.consolidate(self.updates_array_uri, config=conf)
-            tiledb.vacuum(self.updates_array_uri, config=conf)
 
     def _open_updates_array(self, timestamp: int = None):
         with tiledb.scope_ctx(ctx_or_config=self.config):
@@ -836,31 +895,97 @@ class Index:
 
 
 def create_metadata(
-    uri: str,
+    group: tiledb.Group,
     dimensions: int,
     vector_type: np.dtype,
     index_type: str,
     storage_version: str,
     distance_metric: vspy.DistanceMetric,
-    group_exists: bool = False,
-    config: Optional[Mapping[str, Any]] = None,
 ):
     """
     Creates the index group adding index metadata.
     """
-    with tiledb.scope_ctx(ctx_or_config=config):
-        if not group_exists:
-            try:
-                tiledb.group_create(uri)
-            except tiledb.TileDBError as err:
-                raise err
-        group = tiledb.Group(uri, "w")
-        group.meta["dataset_type"] = DATASET_TYPE
-        group.meta["dtype"] = np.dtype(vector_type).name
-        group.meta["storage_version"] = storage_version
-        group.meta["index_type"] = index_type
-        group.meta["base_sizes"] = json.dumps([0])
-        group.meta["ingestion_timestamps"] = json.dumps([0])
-        group.meta["has_updates"] = False
-        group.meta["distance_metric"] = int(distance_metric)
+    group.meta["dataset_type"] = DATASET_TYPE
+    group.meta["dtype"] = np.dtype(vector_type).name
+    group.meta["dimensions"] = dimensions
+    group.meta["storage_version"] = storage_version
+    group.meta["index_type"] = index_type
+    group.meta["base_sizes"] = json.dumps([0])
+    group.meta["ingestion_timestamps"] = json.dumps([0])
+    group.meta["has_updates"] = False
+    group.meta["distance_metric"] = int(distance_metric)
+
+
+def open(
+    uri: str,
+    open_for_remote_query_execution: bool = False,
+    config: Optional[Mapping[str, Any]] = None,
+    timestamp=None,
+    **kwargs,
+) -> Index:
+    """
+    Factory method that opens a vector index.
+
+    Retrieves the `index_type` from the index group metadata and instantiates the appropriate `Index` subclass.
+
+    Parameters
+    ----------
+    uri: str
+        URI of the index.
+    config: Optional[Mapping[str, Any]]
+        TileDB config dictionary.
+    timestamp: int or tuple(int)
+        If int, open the index at a given timestamp.
+        If tuple, open at the given start and end timestamps.
+    open_for_remote_query_execution: bool
+        If `True`, do not load any index data in main memory locally, and instead load index data in the TileDB Cloud taskgraph created when a non-`None` `driver_mode` is passed to `query()`.
+        If `False`, load index data in main memory locally. Note that you can still use a taskgraph for query execution, you'll just end up loading the data both on your local machine and in the cloud taskgraph.
+    kwargs:
+        Additional arguments to be passed to the `Index` subclass constructor.
+    """
+    from tiledb.vector_search.flat_index import FlatIndex
+    from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+    from tiledb.vector_search.ivf_pq_index import IVFPQIndex
+    from tiledb.vector_search.vamana_index import VamanaIndex
+
+    group = tiledb.Group(uri, "r")
+    index_type = group.meta["index_type"]
+    if index_type == "FLAT":
+        return FlatIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    elif index_type == "IVF_FLAT":
+        return IVFFlatIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    elif index_type == "VAMANA":
+        return VamanaIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    elif index_type == "IVF_PQ":
+        return IVFPQIndex(
+            uri=uri,
+            open_for_remote_query_execution=open_for_remote_query_execution,
+            config=config,
+            timestamp=timestamp,
+            group=group,
+            **kwargs,
+        )
+    else:
         group.close()
+        raise ValueError(f"Unsupported index type {index_type}")

@@ -124,6 +124,7 @@ TEST_CASE("Singleton behavior", "[seeder]") {
 
   // Ensure they have the same seed value
   auto seed = seeder1.seed();
+  CHECK(seed.has_value());
   CHECK_THROWS_WITH(
       seeder2.seed(),
       Catch::Matchers::ContainsSubstring("Seed can only be used once"));

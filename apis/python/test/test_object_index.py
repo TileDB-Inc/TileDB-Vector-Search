@@ -175,11 +175,21 @@ def assert_equal(
 
 
 def evaluate_query(
-    index_type: str, index_uri, query_kwargs, dim_id, vector_dim_offset, config=None
+    index_type: str,
+    index_uri,
+    query_kwargs,
+    dim_id,
+    vector_dim_offset,
+    config=None,
+    open_for_remote_query_execution=False,
 ):
     v_id = dim_id - vector_dim_offset
 
-    index = object_index.ObjectIndex(uri=index_uri, config=config)
+    index = object_index.ObjectIndex(
+        uri=index_uri,
+        open_for_remote_query_execution=open_for_remote_query_execution,
+        config=config,
+    )
     distances, objects, metadata = index.query(
         {"object": np.array([[dim_id, dim_id, dim_id, dim_id]])}, k=21, **query_kwargs
     )
@@ -414,6 +424,19 @@ def test_object_index_ivf_flat_cloud(tmp_path):
         vector_dim_offset=0,
         config=config,
     )
+    evaluate_query(
+        index_type="IVF_FLAT",
+        index_uri=index_uri,
+        query_kwargs={
+            "nprobe": 10,
+            "driver_mode": Mode.REALTIME,
+            "driver_resource_class": "standard",
+        },
+        dim_id=42,
+        vector_dim_offset=0,
+        config=config,
+        open_for_remote_query_execution=True,
+    )
 
     # Add new data with a new reader
     reader = TestReader(
@@ -440,10 +463,15 @@ def test_object_index_ivf_flat_cloud(tmp_path):
     evaluate_query(
         index_type="IVF_FLAT",
         index_uri=index_uri,
-        query_kwargs={"nprobe": 10},
+        query_kwargs={
+            "nprobe": 10,
+            "driver_mode": Mode.REALTIME,
+            "driver_resource_class": "standard",
+        },
         dim_id=1042,
         vector_dim_offset=0,
         config=config,
+        open_for_remote_query_execution=True,
     )
     delete_uri(index_uri, config)
 

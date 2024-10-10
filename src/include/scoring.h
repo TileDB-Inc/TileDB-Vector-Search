@@ -111,6 +111,31 @@ struct sum_of_squares_distance {
 #endif
 };
 
+struct sqrt_sum_of_squares_distance {
+#ifdef __AVX2__
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return sqrt(avx2_sum_of_squares(a, b));
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return sqrt(avx2_sum_of_squares(a));
+  }
+
+#else
+  template <feature_vector V, feature_vector U>
+  constexpr inline float operator()(const V& a, const U& b) const {
+    return sqrt(unroll4_sum_of_squares(a, b));
+  }
+
+  template <feature_vector V>
+  constexpr inline float operator()(const V& a) const {
+    return sqrt(unroll4_sum_of_squares(a));
+  }
+#endif
+};
+
 /**
  * @brief Function object for computing the sum of squared distance, augmented
  * to count the number of comparisons.
@@ -163,6 +188,7 @@ struct logging_sum_of_squares_distance {
 }  // namespace _l2_distance
 
 using sum_of_squares_distance = _l2_distance::sum_of_squares_distance;
+using sqrt_sum_of_squares_distance = _l2_distance::sqrt_sum_of_squares_distance;
 inline constexpr auto l2_distance = _l2_distance::sum_of_squares_distance{};
 
 using counting_sum_of_squares_distance =
@@ -316,7 +342,27 @@ struct cosine_distance_normalized {
 using cosine_distance = _cosine_distance::cosine_distance;
 using cosine_distance_normalized = _cosine_distance::cosine_distance_normalized;
 
-enum class DistanceMetric : uint32_t { L2 = 0, INNER_PRODUCT = 1, COSINE = 2 };
+enum class DistanceMetric : uint32_t {
+  SUM_OF_SQUARES = 0,
+  INNER_PRODUCT = 1,
+  COSINE = 2,
+  L2 = 3
+};
+
+inline std::string to_string(DistanceMetric metric) {
+  switch (metric) {
+    case DistanceMetric::SUM_OF_SQUARES:
+      return "SUM_OF_SQUARES";
+    case DistanceMetric::INNER_PRODUCT:
+      return "INNER_PRODUCT";
+    case DistanceMetric::COSINE:
+      return "COSINE";
+    case DistanceMetric::L2:
+      return "L2";
+    default:
+      return "UNKNOWN";
+  }
+}
 
 // ----------------------------------------------------------------------------
 // Functions for dealing with the case of when size of scores < k_nn
@@ -338,6 +384,19 @@ void pad_with_sentinels(size_t start, U& top_k, V& top_k_scores) {
   using index_type = typename U::value_type;
   for (size_t i = start; i < top_k.size(); ++i) {
     top_k[i] = std::numeric_limits<index_type>::max();
+    top_k_scores[i] = std::numeric_limits<score_type>::max();
+  }
+}
+
+template <class U, class V, class W>
+void pad_with_sentinels(
+    size_t start, U& top_k, W& top_k_indices, V& top_k_scores) {
+  using score_type = typename V::value_type;
+  using index_type = typename U::value_type;
+  using indices_type = size_t;
+  for (size_t i = start; i < top_k.size(); ++i) {
+    top_k[i] = std::numeric_limits<index_type>::max();
+    top_k_indices[i] = std::numeric_limits<indices_type>::max();
     top_k_scores[i] = std::numeric_limits<score_type>::max();
   }
 }
@@ -495,6 +554,32 @@ inline auto get_top_k(std::vector<std::vector<Heap>>& scores, size_t k_nn) {
 // Functions for computing top k neighbors with scores
 // ----------------------------------------------------------------------------
 
+inline void get_top_k_with_scores_and_indices_from_heap(
+    auto&& min_scores,
+    auto&& top_k,
+    auto&& top_k_indices,
+    auto&& top_k_scores) {
+  std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
+    return std::get<0>(a) < std::get<0>(b);
+  });
+  auto k_nn = std::min(size(min_scores), size(top_k));
+  std::transform(
+      begin(min_scores),
+      begin(min_scores) + k_nn,
+      begin(top_k_scores),
+      ([](auto&& e) { return std::get<0>(e); }));
+  std::transform(
+      begin(min_scores), begin(min_scores) + k_nn, begin(top_k), ([](auto&& e) {
+        return std::get<1>(e);
+      }));
+  std::transform(
+      begin(min_scores),
+      begin(min_scores) + k_nn,
+      begin(top_k_indices),
+      ([](auto&& e) { return std::get<2>(e); }));
+  pad_with_sentinels(k_nn, top_k, top_k_indices, top_k_scores);
+}
+
 inline void get_top_k_with_scores_from_heap(
     auto&& min_scores, auto&& top_k, auto&& top_k_scores) {
   std::sort_heap(begin(min_scores), end(min_scores), [](auto&& a, auto&& b) {
@@ -543,6 +628,30 @@ inline auto get_top_k_with_scores(std::vector<Heap>& scores, size_t k_nn) {
         scores[j], top_k[j], top_scores[j]);  // Will pad with sentinels
   }
   return std::make_tuple(std::move(top_scores), std::move(top_k));
+}
+
+template <class Heap>
+inline auto get_top_k_with_scores_and_indices(
+    std::vector<Heap>& scores, size_t k_nn) {
+  using score_type = heap_score_t<Heap>;
+  using index_type = heap_index_t<Heap>;
+  using indices_type = size_t;
+
+  auto num_queries = size(scores);
+
+  ColMajorMatrix<index_type> top_k(k_nn, num_queries);
+  ColMajorMatrix<indices_type> top_k_indices(k_nn, num_queries);
+  ColMajorMatrix<score_type> top_scores(k_nn, num_queries);
+
+  for (size_t j = 0; j < num_queries; ++j) {
+    get_top_k_with_scores_and_indices_from_heap(
+        scores[j],
+        top_k[j],
+        top_k_indices[j],
+        top_scores[j]);  // Will pad with sentinels
+  }
+  return std::make_tuple(
+      std::move(top_scores), std::move(top_k), std::move(top_k_indices));
 }
 
 // Overload for two-d scores
@@ -649,36 +758,39 @@ bool validate_top_k(TK& top_k, const G& g) {
 
 template <feature_vector_array U, feature_vector_array V>
 auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
-  // print_types(I, groundtruth);
-
   size_t total_intersected = 0;
 
   if constexpr (feature_vector_array<std::remove_cvref_t<decltype(I)>>) {
     for (size_t i = 0; i < I.num_cols(); ++i) {
-      std::sort(begin(I[i]), end(I[i]));
-      std::sort(begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
+      std::vector<std::decay_t<decltype(I[i][0])>> sorted_I(
+          begin(I[i]), end(I[i]));
+      std::vector<std::decay_t<decltype(groundtruth[i][0])>> sorted_groundtruth(
+          begin(groundtruth[i]), begin(groundtruth[i]) + k_nn);
 
-      // @todo remove -- for debugging only
-      std::vector<size_t> x(begin(I[i]), end(I[i]));
-      std::vector<size_t> y(begin(groundtruth[i]), end(groundtruth[i]));
+      std::sort(begin(sorted_I), end(sorted_I));
+      std::sort(begin(sorted_groundtruth), end(sorted_groundtruth));
 
       total_intersected += std::set_intersection(
-          begin(I[i]),
-          end(I[i]),
-          begin(groundtruth[i]),
-          /*end(groundtruth[i]*/ begin(groundtruth[i]) + k_nn,
+          begin(sorted_I),
+          end(sorted_I),
+          begin(sorted_groundtruth),
+          end(sorted_groundtruth),
           assignment_counter{});
     }
   } else {
     if constexpr (feature_vector<std::remove_cvref_t<decltype(I)>>) {
-      std::sort(begin(I), end(I));
-      std::sort(begin(groundtruth), begin(groundtruth) + k_nn);
+      std::vector<std::decay_t<decltype(I[0])>> sorted_I(begin(I), end(I));
+      std::vector<std::decay_t<decltype(groundtruth[0])>> sorted_groundtruth(
+          begin(groundtruth), begin(groundtruth) + k_nn);
+
+      std::sort(begin(sorted_I), end(sorted_I));
+      std::sort(begin(sorted_groundtruth), end(sorted_groundtruth));
 
       total_intersected += std::set_intersection(
-          begin(I),
-          end(I),
-          begin(groundtruth),
-          /*end(groundtruth)*/ begin(groundtruth) + k_nn,
+          begin(sorted_I),
+          end(sorted_I),
+          begin(sorted_groundtruth),
+          end(sorted_groundtruth),
           assignment_counter{});
     } else {
       static_assert(
@@ -687,7 +799,7 @@ auto count_intersections(const U& I, const V& groundtruth, size_t k_nn) {
     }
   }
   return total_intersected;
-};
+}
 
 #if defined(TILEDB_VS_ENABLE_BLAS) && 0
 

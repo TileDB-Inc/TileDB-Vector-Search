@@ -53,6 +53,7 @@ class VamanaIndex(index.Index):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         open_for_remote_query_execution: bool = False,
+        group: tiledb.Group = None,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -67,6 +68,7 @@ class VamanaIndex(index.Index):
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
+            group=group,
         )
         # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
@@ -136,7 +138,7 @@ def create(
     r_max_degree: int = R_MAX_DEGREE_DEFAULT,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
-    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.L2,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     **kwargs,
 ) -> VamanaIndex:
     """
@@ -170,6 +172,7 @@ def create(
         )
     if (
         distance_metric != vspy.DistanceMetric.L2
+        and distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES
         and distance_metric != vspy.DistanceMetric.COSINE
     ):
         raise ValueError(

@@ -57,6 +57,16 @@ enum class IndexKind { FlatL2, IVFFlat, Vamana, IVFPQ };
 
 enum class QueryType { FiniteRAM, InfiniteRAM };
 
+enum class IndexLoadStrategy {
+  // Will load the index as an OOC index.
+  PQ_OOC,
+  // Load the PQ index data as well as metadata.
+  PQ_INDEX,
+  // Load everything DEFAULT does, but also preload feature vectors for
+  // reranking.
+  PQ_INDEX_AND_RERANKING_VECTORS,
+};
+
 /******************************************************************************
  * Static info for arrays associated with an index group
  ******************************************************************************/
