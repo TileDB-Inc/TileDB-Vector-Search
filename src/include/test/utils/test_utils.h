@@ -202,8 +202,10 @@ void check_single_vector_equals(
   CHECK(scores_vector_array.num_ids() == ids_vector_array.num_ids());
   auto scores = std::span<float>(
       (float*)scores_vector_array.data(), scores_vector_array.num_vectors());
+  debug_vector(scores, "[check_single_vector_equals] scores");
   auto ids = std::span<uint32_t>(
       (uint32_t*)ids_vector_array.data(), ids_vector_array.num_vectors());
+  debug_vector(ids, "[check_single_vector_equals] ids");
   CHECK(scores.size() == expected_scores.size());
   CHECK(ids.size() == expected_ids.size());
   if (!std::equal(scores.begin(), scores.end(), expected_scores.begin())) {

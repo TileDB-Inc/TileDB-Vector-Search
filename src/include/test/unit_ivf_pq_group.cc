@@ -601,7 +601,7 @@ TEST_CASE("mismatched storage version", "[ivf_pq_group]") {
           TemporalPolicy{TimeTravel, 0},
           "different_version",
           10),
-      "Version mismatch. Requested different_version but found 0.3");
+      "Invalid storage version: different_version");
 }
 
 TEST_CASE("clear history", "[ivf_pq_group]") {

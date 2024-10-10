@@ -204,6 +204,8 @@ void write_matrix(
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri, TILEDB_FILTER_NONE);
   }
 
+  std::cout << "[write_matrix] A.num_rows(): " << A.num_rows() << " A.num_cols(): " << A.num_cols() << std::endl;
+
   if (A.num_rows() == 0 || A.num_cols() == 0) {
     return;
   }
@@ -372,6 +374,57 @@ std::vector<T> read_vector(
     const std::string& uri,
     TemporalPolicy temporal_policy = {}) {
   return read_vector_helper<T>(ctx, uri, 0, 0, temporal_policy, true);
+}
+
+/**
+ * Read the contents of a TileDB array into a std::vector.
+ * @tparam T Type of data element stored.
+ * @param ctx The TileDB context.
+ * @param uri The URI of the TileDB array.
+ * @param slices The slices to read. Each slice is a pair of start and end.
+ * @param temporal_policy The temporal policy for the read.
+ * @return The vector of data.
+ */
+template <class T, typename Slice>
+std::vector<T> read_vector(
+    const tiledb::Context& ctx,
+    const std::string& uri,
+    const std::vector<std::pair<Slice, Slice>> &slices,
+    size_t total_slices_size,
+    TemporalPolicy temporal_policy = {}) {
+  if (total_slices_size == 0) {
+    return {};
+  }
+  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+
+  auto array_ = tiledb_helpers::open_array(
+      tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
+  auto schema_ = array_->schema();
+
+  const size_t idx = 0;
+  auto attr = schema_.attribute(idx);
+
+  std::string attr_name = attr.name();
+
+  // Create a subarray that reads the array up to the specified subset.
+  tiledb::Subarray subarray(ctx, *array_);
+  for (const auto &slice: slices) {
+    subarray.add_range(0, static_cast<int>(slice.first), static_cast<int>(slice.second));
+  }
+
+  // @todo: use something non-initializing
+  std::vector<T> data_(total_slices_size);
+
+  tiledb::Query query(ctx, *array_);
+  query.set_subarray(subarray).set_data_buffer(
+      attr_name, data_.data(), total_slices_size);
+  tiledb_helpers::submit_query(tdb_func__, uri, query);
+  _memory_data.insert_entry(tdb_func__, total_slices_size * sizeof(T));
+
+  array_->close();
+  assert(tiledb::Query::Status::COMPLETE == query.query_status());
+
+  return data_;
 }
 
 template <class T>
