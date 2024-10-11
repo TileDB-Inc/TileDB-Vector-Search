@@ -35,7 +35,8 @@ class ColpaliEmbedding(ObjectEmbedding):
 
     def load(self) -> None:
         import torch
-        from colpali_engine.models import ColPali, ColPaliProcessor
+        from colpali_engine.models import ColPali
+        from colpali_engine.models import ColPaliProcessor
 
         if self.device is None:
             if torch.cuda.is_available() and torch.cuda.device_count() > 0:
@@ -45,21 +46,26 @@ class ColpaliEmbedding(ObjectEmbedding):
 
         # Load model
         self.model = ColPali.from_pretrained(
-            self.model_name, 
-            torch_dtype=torch.bfloat16, 
-            device_map=self.device).eval()
+            self.model_name, torch_dtype=torch.bfloat16, device_map=self.device
+        ).eval()
         self.processor = ColPaliProcessor.from_pretrained(self.model_name)
 
-    def embed(self, objects: OrderedDict, metadata: OrderedDict) -> Tuple[np.ndarray, np.array]:
+    def embed(
+        self, objects: OrderedDict, metadata: OrderedDict
+    ) -> Tuple[np.ndarray, np.array]:
         import torch
         from PIL import Image
-        from tqdm import tqdm
         from torch.utils.data import DataLoader
-        
+        from tqdm import tqdm
+
         if "image" in objects:
             images = []
             for i in range(len(objects["image"])):
-                images.append(Image.fromarray(np.reshape(objects["image"][i], objects["shape"][i])))
+                images.append(
+                    Image.fromarray(
+                        np.reshape(objects["image"][i], objects["shape"][i])
+                    )
+                )
             dataloader = DataLoader(
                 images,
                 batch_size=self.batch_size,
@@ -73,7 +79,7 @@ class ColpaliEmbedding(ObjectEmbedding):
                 shuffle=False,
                 collate_fn=lambda x: self.processor.process_queries(x),
             )
-            
+
         embeddings = None
         external_ids = None
         id = 0
@@ -83,14 +89,14 @@ class ColpaliEmbedding(ObjectEmbedding):
                 batch_embeddings = list(torch.unbind(self.model(**batch).to("cpu")))
             for object_embeddings in batch_embeddings:
                 object_embeddings_np = object_embeddings.to(torch.float32).cpu().numpy()
-                ext_ids = metadata["external_id"][id]*np.ones(object_embeddings_np.shape[0], dtype=np.uint64)
+                ext_ids = metadata["external_id"][id] * np.ones(
+                    object_embeddings_np.shape[0], dtype=np.uint64
+                )
                 if embeddings is None:
                     external_ids = ext_ids
                     embeddings = object_embeddings_np
                 else:
                     external_ids = np.concatenate((external_ids, ext_ids))
                     embeddings = np.vstack((embeddings, object_embeddings_np))
-                id+=1
+                id += 1
         return (embeddings, external_ids)
-        
-
