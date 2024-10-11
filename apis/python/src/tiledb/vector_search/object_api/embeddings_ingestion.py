@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from tiledb.cloud.dag import Mode
 
@@ -298,7 +298,11 @@ def ingest_embeddings_with_driver(
 
                     logger.debug("Embedding objects...")
                     embeddings = object_embedding.embed(objects, metadata)
-
+                    if isinstance(embeddings, Tuple):
+                        external_ids = embeddings[1]
+                        embeddings = embeddings[0]
+                    else:
+                        external_ids = objects["external_id"].astype(np.uint64)
                     logger.debug("Write embeddings partition_id: %d", partition_id)
                     if use_updates_array:
                         vectors = np.empty(embeddings.shape[0], dtype="O")
@@ -306,7 +310,7 @@ def ingest_embeddings_with_driver(
                             vectors[i] = embeddings[i].astype(vector_type)
                         obj_index.index.update_batch(
                             vectors=vectors,
-                            external_ids=objects["external_id"].astype(np.uint64),
+                            external_ids=external_ids.astype(np.uint64),
                         )
                     else:
                         embeddings_flattened = np.empty(1, dtype="O")
@@ -317,16 +321,16 @@ def ingest_embeddings_with_driver(
                         embeddings_shape[0] = np.array(
                             embeddings.shape, dtype=np.uint32
                         )
-                        external_ids = np.empty(1, dtype="O")
-                        external_ids[0] = objects["external_id"].astype(np.uint64)
+                        write_external_ids = np.empty(1, dtype="O")
+                        write_external_ids[0] = external_ids.astype(np.uint64)
                         embeddings_array[partition_id] = {
                             "vectors": embeddings_flattened,
                             "vectors_shape": embeddings_shape,
-                            "external_ids": external_ids,
+                            "external_ids": write_external_ids,
                         }
                     if metadata_array_uri is not None:
-                        external_ids = metadata.pop("external_id", None)
-                        metadata_array[external_ids] = metadata
+                        metadata_external_ids = metadata.pop("external_id", None)
+                        metadata_array[metadata_external_ids] = metadata
 
                 if not use_updates_array:
                     embeddings_array.close()
