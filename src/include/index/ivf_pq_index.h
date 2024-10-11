@@ -967,7 +967,6 @@ class ivf_pq_index {
     // unpartitioned_pq_vectors_ =
     //     pq_encode<ColMajorMatrix<feature_type>, ColMajorMatrixWithIds<pq_code_type, id_type>>(
     //         training_set);
-    debug_matrix_with_ids(*unpartitioned_pq_vectors_, "[index@ivf_pq_index@ingest_parts] unpartitioned_pq_vectors_");
     unpartitioned_pq_vectors_ = pq_encode<Array, ColMajorMatrix<pq_code_type>>(training_set);
     // std::copy(
     //     training_set_ids.begin(),
@@ -1118,13 +1117,15 @@ class ivf_pq_index {
       size_t i = 0;
       uint64_t prev_index = 0;
       for (size_t work_item_id = 0; work_item_id < work_items; ++work_item_id) {
-          prev_index = partial_indexes[i++];
+          prev_index = partial_indexes[i];
+          i++;
           for (size_t partition_id = 0; partition_id < partitions; ++partition_id) {
-              auto slice = std::make_pair(prev_index, partial_indexes[i++] - 1);
+              auto slice = std::make_pair(static_cast<int>(prev_index), static_cast<int>(partial_indexes[i] - 1));
               if (slice.first <= slice.second && slice.first != std::numeric_limits<uint64_t>::max()) {
                   partition_slices[partition_id].push_back(slice);
               }
-              prev_index = partial_indexes[i - 1];
+              prev_index = partial_indexes[i];
+              i++;
           }
       }
       for (int a = 0; a < partition_slices.size(); ++a) {

@@ -1231,6 +1231,23 @@ def ingest(
             to_temporal_policy(index_timestamp)
         )
         
+        updated_ids = read_updated_ids(
+                updates_uri=updates_uri,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+
+        external_ids = read_external_ids(
+            external_ids_uri=external_ids_uri,
+            external_ids_type=external_ids_type,
+            start_pos=0,
+            end_pos=training_sample_size,
+            config=config,
+            verbose=verbose,
+            trace_id=trace_id,
+        ) if training_sample_size > 0 else np.empty((0, 1), dtype=vector_type)
+
         sample_vectors = read_sample_vectors(
             source_uri=source_uri,
             source_type=source_type,
@@ -1243,7 +1260,14 @@ def ingest(
             verbose=verbose,
             trace_id=trace_id,
         ) if training_sample_size > 0 else np.empty((0, dimensions), dtype=vector_type)
+        
+        # Filter out the updated vectors from the sample vectors.
+        updates_filter = np.in1d(
+            external_ids, updated_ids, assume_unique=True, invert=True
+        )
+        sample_vectors = sample_vectors[updates_filter]
 
+        # Then add any new vectors.
         additions_vectors, _ = read_additions(
             updates_uri=updates_uri,
             config=config,
@@ -1255,7 +1279,7 @@ def ingest(
         if additions_vectors is not None:
             sample_vectors = np.concatenate((sample_vectors, additions_vectors))
         
-        sample_vectors_array = vspy.FeatureVectorArray(sample_vectors)
+        sample_vectors_array = vspy.FeatureVectorArray(np.transpose(sample_vectors).astype(vector_type))
         index.train(sample_vectors_array, partitions, to_temporal_policy(index_timestamp))
 
     def centralised_kmeans_udf(
@@ -1790,8 +1814,8 @@ def ingest(
         index = vspy.IndexIVFPQ(
             ctx, 
             index_group_uri,
-            vspy.IndexLoadStrategy.PQ_INDEX,
-            0,
+            vspy.IndexLoadStrategy.PQ_OOC,
+                1,  
             to_temporal_policy(index_timestamp)
         ) if index_type == "IVF_PQ" else None
 
@@ -1950,8 +1974,8 @@ def ingest(
             index = vspy.IndexIVFPQ(
                 ctx, 
                 index_group_uri, 
-                vspy.IndexLoadStrategy.PQ_INDEX,
-                0,
+                vspy.IndexLoadStrategy.PQ_OOC,
+                1,
                 to_temporal_policy(index_timestamp)
             )
             input_vectors = vspy.FeatureVectorArray(np.transpose(additions_vectors).astype(vector_type))

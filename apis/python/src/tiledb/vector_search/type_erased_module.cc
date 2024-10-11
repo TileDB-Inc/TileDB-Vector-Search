@@ -290,6 +290,9 @@ void init_type_erased_module(py::module_& m) {
       .def("ids_type", &FeatureVectorArray::ids_type)
       .def("ids_type_string", &FeatureVectorArray::ids_type_string)
       .def_buffer([](FeatureVectorArray& v) -> py::buffer_info {
+        // std::cout << "[type_erased_module@FeatureVectorArray] Buffer info path" << std::endl;
+        // std::cout << "[type_erased_module@FeatureVectorArray] v.num_vectors()" << v.num_vectors() << std::endl;
+        // std::cout << "[type_erased_module@FeatureVectorArray] v.dimensions()" << v.dimensions() << std::endl;
         return py::buffer_info(
             v.data(),                           /* Pointer to buffer */
             datatype_to_size(v.feature_type()), /* Size of one scalar */
@@ -304,6 +307,7 @@ void init_type_erased_module(py::module_& m) {
       })
       .def(
           py::init([](py::array vectors, py::array ids) {
+            std::cout << "[type_erased_module@FeatureVectorArray] py::array path\n";
             // The vector buffer info.
             py::buffer_info info = vectors.request();
             if (info.ndim != 2) {
@@ -349,15 +353,23 @@ void init_type_erased_module(py::module_& m) {
                     ".");
               }
             }
-
+            // std::cout << "[type_erased_module@FeatureVectorArray] info.shape[0]: " << info.shape[0] << std::endl;
+            // std::cout << "[type_erased_module@FeatureVectorArray] info.shape[1]: " << info.shape[1] << std::endl;
             auto feature_vector_array = [&]() {
-              auto order = vectors.flags() & py::array::f_style ?
-                               TILEDB_COL_MAJOR :
-                               TILEDB_ROW_MAJOR;
+              // One-dimensional numpy arrays show up as TILEDB_COL_MAJOR, even when they should be 
+              // TILEDB_ROW_MAJOR. So here we ignore the order for one-dimensional arrays.
+              // if (info.shape[1] == 1 || info.shape[0] == 1) {
+              //     // Always treat one-dimensional vectors as row-major to preserve shape
+              //     return FeatureVectorArray(info.shape[1], info.shape[0], dtype_str, ids_dtype_str);
+              // }
+
+              auto order = vectors.flags() & py::array::f_style ? TILEDB_COL_MAJOR : TILEDB_ROW_MAJOR;
               if (order == TILEDB_COL_MAJOR) {
+                // std::cout << "[type_erased_module@FeatureVectorArray] TILEDB_COL_MAJOR" << std::endl;
                 return FeatureVectorArray(
                     info.shape[0], info.shape[1], dtype_str, ids_dtype_str);
               } else {
+                // std::cout << "[type_erased_module@FeatureVectorArray] TILEDB_ROW_MAJOR" << std::endl;
                 return FeatureVectorArray(
                     info.shape[1], info.shape[0], dtype_str, ids_dtype_str);
               }
@@ -525,8 +537,8 @@ void init_type_erased_module(py::module_& m) {
           py::arg("id_type") = "uint64",
           py::arg("partitioning_index_type") = "uint64",
           py::arg("num_subspaces") = 16,
-          py::arg("max_iterations") = 2,
-          py::arg("convergence_tolerance") = 0.000025f,
+          py::arg("max_iterations") = 10,
+          py::arg("convergence_tolerance") = 0.0001f,
           py::arg("reassign_ratio") = 0.075f,
           py::arg("temporal_policy") = std::nullopt,
           py::arg("distance_metric") = DistanceMetric::SUM_OF_SQUARES,

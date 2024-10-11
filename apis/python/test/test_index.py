@@ -37,6 +37,7 @@ def check_default_metadata(
     uri, expected_vector_type, expected_storage_version, expected_index_type
 ):
     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+    print('[check_default_metadata] group.meta', group.meta)
     assert "dataset_type" in group.meta
     assert group.meta["dataset_type"] == DATASET_TYPE
     assert type(group.meta["dataset_type"]) == str
@@ -307,6 +308,10 @@ def test_ivf_pq_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     if os.path.exists(uri):
         os.rmdir(uri)
+    # uri = "/tmp/ivf_pq_python"
+    # if os.path.exists(uri):
+    #     shutil.rmtree(uri)
+
     vector_type = np.float32
 
     index = ivf_pq_index.create(
@@ -319,7 +324,6 @@ def test_ivf_pq_index(tmp_path):
     ingestion_timestamps, base_sizes = load_metadata(uri)
     assert base_sizes == [0]
     assert ingestion_timestamps == [0]
-
     queries = np.array([[2, 2, 2]], dtype=np.float32)
     distances, ids = index.query(queries, k=1)
     assert distances.shape == (1, 1)
@@ -332,16 +336,23 @@ def test_ivf_pq_index(tmp_path):
     )
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "IVF_PQ")
 
+    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+    print('[test_index] group.meta', group.meta)
+
     update_vectors = np.empty([5], dtype=object)
     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.float32))
     update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.float32))
     update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
+    print('[test_index] index.update_batch() ===============================')
     index.update_batch(
         vectors=update_vectors,
         external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
     )
+
+    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+    print('[test_index] group.meta', group.meta)
     query_and_check_distances(
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
@@ -353,11 +364,17 @@ def test_ivf_pq_index(tmp_path):
         [[2, 1]],
         k_factor=2.0,
     )
-
+    
+    print('[test_index] index.consolidate_updates() ===============================')
     index = index.consolidate_updates()
+
+    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
+    print('[test_index] group.meta', group.meta)
 
     # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
     ingestion_timestamps, base_sizes = load_metadata(uri)
+    print('[test_index] ingestion_timestamps:', ingestion_timestamps)
+    print('[test_index] base_sizes:', base_sizes)
     assert base_sizes == [5]
     timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
     timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
@@ -497,28 +514,28 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
     # number of columns in the indexed data.
     size = 1000
     indexes = ["FLAT", "IVF_FLAT", "VAMANA", "IVF_PQ"]
-    num_columns_in_vector = [1, 2, 3, 4, 5, 10]
+    dimensions_in_ingestion = [1, 2, 3, 4, 5, 10]
     for index_type in indexes:
-        for num_columns in num_columns_in_vector:
-            index_uri = os.path.join(tmp_path, f"array_{index_type}_{num_columns}")
-            dataset_dir = os.path.join(tmp_path, f"dataset_{index_type}_{num_columns}")
+        for dimensions in dimensions_in_ingestion:
+            index_uri = os.path.join(tmp_path, f"array_{index_type}_{dimensions}")
+            dataset_dir = os.path.join(tmp_path, f"dataset_{index_type}_{dimensions}")
             create_random_dataset_f32_only_data(
-                nb=size, d=num_columns, centers=1, path=dataset_dir
+                nb=size, d=dimensions, centers=1, path=dataset_dir
             )
             index = ingest(
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=os.path.join(dataset_dir, "data.f32bin"),
-                num_subspaces=num_columns,
+                num_subspaces=dimensions,
                 partitions=1,
             )
 
-            # We have created a dataset with num_columns in each vector. Let's try creating queries
+            # We have created a dataset with dimensions in each vector. Let's try creating queries
             # with different numbers of columns and confirming incorrect ones will throw.
-            for num_columns_for_query in range(1, num_columns + 2):
-                query_shape = (1, num_columns_for_query)
+            for dimensions_in_query in range(1, dimensions + 2):
+                query_shape = (1, dimensions_in_query)
                 query = np.random.rand(*query_shape).astype(np.float32)
-                if query.shape[1] == num_columns:
+                if query.shape[1] == dimensions:
                     index.query(query, k=1, nprobe=1)
                 else:
                     with pytest.raises(TypeError):

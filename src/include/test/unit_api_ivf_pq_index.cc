@@ -1146,7 +1146,6 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   }
 }
 
-
 TEST_CASE("train python", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   // std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
@@ -1156,21 +1155,20 @@ TEST_CASE("train python", "[api_ivf_pq_index]") {
     vfs.remove_dir(index_uri);
   }
 
-  using feature_type = float;
+  using feature_type = uint8_t;
   
-  uint64_t dimensions = 5;
-  uint32_t num_subspaces = 1;
+  uint64_t dimensions = 6;
+  uint32_t num_subspaces = dimensions;
   uint32_t max_iterations = 2;
   float convergence_tolerance = 0.000025f;
   float reassign_ratio = 0.075f;
-  size_t n_list = 1;
 
 
   IndexIVFPQ::create(
     ctx,
       index_uri,
       dimensions,
-      TILEDB_FLOAT32,
+      TILEDB_UINT8,
       TILEDB_UINT64,
       TILEDB_UINT64,
     num_subspaces,
@@ -1180,12 +1178,32 @@ TEST_CASE("train python", "[api_ivf_pq_index]") {
     std::make_optional<TemporalPolicy>(TemporalPolicy{TimeTravel, 0})
     );
 
+  auto vectors = ColMajorMatrix<feature_type>{{
+    {  7   ,6 ,249   ,3   ,2   ,2},
+    {254 ,249   ,7   ,0   ,9   ,3},
+    {248 ,255   ,4   ,0 ,249   ,0},
+    {251 ,249 ,245   ,3 ,250 ,252},
+    {249 ,248 ,250   ,0   ,5 ,251},
+    {254   ,7   ,1   ,4   ,1   ,2},
+    {  5 ,254   ,2   ,0 ,253 ,255},
+    {  3   ,5 ,250 ,245 ,249   ,0},
+    {250 ,252   ,6   ,7 ,252   ,5},
+    {  4   ,5   ,9   ,9 ,248 ,252},
+  }};
   {
-    auto temporal_policy = TemporalPolicy{TimeTravel, 1728511443659};
-    auto vectors = ColMajorMatrix<feature_type>{{{1, 2, 3, 4, 5}}};
+    size_t partitions = 2;
+    auto temporal_policy = TemporalPolicy{TimeTravel, 1};
     std::cout << "index() ==============================================" << std::endl;
     auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
     std::cout << "index.train() ==============================================" << std::endl;
-    index.train(FeatureVectorArray(vectors), n_list ,temporal_policy);
+    index.train(FeatureVectorArray(vectors), partitions, temporal_policy);
+    index.ingest(FeatureVectorArray(vectors));
+  }
+
+  {
+    size_t partitions = 3;
+    auto temporal_policy = TemporalPolicy{TimeTravel, 5};
+    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    index.train(FeatureVectorArray(vectors), partitions, temporal_policy);
   }
 }

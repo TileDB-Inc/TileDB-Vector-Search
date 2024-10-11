@@ -104,14 +104,22 @@ class ivf_pq_group : public base_index_group<index_type> {
       }
     }
 
-    tile_size = (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimensions());
-    std::cout << "[ivf_pq_group@constructor] tile_size: " << tile_size << std::endl;
-    std::cout << "[ivf_pq_group@constructor] this->version_: " << this->version_ << std::endl;
-    default_compression = string_to_filter(storage_formats[this->version_]["default_attr_filters"]);
+    std::cout << "[ivf_pq_group@constructor] TILEDB_WRITE: " << (rw == TILEDB_WRITE) << std::endl;
+
+    // If we are creating a new group, we set these before load().
+    if (rw == TILEDB_WRITE) {
+      tile_size = (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimensions());
+      default_compression = string_to_filter(storage_formats[this->version_]["default_attr_filters"]);
+    }
 
     set_num_clusters(num_clusters);
     set_num_subspaces(num_subspaces);
     Base::load();
+
+    // Else if we are reading a group, we set these after load().
+    if (rw == TILEDB_READ) {
+      tile_size = (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimensions());
+      default_compression = string_to_filter(storage_formats[this->version_]["default_attr_filters"]);
   }
 
   void append_valid_array_names_impl() {
