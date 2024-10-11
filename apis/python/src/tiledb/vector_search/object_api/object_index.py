@@ -292,6 +292,7 @@ class ObjectIndex:
         driver_resources: Optional[Mapping[str, Any]] = None,
         extra_driver_modules: Optional[List[str]] = None,
         driver_access_credentials_name: Optional[str] = None,
+        merge_results_result_pos_as_score: bool = True,
         merge_results_reverse_dist: Optional[bool] = None,
         merge_results_per_query_embedding_group_fn: Callable = max,
         merge_results_per_query_group_fn: Callable = operator.add,
@@ -367,6 +368,9 @@ class ObjectIndex:
             A list of extra Python modules to install on the driver node.
         driver_access_credentials_name: Optional[str]
             If `driver_mode` was not `None`, the access credentials name to use for the driver execution.
+        merge_results_result_pos_as_score: bool
+            Applies only when there are multiple query embeddings per query.
+            If True, each result score is based on the position of the result for the query embedding.
         merge_results_reverse_dist: Optional[bool]
             Applies only when there are multiple query embeddings per query.
             If True, the distances are reversed based on their reciprocal, (1 / dist).
@@ -467,6 +471,7 @@ class ObjectIndex:
                 query_ids=query_ids,
                 num_queries=num_queries,
                 k=fetch_k,
+                result_pos_as_score=merge_results_result_pos_as_score,
                 reverse_dist=merge_results_reverse_dist,
                 per_query_embedding_group_fn=merge_results_per_query_embedding_group_fn,
                 per_query_group_fn=merge_results_per_query_group_fn,
@@ -560,13 +565,17 @@ class ObjectIndex:
         query_ids,
         num_queries,
         k,
+        result_pos_as_score=True,
         reverse_dist=True,
         per_query_embedding_group_fn=max,
         per_query_group_fn=operator.add,
     ):
         """
         Post-process query results for multiple embeddings per query object.
-        -  If `reverse_dist` uses as score the reciprocal of the distance: (1 / distance)
+        -  Computes score per original result
+            - If `result_pos_as_score=True` the score is based on the position of the result for the query embedding.
+            - Else, the distance is used as score
+                - If `reverse_dist=True` uses as score the reciprocal of the distance: (1 / distance)
         -  Applies `per_query_embedding_group_fn` to group object results per query embedding.
         -  Applies `per_query_group_fn` to group object results per query.
         """
@@ -582,10 +591,12 @@ class ObjectIndex:
             q_emb_score = {}
             for result_id in range(distances.shape[1]):
                 obj_id = object_ids[q_emb_id][result_id]
-                # score = 1 - result_id/k
-                score = distances[q_emb_id][result_id]
-                if reverse_dist:
-                    score = get_reciprocal(score)
+                if result_pos_as_score:
+                    score = 1 - result_id / k
+                else:
+                    score = distances[q_emb_id][result_id]
+                    if reverse_dist:
+                        score = get_reciprocal(score)
                 if obj_id not in q_emb_score:
                     q_emb_score[obj_id] = score
                 else:
@@ -907,6 +918,7 @@ def create(
     embedding: ObjectEmbedding,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    metadata_tile_size: int = 10000,
     **kwargs,
 ) -> ObjectIndex:
     """Creates a new ObjectIndex.
@@ -1000,8 +1012,8 @@ def create(
             object_metadata_array_uri = f"{uri}/{metadata_array_name}"
             external_ids_dim = tiledb.Dim(
                 name="external_id",
-                domain=(0, np.iinfo(np.dtype("uint64")).max - 10000),
-                tile=10000,
+                domain=(0, np.iinfo(np.dtype("uint64")).max - metadata_tile_size),
+                tile=metadata_tile_size,
                 dtype=np.dtype(np.uint64),
             )
             external_ids_dom = tiledb.Domain(external_ids_dim)
