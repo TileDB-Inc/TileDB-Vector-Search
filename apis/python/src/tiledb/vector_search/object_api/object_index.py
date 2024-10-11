@@ -3,7 +3,7 @@ import operator
 import random
 import string
 from collections import OrderedDict
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 import numpy as np
 
@@ -292,6 +292,9 @@ class ObjectIndex:
         driver_resources: Optional[Mapping[str, Any]] = None,
         extra_driver_modules: Optional[List[str]] = None,
         driver_access_credentials_name: Optional[str] = None,
+        merge_results_reverse_dist: Optional[bool] = None,
+        merge_results_per_query_embedding_group_fn: Callable = max,
+        merge_results_per_query_group_fn: Callable = operator.add,
         **kwargs,
     ):
         """
@@ -364,6 +367,16 @@ class ObjectIndex:
             A list of extra Python modules to install on the driver node.
         driver_access_credentials_name: Optional[str]
             If `driver_mode` was not `None`, the access credentials name to use for the driver execution.
+        merge_results_reverse_dist: Optional[bool]
+            Applies only when there are multiple query embeddings per query.
+            If True, the distances are reversed based on their reciprocal, (1 / dist).
+        merge_results_per_query_embedding_group_fn: Callable
+            Applies only when there are multiple query embeddings per query.
+            Group function used to group together object scores per query embedding (i.e max, min, etc.).
+        merge_results_per_query_group_fn: Callable
+            Applies only when there are multiple query embeddings per query.
+            Group function used to group together object scores per query (i.e add). This is applied after
+            `merge_results_per_query_embedding_group_fn`
         **kwargs
             Keyword arguments to pass to the index query method.
 
@@ -440,6 +453,13 @@ class ObjectIndex:
         )
 
         # Post-process query results for multiple embeddings per query object
+        if merge_results_reverse_dist is None:
+            merge_results_reverse_dist = (
+                False
+                if self.index.distance_metric == vspy.DistanceMetric.INNER_PRODUCT
+                else True
+            )
+
         if query_embeddings.shape[0] > num_queries:
             distances, object_ids = self._merge_results_per_query(
                 distances=distances,
@@ -447,9 +467,9 @@ class ObjectIndex:
                 query_ids=query_ids,
                 num_queries=num_queries,
                 k=fetch_k,
-                reverse_dist=False
-                if self.index.distance_metric == vspy.DistanceMetric.INNER_PRODUCT
-                else True,
+                reverse_dist=merge_results_reverse_dist,
+                per_query_embedding_group_fn=merge_results_per_query_embedding_group_fn,
+                per_query_group_fn=merge_results_per_query_group_fn,
             )
 
         unique_ids, idx = np.unique(object_ids, return_inverse=True)
