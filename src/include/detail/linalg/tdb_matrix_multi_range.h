@@ -132,9 +132,6 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       , total_num_columns_{total_num_columns} {
     constructor_timer.stop();
 
-    std::cout << "[tdbBlockedMatrixMultiRange@constructor] upper_bound: " << upper_bound << std::endl;
-    std::cout << "[tdbBlockedMatrixMultiRange@constructor] total_num_columns: " << total_num_columns << std::endl;
-
     // The default is to load all the vectors.
     if (upper_bound == 0 || upper_bound > total_num_columns_) {
       column_capacity_ = total_num_columns_;
@@ -256,7 +253,6 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       for (size_t i = 0; i < column_slices_.size(); ++i) {
         const auto start = static_cast<int>(column_slices_[i].first);
         const auto end = static_cast<int>(column_slices_[i].second);
-        std::cout << "[tdbBlockedMatrixMultiRange@load] start: " << start << ", end: " << end << std::endl;
         subarray.add_range(1, start, end);
       }
     }

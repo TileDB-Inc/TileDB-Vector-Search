@@ -57,7 +57,8 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
   tiledb::Context ctx;
   tiledb::Config cfg;
 
-  std::string uri = "/tmp/tmp_ivf_pq_index";
+  std::string uri =
+      (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(uri)) {
     vfs.remove_dir(uri);
@@ -117,10 +118,6 @@ TEST_CASE("load metadata from index", "[ivf_pq_metadata]") {
   }
 
     ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type> idx(ctx, uri);
-  //   auto training_vectors = ColMajorMatrixWithIds<siftsmall_feature_type, siftsmall_ids_type>{
-  //       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}, {10, 11, 12, 13}};
-  //   idx.train(training_vectors);
-  //   idx.ingest(training_vectors, training_vectors.raveled_ids(), {});
 
   {
     // Check that we can overwrite the last ingestion_timestamps, base_sizes,

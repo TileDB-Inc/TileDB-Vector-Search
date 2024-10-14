@@ -304,7 +304,6 @@ TEST_CASE("time travel", "[tdb_matrix_multi_range]") {
 
   std::vector<size_t> column_indices(num_vectors);
   std::iota(column_indices.begin(), column_indices.end(), 0);
-  debug_matrix(column_indices, "column_indices", 100);
 
   {
     // We can load the matrix at the creation timestamp.

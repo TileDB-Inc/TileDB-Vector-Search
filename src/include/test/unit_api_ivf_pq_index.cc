@@ -631,9 +631,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   // Create an empty index.
   {
     // We write the empty index at timestamp 0.
-    std::cout << "[api_ivf_pq_index] create() -----------------------------------------" << std::endl;
     IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32,  num_subspaces, max_iterations, convergence_tolerance, reassign_ratio);
-    std::cout << "[api_ivf_pq_index] IndexIVFPQ() -----------------------------------------" << std::endl;
     auto index = IndexIVFPQ(ctx, index_uri);
 
     CHECK(index.dimensions() == dimensions);
@@ -669,7 +667,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   {
     // We then load this empty index and don't set a timestamp (which means
     // we'll read from 0 -> max uint64).
-    std::cout << "[api_ivf_pq_index] index() -----------------------------------------" << std::endl;
     auto index = IndexIVFPQ(ctx, index_uri);
 
     CHECK(index.temporal_policy().timestamp_start() == 0);
@@ -692,12 +689,10 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto training_vector_array = FeatureVectorArray(training);
     // We then write the index at timestamp 99.
     CHECK(index.temporal_policy().timestamp_end() != 99);
-    std::cout << "[api_ivf_pq_index] index.train() -----------------------------------------" << std::endl;
     index.train(training_vector_array, partitions, TemporalPolicy(TimeTravel, 99));
     CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.n_list() == partitions);
     return;
-    std::cout << "[api_ivf_pq_index] index.ingest() -----------------------------------------" << std::endl;
     index.ingest(training_vector_array, training_ids);
     
     // This also updates the timestamp of the index - we're now at timestamp 99.
@@ -743,7 +738,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   {
     // We then load the trained index and don't set a timestamp (which means
     // we'll load it at timestamp 99).
-    std::cout << "[api_ivf_pq_index] index() -----------------------------------------" << std::endl;
     auto index = IndexIVFPQ(ctx, index_uri);
     // Check that we can do finite and infinite queries and then train + write
     // the index.
@@ -752,7 +746,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
       size_t nprobe = 1;
       auto queries = ColMajorMatrix<feature_type_type>{
           {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
-     std::cout << "[api_ivf_pq_index] index.query() -----------------------------------------" << std::endl;
       auto&& [scores, ids] =
           index.query(FeatureVectorArray(queries), top_k, nprobe);
       check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {1, 2, 3, 4});
@@ -761,7 +754,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         size_t upper_bound = 5;
         auto index_finite =
             IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
-        std::cout << "[api_ivf_pq_index] index.query() -----------------------------------------" << std::endl;
         auto&& [scores_finite, ids_finite] =
             index_finite.query(FeatureVectorArray(queries), top_k, nprobe);
         check_single_vector_equals(
@@ -784,10 +776,8 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto training_ids = FeatureVector(std::vector<id_type_type>{11, 22, 33, 44, 55});
 
     auto training_vector_array = FeatureVectorArray(training);
-    std::cout << "[api_ivf_pq_index] index.train() -----------------------------------------" << std::endl;
     // We then write the index at timestamp 100.
     index.train(training_vector_array, 10, TemporalPolicy(TimeTravel, 100));
-    std::cout << "[api_ivf_pq_index] index.ingest() -----------------------------------------" << std::endl;
     index.ingest(training_vector_array, training_ids);
 
     // This also updates the timestamp of the index - we're now at timestamp
@@ -801,7 +791,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     size_t nprobe = 1;
     auto queries = ColMajorMatrix<feature_type_type>{
         {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}}};
-    std::cout << "[api_ivf_pq_index] index.query() -----------------------------------------" << std::endl;
     auto&& [scores, ids] =
         index.query(FeatureVectorArray(queries), top_k, nprobe);
 
@@ -1048,10 +1037,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         all_ingestion_timestamps.end(),
         std::vector<uint64_t>{100}.begin()));
   }
-
-  std::string path =
-      (std::filesystem::temp_directory_path() / "dump_logs_file.txt").string();
-  dump_logs(path, "IVF_PQ", 1, 2, 3, 4, 5.5f);
 }
 
 TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {

@@ -194,7 +194,6 @@ int ivf_pq_index(
 
     // Write out the arrays
     if (!parts_uri.empty()) {
-      std::cout << "[index@ivf_index] writing to parts_uri: " << parts_uri << " start_pos: " << start_pos << std::endl;
       write_matrix<FeatureType, stdx::layout_left, size_t>(
           ctx,
           shuffled_input_vectors,
@@ -204,7 +203,6 @@ int ivf_pq_index(
           temporal_policy);
     }
     if (!pq_parts_uri.empty()) {
-      std::cout << "[index@ivf_index] writing to pq_parts_uri: " << pq_parts_uri << " start_pos: " << start_pos << std::endl;
       write_matrix<PQFeatureType, stdx::layout_left, size_t>(
           ctx,
           shuffled_pq_input_vectors,
@@ -225,13 +223,11 @@ int ivf_pq_index(
     }
     
 //    if (!pq_index_uri.empty()) {
-//      std::cout << "[index@ivf_index] writing to pq_index_uri: " << pq_index_uri << " partition_start: " << partition_start << std::endl;
 //      debug_vector(indices);
 //      write_vector(
 //          ctx, indices, pq_index_uri, partition_start, false, temporal_policy);
 //    }
 //    if (!pq_id_uri.empty()) {
-//      std::cout << "[index@ivf_index] writing to pq_id_uri: " << pq_id_uri << " start_pos: " << start_pos << std::endl;
 //      debug_vector(shuffled_ids);
 //      write_vector(
 //          ctx, shuffled_ids, pq_id_uri, start_pos, false, temporal_policy);
@@ -336,7 +332,6 @@ int ivf_index(
 
     // Write out the arrays
     if (!parts_uri.empty()) {
-      std::cout << "[index@ivf_index] writing to parts_uri: " << parts_uri << " start_pos: " << start_pos << std::endl;
       write_matrix<FeatureType, stdx::layout_left, size_t>(
           ctx,
           shuffled_input_vectors,
@@ -346,12 +341,10 @@ int ivf_index(
           temporal_policy);
     }
     if (!index_uri.empty()) {
-      std::cout << "[index@ivf_index] writing to index_uri: " << index_uri << " partition_start: " << partition_start << std::endl;
       write_vector(
           ctx, indices, index_uri, partition_start, false, temporal_policy);
     }
     if (!id_uri.empty()) {
-      std::cout << "[index@ivf_index] writing to id_uri: " << id_uri << " start_pos: " << start_pos << std::endl;
       write_vector(
           ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
     }

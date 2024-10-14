@@ -121,7 +121,6 @@ class base_index_group {
       throw std::runtime_error("Version not set.");
     }
     for (auto&& [array_key, array_name] : storage_formats[version_]) {
-      // std::cout << "[index_group@init_valid_array_names] array_key: " << array_key << " array_name: " << array_name << std::endl;
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
@@ -279,7 +278,6 @@ class base_index_group {
 
   constexpr std::string array_key_to_temp_uri(const std::string& array_key) const {
     auto name = array_key_to_array_name(array_key);
-    // std::cout << "[index_group@array_key_to_temp_uri] name: " << name << std::endl;
     if (array_name_to_temp_uri_.find(name) == array_name_to_temp_uri_.end()) {
       throw std::runtime_error(
           "[index_group@array_key_to_temp_uri] Invalid key when getting the URI: " + array_key +

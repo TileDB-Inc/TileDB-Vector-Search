@@ -104,8 +104,6 @@ class ivf_pq_group : public base_index_group<index_type> {
       }
     }
 
-    std::cout << "[ivf_pq_group@constructor] TILEDB_WRITE: " << (rw == TILEDB_WRITE) << std::endl;
-
     // If we are creating a new group, we set these before load().
     if (rw == TILEDB_WRITE) {
       tile_size = (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimensions());
@@ -283,15 +281,7 @@ class ivf_pq_group : public base_index_group<index_type> {
    * Create a ready-to-use group with default arrays
    ****************************************************************************/
   void create_default_impl() {
-    std::cout << "[ivf_pq_group@create_default_impl] tile_size: " << tile_size<< std::endl;
-
     this->init_valid_array_names();
-
-    // static const int32_t tile_size{
-    //     (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) /
-    //               this->get_dimensions())};
-    // static const tiledb_filter_type_t default_compression{
-    //     string_to_filter(storage_formats[version_]["default_attr_filters"])};
 
     tiledb::Group::create(cached_ctx_, group_uri_);
     auto write_group = tiledb::Group(
@@ -387,12 +377,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     create_feature_vectors_matrix(temp_group, this->feature_vectors_temp_uri());
     create_ids_vector(temp_group, this->ids_temp_uri(), this->ids_array_name());
     create_indices_vector(temp_group, this->feature_vectors_index_temp_uri(), this->feature_vectors_index_name());
-    
     create_pq_ivf_vectors_matrix(temp_group, pq_ivf_vectors_temp_uri());
-//    create_ids_vector(temp_group, pq_ivf_ids_temp_uri(), this->pq_ivf_ids_array_name());
-//    create_indices_vector(temp_group, pq_ivf_indices_temp_uri(), this->pq_ivf_indices_array_name());
-
-    std::cout << "[ivf_pq_group@create_temp_data_group] Created temp data group: " << temp_group.dump(true) << std::endl;
   }
 private:
   void create_feature_vectors_matrix(tiledb::Group &group, const std::string &uri) {

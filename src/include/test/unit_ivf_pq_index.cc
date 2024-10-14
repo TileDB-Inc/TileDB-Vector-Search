@@ -444,7 +444,6 @@ uint64_t write_timestamp = 1000;
   // Clear history.
   ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
       ctx, index_uri, write_timestamp + 10);
-  return;
   auto idx2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
       ctx, index_uri);
 
@@ -568,8 +567,6 @@ ivf_pq_index<feature_type, id_type> index(ctx, index_uri);
         ColMajorMatrix<feature_type>{{{value, value, value, value}}};
     auto&& [scores, ids] = index.query(queries, k_nn, nprobe);
 
-    debug_matrix(scores, "scores");
-    debug_matrix(ids, "ids");
 
     CHECK(scores(0, 0) == 0);
     CHECK(ids(0, 0) == i * 11);
@@ -599,8 +596,6 @@ ivf_pq_index<feature_type, id_type> index(ctx, index_uri);
         ColMajorMatrix<feature_type>{{{value, value, value, value}}};
     auto&& [scores_from_finite, ids_from_finite] =
         index2->query(queries, k_nn, nprobe, 5);
-     debug_matrix(scores_from_finite, "scores_from_finite");
-     debug_matrix(ids_from_finite, "ids_from_finite");
     CHECK(scores_from_finite(0, 0) == 0);
     CHECK(ids_from_finite(0, 0) == i * 11);
     auto&& [scores, ids] = index2->query(queries, k_nn, nprobe);
@@ -618,7 +613,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
     vfs.remove_dir(index_uri);
   }
 
-  size_t num_vectors = 100;
+  size_t num_vectors = 500;
   uint64_t dimensions = 4;
   size_t partitions = 4;
   uint32_t num_subspaces = 1;
@@ -627,7 +622,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
   float reassign_ratio = 0.09f;
 
   size_t nprobe = partitions;
-  size_t k_nn = 1;
+  size_t k_nn = 40;
   float k_factor = 2.f;
   size_t upper_bound = 350;
 
@@ -666,13 +661,9 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
     {
      auto&& [scores_reranking, ids_reranking] =
          index.query(queries, k_nn, nprobe, k_factor);
-    return;
-     debug_matrix(scores_reranking, "scores_reranking");
-     debug_matrix(ids_reranking, "ids_reranking");
      CHECK(
          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
      CHECK(scores_reranking(0, 0) == 0);
-     return;
       auto&& [scores_no_reranking, ids_no_reranking] =
           index.query(queries, k_nn, nprobe, 1.f);
       num_equal_no_reranking =
@@ -681,7 +672,6 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
       CHECK(num_equal_no_reranking >= 5);
     }
   }
-//  return;
 
   // We can open the index by URI and query.
   {
@@ -689,20 +679,15 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
     // infinite.
     {
-      std::cout << "ivf_pq_index<feature_type, id_type>(ctx, index_uri) -----------------------------" << std::endl;
       auto index_infinite =
           ivf_pq_index<feature_type, id_type>(ctx, index_uri);
       CHECK(index_infinite.num_partitions() == partitions);
       CHECK(index_infinite.upper_bound() == 0);
-      std::cout << "query() -----------------------------" << std::endl;
       auto&& [scores_reranking, ids_reranking] =
           index_infinite.query(queries, k_nn, nprobe, k_factor);
-      debug_matrix(scores_reranking, "scores_reranking");
-      debug_matrix(ids_reranking, "ids_reranking");
      CHECK(
          k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
      CHECK(scores_reranking(0, 0) == 0);
-      return;
       auto&& [scores_no_reranking, ids_no_reranking] =
           index_infinite.query(queries, k_nn, nprobe, 1.f);
       CHECK(
