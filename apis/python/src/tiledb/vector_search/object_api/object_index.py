@@ -1020,6 +1020,7 @@ def create(
             schema = tiledb.ArraySchema(
                 domain=external_ids_dom,
                 sparse=True,
+                capacity=metadata_tile_size,
                 attrs=object_reader.metadata_attributes(),
             )
             tiledb.Array.create(object_metadata_array_uri, schema)
