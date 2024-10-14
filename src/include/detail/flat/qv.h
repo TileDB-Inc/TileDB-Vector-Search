@@ -50,7 +50,6 @@
 #include "linalg.h"
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
-#include "utils/timer.h"
 
 namespace detail::flat {
 
@@ -81,7 +80,7 @@ template <
     size_t k_nn,
     unsigned int nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_query_heap_0"};
 
   using id_type = uint64_t;
   using score_type = float;
@@ -182,7 +181,7 @@ auto qv_query_heap(
     size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_query_heap"};
 
   // print_types(distance);
   // load(db);
@@ -293,12 +292,9 @@ auto qv_query_heap_tiled(
     size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
+  scoped_timer _{"qv@qv_query_heap_tiled"};
+
   load(db);
-
-  // debug_matrix(db);
-  // debug_matrix(query);
-
-  scoped_timer _{tdb_func__};
 
   // using feature_type = typename
   // std::remove_reference_t<decltype(db)>::value_type;
@@ -484,7 +480,7 @@ auto qv_partition(
     const Q& q,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_partition"};
 
   // Just need a single vector -- creating an index, not ids, so hardcoded
   // size_t is okay to use here
@@ -534,7 +530,7 @@ auto qv_partition_with_scores(
     const Q& q,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_partition_with_scores"};
 
   auto size_db = ::num_vectors(db);
 

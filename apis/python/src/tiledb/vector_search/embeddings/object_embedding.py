@@ -1,6 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, OrderedDict
+from typing import Dict, OrderedDict, Tuple, Union
 
 import numpy as np
 
@@ -43,10 +43,12 @@ class ObjectEmbedding(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def embed(self, objects: OrderedDict, metadata: OrderedDict) -> np.ndarray:
+    def embed(
+        self, objects: OrderedDict, metadata: OrderedDict
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.array]]:
         """
         Creates embedding vectors for objects. Returns a numpy array of embedding vectors.
-        There is no enforced restriction on the object format. ObjectReaders and ObjectEmbeddings should use comatible object and metadata formats.
+        There is no enforced restriction on the object format. ObjectReaders and ObjectEmbeddings should use compatible object and metadata formats.
 
         Parameters
         ----------

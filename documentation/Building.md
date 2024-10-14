@@ -7,14 +7,25 @@ TileDB Vector Search can be built from source for either C++ or Python.
 To build for C++, run:
 
 ```bash
+# Configure:
 cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug
+# Build:
 cmake --build ./src/build -j3
+# Run tests:
+cmake --build ./src/build --target check
 ```
 
-Then you can run the tests:
+Though above makes it easy to build and run all tests, incremental rebuild will not work. To get incremental rebuild working, we turn off Superbuild with `-DCMAKE_IDE=ON`. Note that unlike when using Superbuild (which is the default when `-DCMAKE_IDE=ON` is not set), you must pass `-DTileDB_DIR:PATH`.
 
 ```bash
-cmake --build ./src/build --target check
+# Configure:
+cmake -S ./src -B ./src/build  -DCMAKE_BUILD_TYPE=Debug -DCMAKE_IDE=ON -DTileDB_DIR:PATH=/Users/<name>/repo/tileDB/build/dist
+# Build everything:
+cmake --build ./src/build -j3
+# Build a single unit test:
+cmake --build ./src/build --target unit_tdb_partitioned_matrix
+# Run that single unit test:
+./src/build/include/test/unit_tdb_partitioned_matrix
 ```
 
 Alternatively, you can setup CLion, which is the suggested way to develop C++ in this project. To set up CLion:

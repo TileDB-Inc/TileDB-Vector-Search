@@ -1,5 +1,5 @@
 /**
- * @file   logging.h
+ * @file logging_time.h
  *
  * @section LICENSE
  *
@@ -89,16 +89,6 @@ code.
  * The associated singleton provides methods for getting memory usages
 individually
  * or cumulatively.
- *
- * @example
- * @code{.cpp}
-// Print totals for all timers
-auto timers = _timing_data.get_timer_names();
-for (const auto& timer : timers) {
-   std::cout << timer << ":  " <<
-_timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
-}
- * @endcode
  */
 
 #ifndef TDB_LOGGING_TIME_H
@@ -112,6 +102,7 @@ _timing_data.get_intervals_summed<std::chrono::milliseconds>(timer) << " ms\n";
 #include <set>
 #include <string>
 #include <vector>
+#include "utils/utils.h"
 
 /**
  *  Macro holding the name of the function in which it is called.
@@ -269,26 +260,6 @@ class timing_data_class {
       oss << "\n";
     }
     return oss.str();
-  }
-
- private:
-  std::string format_duration_ns(double duration_ns) const {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2);
-
-    if (duration_ns < 1000) {
-      oss << duration_ns;
-      return oss.str() + " ns";
-    } else if (duration_ns < 1000000) {
-      oss << (duration_ns / 1000.0);
-      return oss.str() + " µs";
-    } else if (duration_ns < 1000000000) {
-      oss << (duration_ns / 1000000.0);
-      return oss.str() + " ms";
-    } else {
-      oss << (duration_ns / 1000000000.0);
-      return oss.str() + " s";
-    }
   }
 };
 

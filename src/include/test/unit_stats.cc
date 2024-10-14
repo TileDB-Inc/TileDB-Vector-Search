@@ -37,3 +37,21 @@ TEST_CASE("test build_config", "[stats]") {
   auto config = build_config();
   CHECK(!config.empty());
 }
+
+TEST_CASE("test logging_string and dump_logs", "[stats]") {
+  { scoped_timer _("scoped_timer_1"); }
+  log_timer _1{"log_timer_1"};
+  _1.stop();
+  log_timer _2{"log_timer_2"};
+  _2.stop();
+
+  std::string log = logging_string();
+  std::cout << log << std::endl;
+  REQUIRE(log.find("  scoped_timer_1: ") != std::string::npos);
+  REQUIRE(log.find("log_timer_1: count: 1, ") != std::string::npos);
+  REQUIRE(log.find("log_timer_2: count: 1, ") != std::string::npos);
+
+  std::string path =
+      (std::filesystem::temp_directory_path() / "dump_logs_file.txt").string();
+  dump_logs(path, "IVF_PQ", 1, 2, 3, 4, 5.5f);
+}

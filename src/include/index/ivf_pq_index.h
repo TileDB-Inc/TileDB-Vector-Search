@@ -560,6 +560,8 @@ class ivf_pq_index {
         typename ColMajorMatrix<feature_type>::span_type,
         typename ColMajorMatrix<flat_vector_feature_type>::span_type>
   auto train_pq(const V& training_set, kmeans_init init = kmeans_init::random) {
+    scoped_timer _{"ivf_pq_index@train_pq"};
+    
     // This basically the same thing we do in ivf_flat, but we perform it
     // num_subspaces_ times, once for each subspace.
     // @todo IMPORTANT This is highly suboptimal and will make multiple passes
@@ -724,6 +726,7 @@ class ivf_pq_index {
   template <feature_vector_array V, class Distance = sum_of_squares_distance>
   void train_ivf(
       const V& training_set, kmeans_init init = kmeans_init::random) {
+    scoped_timer _{"ivf_pq_index@train_ivf"};
     dimensions_ = ::dimensions(training_set);
     if (num_partitions_ == 0) {
       num_partitions_ = std::sqrt(::num_vectors(training_set));
@@ -773,6 +776,7 @@ class ivf_pq_index {
       size_t num_partitions = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       Distance distance = Distance{}) {
+    scoped_timer _{"ivf_pq_index@train"};
     std::cout << "[index@ivf_pq_index@train]" << std::endl;
     debug_matrix(training_set, "[index@ivf_pq_index@train] training_set");
     if (num_subspaces_ <= 0) {
@@ -1359,6 +1363,7 @@ class ivf_pq_index {
       feature_vector_array PQArray,
       class Distance = uncached_sub_sum_of_squares_distance>
   auto pq_encode(const Array& training_set, Distance distance = Distance{}) const {
+    scoped_timer _{"ivf_pq_index@pq_encode"};
     auto pq_vectors =
         std::make_unique<PQArray>(num_subspaces_, ::num_vectors(training_set));
     auto& pqv = *pq_vectors;
@@ -1650,6 +1655,7 @@ class ivf_pq_index {
       size_t k_nn,
       size_t nprobe,
       float k_factor = 1.f) {
+    scoped_timer _{"ivf_pq_index@query"};
     if (k_factor < 1.f) {
       throw std::runtime_error("k_factor must be >= 1");
     }
