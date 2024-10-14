@@ -41,6 +41,8 @@ class ColpaliEmbedding(ObjectEmbedding):
         if self.device is None:
             if torch.cuda.is_available() and torch.cuda.device_count() > 0:
                 self.device = "cuda"
+            elif torch.backends.mps.is_available():
+                self.device = "mps"
             else:
                 self.device = "cpu"
 
