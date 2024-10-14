@@ -51,7 +51,7 @@ TEMPLATE_TEST_CASE(
       (std::filesystem::temp_directory_path() / "tmp_tdb_matrix").string();
   std::string tmp_ids_uri =
       (std::filesystem::temp_directory_path() / "tmp_tdb_ids_matrix").string();
-  int offset = 13;
+  size_t offset = 13;
   size_t Mrows = 200;
   size_t Ncols = 500;
   auto X = ColMajorMatrixWithIds<TestType, TestType, size_t>(Mrows, Ncols);
@@ -63,7 +63,10 @@ TEMPLATE_TEST_CASE(
 
   auto Y = tdbColMajorMatrixWithIds<TestType, TestType>(
       ctx, tmp_matrix_uri, tmp_ids_uri);
-  Y.load();
+  CHECK(Y.load() == true);
+  for (int i = 0; i < 5; ++i) {
+    CHECK(Y.load() == false);
+  }
   CHECK(num_vectors(Y) == num_vectors(X));
   CHECK(dimensions(Y) == dimensions(X));
   CHECK(std::equal(
@@ -229,7 +232,7 @@ TEST_CASE("load from uri", "[tdb_matrix_with_ids]") {
   ck.load();
   CHECK(ck.num_ids() == num_sift_vectors);
 
-  auto num_queries = 10;
+  size_t num_queries = 10;
   auto qk = tdbColMajorMatrixWithIds<float>(
       ctx, sift_query_uri, sift_ids_uri, num_queries);
   load(qk);
@@ -284,7 +287,7 @@ TEST_CASE("empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(dimensions(X) == 0);
 
     CHECK(X.num_ids() == 0);
-    CHECK(X.raveled_ids().size() == 0);
+    CHECK(X.raveled_ids().empty());
   }
 
   {
@@ -296,7 +299,7 @@ TEST_CASE("empty matrix", "[tdb_matrix_with_ids]") {
     CHECK(X.num_rows() == 0);
     CHECK(dimensions(X) == 0);
     CHECK(X.num_ids() == 0);
-    CHECK(X.raveled_ids().size() == 0);
+    CHECK(X.raveled_ids().empty());
   }
 }
 
@@ -430,7 +433,7 @@ TEST_CASE("time travel", "[tdb_matrix_with_ids]") {
         ctx, tmp_matrix_uri, tmp_ids_uri, 0, TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
     CHECK(dimensions(Y) == 0);
-    CHECK(Y.size() == 0);
+    CHECK(Y.empty());
   }
 
   {
@@ -446,6 +449,6 @@ TEST_CASE("time travel", "[tdb_matrix_with_ids]") {
         TemporalPolicy{TimeTravel, 5});
     CHECK(num_vectors(Y) == 0);
     CHECK(dimensions(Y) == 0);
-    CHECK(Y.size() == 0);
+    CHECK(Y.empty());
   }
 }

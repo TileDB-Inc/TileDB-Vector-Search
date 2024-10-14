@@ -81,7 +81,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
-      : Base(nrows, ncols, policy)
+      : Base(nrows, ncols)
       , num_ids_(this->num_rows_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , ids_storage_{std::make_unique_for_overwrite<IdsType[]>(this->num_rows_)}
@@ -96,7 +96,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : Base(nrows, ncols, policy)
+      : Base(nrows, ncols)
       , num_ids_(this->num_cols_)
 #ifdef __cpp_lib_smart_ptr_for_overwrite
       , ids_storage_{std::make_unique_for_overwrite<IdsType[]>(this->num_cols_)}
@@ -112,7 +112,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
       size_type nrows,
       size_type ncols,
       LayoutPolicy policy = LayoutPolicy()) noexcept
-      : Base(std::move(storage), nrows, ncols, policy)
+      : Base(std::move(storage), nrows, ncols)
       , num_ids_{std::is_same<LayoutPolicy, stdx::layout_right>::value ? this->num_rows_ : this->num_cols_}
       , ids_storage_{std::move(ids_storage)} {
   }
@@ -122,7 +122,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
    * The initializer list is assumed to be in row-major order.
    */
   MatrixWithIds(
-      std::initializer_list<std::initializer_list<T>> matrix,
+      const std::vector<std::vector<T>>& matrix,
       const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_right>)
       : Base(matrix)
@@ -141,7 +141,7 @@ class MatrixWithIds : public Matrix<T, LayoutPolicy, I> {
    * The initializer list is assumed to be in column-major order.
    */
   MatrixWithIds(
-      std::initializer_list<std::initializer_list<T>> matrix,
+      const std::vector<std::vector<T>>& matrix,
       const std::vector<IdsType>& ids) noexcept
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(matrix)
@@ -218,8 +218,12 @@ void debug_matrix_with_ids(
     const MatrixWithIds& matrix,
     const std::string& msg = "",
     size_t max_size = 10) {
-  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
+  auto rowsEnd = std::min(
+      dimensions(matrix),
+      static_cast<typename MatrixWithIds::size_type>(max_size));
+  auto colsEnd = std::min(
+      num_vectors(matrix),
+      static_cast<typename MatrixWithIds::size_type>(max_size));
 
   debug_matrix(matrix, msg, max_size);
 

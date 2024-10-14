@@ -70,15 +70,12 @@ class tdbBlockedMatrix : public MatrixBase {
   using size_type = typename Base::size_type;
   using reference = typename Base::reference;
 
-  using view_type = Base;
-
   constexpr static auto matrix_order_{order_v<LayoutPolicy>};
 
  protected:
-  using row_domain_type = int32_t;
   using col_domain_type = int32_t;
 
-  log_timer constructor_timer{"tdbBlockedMatrix constructor"};
+  log_timer constructor_timer{"tdb_matrix@ctor"};
 
   tiledb::Context ctx_;
   std::string uri_;
@@ -95,12 +92,11 @@ class tdbBlockedMatrix : public MatrixBase {
   index_type last_row_;
   index_type first_col_;
   index_type last_col_;
+
+  // The columns loaded into memory.  Except for the last (remainder) block,
+  // this range will be equal to `load_blocksize_`.
   index_type first_resident_col_;
   index_type last_resident_col_;
-
-  // The number of columns loaded into memory.  Except for the last (remainder)
-  // block, this will be equal to `blocksize_`.
-  index_type num_resident_cols_{0};
 
   // How many columns to load at a time
   index_type load_blocksize_{0};
@@ -113,6 +109,10 @@ class tdbBlockedMatrix : public MatrixBase {
   // std::future<bool> fut_;
   // size_t pending_row_offset{0};
   // size_t pending_col_offset{0};
+
+  size_t get_elements_to_load() const {
+    return std::min(load_blocksize_, last_col_ - last_resident_col_);
+  }
 
  public:
   tdbBlockedMatrix(tdbBlockedMatrix&& rhs) = default;
@@ -222,7 +222,7 @@ class tdbBlockedMatrix : public MatrixBase {
       , first_row_{first_row}
       , first_col_{first_col} {
     constructor_timer.stop();
-    scoped_timer _{tdb_func__ + " " + uri};
+    scoped_timer _{"tdb_matrix@ctor@" + uri};
 
     if (last_row && *last_row < first_row_) {
       throw std::runtime_error("last_row < first_row");
@@ -233,20 +233,13 @@ class tdbBlockedMatrix : public MatrixBase {
 
     auto cell_order = schema_.cell_order();
     auto tile_order = schema_.tile_order();
-
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
         (matrix_order_ == TILEDB_COL_MAJOR && cell_order == TILEDB_ROW_MAJOR)) {
       throw std::runtime_error("Cell order and matrix order must match");
     }
-
     if (cell_order != tile_order) {
       throw std::runtime_error("Cell order and tile order must match");
     }
-
-    auto domain_{schema_.domain()};
-
-    auto row_domain{domain_.dimension(0)};
-    auto col_domain{domain_.dimension(1)};
 
     // If non_empty_domain() is an empty vector it means that
     // the array is empty. Else If the user specifies a value then we use it,
@@ -310,7 +303,7 @@ class tdbBlockedMatrix : public MatrixBase {
 
   // @todo Allow specification of how many columns to advance by
   virtual bool load() {
-    scoped_timer _{tdb_func__ + " " + uri_};
+    scoped_timer _{"tdb_matrix@load@" + uri_};
 
     const size_t attr_idx{0};
     auto attr = schema_.attribute(attr_idx);
@@ -324,11 +317,11 @@ class tdbBlockedMatrix : public MatrixBase {
     }
 
     size_t dimension = last_row_ - first_row_;
-    auto elements_to_load =
-        std::min(load_blocksize_, last_col_ - last_resident_col_);
+    auto elements_to_load = get_elements_to_load();
 
     // Return if we're at the end
     if (elements_to_load == 0 || dimension == 0) {
+      array_->close();
       return false;
     }
 
@@ -356,11 +349,15 @@ class tdbBlockedMatrix : public MatrixBase {
         .set_data_buffer(attr_name, this->data(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, uri_, query);
     _memory_data.insert_entry(
-        tdb_func__, elements_to_load * dimension * sizeof(T));
+        "tdb_matrix@load", elements_to_load * dimension * sizeof(T));
 
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status is not complete");
+    }
+
+    if (get_elements_to_load() == 0) {
+      array_->close();
     }
 
     num_loads_++;
@@ -428,34 +425,16 @@ class tdbPreLoadMatrix : public tdbBlockedMatrix<T, LayoutPolicy, I> {
 };
 
 /**
- * Convenience class for row-major blocked matrices.
- */
-template <class T, class I = size_t>
-using tdbRowMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major blockef matrices.
  */
 template <class T, class I = size_t>
 using tdbColMajorBlockedMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
 
 /**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t>
-using tdbRowMajorMatrix = tdbBlockedMatrix<T, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major matrices.
  */
 template <class T, class I = size_t>
 using tdbColMajorMatrix = tdbBlockedMatrix<T, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class I = size_t>
-using tdbRowMajorPreLoadMatrix = tdbPreLoadMatrix<T, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.

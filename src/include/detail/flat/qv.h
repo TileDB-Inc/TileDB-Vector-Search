@@ -50,7 +50,6 @@
 #include "linalg.h"
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
-#include "utils/timer.h"
 
 namespace detail::flat {
 
@@ -78,10 +77,10 @@ template <
 [[deprecated]] auto qv_query_heap_0(
     const DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned int nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_query_heap_0"};
 
   using id_type = uint64_t;
   using score_type = float;
@@ -89,13 +88,12 @@ template <
   // @todo This should work with num_top_k as min, rather than k_nn if
   // k_nn < num_vectors(db) but somehow it doesn't
   // A matrix with many uninitialized values is created....
-  auto num_top_k = std::min<decltype(k_nn)>(k_nn, num_vectors(db));
+  //  auto num_top_k = std::min<decltype(k_nn)>(k_nn, num_vectors(db));
   ColMajorMatrix<id_type> top_k(k_nn, /*num_top_k,*/ num_vectors(q));
 
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
   stdx::range_for_each(
       std::move(par), q, [&](auto&& q_vec, auto&& n = 0, auto&& j = 0) {
-        size_t size_q = num_vectors(q);
         size_t size_db = num_vectors(db);
 
         // @todo can we do this more efficiently?
@@ -142,7 +140,7 @@ auto qv_query_heap(
     const DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{});
 
@@ -150,7 +148,7 @@ template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto qv_query_heap(
     const DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(
@@ -162,7 +160,7 @@ auto qv_query_heap(
     const DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -180,10 +178,10 @@ auto qv_query_heap(
     const DB& db,
     const Q& query,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_query_heap"};
 
   // print_types(distance);
   // load(db);
@@ -238,7 +236,7 @@ template <
 auto qv_query_heap(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(
@@ -260,7 +258,7 @@ auto qv_query_heap(
     DB& db,
     const Q& q,
     const std::vector<Index>& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -291,15 +289,12 @@ auto qv_query_heap_tiled(
     DB& db,
     const Q& query,
     [[maybe_unused]] const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
+  scoped_timer _{"qv@qv_query_heap_tiled"};
+
   load(db);
-
-  // debug_matrix(db);
-  // debug_matrix(query);
-
-  scoped_timer _{tdb_func__};
 
   // using feature_type = typename
   // std::remove_reference_t<decltype(db)>::value_type;
@@ -310,7 +305,6 @@ auto qv_query_heap_tiled(
   // algorithms have iterator-based interaces, and the `Matrix` class does not
   // yet have iterators.
   // @todo Implement iterator interface to `Matrix` class
-  size_t size_db = db.num_cols();
   size_t container_size = num_vectors(query);
   size_t block_size = (container_size + nthreads - 1) / nthreads;
 
@@ -440,7 +434,7 @@ template <
 auto qv_query_heap_tiled(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap_tiled(
@@ -456,7 +450,7 @@ auto qv_query_heap_tiled(
     DB& db,
     const Q& q,
     const std::vector<Index>& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return qv_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -486,7 +480,7 @@ auto qv_partition(
     const Q& q,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_partition"};
 
   // Just need a single vector -- creating an index, not ids, so hardcoded
   // size_t is okay to use here
@@ -536,7 +530,7 @@ auto qv_partition_with_scores(
     const Q& q,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"qv@qv_partition_with_scores"};
 
   auto size_db = ::num_vectors(db);
 

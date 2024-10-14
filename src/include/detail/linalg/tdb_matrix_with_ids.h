@@ -71,7 +71,7 @@ class tdbBlockedMatrixWithIds
   using ids_type = typename Base::ids_type;
 
  private:
-  log_timer constructor_timer{"tdbBlockedMatrixWithIds constructor"};
+  log_timer constructor_timer{"tdb_matrix_with_ids@ctor"};
 
   std::string ids_uri_;
   std::unique_ptr<tiledb::Array> ids_array_;
@@ -85,8 +85,8 @@ class tdbBlockedMatrixWithIds
 
   /**
    * @brief Construct a new tdbBlockedMatrixWithIds object, limited to
-   * `upper_bound` vectors. In this case, the `Matrix` is row-major, so the
-   * number of vectors is the number of rows.
+   * `upper_bound` vectors. In this case, the `Matrix` is column-major, so the
+   * number of vectors is the number of columns.
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
@@ -142,7 +142,7 @@ class tdbBlockedMatrixWithIds
       size_t first_col,
       std::optional<size_t> last_col,
       size_t upper_bound,
-      TemporalPolicy temporal_policy)  // noexcept
+      TemporalPolicy temporal_policy)
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
       : Base(
             ctx,
@@ -165,8 +165,9 @@ class tdbBlockedMatrixWithIds
 
   // @todo Allow specification of how many columns to advance by
   bool load() {
-    scoped_timer _{tdb_func__ + " " + this->ids_uri_};
+    scoped_timer _{"tdb_matrix_with_ids@load@" + this->ids_uri_};
     if (!Base::load()) {
+      ids_array_->close();
       return false;
     }
 
@@ -208,10 +209,14 @@ class tdbBlockedMatrixWithIds
         .set_data_buffer(attr_name, this->ids(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, ids_uri_, query);
     _memory_data.insert_entry(
-        tdb_func__, elements_to_load * dimension * sizeof(T));
+        "tdb_matrix_with_ids@load", elements_to_load * dimension * sizeof(T));
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {
       throw std::runtime_error("Query status for IDs is not complete");
+    }
+
+    if (this->get_elements_to_load() == 0) {
+      ids_array_->close();
     }
 
     return true;
@@ -276,27 +281,6 @@ class tdbPreLoadMatrixWithIds
 };
 
 /**
- * Convenience class for row-major blocked matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
-
-/**
- * Convenience class for column-major blocked matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbColMajorBlockedMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_left, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorMatrixWithIds =
-    tdbBlockedMatrixWithIds<T, IdsType, stdx::layout_right, I>;
-
-/**
  * Convenience class for column-major matrices.
  */
 template <class T, class IdsType = uint64_t, class I = size_t>
@@ -312,13 +296,6 @@ template <
     class LayoutPolicy = stdx::layout_right,
     class I = size_t>
 using tdbMatrixWithIds = tdbBlockedMatrixWithIds<T, IdsType, LayoutPolicy, I>;
-
-/**
- * Convenience class for row-major matrices.
- */
-template <class T, class IdsType = uint64_t, class I = size_t>
-using tdbRowMajorPreLoadMatrixWithIds =
-    tdbPreLoadMatrixWithIds<T, IdsType, stdx::layout_right, I>;
 
 /**
  * Convenience class for column-major matrices.

@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Dict, Mapping, Optional
 
 import numpy as np
@@ -175,6 +174,7 @@ def ivf_index_tdb(
     id_uri: str,
     start: int = 0,
     end: int = 0,
+    partition_start: int = 0,
     nthreads: int = 0,
     timestamp: int = 0,
     config: Dict = None,
@@ -198,6 +198,7 @@ def ivf_index_tdb(
             end,
             nthreads,
             timestamp,
+            partition_start,
         ]
     )
 
@@ -222,6 +223,7 @@ def ivf_index(
     id_uri: str,
     start: int = 0,
     end: int = 0,
+    partition_start: int = 0,
     nthreads: int = 0,
     timestamp: int = 0,
     config: Dict = None,
@@ -245,6 +247,7 @@ def ivf_index(
             end,
             nthreads,
             timestamp,
+            partition_start,
         ]
     )
 
@@ -270,6 +273,7 @@ def ivf_query_ram(
     nthreads: int,
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
 ):
     """
     Run IVF vector query using infinite RAM
@@ -310,6 +314,7 @@ def ivf_query_ram(
             nprobe,
             k_nn,
             nthreads,
+            distance_metric,
         ]
     )
 
@@ -349,6 +354,7 @@ def ivf_query(
     ctx: "Ctx" = None,
     use_nuv_implementation: bool = False,
     timestamp: int = 0,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
 ):
     """
     Run IVF vector query using a memory budget
@@ -396,12 +402,13 @@ def ivf_query(
             memory_budget,
             nthreads,
             timestamp,
+            distance_metric,
         ]
     )
 
-    logging.info(
-        f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
-    )
+    # logging.info(
+    #     f">>>> module.py: ivf_query_ram len(indices): {len(indices)}, dtype: {dtype}, use_nuv_implementation: {use_nuv_implementation}"
+    # )
 
     if dtype == np.float32:
         if use_nuv_implementation:
@@ -444,6 +451,7 @@ def dist_qv(
     k_nn: int,
     ctx: "Ctx" = None,
     timestamp: int = 0,
+    upper_bound: int = 0,
 ):
     if ctx is None:
         ctx = vspy.Ctx({})
@@ -458,6 +466,7 @@ def dist_qv(
             ids_uri,
             k_nn,
             timestamp,
+            upper_bound,
         ]
     )
 

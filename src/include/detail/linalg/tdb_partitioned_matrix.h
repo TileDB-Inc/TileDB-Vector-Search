@@ -75,7 +75,6 @@
 #include "tdb_defs.h"
 
 #include "tdb_helpers.h"
-#include "utils/timer.h"
 
 namespace stdx {
 using namespace Kokkos;
@@ -128,7 +127,7 @@ class tdbPartitionedMatrix
 
   // For now, we assume this is always valid so we don't need to add constructor
   // arguments to limit it
-  size_t num_array_rows_{0};
+  uint64_t dimensions_{0};
 
   // We don't actually use this
   // size_t num_array_cols_{0};
@@ -172,19 +171,37 @@ class tdbPartitionedMatrix
    * Column information
    ****************************************************************************/
 
+  // The total number of columns (resident plus non-resident)
+  unsigned long total_max_cols_{0UL};
+
   // The max number of columns that can fit in allocated memory
   size_t column_capacity_{0};
 
   // The number of columns that are currently loaded into memory
   size_t num_resident_cols_{0};
 
-  // The initial and final index numbers of the resident columns
+  // The final index numbers of the resident columns
   index_type last_resident_col_{0};
 
   /*****************************************************************************
    * Accounting information
    ****************************************************************************/
   size_t max_resident_parts_{0};
+
+  /*****************************************************************************
+   * Closing the arrays
+   ****************************************************************************/
+  bool closed_ = false;
+
+  void close() {
+    closed_ = true;
+    if (partitioned_vectors_array_->is_open()) {
+      partitioned_vectors_array_->close();
+    }
+    if (partitioned_ids_array_->is_open()) {
+      partitioned_ids_array_->close();
+    }
+  }
 
  public:
   tdbPartitionedMatrix(const tdbPartitionedMatrix&) = delete;
@@ -279,7 +296,7 @@ class tdbPartitionedMatrix
       , relevant_parts_(relevant_parts)
       , squashed_indices_(size(relevant_parts_) + 1)
       , last_resident_part_{0} {
-    scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
+    scoped_timer _{"tdb_partitioned_matrix@ctor@" + partitioned_vectors_uri_};
     if (relevant_parts_.size() >= indices.size()) {
       throw std::runtime_error(
           "Invalid partitioning, relevant_parts_ size (" +
@@ -300,27 +317,24 @@ class tdbPartitionedMatrix
 
     auto cell_order = partitioned_vectors_schema_.cell_order();
     auto tile_order = partitioned_vectors_schema_.tile_order();
-
     if (cell_order != tile_order) {
       throw std::runtime_error("Cell order and tile order must match");
     }
 
     auto domain_{partitioned_vectors_schema_.domain()};
-
-    auto array_rows_{domain_.dimension(0)};
-    auto array_cols_{domain_.dimension(1)};
-
-    num_array_rows_ =
-        (array_rows_.template domain<row_domain_type>().second -
-         array_rows_.template domain<row_domain_type>().first + 1);
+    auto array_rows{domain_.dimension(0)};
+    auto array_cols{domain_.dimension(1)};
+    dimensions_ =
+        (array_rows.template domain<row_domain_type>().second -
+         array_rows.template domain<row_domain_type>().first + 1);
 
 // We don't use this.  The active partitions naturally limits the number of
 // columns that we will read in.
 // Comment out for now
 #if 0
     num_array_cols_ =
-        (array_cols_.template domain<col_domain_type>().second -
-         array_cols_.template domain<col_domain_type>().first + 1);
+        (array_cols.template domain<col_domain_type>().second -
+         array_cols.template domain<col_domain_type>().first + 1);
 #endif
 
     if ((matrix_order_ == TILEDB_ROW_MAJOR && cell_order == TILEDB_COL_MAJOR) ||
@@ -329,12 +343,11 @@ class tdbPartitionedMatrix
     }
 
     // indices might not be contiguous, so we need to explicitly add the deltas
-    auto total_max_cols = 0UL;
     size_t max_part_size{0};
     for (size_t i = 0; i < total_num_parts_; ++i) {
       auto part_size = master_indices_[relevant_parts_[i] + 1] -
                        master_indices_[relevant_parts_[i]];
-      total_max_cols += part_size;
+      total_max_cols_ += part_size;
       max_part_size = std::max<size_t>(max_part_size, part_size);
     }
 
@@ -344,8 +357,8 @@ class tdbPartitionedMatrix
           std::to_string(upper_bound) + " < " + std::to_string(max_part_size));
     }
 
-    if (upper_bound == 0 || upper_bound > total_max_cols) {
-      column_capacity_ = total_max_cols;
+    if (upper_bound == 0 || upper_bound > total_max_cols_) {
+      column_capacity_ = total_max_cols_;
     } else {
       column_capacity_ = upper_bound;
     }
@@ -397,9 +410,8 @@ class tdbPartitionedMatrix
      * resident at any one time.  We use this to size the index of the
      * partitioned_matrix base class.
      */
-    size_t dimension = num_array_rows_;
     Base::operator=(
-        std::move(Base{dimension, column_capacity_, max_resident_parts_}));
+        std::move(Base{dimensions_, column_capacity_, max_resident_parts_}));
     this->num_vectors_ = 0;
     this->num_parts_ = 0;
 
@@ -418,11 +430,12 @@ class tdbPartitionedMatrix
    *
    */
   bool load() override {
-    scoped_timer _{tdb_func__ + " " + partitioned_vectors_uri_};
+    scoped_timer _{"tdb_partitioned_matrix@load@" + partitioned_vectors_uri_};
 
     if (this->part_index_.size() != max_resident_parts_ + 1) {
       throw std::runtime_error(
-          "Invalid partitioning, part_index_ size " +
+          "[tdb_partioned_matrix@load] Invalid partitioning, part_index_ "
+          "size " +
           std::to_string(this->part_index_.size()) +
           " != " + std::to_string(max_resident_parts_ + 1));
     }
@@ -458,7 +471,8 @@ class tdbPartitionedMatrix
       // for, throw.
       if (num_resident_cols_ > column_capacity_) {
         throw std::runtime_error(
-            "Invalid partitioning, num_resident_cols_ (" +
+            "[tdb_partioned_matrix@load] Invalid partitioning, "
+            "num_resident_cols_ (" +
             std::to_string(num_resident_cols_) + ") > column_capacity_ (" +
             std::to_string(column_capacity_) + ")");
       }
@@ -467,7 +481,8 @@ class tdbPartitionedMatrix
       num_resident_parts = last_resident_part_ - first_resident_part;
       if (num_resident_parts > max_resident_parts_) {
         throw std::runtime_error(
-            "Invalid partitioning, num_resident_parts " +
+            "[tdb_partioned_matrix@load] Invalid partitioning, "
+            "num_resident_parts " +
             std::to_string(num_resident_parts) + " > " +
             std::to_string(max_resident_parts_));
       }
@@ -478,18 +493,31 @@ class tdbPartitionedMatrix
       if ((num_resident_cols_ == 0 && num_resident_parts != 0) ||
           (num_resident_cols_ != 0 && num_resident_parts == 0)) {
         throw std::runtime_error(
-            "Invalid partitioning, " + std::to_string(num_resident_cols_) +
-            " resident cols and " + std::to_string(num_resident_parts) +
-            " resident parts");
+            "[tdb_partioned_matrix@load] Invalid partitioning, " +
+            std::to_string(num_resident_cols_) + " resident cols and " +
+            std::to_string(num_resident_parts) + " resident parts");
       }
 
       if (this->part_index_.size() != max_resident_parts_ + 1) {
         throw std::runtime_error(
-            "Invalid partitioning, part_index_ size (" +
+            "[tdb_partioned_matrix@load] Invalid partitioning, part_index_ "
+            "size (" +
             std::to_string(this->part_index_.size()) +
             ") != max_resident_parts_ + 1 (" +
             std::to_string(max_resident_parts_ + 1) + ")");
       }
+    }
+
+    // If closed_ is true, it means we have already read all the data and closed
+    // our arrays. Note that we could add this at the top of `load()` and
+    // return false, but the `num_resident_cols_ == 0` check already handles
+    // this case. So instead we leave this here - it should never be hit, but if
+    // it is, we'll have an error to investigate, rather than just returning
+    // false incorrectly.
+    if (closed_) {
+      throw std::runtime_error(
+          "[tdb_partioned_matrix@load] Arrays are closed - this should not "
+          "happen.");
     }
 
     // 2. Load the vectors and IDs.
@@ -499,8 +527,7 @@ class tdbPartitionedMatrix
       std::string attr_name = attr.name();
       tiledb::Subarray subarray(ctx_, *(this->partitioned_vectors_array_));
       // For a 128 dimension vector, Dimension 0 will go from 0 to 127.
-      auto dimension = num_array_rows_;
-      subarray.add_range(0, 0, (int)dimension - 1);
+      subarray.add_range(0, 0, static_cast<int>(dimensions_) - 1);
 
       // b. Set up the IDs subarray.
       auto ids_attr = ids_schema_.attribute(0);
@@ -521,7 +548,8 @@ class tdbPartitionedMatrix
         ids_subarray.add_range(0, (int)start, (int)stop - 1);
       }
       if (col_count != last_resident_col_ - first_resident_col) {
-        throw std::runtime_error("Column count mismatch");
+        throw std::runtime_error(
+            "[tdb_partioned_matrix@load] Column count mismatch");
       }
 
       // c. Execute the vectors query.
@@ -529,14 +557,16 @@ class tdbPartitionedMatrix
       auto ptr = this->data();
       query.set_subarray(subarray)
           .set_layout(partitioned_vectors_schema_.cell_order())
-          .set_data_buffer(attr_name, ptr, col_count * dimension);
+          .set_data_buffer(attr_name, ptr, col_count * dimensions_);
       tiledb_helpers::submit_query(tdb_func__, partitioned_vectors_uri_, query);
-      _memory_data.insert_entry(tdb_func__, col_count * dimension * sizeof(T));
+      _memory_data.insert_entry(
+          "tdb_partitioned_matrix@load", col_count * dimensions_ * sizeof(T));
 
-      auto qs = query.query_status();
       // @todo Handle incomplete queries.
       if (tiledb::Query::Status::COMPLETE != query.query_status()) {
-        throw std::runtime_error("Query status is not complete -- fix me");
+        throw std::runtime_error(
+            "[tdb_partioned_matrix@load] Query status is not complete -- fix "
+            "me");
       }
 
       // d. Execute the IDs query.
@@ -545,11 +575,14 @@ class tdbPartitionedMatrix
       ids_query.set_subarray(ids_subarray)
           .set_data_buffer(ids_attr_name, ids_ptr, col_count);
       tiledb_helpers::submit_query(tdb_func__, partitioned_ids_uri_, ids_query);
-      _memory_data.insert_entry(tdb_func__, col_count * sizeof(T));
+      _memory_data.insert_entry(
+          "tdb_partitioned_matrix@load", col_count * sizeof(T));
 
       // assert(tiledb::Query::Status::COMPLETE == query.query_status());
       if (tiledb::Query::Status::COMPLETE != ids_query.query_status()) {
-        throw std::runtime_error("Query status is not complete -- fix me");
+        throw std::runtime_error(
+            "[tdb_partioned_matrix@load] Query status is not complete -- fix "
+            "me");
       }
     }
 
@@ -564,7 +597,48 @@ class tdbPartitionedMatrix
     this->num_vectors_ = num_resident_cols_;
     this->num_parts_ = num_resident_parts;
 
+    if (last_resident_part_ == total_num_parts_ &&
+        last_resident_col_ == total_max_cols_) {
+      // We have loaded all the data we can, let's close our Array's.
+      close();
+    }
+
     return true;
+  }
+
+  unsigned long total_num_vectors() const override {
+    return total_max_cols_;
+  }
+
+  size_t local_index_to_global(size_t i) const override {
+    if (squashed_indices_.empty()) {
+      return i;
+    }
+
+    // First we need to find which part we are in. This is local to the parts we
+    // have loaded.
+    auto it =
+        std::upper_bound(squashed_indices_.begin(), squashed_indices_.end(), i);
+    size_t local_part = std::distance(squashed_indices_.begin(), it);
+    // Adjust for the case where the iterator points beyond the actual part we
+    // are in.
+    local_part = local_part == 0 ? local_part : local_part - 1;
+
+    // Now see how many vectors into this local part we are.
+    size_t difference = i - squashed_indices_[local_part];
+
+    // Now we find which part we are in relative to all the parts saved at this
+    // URI.
+    size_t global_part = relevant_parts_[local_part];
+
+    // Now we can see where this part lies in the global array.
+    size_t start = master_indices_[global_part];
+
+    // And we return how many vectors past the start of this part in the global
+    // array we are.
+    size_t result = start + difference;
+
+    return result;
   }
 
   /**
@@ -572,22 +646,22 @@ class tdbPartitionedMatrix
    */
   ~tdbPartitionedMatrix() {
     // Don't really need these since tiledb::Array will close on destruction
-    if (partitioned_vectors_array_->is_open()) {
-      partitioned_vectors_array_->close();
-    }
-    if (partitioned_ids_array_->is_open()) {
-      partitioned_ids_array_->close();
-    }
+    close();
   }
 
-  void debug_tdb_partitioned_matrix(const std::string& msg, size_t max_size) {
+  void debug_tdb_partitioned_matrix(
+      const std::string& msg, size_t max_size = 10) const {
     debug_partitioned_matrix(*this, msg, max_size);
-    debug_vector(master_indices_, "# master_indices_", max_size);
-    debug_vector(relevant_parts_, "# relevant_parts_", max_size);
+    debug_vector(master_indices_, "# master_indices_  ", max_size);
+    debug_vector(relevant_parts_, "# relevant_parts_  ", max_size);
     debug_vector(squashed_indices_, "# squashed_indices_", max_size);
     std::cout << "# total_num_parts_: " << total_num_parts_ << std::endl;
     std::cout << "# last_resident_part_: " << last_resident_part_ << std::endl;
+    std::cout << "# num_parts_: " << this->num_parts_ << std::endl;
+
+    std::cout << "# total_max_cols_: " << total_max_cols_ << std::endl;
     std::cout << "# column_capacity_: " << column_capacity_ << std::endl;
+    std::cout << "# num_vectors_: " << this->num_vectors_ << std::endl;
     std::cout << "# num_resident_cols_: " << num_resident_cols_ << std::endl;
     std::cout << "# last_resident_col_: " << last_resident_col_ << std::endl;
     std::cout << "# max_resident_parts_: " << max_resident_parts_ << std::endl;

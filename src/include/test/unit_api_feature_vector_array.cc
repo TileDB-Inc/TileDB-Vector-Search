@@ -246,8 +246,8 @@ TEST_CASE("feature vector array with IDs open", "[api]") {
 }
 
 TEST_CASE("MatrixWithIds constructors and destructors", "[api]") {
-  auto rows = 3;
-  auto cols = 7;
+  uint64_t rows = 3;
+  uint64_t cols = 7;
 
   SECTION("copy constructor") {
     using DataType = int;
@@ -702,7 +702,7 @@ TEST_CASE("temporal_policy", "[api]") {
     auto ids = std::span<IdsType>(
         (IdsType*)feature_vector_array.ids(),
         feature_vector_array.num_vectors());
-    CHECK(ids.size() == 0);
-    CHECK(data.size() == 0);
+    CHECK(ids.empty());
+    CHECK(data.empty());
   }
 }

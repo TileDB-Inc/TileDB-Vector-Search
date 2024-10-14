@@ -97,8 +97,34 @@ auto datatype_to_format(tiledb_datatype_t datatype) {
     case TILEDB_UINT64:
       return py::format_descriptor<uint64_t>::format();
     default:
-      throw std::runtime_error("Unsupported datatype");
+      throw std::runtime_error(
+          "[type_erased_module@datatype_to_format] Unsupported datatype");
   }
+}
+
+bool check_datatype_format(
+    const std::string& dtype_format, const std::string& buffer_info_format) {
+  if (dtype_format == buffer_info_format) {
+    return true;
+  }
+  // We need to handle uint64 specifically of a numpy quirk:
+  // a. dtype_format (i.e.
+  // `datatype_to_format(string_to_datatype(<py::array>.dtype().str()))`) will
+  // give us 'Q' (numpy.ulonglong) See:
+  //  https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.ulonglong
+  // b. buffer_info_format (i.e. `<py::array>.request().format`) will
+  // give us 'L' (numpy.uint) because numpy.uint is an alias for numpy.uint64 on
+  // Darwin arm64. See:
+  //  https://numpy.org/doc/stable/reference/arrays.scalars.html#numpy.uint
+  if (dtype_format == "Q" && buffer_info_format == "L") {
+    return true;
+  }
+  // The same thing happens with int64, but for it dtype_format will give 'q'
+  // (numpy.longlong), whereas buffer_info_format gives 'l' (numpy.int_).
+  if (dtype_format == "q" && buffer_info_format == "l") {
+    return true;
+  }
+  return false;
 }
 
 // Define Pybind11 bindings
@@ -176,19 +202,26 @@ void init_type_erased_module(py::module_& m) {
             /* Strides (in bytes) for each index */
         );
       })
-      .def(py::init([](py::array b) {
+      .def(py::init([](py::array vector) {
         /* Request a buffer descriptor from Python */
-        py::buffer_info info = b.request();
-        if (info.ndim != 1)
+        py::buffer_info info = vector.request();
+        if (info.ndim != 1) {
           throw std::runtime_error(
-              "Incompatible buffer dimension! Should be 1.");
+              "[type_erased_module@FeatureVector] Incompatible buffer "
+              "dimension. Should be 1, but was " +
+              std::to_string(info.ndim) + ".");
+        }
 
-        auto dtype_str = b.dtype().str();
+        auto dtype_str = vector.dtype().str();
         tiledb_datatype_t datatype = string_to_datatype(dtype_str);
-        if (info.format != datatype_to_format(datatype))
+        auto datatype_format = datatype_to_format(datatype);
+        if (!check_datatype_format(datatype_format, info.format)) {
           throw std::runtime_error(
-              "Incompatible format: expected array of " +
-              datatype_to_string(datatype));
+              "[type_erased_module@FeatureVector] Incompatible format: "
+              "expected array of " +
+              datatype_to_string(datatype) + " (" + datatype_format +
+              "), but was " + info.format + ".");
+        }
 
         size_t sz = datatype_to_size(datatype);
 
@@ -243,38 +276,84 @@ void init_type_erased_module(py::module_& m) {
                  v.dimensions(), /* Strides (in bytes) for each index */
              datatype_to_size(v.feature_type())});
       })
-      .def(py::init([](py::array b) {
-        /* Request a buffer descriptor from Python */
-        py::buffer_info info = b.request();
-        if (info.ndim != 2)
-          throw std::runtime_error(
-              "Incompatible buffer dimension! Should be 2.");
+      .def(
+          py::init([](py::array vectors, py::array ids) {
+            // The vector buffer info.
+            py::buffer_info info = vectors.request();
+            if (info.ndim != 2) {
+              throw std::runtime_error(
+                  "[type_erased_module@FeatureVectorArray] Incompatible buffer "
+                  "dimension. Should be 2, but was " +
+                  std::to_string(info.ndim) + ".");
+            }
 
-        auto dtype_str = b.dtype().str();
-        tiledb_datatype_t datatype = string_to_datatype(dtype_str);
-        if (info.format != datatype_to_format(datatype))
-          throw std::runtime_error(
-              "Incompatible format: expected array of " +
-              datatype_to_string(datatype));
+            auto dtype_str = vectors.dtype().str();
+            tiledb_datatype_t datatype = string_to_datatype(dtype_str);
+            auto datatype_format = datatype_to_format(datatype);
+            if (!check_datatype_format(datatype_format, info.format)) {
+              throw std::runtime_error(
+                  "[type_erased_module@FeatureVectorArray] Incompatible format "
+                  "- expected array of " +
+                  datatype_to_string(datatype) + " (" + datatype_format +
+                  "), but was " + info.format + ".");
+            }
 
-        size_t sz = datatype_to_size(datatype);
+            // The ids vector buffer info.
+            py::buffer_info ids_info = ids.request();
+            if (ids_info.ndim != 1) {
+              throw std::runtime_error(
+                  "[type_erased_module@FeatureVectorArray] Incompatible ids "
+                  "buffer dimension. Should be 1, but was " +
+                  std::to_string(ids_info.ndim) + ".");
+            }
 
-        auto v = [&]() {
-          auto order = b.flags() & py::array::f_style ? TILEDB_COL_MAJOR :
-                                                        TILEDB_ROW_MAJOR;
-          if (order == TILEDB_COL_MAJOR) {
-            return FeatureVectorArray(info.shape[0], info.shape[1], dtype_str);
-          } else {
-            return FeatureVectorArray(info.shape[1], info.shape[0], dtype_str);
-          }
-        }();
+            std::string ids_dtype_str;
+            tiledb_datatype_t ids_datatype = TILEDB_ANY;
+            if (ids.size() != 0) {
+              ids_dtype_str = ids.dtype().str();
+              ids_datatype = string_to_datatype(ids_dtype_str);
+              auto ids_datatype_format = datatype_to_format(ids_datatype);
+              if (!check_datatype_format(
+                      ids_datatype_format, ids_info.format)) {
+                throw std::runtime_error(
+                    "[type_erased_module@FeatureVectorArray] Incompatible ids "
+                    "format - expected array of " +
+                    datatype_to_string(ids_datatype) + " (" +
+                    ids_datatype_format + "), but was " + ids_info.format +
+                    ".");
+              }
+            }
 
-        auto data = (uint8_t*)v.data();
-        std::memcpy(
-            data, (uint8_t*)info.ptr, info.shape[0] * info.shape[1] * sz);
+            auto feature_vector_array = [&]() {
+              auto order = vectors.flags() & py::array::f_style ?
+                               TILEDB_COL_MAJOR :
+                               TILEDB_ROW_MAJOR;
+              if (order == TILEDB_COL_MAJOR) {
+                return FeatureVectorArray(
+                    info.shape[0], info.shape[1], dtype_str, ids_dtype_str);
+              } else {
+                return FeatureVectorArray(
+                    info.shape[1], info.shape[0], dtype_str, ids_dtype_str);
+              }
+            }();
 
-        return v;
-      }));
+            auto data = (uint8_t*)feature_vector_array.data();
+            std::memcpy(
+                data,
+                (uint8_t*)info.ptr,
+                info.shape[0] * info.shape[1] * datatype_to_size(datatype));
+
+            if (ids.size() != 0) {
+              std::memcpy(
+                  feature_vector_array.ids(),
+                  (uint8_t*)ids_info.ptr,
+                  ids_info.shape[0] * datatype_to_size(ids_datatype));
+            }
+
+            return feature_vector_array;
+          }),
+          py::arg("vectors"),
+          py::arg("ids") = py::array());
 
   py::class_<IndexFlatL2>(m, "IndexFlatL2")
       .def(
@@ -289,8 +368,8 @@ void init_type_erased_module(py::module_& m) {
       .def("dimensions", &IndexFlatL2::dimensions)
       .def(
           "query",
-          [](IndexFlatL2& index, FeatureVectorArray& vectors, size_t top_k) {
-            auto r = index.query(vectors, top_k);
+          [](IndexFlatL2& index, const FeatureVectorArray& vectors, size_t k) {
+            auto r = index.query(vectors, k);
             return make_python_pair(std::move(r));
           });
 
@@ -301,7 +380,8 @@ void init_type_erased_module(py::module_& m) {
         } else if (s == "random") {
           return kmeans_init::random;
         } else {
-          throw std::runtime_error("Invalid kmeans_init value");
+          throw std::runtime_error(
+              "[type_erased_module@kmeans_init] Invalid kmeans_init value");
         }
       }));
 
@@ -339,14 +419,14 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "query",
           [](IndexVamana& index,
-             FeatureVectorArray& vectors,
-             size_t top_k,
-             size_t l_search) {
-            auto r = index.query(vectors, top_k, l_search);
+             const FeatureVectorArray& vectors,
+             size_t k,
+             uint32_t l_search) {
+            auto r = index.query(vectors, k, l_search);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
-          py::arg("top_k"),
+          py::arg("k"),
           py::arg("l_search"))
       .def(
           "write_index",
@@ -385,12 +465,21 @@ void init_type_erased_module(py::module_& m) {
           [](IndexIVFPQ& instance,
              const tiledb::Context& ctx,
              const std::string& group_uri,
+             IndexLoadStrategy index_load_strategy,
+             size_t memory_budget,
              std::optional<TemporalPolicy> temporal_policy) {
-            new (&instance) IndexIVFPQ(ctx, group_uri, temporal_policy);
+            new (&instance) IndexIVFPQ(
+                ctx,
+                group_uri,
+                index_load_strategy,
+                memory_budget,
+                temporal_policy);
           },
           py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
           py::arg("ctx"),
           py::arg("group_uri"),
+          py::arg("index_load_strategy") = IndexLoadStrategy::PQ_INDEX,
+          py::arg("memory_budget") = 0,
           py::arg("temporal_policy") = std::nullopt)
       .def(
           "__init__",
@@ -400,10 +489,11 @@ void init_type_erased_module(py::module_& m) {
           })
       .def(
           "train",
-          [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
-            index.train(vectors);
-          },
-          py::arg("vectors"))
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             std::optional<size_t> nlist) { index.train(vectors, nlist); },
+          py::arg("vectors"),
+          py::arg("nlist") = std::nullopt)
       .def(
           "add",
           [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
@@ -413,17 +503,17 @@ void init_type_erased_module(py::module_& m) {
       .def(
           "query",
           [](IndexIVFPQ& index,
-             QueryType queryType,
-             FeatureVectorArray& vectors,
-             size_t top_k,
-             size_t nprobe) {
-            auto r = index.query(queryType, vectors, top_k, nprobe);
+             const FeatureVectorArray& vectors,
+             size_t k,
+             size_t nprobe,
+             float k_factor) {
+            auto r = index.query(vectors, k, nprobe, k_factor);
             return make_python_pair(std::move(r));
           },
-          py::arg("queryType"),
           py::arg("vectors"),
-          py::arg("top_k"),
-          py::arg("nprobe"))
+          py::arg("k"),
+          py::arg("nprobe"),
+          py::arg("k_factor") = 1.f)
       .def(
           "write_index",
           [](IndexIVFPQ& index,
@@ -478,7 +568,9 @@ void init_type_erased_module(py::module_& m) {
             } else if (std::string(init_str) == "random") {
               init = kmeans_init::random;
             } else {
-              throw std::runtime_error("Invalid kmeans_init value");
+              throw std::runtime_error(
+                  "[type_erased_module@IndexIVFFlat@train] Invalid kmeans_init "
+                  "value");
             }
             index.train(vectors, init);
           },
@@ -495,24 +587,24 @@ void init_type_erased_module(py::module_& m) {
           "query_infinite_ram",
           [](IndexIVFFlat& index,
              const FeatureVectorArray& query,
-             size_t top_k,
+             size_t k,
              size_t nprobe) {
-            auto r = index.query_infinite_ram(query, top_k, nprobe);
+            auto r = index.query_infinite_ram(query, k, nprobe);
             return make_python_pair(std::move(r));
-          })  //  , py::arg("vectors"), py::arg("top_k") = 1, py::arg("nprobe")
+          })  //  , py::arg("vectors"), py::arg("k") = 1, py::arg("nprobe")
               //  = 10)
       .def(
           "query_finite_ram",
           [](IndexIVFFlat& index,
              const FeatureVectorArray& query,
-             size_t top_k,
+             size_t k,
              size_t nprobe,
              size_t upper_bound) {
-            auto r = index.query_finite_ram(query, top_k, nprobe, upper_bound);
+            auto r = index.query_finite_ram(query, k, nprobe, upper_bound);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
-          py::arg("top_k") = 1,
+          py::arg("k") = 1,
           py::arg("nprobe") = 10,
           py::arg("upper_bound") = 0)
       .def("feature_type_string", &IndexIVFFlat::feature_type_string)
@@ -526,4 +618,6 @@ void init_type_erased_module(py::module_& m) {
       .export_values();
 
   m.def("build_config_string", []() { return build_config().dump(); });
+
+  m.def("logging_string", []() { return logging_string(); });
 }

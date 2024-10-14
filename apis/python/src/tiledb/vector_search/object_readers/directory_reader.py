@@ -385,6 +385,9 @@ class TileDBLoader:
             mime_type = mimetypes.guess_type(self.uri)[0]
             f = vfs.open(self.uri)
 
+        if mime_type is None:
+            mime_type = "text/plain"
+
         if mime_type.startswith("image/"):
             from langchain_community.document_loaders import UnstructuredFileIOLoader
 
@@ -515,31 +518,71 @@ class DirectoryImageReader(DirectoryReader):
         }
 
     def metadata_attributes(self) -> List[tiledb.Attr]:
+        image_attr = tiledb.Attr(
+            name="image",
+            dtype=np.uint8,
+            var=True,
+            filters=tiledb.FilterList([tiledb.ZstdFilter()]),
+        )
         image_shape_attr = tiledb.Attr(name="shape", dtype=np.uint32, var=True)
         file_path_attr = tiledb.Attr(name="file_path", dtype=str)
-        return [image_shape_attr, file_path_attr]
+        page_attr = tiledb.Attr(name="page", dtype=np.int32)
+        return [image_attr, image_shape_attr, file_path_attr, page_attr]
 
     def read_objects(
         self, partition: DirectoryPartition
     ) -> Tuple[OrderedDict, OrderedDict]:
+        import mimetypes
+
         from PIL import Image
 
         import tiledb
 
-        size = len(partition.paths)
-        images = np.empty(size, dtype="O")
-        shapes = np.empty(size, dtype="O")
-        file_paths = np.empty(size, dtype="O")
-        external_ids = np.zeros(size, dtype=np.uint64)
+        max_size = DirectoryTextReader.MAX_OBJECTS_PER_FILE * len(partition.paths)
+        images = np.empty(max_size, dtype="O")
+        shapes = np.empty(max_size, dtype="O")
+        file_paths = np.empty(max_size, dtype="O")
+        pages = np.zeros(max_size, dtype=np.int32)
+        external_ids = np.zeros(max_size, dtype=np.uint64)
         write_id = 0
         vfs = tiledb.VFS()
         for path in partition.paths:
-            with vfs.open(path) as fp:
+            if tiledb.array_exists(path):
+                with tiledb.open(path, "r") as a:
+                    mime_type = a.meta.get("mime_type", None)
+                fp = tiledb.filestore.Filestore(path)
+            else:
+                mime_type = mimetypes.guess_type(path)[0]
+                fp = vfs.open(path)
+            if path.endswith(".pdf") or mime_type == "application/pdf":
+                from io import BytesIO
+
+                import fitz
+
+                doc = fitz.open(stream=fp.read())
+                p = 0
+                for page in doc.pages():
+                    zoom = 1
+                    mat = fitz.Matrix(zoom, zoom)
+                    pix = page.get_pixmap(matrix=mat)
+
+                    image = np.array(
+                        Image.open(BytesIO(pix.tobytes(output="png", jpg_quality=95)))
+                    )[:, :, :3]
+                    images[write_id] = image.flatten()
+                    shapes[write_id] = np.array(image.shape, dtype=np.uint32)
+                    external_ids[write_id] = abs(hash(f"{path}_{page}"))
+                    file_paths[write_id] = str(path)
+                    pages[write_id] = p
+                    write_id += 1
+                    p += 1
+            else:
                 image = np.array(Image.open(fp))[:, :, :3]
                 images[write_id] = image.flatten()
                 shapes[write_id] = np.array(image.shape, dtype=np.uint32)
-                external_ids[write_id] = partition.object_id_start + write_id
+                external_ids[write_id] = abs(hash(f"{path}_{0}"))
                 file_paths[write_id] = str(path)
+                pages[write_id] = 0
                 write_id += 1
         return (
             {
@@ -548,8 +591,10 @@ class DirectoryImageReader(DirectoryReader):
                 "external_id": external_ids[0:write_id],
             },
             {
+                "image": images[0:write_id],
                 "shape": shapes[0:write_id],
                 "file_path": file_paths[0:write_id],
+                "page": pages[0:write_id],
                 "external_id": external_ids[0:write_id],
             },
         )

@@ -195,7 +195,7 @@ TEST_CASE("build index and query in place infinite", "[api_ivf_flat_index]") {
 
     auto intersections = count_intersections(t, groundtruth_set, k_nn);
     auto nt = num_vectors(t);
-    auto recall = ((double)intersections) / ((double)nt * k_nn);
+    auto recall = intersections / static_cast<double>(nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall >= 0.999);
     } else if (nprobe == 8) {
@@ -255,7 +255,7 @@ TEST_CASE("read index and query infinite and finite", "[api_ivf_flat_index]") {
     auto nt = num_vectors(t);
     auto nv = num_vectors(v);
     CHECK(nt == nv);
-    auto recall = ((double)intersections_a) / ((double)nt * k_nn);
+    auto recall = intersections_a / static_cast<double>(nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall >= 0.998);
     } else if (nprobe == 8) {
@@ -278,7 +278,7 @@ TEST_CASE("read index and query infinite and finite", "[api_ivf_flat_index]") {
     auto nt = num_vectors(t);
     auto nv = num_vectors(v);
     CHECK(nt == nv);
-    auto recall = ((double)intersections_a) / ((double)nt * k_nn);
+    auto recall = intersections_a / static_cast<double>(nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall >= 0.998);
     } else if (nprobe == 8) {
@@ -301,7 +301,7 @@ TEST_CASE("read index and query infinite and finite", "[api_ivf_flat_index]") {
     auto nt = num_vectors(t);
     auto nv = num_vectors(v);
     CHECK(nt == nv);
-    auto recall = ((double)intersections_a) / ((double)nt * k_nn);
+    auto recall = intersections_a / static_cast<double>(nt * k_nn);
     if (nprobe == 32) {
       CHECK(recall >= 0.998);
     } else if (nprobe == 8) {

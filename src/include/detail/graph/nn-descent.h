@@ -343,7 +343,6 @@ auto nn_descent_1(auto&& db, size_t k_nn, Distance distance = Distance()) {
   size_t num_updates{0};
   do {
     num_updates = nn_descent_1_step_all(g, db);
-    std::cout << num_updates << std::endl;
   } while (num_updates > (k_nn * num_vertices(g)) / 100);
 
   return g;
@@ -403,8 +402,6 @@ auto nn_descent_step_all(auto&& g, auto&& db, Distance distance = Distance()) {
     });
   }
 
-  t.stop();
-
   std::cout << num_visited << ", " << num_updates << ", " << num_candidates
             << std::endl;
 
@@ -444,8 +441,6 @@ auto nn_descent_step_full_all(
       }
     });
   }
-
-  t.stop();
 
   std::cout << num_visited << ", " << num_updates << ", " << num_candidates
             << std::endl;

@@ -112,9 +112,6 @@ class nn_graph {
     }
   }
 
-  auto sort_edges(id_type i) {
-  }
-
   auto build_in_edges() {
     for (size_t i = 0; i < num_vertices_; ++i) {
       in_edges_[i].clear();
@@ -202,8 +199,7 @@ template <class T, std::integral ID, class Distance = sum_of_squares_distance>
 auto init_random_nn_graph(auto&& db, size_t L, Distance distance = Distance()) {
   auto num_vertices = db.num_cols();
   nn_graph<T, ID> g(num_vertices, L);
-  std::random_device rd;
-  std::mt19937 gen(rd());
+  std::mt19937_64& gen = PRNG::get().generator();
 
   std::uniform_int_distribution<size_t> dis(0, num_vertices - 1);
 

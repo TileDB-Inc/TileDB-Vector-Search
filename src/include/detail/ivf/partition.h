@@ -87,7 +87,7 @@ auto partition_ivf_flat_index(
     size_t nprobe,
     size_t nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"partition@partition_ivf_flat_index"};
 
   if (::num_vectors(centroids) < nprobe) {
     throw std::invalid_argument(
@@ -115,8 +115,6 @@ auto partition_ivf_flat_index(
   auto active_centroids = std::set<parts_type>{};
   for (size_t j = 0; j < num_queries; ++j) {
     for (size_t p = 0; p < nprobe; ++p) {
-      auto tmp = top_centroids(p, j);
-      // assert(tmp == 0);
       centroid_query.emplace(top_centroids(p, j), j);
       active_centroids.emplace(top_centroids(p, j));
     }

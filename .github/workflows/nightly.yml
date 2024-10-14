@@ -1,0 +1,29 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  # Comment this back in to test file updates.
+  # pull_request:
+  #   branches: [main]
+
+jobs:
+  sanitizer:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitizer: [address, leak, thread]
+    continue-on-error: true
+    steps:
+      - name: Install OpenBLAS
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo apt install libopenblas-dev
+      - uses: actions/checkout@v3
+      - name: Configure CMake
+        run: cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_SANITIZER=${{ matrix.sanitizer }} -DTILEDB_VS_ENABLE_BLAS=ON
+      - name: Build
+        run: cmake --build ./src/build -j3
+      - name: Run Tests
+        run: cmake --build ./src/build --target check-ci
+        # TODO: Once we fix sanitizer errors, remove this.
+        continue-on-error: true

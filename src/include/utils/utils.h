@@ -144,6 +144,25 @@ struct assignment_counter {
   }
 };
 
+std::string format_duration_ns(double duration_ns) {
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(2);
+
+  if (duration_ns < 1000) {
+    oss << duration_ns;
+    return oss.str() + " ns";
+  } else if (duration_ns < 1000000) {
+    oss << (duration_ns / 1000.0);
+    return oss.str() + " µs";
+  } else if (duration_ns < 1000000000) {
+    oss << (duration_ns / 1000000.0);
+    return oss.str() + " ms";
+  } else {
+    oss << (duration_ns / 1000000000.0);
+    return oss.str() + " s";
+  }
+}
+
 }  // anonymous namespace
 
 #endif

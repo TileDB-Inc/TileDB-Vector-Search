@@ -19,31 +19,25 @@ import boto3
 import paramiko
 
 installations = ["tiledb"]
-algorithms = [
-    "tiledb-ivf-flat",
-    "tiledb-ivf-pq",
-    "tiledb-flat",
-    # NOTE(paris): Commented out until Vamana disk space usage is optimized.
-    # "tiledb-vamana"
-]
+algorithms = ["tiledb-ivf-flat", "tiledb-ivf-pq", "tiledb-flat", "tiledb-vamana"]
 
 also_benchmark_others = True
 if also_benchmark_others:
     # TODO(paris): Some of these are failing so commented out. Investigate and re-enable.
     installations += [
-        # "flann",
-        # "faiss",
-        # "hnswlib",
+        "flann",
+        "faiss",
+        "hnswlib",
         # "weaviate"
         # "milvus",
-        "pgvector"
+        "pgvector",
     ]
     algorithms += [
-        # "flann",
-        # "faiss-ivf",
+        "flann",
+        "faiss-ivf",
         # "faiss-lsh",
-        # "faiss-ivfpqfs",
-        # "hnswlib",
+        "faiss-ivfpqfs",
+        "hnswlib",
         # "weaviate",
         # "milvus-flat",
         # "milvus-ivfflat",
@@ -52,6 +46,11 @@ if also_benchmark_others:
         # "milvus-hnsw",
         "pgvector",
     ]
+
+# If you want to skip running benchmarks and keep the instance running after the script finishes,
+# set this to True. This is useful if you want to SSH into the instance and make changes to
+# ann-benchmarks code. Make sure to terminate the instance manually on AWS when you are done.
+skip_benchmarks_and_leave_running = False
 
 # You must set these before running the script:
 key_name = os.environ.get("TILEDB_EC2_KEY_NAME")
@@ -64,6 +63,13 @@ if not os.path.exists(key_path):
     raise FileNotFoundError(
         f"Key file not found at {key_path}. Please set the correct path before running."
     )
+
+# If you want to connect to a running instance, set these. Note that we could fetch instance_id from
+# the public_dns (via ec2.describe_instances()), but I had IAM permissions issues, so we manually set.
+# Example: "ec2-9-38-120-343.eu-central-1.compute.amazonaws.com"
+connect_to_running_instance_public_dns = ""
+# Example: "i-0790c23df32093234"
+connect_to_running_instance_id = ""
 
 # You do not need to change these.
 security_group_ids = ["sg-04258b401ce76d246"]
@@ -138,54 +144,62 @@ def execute_commands(ssh, commands):
 
 
 try:
-    # Launch an EC2 instance
-    logger.info("Launching EC2 instance...")
-    response = ec2.run_instances(
-        ImageId=ami_id,
-        InstanceType=instance_type,
-        KeyName=key_name,
-        SecurityGroupIds=security_group_ids,
-        MinCount=1,
-        MaxCount=1,
-        BlockDeviceMappings=[
-            {
-                "DeviceName": "/dev/xvda",
-                "Ebs": {
-                    # Size in GiB.
-                    "VolumeSize": 30,
-                    # General Purpose SSD (gp3).
-                    "VolumeType": "gp3",
+    if connect_to_running_instance_public_dns and connect_to_running_instance_id:
+        # Connect to an existng EC2 instance.
+        public_dns = connect_to_running_instance_public_dns
+        instance_id = connect_to_running_instance_id
+        logger.info(
+            f"Will connect to running instance at public_dns: {public_dns} and instance_id: {instance_id}"
+        )
+    else:
+        # Launch an EC2 instance.
+        logger.info("Launching EC2 instance...")
+        response = ec2.run_instances(
+            ImageId=ami_id,
+            InstanceType=instance_type,
+            KeyName=key_name,
+            SecurityGroupIds=security_group_ids,
+            MinCount=1,
+            MaxCount=1,
+            BlockDeviceMappings=[
+                {
+                    "DeviceName": "/dev/xvda",
+                    "Ebs": {
+                        # Size in GiB.
+                        "VolumeSize": 30,
+                        # General Purpose SSD (gp3).
+                        "VolumeType": "gp3",
+                    },
+                }
+            ],
+        )
+        instance_id = response["Instances"][0]["InstanceId"]
+        logger.info(f"Launched EC2 instance with ID: {instance_id}")
+
+        # Wait for the instance to be in a running state.
+        logger.info("Waiting for instance to enter running state...")
+        waiter = ec2.get_waiter("instance_running")
+        waiter.wait(InstanceIds=[instance_id])
+
+        # Get the public DNS name of the instance.
+        instance_description = ec2.describe_instances(InstanceIds=[instance_id])
+        public_dns = instance_description["Reservations"][0]["Instances"][0][
+            "PublicDnsName"
+        ]
+        logger.info(f"Public DNS of the instance: {public_dns}")
+
+        # Tag the instance.
+        instance_name = f"vector-search-ann-benchmarks-{socket.gethostname()}"
+        logger.info(f"Will name the instance: {instance_name}")
+        ec2.create_tags(
+            Resources=[instance_id],
+            Tags=[
+                {
+                    "Key": "Name",
+                    "Value": instance_name,
                 },
-            }
-        ],
-    )
-    instance_id = response["Instances"][0]["InstanceId"]
-    logger.info(f"Launched EC2 instance with ID: {instance_id}")
-
-    # Wait for the instance to be in a running state.
-    logger.info("Waiting for instance to enter running state...")
-    waiter = ec2.get_waiter("instance_running")
-    waiter.wait(InstanceIds=[instance_id])
-
-    # Get the public DNS name of the instance.
-    instance_description = ec2.describe_instances(InstanceIds=[instance_id])
-    public_dns = instance_description["Reservations"][0]["Instances"][0][
-        "PublicDnsName"
-    ]
-    logger.info(f"Public DNS of the instance: {public_dns}")
-
-    # Tag the instance.
-    instance_name = f"vector-search-ann-benchmarks-{socket.gethostname()}"
-    logger.info(f"Will name the instance: {instance_name}")
-    ec2.create_tags(
-        Resources=[instance_id],
-        Tags=[
-            {
-                "Key": "Name",
-                "Value": instance_name,
-            },
-        ],
-    )
+            ],
+        )
 
     # Wait for SSH to be ready
     if not check_ssh_ready(public_dns=public_dns, key_filename=key_path):
@@ -227,42 +241,45 @@ try:
         "git clone https://github.com/TileDB-Inc/ann-benchmarks.git",
         f"cd {ann_benchmarks_dir} && pip3 install -r requirements.txt",
     ]
-    for installation in installations:
+    if not skip_benchmarks_and_leave_running:
+        for installation in installations:
+            post_reconnect_commands.append(
+                f"cd {ann_benchmarks_dir} && python3 install.py --algorithm {installation}"
+            )
+        for algorithm in algorithms:
+            post_reconnect_commands += [
+                # NOTE: If you want to force re-running a benchmark even if the results exist, add --force.
+                f"cd {ann_benchmarks_dir} && python3 run.py --dataset sift-128-euclidean --algorithm {algorithm} --batch",
+                f"cd {ann_benchmarks_dir} && sudo chmod -R 777 results/sift-128-euclidean/10/{algorithm}-batch",
+            ]
         post_reconnect_commands.append(
-            f"cd {ann_benchmarks_dir} && python3 install.py --algorithm {installation}"
+            f"cd {ann_benchmarks_dir} && python3 create_website.py"
         )
-    for algorithm in algorithms:
-        post_reconnect_commands += [
-            f"cd {ann_benchmarks_dir} && python3 run.py --dataset sift-128-euclidean --algorithm {algorithm} --force --batch",
-            f"cd {ann_benchmarks_dir} && sudo chmod -R 777 results/sift-128-euclidean/10/{algorithm}-batch",
-        ]
-    post_reconnect_commands.append(
-        f"cd {ann_benchmarks_dir} && python3 create_website.py"
-    )
     execute_commands(ssh, post_reconnect_commands)
 
     logger.info("Finished running the benchmarks.")
 
     # Download the results.
-    remote_paths = [
-        f"{ann_benchmarks_dir}/index.html",
-        f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.png",
-        f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.html",
-    ]
-    for algorithm in algorithms:
-        remote_paths += [
-            f"{ann_benchmarks_dir}/{algorithm}-batch.png",
-            f"{ann_benchmarks_dir}/{algorithm}-batch.html",
+    if not skip_benchmarks_and_leave_running:
+        remote_paths = [
+            f"{ann_benchmarks_dir}/index.html",
+            f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.png",
+            f"{ann_benchmarks_dir}/sift-128-euclidean_10_euclidean-batch.html",
         ]
-    sftp = ssh.open_sftp()
-    for remote_path in remote_paths:
-        local_filename = os.path.basename(remote_path)
-        local_path = os.path.join(results_dir, local_filename)
-        logger.info(f"Downloading {remote_path} to {local_path}...")
-        sftp.get(remote_path, local_path)
-        logger.info(f"File downloaded to {local_path}.")
-    logger.info("File downloading complete, closing the SFTP connection.")
-    sftp.close()
+        for algorithm in algorithms:
+            remote_paths += [
+                f"{ann_benchmarks_dir}/{algorithm}-batch.png",
+                f"{ann_benchmarks_dir}/{algorithm}-batch.html",
+            ]
+        sftp = ssh.open_sftp()
+        for remote_path in remote_paths:
+            local_filename = os.path.basename(remote_path)
+            local_path = os.path.join(results_dir, local_filename)
+            logger.info(f"Downloading {remote_path} to {local_path}...")
+            sftp.get(remote_path, local_path)
+            logger.info(f"File downloaded to {local_path}.")
+        logger.info("File downloading complete, closing the SFTP connection.")
+        sftp.close()
 
     logger.info("Benchmarking complete, closing the SSH connection.")
     ssh.close()
@@ -276,11 +293,16 @@ except Exception as e:
         terminate_instance(instance_id)
 
 else:
-    logger.info(
-        f"Finished, will try to terminate instance {instance_id} available at public_dns: {public_dns}."
-    )
-    if "instance_id" in locals():
-        logger.info(f"Will terminate instance {instance_id}.")
-        terminate_instance(instance_id)
+    if skip_benchmarks_and_leave_running:
+        logger.info(
+            f"We will leave instance {instance_id} available at public_dns: {public_dns}. Make sure to terminate it manually."
+        )
+    else:
+        logger.info(
+            f"Finished, will try to terminate instance {instance_id} available at public_dns: {public_dns}."
+        )
+        if "instance_id" in locals():
+            logger.info(f"Will terminate instance {instance_id}.")
+            terminate_instance(instance_id)
 
 logger.info("Done.")

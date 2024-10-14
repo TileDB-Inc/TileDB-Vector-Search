@@ -43,7 +43,7 @@
 // clang-format off
 
   auto centroids = ColMajorMatrix<float> {
-      {
+      {{
           {8, 6, 7},
           {5, 3, 0},
           {9, 1, 2},
@@ -66,23 +66,23 @@
           {1, 5, 9},
           {9, 0, 3,},
           {5, 7, 6},
-      }
+      }}
   };
   auto query = ColMajorMatrix<float> {
-      {
+      {{
           {3, 4, 5},
           {2, 300, 8},
           {3, 1, 3.5},
           {3, 1, 3},
           {4, 5, 6},
-      }
+      }}
   };
 
   /**
    * Taken from [0:5,9:12] of sift_base
    */
   auto sift_base = ColMajorMatrix<float>
-      {
+      {{
           { 21.,  13.,  17.},
           { 13.,  60.,  10.},
           { 18.,  15.,   6.},
@@ -115,16 +115,16 @@
           { 21.,  35.,  30.},
           { 20.,  10.,  12.},
           { 13.,   2.,  10.},
-      };
+      }};
 
   auto sift_query = ColMajorMatrix<float>
-      {
+      {{
           { 0.,  7., 50.},
           {11.,  4., 43.},
           {77.,  5.,  9.},
           {24., 11.,  1.},
           { 3.,  2.,  0.}
-      };
+      }};
 
 // clang-format on
 
@@ -140,8 +140,8 @@ struct siftsmall_test_init_defaults {
 
   size_t k_nn = 10;
   size_t nthreads = 0;
-  size_t max_iter = 10;
-  float tolerance = 1e-4;
+  uint32_t max_iterations = 10;
+  float convergence_tolerance = 1e-4;
 };
 
 template <class IndexType>
@@ -159,7 +159,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
   siftsmall_test_init(
       tiledb::Context ctx,
       size_t nl,
-      size_t num_subspaces = 0,
+      uint32_t num_subspaces = 0,
       size_t num_vectors = 0)
       : ctx_{ctx}
       , nlist(nl)
@@ -172,11 +172,12 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     if constexpr (std::is_same_v<
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
-      idx = IndexType(nlist, max_iter, tolerance);
+      idx = IndexType(nlist, max_iterations, convergence_tolerance);
     } else if constexpr (std::is_same_v<
                              IndexType,
                              ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx = IndexType(nlist, num_subspaces, max_iter, tolerance);
+      idx = IndexType(
+          nlist, num_subspaces, max_iterations, convergence_tolerance);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }

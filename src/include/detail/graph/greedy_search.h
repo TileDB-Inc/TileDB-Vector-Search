@@ -56,14 +56,14 @@ static inline bool noisy_robust_prune = false;
  * @brief Developmental code for performance analysis / optimization of
  * greedy search. "O1" is the OG.
  */
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search_O2(
     auto&& graph,
     auto&& db,
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t Lmax,
+    uint32_t Lmax,
     Distance&& distance = Distance{}) {
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L;
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> V;
@@ -163,14 +163,14 @@ auto greedy_search_O2(
  * @param distance distance functor
  * @return top_k_scores, top_k, visited vertices
  */
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search_O0(
     auto&& graph,
     auto&& db,
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t Lmax,
+    uint32_t Lmax,
     Distance&& distance = Distance{}) {
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> L;
   std::unordered_set<typename std::decay_t<decltype(graph)>::id_type> V;
@@ -280,19 +280,19 @@ auto greedy_search_O0(
  *
  * @todo -- add a `SearchPath `template parameter to determine whether to
  * return the top k results of the search or just the path taken.
- * @todo -- remove printf debugging code
  * @todo -- would it be more efficient somehow to process multiple queries?
  */
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search_O1(
     auto&& graph,
     auto&& db,
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t L,
+    uint32_t L,
     Distance&& distance = Distance{},
     bool convert_to_db_ids = false) {
+  scoped_timer _{"greedy_search@greedy_search_O1"};
   // using feature_type = typename std::decay_t<decltype(graph)>::feature_type;
   using id_type = typename std::decay_t<decltype(graph)>::id_type;
   using score_type = typename std::decay_t<decltype(graph)>::score_type;
@@ -314,8 +314,6 @@ auto greedy_search_O1(
   // auto result = std::set<id_type>{};
   auto q1 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
   auto q2 = k_min_heap<score_type, id_type>{L};  // 𝓛 \ 𝓥
-
-  scoped_timer __{tdb_func__};
 
   // 𝓛 <- {s} and 𝓥 <- ∅
   result.insert(distance(db[source], query), source);
@@ -415,8 +413,6 @@ auto greedy_search_O1(
     q2.clear();
   }
 
-  // auto top_k = Vector<id_type>(k_nn);
-  // auto top_k_scores = Vector<score_type>(k_nn);
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
 
@@ -425,7 +421,7 @@ auto greedy_search_O1(
   // Optionally convert from the vector indexes to the db IDs. Used during
   // querying to map to external IDs.
   if (convert_to_db_ids) {
-    for (int i = 0; i < k_nn; ++i) {
+    for (size_t i = 0; i < k_nn; ++i) {
       if (top_k[i] != std::numeric_limits<id_type>::max()) {
         top_k[i] = db.ids()[top_k[i]];
       }
@@ -436,14 +432,14 @@ auto greedy_search_O1(
       std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
 }
 
-template </* SearchPath SP, */ class Distance = sum_of_squares_distance>
+template <class Distance = sum_of_squares_distance>
 auto greedy_search(
     auto&& graph,
     auto&& db,
     typename std::decay_t<decltype(graph)>::id_type source,
     auto&& query,
     size_t k_nn,
-    size_t L,
+    uint32_t L,
     Distance&& distance = Distance{},
     bool convert_to_db_ids = false) {
   if (graph.num_vertices() == 0) {

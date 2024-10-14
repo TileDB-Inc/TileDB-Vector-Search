@@ -74,13 +74,13 @@ TEMPLATE_LIST_TEST_CASE(
   }
   SECTION("values, copy") {
     auto b = std::move(a);
-    for (size_t i = 0; i < a.num_rows(); ++i) {
+    for (size_t i = 0; i < b.num_rows(); ++i) {
       CHECK((size_t)b(i) == i + 1);
     }
-    for (size_t i = 0; i < a.num_rows(); ++i) {
+    for (size_t i = 0; i < b.num_rows(); ++i) {
       b(i) *= b[i];
     }
-    for (size_t i = 0; i < a.num_rows(); ++i) {
+    for (size_t i = 0; i < b.num_rows(); ++i) {
       CHECK((size_t)b(i) == (i + 1) * (i + 1));
     }
   }
@@ -208,7 +208,7 @@ TEMPLATE_LIST_TEST_CASE(
     "test Matrix initializer_list constructor, row oriented",
     "[linalg][matrix][create][row]",
     TestTypes) {
-  auto a = Matrix<TestType, Kokkos::layout_right>{{1, 2}, {3, 4}, {5, 6}};
+  auto a = Matrix<TestType, Kokkos::layout_right>{{{1, 2}, {3, 4}, {5, 6}}};
   auto v = a.data();
   std::iota(v, v + 6, 1);
 
@@ -244,7 +244,7 @@ TEMPLATE_LIST_TEST_CASE(
     "test Matrix initializer list constructor, column oriented",
     "[linalg][matrixx][create][column]",
     TestTypes) {
-  auto a = Matrix<TestType, Kokkos::layout_left>{{1, 2, 3}, {4, 5, 6}};
+  auto a = Matrix<TestType, Kokkos::layout_left>{{{1, 2, 3}, {4, 5, 6}}};
   auto v = a.data();
   std::iota(v, v + 6, 1);
 
@@ -762,8 +762,6 @@ TEMPLATE_LIST_TEST_CASE(
   CHECK(std::equal(begin(v), end(v), begin(w)));
   std::filesystem::remove_all(uri);
 }
-
-using LayoutTypes = std::tuple<Kokkos::layout_right, Kokkos::layout_left>;
 
 TEMPLATE_LIST_TEST_CASE(
     "test write/read Matrix",

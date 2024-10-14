@@ -53,6 +53,7 @@ class VamanaIndex(index.Index):
         config: Optional[Mapping[str, Any]] = None,
         timestamp=None,
         open_for_remote_query_execution: bool = False,
+        group: tiledb.Group = None,
         **kwargs,
     ):
         self.index_open_kwargs = {
@@ -67,6 +68,7 @@ class VamanaIndex(index.Index):
             config=config,
             timestamp=timestamp,
             open_for_remote_query_execution=open_for_remote_query_execution,
+            group=group,
         )
         # TODO(SC-48710): Add support for `open_for_remote_query_execution`. We don't leave `self.index`` as `None` because we need to be able to call index.dimensions().
         self.index = vspy.IndexVamana(self.ctx, uri, to_temporal_policy(timestamp))
@@ -77,19 +79,9 @@ class VamanaIndex(index.Index):
             storage_formats[self.storage_version]["IDS_ARRAY_NAME"]
         ].uri
 
-        schema = tiledb.ArraySchema.load(self.db_uri, ctx=tiledb.Ctx(self.config))
         self.dimensions = self.index.dimensions()
-
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
-        if self.dtype is None:
-            self.dtype = np.dtype(schema.attr("values").dtype)
-        else:
-            self.dtype = np.dtype(self.dtype)
-
-        if self.base_size == -1:
-            self.size = schema.domain.dim(1).domain[1] + 1
-        else:
-            self.size = self.base_size
+        self.size = self.base_size
 
     def get_dimensions(self):
         """
@@ -146,6 +138,7 @@ def create(
     r_max_degree: int = R_MAX_DEGREE_DEFAULT,
     config: Optional[Mapping[str, Any]] = None,
     storage_version: str = STORAGE_VERSION,
+    distance_metric: vspy.DistanceMetric = vspy.DistanceMetric.SUM_OF_SQUARES,
     **kwargs,
 ) -> VamanaIndex:
     """
@@ -177,6 +170,14 @@ def create(
         raise ValueError(
             f"Storage version {storage_version} is not supported for VamanaIndex. VamanaIndex requires storage version 0.3 or higher."
         )
+    if (
+        distance_metric != vspy.DistanceMetric.L2
+        and distance_metric != vspy.DistanceMetric.SUM_OF_SQUARES
+        and distance_metric != vspy.DistanceMetric.COSINE
+    ):
+        raise ValueError(
+            f"Distance metric {distance_metric} is not supported in VAMANA"
+        )
     ctx = vspy.Ctx(config)
     index = vspy.IndexVamana(
         feature_type=np.dtype(vector_type).name,
@@ -184,6 +185,7 @@ def create(
         dimensions=dimensions,
         l_build=l_build if l_build > 0 else L_BUILD_DEFAULT,
         r_max_degree=r_max_degree if l_build > 0 else R_MAX_DEGREE_DEFAULT,
+        distance_metric=int(distance_metric),
     )
     # TODO(paris): Run all of this with a single C++ call.
     empty_vector = vspy.FeatureVectorArray(

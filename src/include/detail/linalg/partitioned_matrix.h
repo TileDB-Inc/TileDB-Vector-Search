@@ -194,26 +194,27 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     part_index_[0] = 0;
   }
 
-  constexpr auto& num_vectors() {
+  size_t num_vectors() const {
     return num_vectors_;
   }
 
-  constexpr auto& num_vectors() const {
+  virtual unsigned long total_num_vectors() const {
     return num_vectors_;
   }
 
-  constexpr auto& num_partitions() const {
-    return num_parts_;
+  virtual size_t local_index_to_global(size_t i) const {
+    return i;
   }
-  constexpr auto& num_partitions() {
+
+  constexpr size_t num_partitions() const {
     return num_parts_;
   }
 
-  auto& ids() const {
+  const auto& ids() const {
     return ids_;
   }
 
-  auto& indices() const {
+  const auto& indices() const {
     return part_index_;
   }
 
@@ -221,21 +222,6 @@ class PartitionedMatrix : public Matrix<T, LayoutPolicy, I> {
     return false;
   }
 };
-
-/**
- * Convenience class for row-major matrices.
- */
-template <
-    class T,
-    class partitioned_ids_type,
-    class part_index_type,
-    class I = size_t>
-using RowMajorPartitionedMatrix = PartitionedMatrix<
-    T,
-    partitioned_ids_type,
-    part_index_type,
-    stdx::layout_right,
-    I>;
 
 /**
  * Convenience class for column-major matrices.
@@ -257,13 +243,10 @@ void debug_partitioned_matrix(
     const PartitionedMatrix& matrix,
     const std::string& msg = "",
     size_t max_size = 10) {
-  auto rowsEnd = std::min(dimensions(matrix), static_cast<size_t>(max_size));
-  auto colsEnd = std::min(num_vectors(matrix), static_cast<size_t>(max_size));
-
   debug_matrix(matrix, msg, max_size);
 
-  std::cout << "# ids: [";
-  auto end = std::min(matrix.ids().size(), static_cast<size_t>(max_size));
+  std::cout << "# ids:               [";
+  auto end = std::min(matrix.num_vectors(), static_cast<size_t>(max_size));
   for (size_t i = 0; i < end; ++i) {
     std::cout << matrix.ids()[i];
     if (i != matrix.ids().size() - 1) {
@@ -275,7 +258,7 @@ void debug_partitioned_matrix(
   }
   std::cout << "]" << std::endl;
 
-  std::cout << "# indices: [";
+  std::cout << "# indices:           [";
   end = std::min(matrix.indices().size(), static_cast<size_t>(max_size));
   for (size_t i = 0; i < end; ++i) {
     std::cout << matrix.indices()[i];

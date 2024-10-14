@@ -58,7 +58,7 @@ static constexpr const char USAGE[] =
       vamana_index (-h | --help)
       vamana_index (-b | --bfs)
       vamana_index --inputs_uri URI --index_uri URI [--ftype TYPE] [--idtype TYPE] [--force]
-                  [--max_degree NN] [--Lbuild NN] [--backtrack NN] [--alpha FF]
+                  [--max_degree NN] [--Lbuild NN] [--alpha FF]
                   [--nthreads NN] [--log FILE] [--stats] [-d] [-v] [--dump NN]
 
   Options:
@@ -70,7 +70,6 @@ static constexpr const char USAGE[] =
       -f, --force             overwrite index if it exists [default:false]
       -R, --max_degree NN     maximum degree of graph [default: 64]
       -L, --Lbuild NN         size of search list while building [default: 100]
-      -B, --backtrack NN      size of backtrack list [default: 100]
       -a, --alpha FF          pruning parameter [default: 1.2]
       --nthreads N            number of threads to use in parallel loops (0 = all) [default: 0]
       -D, --dump NN           dump Nth iteration graph to file (0 = none) [default: 0]
@@ -91,9 +90,8 @@ int main(int argc, char* argv[]) {
 
   float alpha_0 = 1.0;
 
-  size_t Lbuild = args["--Lbuild"].asLong();
-  size_t max_degree = args["--max_degree"].asLong();
-  size_t backtrack = args["--backtrack"].asLong();
+  uint32_t Lbuild = args["--Lbuild"].asLong();
+  uint32_t max_degree = args["--max_degree"].asLong();
   std::string alpha_str = args["--alpha"].asString();
   float alpha_1 = std::atof(alpha_str.c_str());
 
@@ -113,8 +111,8 @@ int main(int argc, char* argv[]) {
     auto X = tdbColMajorMatrix<feature_type>(ctx, db_uri);
     X.load();
 
-    auto idx = vamana_index<feature_type, id_type>(
-        num_vectors(X), Lbuild, max_degree, backtrack);
+    auto idx =
+        vamana_index<feature_type, id_type>(num_vectors(X), Lbuild, max_degree);
     idx.train(X);
     idx.write_index(ctx, index_uri, overwrite);
 

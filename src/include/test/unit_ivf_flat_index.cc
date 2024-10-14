@@ -35,7 +35,6 @@
 #include <iostream>
 #include <vector>
 
-#include "../linalg.h"
 #include "index/ivf_flat_index.h"
 #include "test/utils/array_defs.h"
 #include "test/utils/gen_graphs.h"
@@ -43,7 +42,7 @@
 
 // kmeans and kmeans indexing still WIP
 
-void debug_centroids(auto& index) {
+void debug_centroids(const auto& index) {
   std::cout << "\nDebug Centroids:\n" << std::endl;
   for (size_t j = 0; j < index.get_centroids().num_rows(); ++j) {
     for (size_t i = 0; i < index.get_centroids().num_cols(); ++i) {
@@ -147,17 +146,19 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
   const bool debug = false;
 
   ColMajorMatrix<float> training_data{
-      {1.0573647, 5.082087},
-      {-6.229642, -1.3590931},
-      {0.7446737, 6.3828287},
-      {-7.698864, -3.0493321},
-      {2.1362762, -4.4448104},
-      {1.04019, -4.0389647},
-      {0.38996044, 5.7235265},
-      {1.7470839, -4.717076}};
-  ColMajorMatrix<float> queries{{-7.3712273, -1.1178735}};
+      {{1.0573647, 5.082087},
+       {-6.229642, -1.3590931},
+       {0.7446737, 6.3828287},
+       {-7.698864, -3.0493321},
+       {2.1362762, -4.4448104},
+       {1.04019, -4.0389647},
+       {0.38996044, 5.7235265},
+       {1.7470839, -4.717076}}};
+  ColMajorMatrix<float> queries{{{-7.3712273, -1.1178735}}};
   ColMajorMatrix<float> sklearn_centroids{
-      {-6.964253, -2.2042127}, {1.6411834, -4.400284}, {0.7306664, 5.7294807}};
+      {{-6.964253, -2.2042127},
+       {1.6411834, -4.400284},
+       {0.7306664, 5.7294807}}};
 
   SECTION("one iteration") {
     if (debug) {
@@ -239,7 +240,6 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
 TEST_CASE("ivf_index write and read", "[ivf_index]") {
   size_t dimension = 128;
   size_t nlist = 100;
-  size_t nprobe = 10;
   size_t k_nn = 10;
   size_t nthreads = 1;
 
@@ -311,36 +311,37 @@ TEMPLATE_TEST_CASE(
 
     auto top_k_ivf_scores = ColMajorMatrix<float>();
     auto top_k_ivf = ColMajorMatrix<unsigned>();
+    auto top_k_ivf_indices = ColMajorMatrix<size_t>();
     auto top_k_scores = ColMajorMatrix<float>();
     auto top_k = ColMajorMatrix<uint64_t>();
     auto query2 = ColMajorMatrix<TestType>();
     auto query4 = ColMajorMatrix<TestType>();
 
     SECTION("query2/4 = 0...") {
-      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0}};
-      query4 = ColMajorMatrix<TestType>{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+      query2 = ColMajorMatrix<TestType>{{{0, 0, 0, 0, 0, 0}}};
+      query4 = ColMajorMatrix<TestType>{{{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}};
     }
     SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 127, 127, 127}};
+      query2 = ColMajorMatrix<TestType>{{{127, 127, 127, 127, 127, 127}}};
       query4 = ColMajorMatrix<TestType>{
-          {127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}};
+          {{127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127}}};
     }
     SECTION("query2/4 = 0...") {
-      query2 = ColMajorMatrix<TestType>{{0, 0, 0, 127, 127, 127}};
+      query2 = ColMajorMatrix<TestType>{{{0, 0, 0, 127, 127, 127}}};
       query4 = ColMajorMatrix<TestType>{
-          {0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}};
+          {{0, 0, 0, 0, 0, 0, 127, 127, 127, 127, 127, 127}}};
     }
     SECTION("query2/4 = 127...") {
-      query2 = ColMajorMatrix<TestType>{{127, 127, 127, 0, 0, 0}};
+      query2 = ColMajorMatrix<TestType>{{{127, 127, 127, 0, 0, 0}}};
       query4 = ColMajorMatrix<TestType>{
-          {127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}};
+          {{127, 127, 127, 127, 127, 127, 0, 0, 0, 0, 0, 0}}};
     }
     SECTION("query2/4 = 127...") {
       query2 = ColMajorMatrix<TestType>{
-          {127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}};
+          {{127, 0, 127, 0, 127, 0}, {0, 127, 0, 127, 0, 127}}};
       query4 = ColMajorMatrix<TestType>{
-          {127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
-          {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}};
+          {{127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0},
+           {0, 127, 0, 127, 0, 127, 0, 127, 0, 127, 0, 127}}};
     }
 
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
@@ -348,7 +349,8 @@ TEMPLATE_TEST_CASE(
     std::tie(top_k_ivf_scores, top_k_ivf) =
         ivf_idx2.qv_query_heap_infinite_ram(query2, k_nn, 1);  // k, nprobe
     size_t intersections0 = count_intersections(top_k_ivf, top_k, k_nn);
-    double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
+    double recall0 =
+        intersections0 / static_cast<double>(top_k.num_cols() * k_nn);
     CHECK(intersections0 == k_nn * num_vectors(query2));
     CHECK(recall0 == 1.0);
 
@@ -357,8 +359,10 @@ TEMPLATE_TEST_CASE(
     std::tie(top_k_ivf_scores, top_k_ivf) =
         ivf_idx4.qv_query_heap_infinite_ram(query4, k_nn, 1);  // k, nprobe
 
-    size_t intersections1 = (long)count_intersections(top_k_ivf, top_k, k_nn);
-    double recall1 = intersections1 / ((double)top_k.num_cols() * k_nn);
+    size_t intersections1 =
+        static_cast<long>(count_intersections(top_k_ivf, top_k, k_nn));
+    double recall1 =
+        intersections1 / static_cast<double>(top_k.num_cols() * k_nn);
     CHECK(intersections1 == k_nn * num_vectors(query4));
     CHECK(recall1 == 1.0);
   }
@@ -374,17 +378,22 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_index]") {
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [idx, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("infinite") {
     INFO("infinite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
@@ -416,18 +425,23 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<typename decltype(init)::id_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("infinite") {
     INFO("infinite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
@@ -459,18 +473,23 @@ TEST_CASE("Build index, write, read and query, finite", "[ivf_index]") {
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("finite") {
     INFO("finite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_finite_ram(query_set, k_nn, nprobe);
   }
 
@@ -498,14 +517,19 @@ TEST_CASE(
 
   auto init = siftsmall_test_init<index>(ctx, nlist);
 
-  auto&& [nprobe, k_nn, nthreads, max_iter, tolerance] = std::tie(
-      init.nprobe, init.k_nn, init.nthreads, init.max_iter, init.tolerance);
+  auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
+      init.nprobe,
+      init.k_nn,
+      init.nthreads,
+      init.max_iterations,
+      init.convergence_tolerance);
   auto&& [_, training_set, query_set, groundtruth_set] = std::tie(
       init.idx, init.training_set, init.query_set, init.groundtruth_set);
   auto idx = init.get_write_read_idx();
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   SECTION("nuv_finite") {
     INFO("nuv_finite");
@@ -522,7 +546,7 @@ TEST_CASE(
 
   SECTION("finite") {
     INFO("finite");
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_finite_ram(query_set, k_nn, nprobe, upper_bound);
   }
 
@@ -550,6 +574,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
 
   auto top_k_ivf_scores = ColMajorMatrix<float>();
   auto top_k_ivf = ColMajorMatrix<siftsmall_ids_type>();
+  auto top_k_ivf_indices = ColMajorMatrix<size_t>();
 
   auto init =
       siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(
@@ -586,7 +611,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
     INFO("infinite cli");
     auto idx = ivf_flat_index<feature_type, id_type, px_type>(
         ctx, siftsmall_flatIVF_index_uri_32_64);
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 #endif
@@ -595,12 +620,13 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
     INFO("infinite init");
     auto idx =
         ivf_flat_index<feature_type, id_type, px_type>(ctx, tmp_ivf_index_uri);
-    std::tie(top_k_ivf_scores, top_k_ivf) =
+    std::tie(top_k_ivf_scores, top_k_ivf, top_k_ivf_indices) =
         idx.query_infinite_ram(query_set, k_nn, nprobe);
   }
 
   size_t intersections1 = count_intersections(top_k_ivf, groundtruth_set, k_nn);
-  double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
+  double recall1 =
+      intersections1 / static_cast<double>(top_k_ivf.num_cols() * k_nn);
   if (nlist == 1) {
     CHECK(intersections1 == num_vectors(top_k_ivf) * dimensions(top_k_ivf));
     CHECK(recall1 == 1.0);

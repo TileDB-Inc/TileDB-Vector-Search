@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
   std::string index_uri = args["--index_uri"].asString();
   size_t nthreads = args["--nthreads"].asLong();
   size_t max_iter = args["--max_iter"].asLong();
-  size_t num_clusters = args["--num_clusters"].asLong();
+  uint32_t num_clusters = args["--num_clusters"].asLong();
   std::string tol_str = args["--tol"].asString();
   float tolerance = std::atof(tol_str.c_str());
 

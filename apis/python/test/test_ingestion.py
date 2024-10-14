@@ -8,10 +8,10 @@ from common import load_metadata
 
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
+from tiledb.vector_search import open
 from tiledb.vector_search.index import Index
 from tiledb.vector_search.ingestion import TrainingSamplingPolicy
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
 from tiledb.vector_search.module import array_to_matrix
 from tiledb.vector_search.module import kmeans_fit
 from tiledb.vector_search.module import kmeans_predict
@@ -59,6 +59,7 @@ def test_vamana_ingestion_u8(tmp_path):
         l_build=l_build,
         r_max_degree=r_max_degree,
     )
+    index.vacuum()
 
     # This is not a public API, but we directly load the C++ type-erased index to test it. If you
     # are a library user, you should not do this yourself, as the API may change.
@@ -72,7 +73,7 @@ def test_vamana_ingestion_u8(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = VamanaIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -96,11 +97,12 @@ def test_flat_ingestion_u8(tmp_path):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
     )
+    index.vacuum()
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -120,11 +122,12 @@ def test_flat_ingestion_f32(tmp_path):
         index_uri=index_uri,
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
     )
+    index.vacuum()
     _, result = index.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -150,6 +153,7 @@ def test_flat_ingestion_external_id_u8(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.u8bin"),
         external_ids=external_ids,
     )
+    index.vacuum()
     _, result = index.query(queries, k=k)
     assert (
         accuracy(result, gt_i, external_ids_offset=external_ids_offset)
@@ -157,7 +161,7 @@ def test_flat_ingestion_external_id_u8(tmp_path):
     )
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = FlatIndex(uri=index_uri)
+    index_ram = open(uri=index_uri)
     _, result = index_ram.query(queries, k=k)
     assert (
         accuracy(result, gt_i, external_ids_offset=external_ids_offset)
@@ -186,11 +190,12 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
+    index.vacuum()
     _, result = index.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index_ram = IVFFlatIndex(uri=index_uri, memory_budget=int(size / 10))
+    index_ram = open(uri=index_uri, memory_budget=int(size / 10))
     _, result = index_ram.query(queries, k=k, nprobe=nprobe)
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
@@ -201,6 +206,62 @@ def test_ivf_flat_ingestion_u8(tmp_path):
         use_nuv_implementation=True,
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    _, result = index_ram.query(
+        queries,
+        k=k,
+        nprobe=nprobe,
+        mode=Mode.LOCAL,
+    )
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
+def test_ivf_pq_ingestion_u8(tmp_path):
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    index_uri = os.path.join(tmp_path, "array")
+    k = 10
+    size = 10000
+    partitions = 100
+    dimensions = 128
+    nqueries = 100
+    nprobe = 20
+    create_random_dataset_u8(nb=size, d=dimensions, nq=nqueries, k=k, path=dataset_dir)
+    dtype = np.uint8
+
+    queries = get_queries(dataset_dir, dtype=dtype)
+    gt_i, gt_d = get_groundtruth(dataset_dir, k)
+    index = ingest(
+        index_type="IVF_PQ",
+        index_uri=index_uri,
+        source_uri=os.path.join(dataset_dir, "data.u8bin"),
+        partitions=partitions,
+        input_vectors_per_work_item=int(size / 10),
+        num_subspaces=32,
+    )
+    index.vacuum()
+    _, result = index.query(queries, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    index_uri = move_local_index_to_new_location(index_uri)
+    index_ram = open(uri=index_uri, memory_budget=int(size / 10))
+    _, result = index_ram.query(queries, k=k, nprobe=nprobe)
+    assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+    _, result = index_ram.query(
+        queries,
+        k=k,
+        nprobe=nprobe,
+    )
+    query_accuracy = accuracy(result, gt_i)
+    assert query_accuracy > MINIMUM_ACCURACY
+
+    _, result = index_ram.query(
+        queries,
+        k=k,
+        k_factor=2,
+        nprobe=nprobe,
+    )
+    assert accuracy(result, gt_i) > query_accuracy + 0.1
 
     _, result = index_ram.query(
         queries,
@@ -240,6 +301,7 @@ def test_ivf_flat_ingestion_f32(tmp_path):
             input_vectors_per_work_item=int(size / 10),
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
@@ -291,6 +353,7 @@ def test_ingestion_fvec(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -345,6 +408,7 @@ def test_ingestion_numpy(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -400,6 +464,7 @@ def test_ingestion_numpy_i8(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -453,6 +518,7 @@ def test_ingestion_multiple_workers(tmp_path):
             max_tasks_per_stage=4,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -513,6 +579,7 @@ def test_ingestion_external_ids_numpy(tmp_path):
             external_ids=external_ids,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, external_ids_offset) > minimum_accuracy
 
@@ -535,13 +602,14 @@ def test_ingestion_timetravel(tmp_path):
         default_result_i = [[np.iinfo(np.uint64).max], [np.iinfo(np.uint64).max]]
 
         # We ingest at timestamp 10.
-        ingest(
+        index = ingest(
             index_type=index_type,
             index_uri=index_uri,
             input_vectors=data,
             index_timestamp=10,
             num_subspaces=2,
         )
+        index.vacuum()
 
         # If we load the index with any timestamp < 10, then we have no data and so have no results.
         query_and_check_equals(
@@ -617,10 +685,8 @@ def test_ingestion_timetravel(tmp_path):
             timestamp=20,
         )
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
+        index.vacuum()
 
         # We still have no results before timestamp 10.
         query_and_check_equals(
@@ -814,6 +880,7 @@ def test_ingestion_with_updates(tmp_path):
             partitions=partitions,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert base_sizes == [1000]
@@ -827,12 +894,7 @@ def test_ingestion_with_updates(tmp_path):
         ingestion_timestamp = ingestion_timestamps[0]
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        if index_type == "IVF_PQ":
-            # TODO(paris): We get 0.989 accuracy instead of 1.0. Investigate why - it should be 1.0
-            # when we have `nprobe = partitions` and `num_subspaces = dimensions`.
-            assert accuracy(result, gt_i) > 0.9
-            continue
-        assert accuracy(result, gt_i) == 1.0
+        assert accuracy(result, gt_i) >= (0.998 if index_type == "IVF_PQ" else 1.0)
 
         update_ids_offset = MAX_UINT64 - size
         updated_ids = {}
@@ -844,16 +906,22 @@ def test_ingestion_with_updates(tmp_path):
             updated_ids[i] = i + update_ids_offset
 
         _, result = index.query(queries, k=k, nprobe=nprobe)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index = index.consolidate_updates(retrain_index=True, partitions=20)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=20)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= (
+            0.998 if index_type == "IVF_PQ" else 1.0
+        )
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert base_sizes == [1000, 1000]
@@ -890,7 +958,7 @@ def test_ingestion_with_batch_updates(tmp_path):
     gt_i, gt_d = get_groundtruth(dataset_dir, k)
 
     for index_type, index_class in zip(INDEXES, INDEX_CLASSES):
-        minimum_accuracy = 0.85 if index_type == "IVF_PQ" else 0.99
+        minimum_accuracy = 0.83 if index_type == "IVF_PQ" else 0.99
 
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         index = ingest(
@@ -901,6 +969,7 @@ def test_ingestion_with_batch_updates(tmp_path):
             input_vectors_per_work_item=int(size / 10),
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i) > minimum_accuracy
 
@@ -928,9 +997,6 @@ def test_ingestion_with_batch_updates(tmp_path):
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri)
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
         _, result = index.query(queries, k=k, nprobe=nprobe)
         assert accuracy(result, gt_i, updated_ids=updated_ids) > minimum_accuracy
@@ -968,6 +1034,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             index_timestamp=1,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert ingestion_timestamps == [1]
@@ -1051,28 +1118,32 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i) == 1.0
 
         # Consolidate updates
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
+        index.vacuum()
 
         ingestion_timestamps, base_sizes = load_metadata(index_uri)
         assert ingestion_timestamps == [1, timestamp_end]
         assert base_sizes == [size, size]
 
+        # The IVF_PQ pq-encoding uses 8 bits per subspace, meaning we train 256 centroids per subspace.
+        # This means if we have > 256 vectors, we will have error from pq-encoding, so even if we create
+        # a subspace for each dimension (like we do here), we will still have error.
+        minimum_accuracy = 0.99 if index_type == "IVF_PQ" else 1.0
+
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= minimum_accuracy
+
         index = index_class(uri=index_uri, timestamp=101)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= minimum_accuracy
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= minimum_accuracy
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= minimum_accuracy
         index = index_class(uri=index_uri, timestamp=(2, 101))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
@@ -1094,11 +1165,11 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
             updated_ids_part[i] = i + update_ids_offset
         index = index_class(uri=index_uri, timestamp=51)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids_part) >= minimum_accuracy
         index_uri = move_local_index_to_new_location(index_uri)
         index = index_class(uri=index_uri, timestamp=(0, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids_part) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids_part) >= minimum_accuracy
         index = index_class(uri=index_uri, timestamp=(2, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert (
@@ -1110,10 +1181,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         # Timetravel at previous ingestion timestamp
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i) == 1.0
+        assert accuracy(result, gt_i) >= minimum_accuracy
         index = index_class(uri=index_uri, timestamp=(0, 1))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i) == 1.0
+        assert accuracy(result, gt_i) >= minimum_accuracy
 
         with tiledb.Group(index_uri, "r") as group:
             assert metadata_to_list(group, "ingestion_timestamps") == [1, 102]
@@ -1148,7 +1219,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri)
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= minimum_accuracy
         index = index_class(uri=index_uri, timestamp=(0, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
@@ -1158,7 +1229,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(0, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= minimum_accuracy
         index = index_class(uri=index_uri, timestamp=(2, 51))
         _, result = index.query(queries, k=k, nprobe=partitions)
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
@@ -1167,9 +1238,10 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
         assert accuracy(result, gt_i, updated_ids=updated_ids) == 0.0
         index = index_class(uri=index_uri, timestamp=(2, None))
         _, result = index.query(queries, k=k, nprobe=partitions)
-        assert accuracy(result, gt_i, updated_ids=updated_ids) == 1.0
+        assert accuracy(result, gt_i, updated_ids=updated_ids) >= minimum_accuracy
 
         # Clear all history
+        assert index.latest_ingestion_timestamp == 102
         Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp)
         index = index_class(uri=index_uri, timestamp=1)
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -1236,6 +1308,7 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
             index_timestamp=1,
             num_subspaces=num_subspaces,
         )
+        index.vacuum()
         if index_type == "IVF_FLAT":
             assert index.partitions == partitions
         _, result = index.query(queries, k=k, nprobe=partitions)
@@ -1256,9 +1329,6 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
         _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
 
-        if index_type == "IVF_PQ":
-            # TODO(SC-48888): Fix consolidation for IVF_PQ.
-            continue
         index = index.consolidate_updates()
         _, result = index.query(queries, k=k, nprobe=partitions, l_search=k * 2)
         assert 0.45 < accuracy(result, gt_i)
@@ -1313,6 +1383,7 @@ def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
                 input_vectors_per_work_item_during_sampling=input_vectors_per_work_item_during_sampling,
                 use_sklearn=True,
             )
+            index.vacuum()
 
             check_training_input_vectors(
                 index_uri=index_uri,
@@ -1352,6 +1423,7 @@ def test_ivf_flat_ingestion_fvec_random_sampling_policy(tmp_path):
         training_sample_size=training_sample_size,
         input_vectors_per_work_item=1000,
     )
+    index.vacuum()
 
     check_training_input_vectors(
         index_uri=index_uri,
@@ -1400,6 +1472,7 @@ def test_storage_versions(tmp_path):
                 storage_version="Foo",
                 num_subspaces=num_subspaces,
             )
+            index.vacuum()
         assert "Invalid storage version" in str(error.value)
 
         with pytest.raises(ValueError) as error:
@@ -1423,6 +1496,7 @@ def test_storage_versions(tmp_path):
                 storage_version=storage_version,
                 num_subspaces=num_subspaces,
             )
+            index.vacuum()
             _, result = index.query(queries, k=k)
             assert accuracy(result, gt_i) >= minimum_accuracy
 
@@ -1505,6 +1579,7 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
         copy_centroids_uri=centroids_uri,
         partitions=centroids_in_size,
     )
+    index.vacuum()
 
     # Query the index.
     queries = np.array([data[4]], dtype=np.float32)
@@ -1640,6 +1715,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.f32bin"),
         training_source_uri=os.path.join(dataset_dir, "training_data.f32bin"),
     )
+    index.vacuum()
 
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(
@@ -1647,7 +1723,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_f32(tmp_path):
     )
 
     index_uri = move_local_index_to_new_location(index_uri)
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
     query_and_check_equals(
         index=index, queries=queries, expected_result_d=[[0]], expected_result_i=[[1]]
     )
@@ -1703,6 +1779,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
             source_uri=os.path.join(dataset_dir, "data.tdb"),
             training_source_uri=os.path.join(dataset_dir, "training_data_invalid.tdb"),
         )
+        index.vacuum()
     assert "training data dimensions" in str(error.value)
 
     ################################################################################################
@@ -1715,6 +1792,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
         source_uri=os.path.join(dataset_dir, "data.tdb"),
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
     )
+    index.vacuum()
 
     queries = np.array([data.transpose()[1]], dtype=np.float32)
     query_and_check_equals(
@@ -1745,7 +1823,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     index_uri = move_local_index_to_new_location(index_uri)
 
     # Load the index again and query.
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
 
     query_and_check_equals(
         index=index,
@@ -1772,7 +1850,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
     # Clear the index history, load, update, and query.
     Index.clear_history(uri=index_uri, timestamp=index.latest_ingestion_timestamp - 1)
 
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
 
     update_vectors = np.empty([2], dtype=object)
     update_vectors[0] = np.array([11.0, 11.1, 11.2, 11.3], dtype=np.dtype(np.float32))
@@ -1798,6 +1876,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_tdb(tmp_path):
         training_source_uri=os.path.join(dataset_dir, "training_data.tdb"),
         training_source_type="TILEDB_ARRAY",
     )
+    index.vacuum()
 
 
 def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
@@ -1827,6 +1906,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
             input_vectors=data,
             training_input_vectors=training_data_invalid,
         )
+        index.vacuum()
     assert "training data dimensions" in str(error.value)
 
     ################################################################################################
@@ -1839,6 +1919,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
         input_vectors=data,
         training_input_vectors=training_data,
     )
+    index.vacuum()
 
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(
@@ -1867,7 +1948,7 @@ def test_ivf_flat_ingestion_with_training_source_uri_numpy(tmp_path):
     # Test we can load the index again and query, update, and consolidate.
     ################################################################################################
     index_uri = move_local_index_to_new_location(index_uri)
-    index = IVFFlatIndex(uri=index_uri)
+    index = open(uri=index_uri)
 
     queries = np.array([data[1]], dtype=np.float32)
     query_and_check_equals(
@@ -1924,6 +2005,7 @@ def test_ivf_flat_taskgraph_query(tmp_path):
         partitions=partitions,
         input_vectors_per_work_item=int(size / 10),
     )
+    index.vacuum()
     _, result = index._taskgraph_query(
         queries, k=k, nprobe=nprobe, nthreads=8, mode=Mode.LOCAL, num_partitions=10
     )

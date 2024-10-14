@@ -63,7 +63,9 @@ class CloudTests(unittest.TestCase):
             input_vectors_per_work_item=5000,
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
+            verbose=True,
         )
+        index.vacuum()
         tiledb_index_uri = groups.info(index_uri).tiledb_uri
 
         # Test without loading index data into memory.
@@ -160,9 +162,11 @@ class CloudTests(unittest.TestCase):
         self.run_cloud_test(CloudTests.flat_index_uri, "FLAT", vs.flat_index.FlatIndex)
 
     def test_cloud_vamana(self):
-        self.run_cloud_test(
-            CloudTests.vamana_index_uri, "VAMANA", vs.vamana_index.VamanaIndex
-        )
+        # TODO(paris): Re-enable after next release updating metadata dimensions to uint64.
+        # self.run_cloud_test(
+        #     CloudTests.vamana_index_uri, "VAMANA", vs.vamana_index.VamanaIndex
+        # )
+        return
 
     def test_cloud_ivf_flat(self):
         self.run_cloud_test(
@@ -196,6 +200,7 @@ class CloudTests(unittest.TestCase):
             config=tiledb.cloud.Config().dict(),
             mode=Mode.BATCH,
         )
+        index.vacuum()
 
         check_training_input_vectors(
             index_uri=index_uri,

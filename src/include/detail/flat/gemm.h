@@ -37,15 +37,14 @@
 #include "detail/linalg/choose_blas.h"
 #include "linalg.h"
 #include "scoring.h"
-#include "utils/timer.h"
 
 namespace detail::flat {
 
 template <class DB, class Q>
 auto gemm_query(const DB& db, const Q& q, int k, bool nth, size_t nthreads) {
+  scoped_timer _{"gemm@gemm_query"};
   load(db);
 
-  scoped_timer _{"Total time " + tdb_func__};
   auto scores = gemm_scores(db, q, nthreads);
   return get_top_k(scores, k, nth, nthreads);
 }
@@ -54,14 +53,14 @@ using namespace std::chrono_literals;
 
 template <class DB, class Q>
 auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"gemm@blocked_gemm_query"};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
 
   std::vector<fixed_min_pair_heap<float, unsigned>> min_scores(
       size(q), fixed_min_pair_heap<float, unsigned>(k));
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"gemm@blocked_gemm_query@loop"};
 
   while (db.load()) {
     _i.start();
@@ -96,7 +95,7 @@ auto blocked_gemm_query(DB& db, Q& q, int k, bool nth, size_t nthreads) {
 
 template <class DB, class Q>
 auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"gemm@gemm_partition"};
 
   auto scores = gemm_scores(db, q, nthreads);
 
@@ -122,7 +121,7 @@ auto gemm_partition(const DB& db, const Q& q, unsigned nthreads) {
 
 template <class DB, class Q>
 auto blocked_gemm_partition(DB& db, Q& q, unsigned nthreads) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"gemm@blocked_gemm_partition"};
 
   ColMajorMatrix<float> scores(db.num_cols(), q.num_cols());
   auto _score_data = raveled(scores);

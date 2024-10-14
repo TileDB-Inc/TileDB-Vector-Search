@@ -44,12 +44,12 @@
 #include <iostream>
 #include <random>
 #include <string>
-
 #include <tiledb/tiledb>
-
-#include "utils/logging.h"
-
 #include "config.h"
+#include "utils/logging_count.h"
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
+#include "utils/logging_time.h"
 
 #ifdef __GNUC__
 // Disable the specific warning for the expression that causes the warning
@@ -104,122 +104,71 @@ class StatsCollectionScope final {
 #endif
 };
 
-static auto dump_logs = [](std::string filename,
-                           const std::string algorithm,
+[[maybe_unused]] static std::string logging_string() {
+  std::ostringstream output;
+
+  output << "Scoped Timers" << std::endl;
+  output << _scoped_timing_data.dump();
+  output << std::endl;
+
+  output << "Manual Timers" << std::endl;
+  output << _timing_data.dump();
+  output << std::endl;
+
+  output << "Memory data" << std::endl;
+  output << _memory_data.dump();
+  output << std::endl;
+
+  output << "Count data" << std::endl;
+  output << _count_data.dump();
+  output << std::endl;
+
+  return output.str();
+}
+
+static auto dump_logs = [](const std::string& filename,
+                           const std::string& algorithm,
                            size_t nqueries,
                            size_t nprobe,
                            size_t k_nn,
                            size_t nthreads,
                            double recall) {
-  // Quick and dirty way to get log info into a summarizable and useful form --
-  // fixed-width columns
-  // @todo encapsulate this as a function that can be customized
-
-  // I don't know why this has to be done in two steps like this but oh well
-  auto c = filename == "" ? std::ofstream(filename) : std::ofstream();
+  auto c = !filename.empty() ? std::ofstream(filename) : std::ofstream();
   std::ostream& output{(filename == "-") ? std::cout : c};
 
-  // @todo print other information
-  output << "# [ Repo ]: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "
+  output << "Repo: " << GIT_REPO_NAME << " @ " << GIT_BRANCH << " / "
          << GIT_COMMIT_HASH << std::endl;
-
-  output << "# [cmake source directory]: " << CMAKE_SOURCE_DIR << std::endl;
-  output << "# [cmake build type]: " << BUILD_TYPE << std::endl;
-  output << "# [compiler]: " << IVF_HACK_CXX_COMPILER << std::endl;
-  output << "# [compiler id]: " << CXX_COMPILER_ID << std::endl;
-  output << "# [compiler version ]: " << CXX_VERSION << std::endl;
-  output << "# [c++ flags]: " << CMAKE_CXX_FLAGS << std::endl;
-  output << "# [c++ debug flags ]: " << CMAKE_CXX_FLAGS_DEBUG << std::endl;
-  output << "# [c++ release flags ]: " << CMAKE_CXX_FLAGS_RELEASE << std::endl;
-  output << "# [c++ relwithdebinfo flags]: " << CMAKE_CXX_FLAGS_RELWITHDEBINFO
+  output << "CMake source directory: " << CMAKE_SOURCE_DIR << std::endl;
+  output << "CMake build type: " << BUILD_TYPE << std::endl;
+  output << "Compiler: " << IVF_HACK_CXX_COMPILER << std::endl;
+  output << "Compiler ID: " << CXX_COMPILER_ID << std::endl;
+  output << "Compiler version : " << CXX_VERSION << std::endl;
+  output << "C++ flags: " << CMAKE_CXX_FLAGS << std::endl;
+  output << "C++ Debug flags: " << CMAKE_CXX_FLAGS_DEBUG << std::endl;
+  output << "C++ Release flags: " << CMAKE_CXX_FLAGS_RELEASE << std::endl;
+  output << "C++ ReleaseWithDebugInfo flags: " << CMAKE_CXX_FLAGS_RELWITHDEBINFO
          << std::endl;
+  output << std::endl;
 
-  output << std::setw(5) << "-|-";
-  output << std::setw(12) << "Algorithm";
-  output << std::setw(9) << "Queries";
+  output << std::setw(9) << "Algorithm";
+  output << std::setw(8) << "Queries";
   output << std::setw(8) << "nprobe";
   output << std::setw(8) << "k_nn";
   output << std::setw(8) << "thrds";
   output << std::setw(8) << "recall";
-
-  // Table of contents -- quantities with long identifiers are marked with a
-  // letter in their column and the key is printed out after the line is logged.
-  std::map<std::string, std::string> toc;
-  char tag = 'A';
-
-  // A bit of a hack -- first set units to seconds
-  auto units = std::string(" (s)");
-  for (auto& timers :
-       {_timing_data.get_timer_names(), _memory_data.get_usage_names()}) {
-    for (auto& timer : timers) {
-      std::string text;
-      if (size(timer) < 3) {
-        text = timer;
-      } else {
-        std::string key =
-            std::string("[") + std::string(1, tag) + std::string("]");
-        toc[key] = timer + units;
-        ++tag;
-        text = key;
-      }
-      output << std::setw(12) << text;
-    }
-    // hack, continued -- set units to MiB at bottom of loop
-    units = std::string(" (MiB)");  // copilot scares me
-  }
-
   output << std::endl;
 
-  auto original_precision = output.precision();
-
-  output << std::setw(5) << "-|-";
-  output << std::setw(12) << algorithm;
-  output << std::setw(9) << nqueries;
+  output << std::setw(9) << algorithm;
+  output << std::setw(8) << nqueries;
   output << std::setw(8) << nprobe;
   output << std::setw(8) << k_nn;
   output << std::setw(8) << nthreads;
   output << std::fixed << std::setprecision(3);
   output << std::setw(8) << recall;
-
-  output.precision(original_precision);
-  output << std::fixed << std::setprecision(3);
-  auto timers = _timing_data.get_timer_names();
-  for (auto& timer : timers) {
-    auto ms = _timing_data.get_entries_summed<std::chrono::microseconds>(timer);
-    if (ms < 1000) {
-      output << std::fixed << std::setprecision(6);
-    } else if (ms < 10000) {
-      output << std::fixed << std::setprecision(5);
-    } else if (ms < 100000) {
-      output << std::fixed << std::setprecision(4);
-    } else {
-      output << std::fixed << std::setprecision(3);
-    }
-    output << std::setw(12) << ms / 1000000.0;
-  }
-
-  output << std::fixed << std::setprecision(0);
-
-  auto usages = _memory_data.get_usage_names();
-  for (auto& usage : usages) {
-    auto mem = _memory_data.get_entries_summed(usage);
-    if (mem < 1) {
-      output << std::fixed << std::setprecision(3);
-    } else if (mem < 10) {
-      output << std::fixed << std::setprecision(2);
-    } else if (mem < 100) {
-      output << std::fixed << std::setprecision(1);
-    } else {
-      output << std::fixed << std::setprecision(0);
-    }
-    output << std::setw(12) << _memory_data.get_entries_summed(usage);
-  }
   output << std::endl;
-  output << std::setprecision(original_precision);
+  output << std::endl;
 
-  for (auto& t : toc) {
-    output << t.first << ": " << t.second << std::endl;
-  }
+  output << logging_string();
 };
 
 [[maybe_unused]] static auto build_config() {

@@ -19,8 +19,8 @@ classifiers = [
 
 # These are the runtime depdendencies.
 dependencies = [
-    "tiledb-cloud>=0.12.15",
-    "tiledb>=0.30.2",
+    "tiledb-cloud>=0.11",
+    "tiledb>=0.32.0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     # scikit-learn>=1.4.2 may be needed?
     "scikit-learn",
@@ -30,7 +30,7 @@ dependencies = [
 [project.optional-dependencies]
 test = ["nbmake", "pytest<8.0.0", "pytest-xdist"]
 formatting = ["pre-commit"]
-benchmarks = ["boto3", "paramiko"]
+benchmarks = ["boto3", "paramiko", "matplotlib"]
 
 [project.urls]
 homepage = "https://tiledb.com"

@@ -33,13 +33,12 @@
 #ifndef TILEDB_BEST_FIRST_H
 #define TILEDB_BEST_FIRST_H
 
-#include <iostream>
 #include <limits>
 #include <queue>
 #include <unordered_set>
 #include <vector>
-
-#include <queue>
+#include "utils/logging_memory.h"
+#include "utils/logging_scoped_time.h"
 
 template <class Node>
 struct compare_node {
@@ -53,7 +52,7 @@ template <
     feature_vector_array A,
     feature_vector V,
     class Distance = sum_of_squares_distance>
-auto best_first_O0(
+std::unordered_set<typename std::decay_t<Graph>::id_type> best_first_O0(
     const Graph& graph,
     const A& db,
     typename std::decay_t<Graph>::id_type source,
@@ -80,17 +79,12 @@ auto best_first_O0(
         continue;
 
       score_type heuristic = distance(db[neighbor_id], query);
-      if (heuristic == 0) {
-        std::cout << "Found goal!" << std::endl;
-        return true;
-      }
       pq.push({heuristic, neighbor_id});
       visited.insert(neighbor_id);
     }
   }
 
-  std::cout << "Goal not found: visited " << size(visited) << std::endl;
-  return false;
+  return visited;
 }
 
 template <
@@ -98,23 +92,19 @@ template <
     feature_vector_array A,
     feature_vector V,
     class Distance = sum_of_squares_distance>
-auto best_first_O1(
+std::unordered_set<typename std::decay_t<Graph>::id_type> best_first_O1(
     const Graph& graph,
     const A& db,
     typename std::decay_t<Graph>::id_type source,
     const V& query,
-    size_t Lmax,
     Distance&& distance = Distance{}) {
+  scoped_timer _{"best_first@best_first_O1"};
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
   using node_type = std::tuple<score_type, id_type>;
 
-  auto pq = k_min_heap<score_type, id_type>{Lmax};
-  auto frontier = std::vector<node_type>{};
   std::unordered_set<id_type> visited;
-
-  frontier.reserve(Lmax);
-  pq.insert(distance(db[source], query), source);
+  auto frontier = std::vector<node_type>{};
   frontier.push_back({distance(db[source], query), source});
 
   while (!frontier.empty()) {
@@ -122,7 +112,7 @@ auto best_first_O1(
     frontier.pop_back();
 
     if (visited.count(p_star) > 0) {
-      throw std::runtime_error("[best_first@best_first_O1] Vertex was visited");
+      continue;
     }
     visited.insert(p_star);
 
@@ -135,8 +125,7 @@ auto best_first_O1(
     }
   }
 
-  std::cout << "Goal not found: visited " << size(visited) << std::endl;
-  return false;
+  return visited;
 }
 
 template <
@@ -152,7 +141,7 @@ auto best_first_O2(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-  scoped_timer __{tdb_func__};
+  scoped_timer _{"best_first@best_first_O2"};
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
@@ -370,7 +359,7 @@ auto best_first_O3(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-  scoped_timer __{tdb_func__};
+  scoped_timer _{"best_first@best_first_O3"};
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
@@ -425,8 +414,6 @@ auto best_first_O3(
 
     // Extract vertex with minimum score from frontier
     auto [_, p_star] = frontier.front();
-
-    auto debug_p_star = p_star;
 
     auto p_star_iter = vertex_state_map.find(p_star);
     if (p_star_iter == vertex_state_map.end()) {
@@ -483,7 +470,6 @@ auto best_first_O3(
           continue;
         }
       }
-      auto debug_neighbor_state = neighbor_state_iter->second;
 
       score_type heuristic = distance(db[neighbor_id], query);
 
@@ -551,7 +537,8 @@ auto best_first_O4(
     typename std::decay_t<Graph>::id_type source,
     const V& query,
     size_t k_nn,
-    size_t Lmax,
+    uint32_t Lmax,
+    bool skip_top_k = false,
     Distance&& distance = Distance{}) {
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
@@ -574,8 +561,6 @@ auto best_first_O4(
   // Will be returned from this function
   std::unordered_set<id_type> visited;
 
-  scoped_timer __{tdb_func__};
-
   score_type heuristic = distance(db[source], query);
   pq.insert(heuristic, source);
   set_enpqd(vertex_state_property_map[source]);
@@ -588,13 +573,17 @@ auto best_first_O4(
     set_visited(vertex_state_property_map[p_star]);
 
     for (auto&& [_, neighbor_id] : graph[p_star]) {
-      auto debug_neighbor_id = neighbor_id;
       auto neighbor_state = vertex_state_property_map[neighbor_id];
       if (!is_unvisited(neighbor_state)) {
         continue;
       }
       set_enpqd(vertex_state_property_map[neighbor_id]);
-
+      if (neighbor_id >= ::num_vectors(db)) {
+        throw std::runtime_error(
+            "[best_first@best_first_O4] neighbor_id (" +
+            std::to_string(neighbor_id) + ") >= ::num_vectors(db) (" +
+            std::to_string(::num_vectors(db)) + ")");
+      }
       score_type heuristic = distance(db[neighbor_id], query);
 
       auto [inserted, evicted, evicted_score, evicted_id] =
@@ -615,7 +604,6 @@ auto best_first_O4(
       }
     }
     clear_enfrontiered(vertex_state_property_map[p_star]);
-    //    std::cout << "p_star " << p_star << std::endl;
     if (!is_visited(vertex_state_property_map[p_star])) {
       throw std::runtime_error(
           "[best_first@best_first_O4] p_star is not visited");
@@ -653,9 +641,15 @@ auto best_first_O4(
     // set_finished(vertex_state_property_map[p_star]);
   } while (p_star != std::numeric_limits<id_type>::max());
 
+  if (skip_top_k) {
+    auto top_k = std::vector<id_type>(0);
+    auto top_k_scores = std::vector<score_type>(0);
+    return std::make_tuple(
+        std::move(top_k_scores), std::move(top_k), std::move(visited));
+  }
+
   auto top_k = std::vector<id_type>(k_nn);
   auto top_k_scores = std::vector<score_type>(k_nn);
-
   get_top_k_with_scores_from_heap(pq, top_k, top_k_scores);
   return std::make_tuple(
       std::move(top_k_scores), std::move(top_k), std::move(visited));
@@ -674,7 +668,7 @@ auto best_first_O5(
     size_t k_nn,
     size_t Lmax,
     Distance&& distance = Distance{}) {
-  scoped_timer __{tdb_func__};
+  scoped_timer _{"best_first@best_first_O5"};
 
   using id_type = typename std::decay_t<Graph>::id_type;
   using score_type = float;
@@ -730,7 +724,6 @@ auto best_first_O5(
           continue;
         }
       }
-      auto debug_neighbor_state = neighbor_state_iter->second;
 
       score_type heuristic = distance(db[neighbor_id], query);
 

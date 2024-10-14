@@ -69,7 +69,7 @@
 #include "ivf_query.h"
 #include "linalg.h"
 #include "stats.h"
-#include "utils/logging.h"
+#include "utils/logging_time.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
 

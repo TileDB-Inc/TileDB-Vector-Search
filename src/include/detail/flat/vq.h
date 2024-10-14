@@ -39,7 +39,6 @@
 #include "algorithm.h"
 #include "linalg.h"
 #include "scoring.h"
-#include "utils/timer.h"
 
 namespace detail::flat {
 
@@ -65,7 +64,7 @@ auto vq_query_heap(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   // @todo Need to get the total number of queries, not just the first block
@@ -84,7 +83,7 @@ auto vq_query_heap(
   unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"flat@vq@vq_query_heap@loop"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
 
@@ -119,7 +118,11 @@ auto vq_query_heap(
 
 template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto vq_query_heap(
-    DB& db, Q& q, int k_nn, unsigned nthreads, Distance distance = Distance{}) {
+    DB& db,
+    Q& q,
+    size_t k_nn,
+    unsigned nthreads,
+    Distance distance = Distance{}) {
   return vq_query_heap(
       without_ids{}, db, q, std::vector<uint64_t>{}, k_nn, nthreads, distance);
 }
@@ -133,7 +136,7 @@ auto vq_query_heap(
     DB& db,
     Q& q,
     const std::vector<Index>& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -155,7 +158,7 @@ auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance);
 
@@ -163,7 +166,7 @@ template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_tiled(
@@ -175,7 +178,7 @@ auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_tiled(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -187,7 +190,7 @@ auto vq_query_heap_tiled(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance) {
   // @todo Need to get the total number of queries, not just the first block
@@ -206,7 +209,7 @@ auto vq_query_heap_tiled(
   unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"flat@vq@vq_query_heap_tiled@loop"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
   do {
@@ -249,7 +252,7 @@ auto vq_query_heap_2(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{});
 
@@ -257,7 +260,7 @@ template <class DB, class Q, class Distance = sum_of_squares_distance>
 auto vq_query_heap_2(
     DB& db,
     const Q& q,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_2(
@@ -273,7 +276,7 @@ auto vq_query_heap_2(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance = Distance{}) {
   return vq_query_heap_2(with_ids{}, db, q, ids, k_nn, nthreads, distance);
@@ -285,7 +288,7 @@ auto vq_query_heap_2(
     DB& db,
     const Q& q,
     const ID& ids,
-    int k_nn,
+    size_t k_nn,
     unsigned nthreads,
     Distance distance) {
   // @todo Need to get the total number of queries, not just the first block
@@ -304,7 +307,7 @@ auto vq_query_heap_2(
   unsigned size_q = num_vectors(q);
   auto par = stdx::execution::indexed_parallel_policy{nthreads};
 
-  log_timer _i{tdb_func__ + " in RAM"};
+  log_timer _i{"flat@vq@vq_query_heap_2@loop"};
 
   // @todo Can we do blocking in the parallel for_each somehow?
   do {
@@ -354,7 +357,7 @@ auto vq_partition(
     const Q& q,
     unsigned nthreads,
     Distance distance = Distance{}) {
-  scoped_timer _{tdb_func__};
+  scoped_timer _{"vq@vq_partition"};
 
   auto num_queries = num_vectors(q);
   auto top_k = Vector<size_t>(num_queries);

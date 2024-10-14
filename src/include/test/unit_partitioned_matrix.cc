@@ -34,13 +34,12 @@
 #include <vector>
 #include "cpos.h"
 #include "detail/linalg/partitioned_matrix.h"
-#include "mdspan/mdspan.hpp"
 
 TEST_CASE("partitioned_matrix: sizes constructor", "[partitioned_matrix]") {
   using feature_type = int;
   using id_type = int;
   using part_index_type = int;
-  size_t dimensions = 3;
+  uint64_t dimensions = 3;
   size_t max_num_vectors = 5;
   size_t max_num_partitions = 2;
 
@@ -48,6 +47,7 @@ TEST_CASE("partitioned_matrix: sizes constructor", "[partitioned_matrix]") {
       ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
           dimensions, max_num_vectors, max_num_partitions);
   CHECK(partitioned_matrix.num_vectors() == 0);
+  CHECK(partitioned_matrix.total_num_vectors() == 0);
   CHECK(partitioned_matrix.num_partitions() == 0);
   CHECK(std::equal(
       partitioned_matrix.ids().begin(),
@@ -60,6 +60,7 @@ TEST_CASE("partitioned_matrix: sizes constructor", "[partitioned_matrix]") {
 
   CHECK(partitioned_matrix.load() == false);
   CHECK(partitioned_matrix.num_vectors() == 0);
+  CHECK(partitioned_matrix.total_num_vectors() == 0);
   CHECK(partitioned_matrix.num_partitions() == 0);
   CHECK(std::equal(
       partitioned_matrix.ids().begin(),
@@ -76,8 +77,8 @@ TEST_CASE("partitioned_matrix: vectors constructor", "[partitioned_matrix]") {
   using id_type = float;
   using part_index_type = float;
 
-  auto parts =
-      ColMajorMatrix<feature_type>{{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}};
+  auto parts = ColMajorMatrix<feature_type>{
+      {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
   std::vector<id_type> ids = {1, 2, 3, 4};
   std::vector<part_index_type> part_index = {0, 1, 4};
 
@@ -86,6 +87,7 @@ TEST_CASE("partitioned_matrix: vectors constructor", "[partitioned_matrix]") {
           parts, ids, part_index);
 
   CHECK(partitioned_matrix.num_vectors() == 4);
+  CHECK(partitioned_matrix.total_num_vectors() == 4);
   CHECK(partitioned_matrix.num_partitions() == 2);
   CHECK(std::equal(
       partitioned_matrix.ids().begin(),
@@ -98,6 +100,7 @@ TEST_CASE("partitioned_matrix: vectors constructor", "[partitioned_matrix]") {
 
   CHECK(partitioned_matrix.load() == false);
   CHECK(partitioned_matrix.num_vectors() == 4);
+  CHECK(partitioned_matrix.total_num_vectors() == 4);
   CHECK(partitioned_matrix.num_partitions() == 2);
   CHECK(std::equal(
       partitioned_matrix.ids().begin(),
@@ -115,7 +118,7 @@ TEST_CASE("partitioned_matrix: training constructor", "[partitioned_matrix]") {
   using part_index_type = uint64_t;
 
   auto training_set =
-      ColMajorMatrix<feature_type>{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
+      ColMajorMatrix<feature_type>{{{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}}};
   std::vector<id_type> part_labels = {1, 0, 1, 0, 1};
   size_t num_parts = 2;
 
@@ -123,6 +126,9 @@ TEST_CASE("partitioned_matrix: training constructor", "[partitioned_matrix]") {
       ColMajorPartitionedMatrix<feature_type, id_type, part_index_type>(
           training_set, part_labels, num_parts);
   CHECK(partitioned_matrix.num_vectors() == _cpo::num_vectors(training_set));
+  CHECK(
+      partitioned_matrix.total_num_vectors() ==
+      _cpo::num_vectors(training_set));
   CHECK(partitioned_matrix.num_partitions() == num_parts);
   CHECK(std::equal(
       partitioned_matrix.data(),

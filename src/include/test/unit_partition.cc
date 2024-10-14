@@ -35,7 +35,7 @@
 #include "test/utils/query_common.h"
 
 TEST_CASE("top_centroids", "[partition]") {
-  auto parts = ColMajorMatrix<float>{
+  auto parts = ColMajorMatrix<float>{{
       {
           1,
           1,
@@ -56,8 +56,8 @@ TEST_CASE("top_centroids", "[partition]") {
           3,
           3,
       },
-  };
-  auto centroids = ColMajorMatrix<float>{
+  }};
+  auto centroids = ColMajorMatrix<float>{{
       {
           1,
           1,
@@ -65,7 +65,7 @@ TEST_CASE("top_centroids", "[partition]") {
           1,
       },
       {2, 2, 2, 2},
-  };
+  }};
   auto top_centroids = detail::ivf::ivf_top_centroids(centroids, parts, 1, 1);
 
   CHECK(top_centroids.num_cols() == 5);
@@ -81,8 +81,8 @@ TEST_CASE("partition_ivf_index", "[partition]") {
   // auto partition_ivf_index(
   //      auto&& centroids, auto&& query, size_t nprobe, size_t nthreads)
 
-  auto nprobe = GENERATE(1, 2, 3);
-  auto nthreads = GENERATE(3);
+  size_t nprobe = GENERATE(1, 2, 3);
+  size_t nthreads = GENERATE(3);
 
   auto&& [active_partitions, active_queries] =
       detail::ivf::partition_ivf_flat_index<uint32_t>(
@@ -92,7 +92,7 @@ TEST_CASE("partition_ivf_index", "[partition]") {
   auto y = active_queries;
 
   CHECK(size(active_partitions) == size(active_queries));
-  auto sum = 0;
+  size_t sum = 0;
   for (size_t i = 0; i < size(active_queries); ++i) {
     sum += size(active_queries[i]);
   }

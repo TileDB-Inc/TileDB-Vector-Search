@@ -39,22 +39,21 @@
 #include "index/index_group.h"
 #include "index/ivf_pq_metadata.h"
 
-// flat_ivf_centroids, pq_ivf_centroids,
-// partitioned_pq_vectors, partitioned_pq_index, partitioned_pq_ids
-// cluster_centroids, distance_tables,
+// flat_ivf_centroids, partitioned_pq_vectors, partitioned_pq_index,
+// partitioned_pq_ids, cluster_centroids.
 
 [[maybe_unused]] static StorageFormat ivf_pq_storage_formats = {
     {"0.3",
      {
-         // @todo Should these be kept consistent with ivf_flat?
-         {"cluster_centroids_array_name", "pq_cluster_centroids"},
-         {"flat_ivf_centroids_array_name", "uncompressed_centroids"},
-         {"pq_ivf_centroids_array_name", "partition_centroids"},
+         // The centroids for each subspace.
+         {"cluster_centroids_array_name", "pq_subspace_centroids"},
+         // The centroids for each partition (of the original vectors).
+         {"flat_ivf_centroids_array_name", "partition_centroids"},
 
-         {"pq_ivf_indices_array_name", "partition_indexes"},
-         {"pq_ivf_vectors_array_name", "shuffled_vectors"},
-
-         {"distance_tables_array_name", "pq_symmetric_distance_tables"},
+         // The partitioned, PQ-encoded vectors.
+         {"pq_ivf_indices_array_name", "partitioned_pq_vector_indexes"},
+         {"pq_ivf_ids_array_name", "partitioned_pq_vector_ids"},
+         {"pq_ivf_vectors_array_name", "partitioned_pq_vectors"},
      }}};
 
 template <class index_type>
@@ -83,10 +82,12 @@ class ivf_pq_group : public base_index_group<index_type> {
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0},
       const std::string& version = std::string{""},
       uint64_t dimensions = 0,
-      size_t num_clusters = 0,
-      size_t num_subspaces = 0)
+      uint32_t num_clusters = 0,
+      uint32_t num_subspaces = 0)
       : Base(ctx, uri, rw, temporal_policy, version, dimensions) {
     if (rw == TILEDB_WRITE && !this->exists()) {
+      // num_clusters and num_subspaces must be set before we call
+      // create_default_impl().
       if (num_clusters == 0) {
         throw std::invalid_argument(
             "num_clusters must be specified when creating a new group.");
@@ -103,16 +104,6 @@ class ivf_pq_group : public base_index_group<index_type> {
 
   void append_valid_array_names_impl() {
     for (auto&& [array_key, array_name] : ivf_pq_storage_formats[version_]) {
-      if (array_key == "distance_tables_array_name") {
-        for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
-          valid_array_keys_.insert(array_key + "_" + std::to_string(i));
-          valid_array_names_.insert(array_name + "_" + std::to_string(i));
-          array_key_to_array_name_[array_key + "_" + std::to_string(i)] =
-              array_name + "_" + std::to_string(i);
-          array_name_to_uri_[array_name] =
-              array_name_to_uri(group_uri_, array_name);
-        }
-      }
       valid_array_keys_.insert(array_key);
       valid_array_names_.insert(array_name);
       array_key_to_array_name_[array_key] = array_name;
@@ -123,44 +114,50 @@ class ivf_pq_group : public base_index_group<index_type> {
 
   void clear_history_impl(uint64_t timestamp) {
     tiledb::Array::delete_fragments(
+        cached_ctx_, this->feature_vectors_uri(), 0, timestamp);
+
+    tiledb::Array::delete_fragments(
         cached_ctx_, cluster_centroids_uri(), 0, timestamp);
+
     tiledb::Array::delete_fragments(
         cached_ctx_, flat_ivf_centroids_uri(), 0, timestamp);
-    tiledb::Array::delete_fragments(
-        cached_ctx_, pq_ivf_centroids_uri(), 0, timestamp);
+
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_indices_uri(), 0, timestamp);
-    tiledb::Array::delete_fragments(cached_ctx_, this->ids_uri(), 0, timestamp);
+    tiledb::Array::delete_fragments(
+        cached_ctx_, pq_ivf_ids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, pq_ivf_vectors_uri(), 0, timestamp);
-    for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
-      std::string this_table_uri =
-          distance_tables_uri() + "_" + std::to_string(i);
-      tiledb::Array::delete_fragments(
-          cached_ctx_, this_table_uri, 0, timestamp);
-    }
   }
 
   /*****************************************************************************
    * Partitioning / repartitioning history information
    ****************************************************************************/
-  auto get_previous_num_partitions() const {
+  uint64_t get_previous_num_partitions() const {
     return metadata_.partition_history_.back();
   }
-  auto get_num_partitions() const {
+  uint64_t get_num_partitions() const {
     return metadata_.partition_history_[this->history_index_];
   }
-  auto append_num_partitions(size_t size) {
+  void append_num_partitions(uint64_t size) {
     metadata_.partition_history_.push_back(size);
   }
-  auto get_all_num_partitions() const {
+  const std::vector<uint64_t>& get_all_num_partitions() const {
     return metadata_.partition_history_;
   }
-  auto set_num_partitions(size_t size) {
+  void set_num_partitions(uint64_t size) {
     metadata_.partition_history_[this->history_index_] = size;
   }
-  auto set_last_num_partitions(size_t size) {
+  void set_last_num_partitions(uint64_t size) {
     metadata_.partition_history_.back() = size;
+  }
+
+  DistanceMetric get_distance_metric() const {
+    return metadata_.distance_metric_;
+  }
+
+  void set_distance_metric(DistanceMetric metric) {
+    metadata_.distance_metric_ = metric;
   }
 
   /*****************************************************************************
@@ -172,17 +169,14 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto flat_ivf_centroids_uri() const {
     return this->array_key_to_uri("flat_ivf_centroids_array_name");
   }
-  [[nodiscard]] auto pq_ivf_centroids_uri() const {
-    return this->array_key_to_uri("pq_ivf_centroids_array_name");
-  }
   [[nodiscard]] auto pq_ivf_indices_uri() const {
     return this->array_key_to_uri("pq_ivf_indices_array_name");
   }
+  [[nodiscard]] auto pq_ivf_ids_uri() const {
+    return this->array_key_to_uri("pq_ivf_ids_array_name");
+  }
   [[nodiscard]] auto pq_ivf_vectors_uri() const {
     return this->array_key_to_uri("pq_ivf_vectors_array_name");
-  }
-  [[nodiscard]] auto distance_tables_uri() const {
-    return this->array_key_to_uri("distance_tables_array_name");
   }
 
   [[nodiscard]] auto cluster_centroids_array_name() const {
@@ -191,49 +185,60 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto flat_ivf_centroids_array_name() const {
     return this->array_key_to_array_name("flat_ivf_centroids_array_name");
   }
-  [[nodiscard]] auto pq_ivf_centroids_array_name() const {
-    return this->array_key_to_array_name("pq_ivf_centroids_array_name");
-  }
   [[nodiscard]] auto pq_ivf_indices_array_name() const {
     return this->array_key_to_array_name("pq_ivf_indices_array_name");
+  }
+  [[nodiscard]] auto pq_ivf_ids_array_name() const {
+    return this->array_key_to_array_name("pq_ivf_ids_array_name");
   }
   [[nodiscard]] auto pq_ivf_vectors_array_name() const {
     return this->array_key_to_array_name("pq_ivf_vectors_array_name");
   }
-  [[nodiscard]] auto distance_tables_array_name() const {
-    return this->array_key_to_array_name("distance_tables_array_name");
-  }
 
   /*****************************************************************************
-   * Getters and setters for PQ related metadata: num_subspaces, sub_dimension,
-   * bits_per_subspace, num_clusters
+   * Getters and setters for PQ related metadata
    ****************************************************************************/
-  auto get_num_subspaces() const {
+  uint64_t get_num_subspaces() const {
     return metadata_.num_subspaces_;
   }
-  auto set_num_subspaces(size_t num_subspaces) {
+  void set_num_subspaces(uint32_t num_subspaces) {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
-  auto get_sub_dimensions() const {
-    return metadata_.sub_dimensions_;
-  }
-  auto set_sub_dimensions(size_t sub_dimensions) {
+  void set_sub_dimensions(uint32_t sub_dimensions) {
     metadata_.sub_dimensions_ = sub_dimensions;
   }
 
-  auto get_bits_per_subspace() const {
-    return metadata_.bits_per_subspace_;
-  }
-  auto set_bits_per_subspace(size_t bits_per_subspace) {
+  void set_bits_per_subspace(uint32_t bits_per_subspace) {
     metadata_.bits_per_subspace_ = bits_per_subspace;
   }
 
-  auto get_num_clusters() const {
+  uint32_t get_num_clusters() const {
     return metadata_.num_clusters_;
   }
-  auto set_num_clusters(size_t num_clusters) {
+  void set_num_clusters(uint32_t num_clusters) {
     metadata_.num_clusters_ = num_clusters;
+  }
+
+  uint32_t get_max_iterations() const {
+    return metadata_.max_iterations_;
+  }
+  void set_max_iterations(uint32_t max_iterations) {
+    metadata_.max_iterations_ = max_iterations;
+  }
+
+  float get_convergence_tolerance() const {
+    return metadata_.convergence_tolerance_;
+  }
+  void set_convergence_tolerance(float convergence_tolerance) {
+    metadata_.convergence_tolerance_ = convergence_tolerance;
+  }
+
+  float get_reassign_ratio() const {
+    return metadata_.reassign_ratio_;
+  }
+  void set_reassign_ratio(float reassign_ratio) {
+    metadata_.reassign_ratio_ = reassign_ratio;
   }
 
   /*****************************************************************************
@@ -281,9 +286,36 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.temp_size_ = 0;
     metadata_.dimensions_ = this->get_dimensions();
 
-    // Create the arrays: cluster_centroids,
-    // flat_ivf_centroids, pq_ivf_centroids, ivf_index,
-    // ivf_ids, pq_ivf_vectors, cluster_centroids, distance_tables
+    // Create the arrays:
+    // - feature_vectors and feature_vectors_ids (not used for query, just for
+    // re-ingestion where we want to re-train centroids)
+    // - cluster_centroids
+    // - flat_ivf_centroids
+    // - pq_ivf_vectors (i.e. the indices, IDs, and vectors)
+    create_empty_for_matrix<
+        typename index_type::feature_type,
+        stdx::layout_left>(
+        cached_ctx_,
+        this->feature_vectors_uri(),
+        this->get_dimensions(),
+        default_domain,
+        this->get_dimensions(),
+        default_tile_extent,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group,
+        this->feature_vectors_uri(),
+        this->feature_vectors_array_name());
+
+    create_empty_for_vector<typename index_type::id_type>(
+        cached_ctx_,
+        this->ids_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group, this->ids_uri(), this->ids_array_name());
+
     create_empty_for_matrix<
         typename index_type::flat_vector_feature_type,
         stdx::layout_left>(
@@ -310,19 +342,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, flat_ivf_centroids_uri(), flat_ivf_centroids_array_name());
 
-    create_empty_for_matrix<
-        typename index_type::pq_vector_feature_type,
-        stdx::layout_left>(
-        cached_ctx_,
-        pq_ivf_centroids_uri(),
-        this->get_num_subspaces(),
-        default_domain,
-        this->get_num_subspaces(),
-        default_tile_extent,
-        default_compression);
-    tiledb_helpers::add_to_group(
-        write_group, pq_ivf_centroids_uri(), pq_ivf_centroids_array_name());
-
     create_empty_for_vector<typename index_type::indices_type>(
         cached_ctx_,
         pq_ivf_indices_uri(),
@@ -331,16 +350,14 @@ class ivf_pq_group : public base_index_group<index_type> {
         default_compression);
     tiledb_helpers::add_to_group(
         write_group, pq_ivf_indices_uri(), pq_ivf_indices_array_name());
-
     create_empty_for_vector<typename index_type::id_type>(
         cached_ctx_,
-        this->ids_uri(),
+        pq_ivf_ids_uri(),
         default_domain,
         tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group, this->ids_uri(), this->ids_array_name());
-
+        write_group, pq_ivf_ids_uri(), pq_ivf_ids_array_name());
     create_empty_for_matrix<
         typename index_type::pq_code_type,
         stdx::layout_left>(
@@ -354,26 +371,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, pq_ivf_vectors_uri(), pq_ivf_vectors_array_name());
 
-    for (size_t i = 0; i < this->get_num_subspaces(); ++i) {
-      std::string this_table_uri =
-          distance_tables_uri() + "_" + std::to_string(i);
-      std::string this_table_array_name =
-          distance_tables_array_name() + "_" + std::to_string(i);
-      create_empty_for_matrix<
-          typename index_type::score_type,
-          stdx::layout_left>(
-          cached_ctx_,
-          this_table_uri,
-          this->get_num_clusters(),
-          this->get_num_clusters(),
-          this->get_num_clusters(),
-          this->get_num_clusters(),
-          default_compression);
-      tiledb_helpers::add_to_group(
-          write_group, this_table_uri, this_table_array_name);
-    }
-
-    // Store the metadata if all of the arrays were created successfully
+    // Store the metadata if all the arrays were created successfully
     metadata_.store_metadata(write_group);
   }
 };

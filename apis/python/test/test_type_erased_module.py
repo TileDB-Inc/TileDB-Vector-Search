@@ -2,6 +2,7 @@ import logging
 
 import numpy as np
 from array_paths import *
+from common import *
 
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search.utils import load_fvecs
@@ -26,6 +27,30 @@ def test_feature_vector_to_numpy():
     assert b.ndim == 1
     assert b.shape == (10000,)
     assert b.dtype == np.uint64
+
+
+def test_numpy_to_feature_vector_data_types():
+    for dtype in [
+        np.float32,
+        np.int8,
+        np.uint8,
+        np.int32,
+        np.uint32,
+        np.uint64,
+    ]:
+        if np.issubdtype(dtype, np.integer):
+            max_val = np.iinfo(dtype).max
+        elif np.issubdtype(dtype, np.floating):
+            max_val = np.finfo(dtype).max
+        else:
+            raise TypeError(f"Unsupported data type {dtype}")
+
+        vector = np.array([max_val], dtype=dtype)
+        feature_vector = vspy.FeatureVector(vector)
+        assert feature_vector.feature_type_string() == np.dtype(dtype).name
+        assert np.array_equal(
+            vector, np.array(feature_vector)
+        ), f"Arrays were not equal for dtype: {dtype}"
 
 
 def test_numpy_to_feature_vector_array_simple():
@@ -73,14 +98,53 @@ def test_feature_vector_array_to_numpy():
     a = vspy.FeatureVectorArray(ctx, siftsmall_inputs_uri)
     assert a.num_vectors() == 10000
     assert a.dimensions() == 128
+    assert a.num_ids() == 0
+    assert a.ids_type_string() == "any"
     b = np.array(a)
     assert b.shape == (10000, 128)
 
     a = vspy.FeatureVectorArray(ctx, bigann10k_inputs_uri)
     assert a.num_vectors() == 10000
     assert a.dimensions() == 128
+    assert a.num_ids() == 0
+    assert a.ids_type_string() == "any"
     b = np.array(a)
     assert b.shape == (10000, 128)
+
+
+def test_numpy_to_feature_vector_array_data_types():
+    for dtype in [
+        np.float32,
+        np.int8,
+        np.uint8,
+        np.int32,
+        np.uint32,
+        np.int64,
+        np.uint64,
+    ]:
+        for dtype_ids in [np.uint32, np.uint64]:
+            if np.issubdtype(dtype, np.integer):
+                max_val = np.iinfo(dtype).max
+            elif np.issubdtype(dtype, np.floating):
+                max_val = np.finfo(dtype).max
+            else:
+                raise TypeError(f"Unsupported data type {dtype}")
+
+            if np.issubdtype(dtype_ids, np.integer):
+                max_val_ids = np.iinfo(dtype_ids).max
+            elif np.issubdtype(dtype, np.floating):
+                max_val_ids = np.finfo(dtype_ids).max
+            else:
+                raise TypeError(f"Unsupported ids data type {dtype_ids}")
+
+            vectors = np.array([[max_val]], dtype=dtype)
+            ids = np.array([max_val_ids], dtype=dtype_ids)
+            feature_vector_array = vspy.FeatureVectorArray(vectors, ids)
+            assert feature_vector_array.feature_type_string() == np.dtype(dtype).name
+            assert feature_vector_array.ids_type_string() == np.dtype(dtype_ids).name
+            assert np.array_equal(
+                vectors, np.array(feature_vector_array)
+            ), f"Arrays were not equal for dtype: {dtype}, dtype_ids: {dtype_ids}"
 
 
 def test_numpy_to_feature_vector_array():
@@ -160,6 +224,14 @@ def test_numpy_to_feature_vector_array():
     # NOTE(paris): It is strange that we have to transpose this output array to have it match the input array. Should investigate this and fix it.
     assert a.shape == np.transpose(np.array(b)).shape
     assert np.array_equal(a, np.transpose(np.array(b)))
+
+
+def test_numpy_to_feature_vector_array_with_ids():
+    a = np.array(np.random.rand(10000, 128), dtype=np.float32)
+    ids = np.arange(10000, dtype=np.uint64)
+    b = vspy.FeatureVectorArray(a, ids)
+    assert b.num_ids() == 10000
+    assert b.ids_type_string() == "uint64"
 
 
 def test_TemporalPolicy():
@@ -392,6 +464,13 @@ def test_construct_IndexIVFPQ():
     assert a.partitioning_index_type_string() == "uint64"
     assert a.dimensions() == 0
 
+    build_config_string = vspy.build_config_string()
+    assert build_config_string is not None
+    assert "tiledb_version" in build_config_string
+    logging_string = vspy.logging_string()
+    assert logging_string is not None
+    assert "Timers" in logging_string
+
 
 def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     nprobe = 100
@@ -427,15 +506,30 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     a.train(training_set)
     a.add(training_set)
 
-    s, t = a.query(vspy.QueryType.InfiniteRAM, query_set, k_nn, nprobe)
+    _, ids = a.query(query_set, k_nn, nprobe)
+    accuracy = recall(ids, groundtruth_set, k_nn)
+    assert accuracy >= 0.87
 
-    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
-    nt = np.double(t.num_vectors()) * np.double(k_nn)
-    recall = intersections / nt
-    assert recall > 0.9
+    index_uri = os.path.join(tmp_path, "array")
+    a.write_index(ctx, index_uri)
+
+    b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
+    _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
+    accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_infinite
+
+    b_finite = vspy.IndexIVFPQ(
+        ctx,
+        index_uri,
+        index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+        memory_budget=1000,
+    )
+    _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
+    accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_finite
 
 
-def test_inplace_build_query_IndexIVFPQ():
+def test_inplace_build_query_IndexIVFPQ(tmp_path):
     nprobe = 100
     k_nn = 10
 
@@ -455,14 +549,28 @@ def test_inplace_build_query_IndexIVFPQ():
 
     a.train(training_set)
     a.add(training_set)
-    s, t = a.query(vspy.QueryType.InfiniteRAM, query_set, k_nn, nprobe)
 
-    intersections = vspy.count_intersections(t, groundtruth_set, k_nn)
+    _, ids = a.query(query_set, k_nn, nprobe)
+    accuracy = recall(ids, groundtruth_set, k_nn)
+    assert accuracy >= 0.87
 
-    nt = np.double(t.num_vectors()) * np.double(k_nn)
-    recall = intersections / nt
+    index_uri = os.path.join(tmp_path, "array")
+    a.write_index(ctx, index_uri)
 
-    assert recall > 0.9
+    b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
+    _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
+    accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_infinite
+
+    b_finite = vspy.IndexIVFPQ(
+        ctx,
+        index_uri,
+        index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+        memory_budget=999,
+    )
+    _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
+    accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_finite
 
 
 def test_construct_IndexIVFFlat():

@@ -11,13 +11,10 @@ from tiledb.vector_search import Index
 from tiledb.vector_search import flat_index
 from tiledb.vector_search import ivf_flat_index
 from tiledb.vector_search import ivf_pq_index
+from tiledb.vector_search import open
 from tiledb.vector_search import vamana_index
-from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.index import DATASET_TYPE
-from tiledb.vector_search.index import create_metadata
 from tiledb.vector_search.ingestion import ingest
-from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
-from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import is_type_erased_index
@@ -32,12 +29,6 @@ def query_and_check_distances(
         distances, ids = index.query(queries, k=k, **kwargs)
         assert np.array_equal(ids, expected_ids)
         assert np.array_equal(distances, expected_distances)
-
-
-def query_and_check(index, queries, k, expected, **kwargs):
-    for _ in range(3):
-        result_d, result_i = index.query(queries, k=k, **kwargs)
-        assert expected.issubset(set(result_i[0]))
 
 
 def check_default_metadata(
@@ -334,6 +325,9 @@ def test_ivf_pq_index(tmp_path):
     assert distances[0][0] == MAX_FLOAT32
     assert ids[0][0] == MAX_UINT64
     query_and_check_distances(index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]])
+    query_and_check_distances(
+        index, queries, 1, [[MAX_FLOAT32]], [[MAX_UINT64]], k_factor=2.0
+    )
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "IVF_PQ")
 
     update_vectors = np.empty([5], dtype=object)
@@ -349,8 +343,71 @@ def test_ivf_pq_index(tmp_path):
     query_and_check_distances(
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
+    query_and_check_distances(
+        index,
+        np.array([[2, 2, 2]], dtype=np.float32),
+        2,
+        [[0, 3]],
+        [[2, 1]],
+        k_factor=2.0,
+    )
 
-    # TODO(paris): Add tests for consolidation once we enable it.
+    index = index.consolidate_updates()
+
+    # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
+    ingestion_timestamps, base_sizes = load_metadata(uri)
+    assert base_sizes == [5]
+    timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
+    timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)
+    assert (
+        ingestion_timestamps[0] > timestamp_5_minutes_ago
+        and ingestion_timestamps[0] < timestamp_5_minutes_from_now
+    )
+
+    # Test that we can query with multiple query vectors.
+    for i in range(5):
+        query_and_check_distances(
+            index,
+            np.array([[i, i, i], [i, i, i]], dtype=np.float32),
+            1,
+            [[0], [0]],
+            [[i], [i]],
+        )
+        query_and_check_distances(
+            index,
+            np.array([[i, i, i], [i, i, i]], dtype=np.float32),
+            1,
+            [[0], [0]],
+            [[i], [i]],
+            k_factor=2.0,
+        )
+
+    # Test that we can query with k > 1.
+    query_and_check_distances(
+        index, np.array([[0, 0, 0]], dtype=np.float32), 2, [[0, 3]], [[0, 1]]
+    )
+
+    # Test that we can query with multiple query vectors and k > 1.
+    query_and_check_distances(
+        index,
+        np.array([[0, 0, 0], [4, 4, 4]], dtype=np.float32),
+        2,
+        [[0, 3], [0, 3]],
+        [[0, 1], [4, 3]],
+    )
+    query_and_check_distances(
+        index,
+        np.array([[0, 0, 0], [4, 4, 4]], dtype=np.float32),
+        2,
+        [[0, 3], [0, 3]],
+        [[0, 1], [4, 3]],
+        k_factor=2.0,
+    )
+
+    vfs = tiledb.VFS()
+    assert vfs.dir_size(uri) > 0
+    Index.delete_index(uri=uri, config={})
+    assert vfs.dir_size(uri) == 0
 
 
 def test_delete_invalid_index(tmp_path):
@@ -362,9 +419,8 @@ def test_delete_index(tmp_path):
     vfs = tiledb.VFS()
 
     indexes = ["FLAT", "IVF_FLAT", "VAMANA", "IVF_PQ"]
-    index_classes = [FlatIndex, IVFFlatIndex, VamanaIndex, IVFPQIndex]
     data = np.array([[1.0, 1.1, 1.2, 1.3], [2.0, 2.1, 2.2, 2.3]], dtype=np.float32)
-    for index_type, index_class in zip(indexes, index_classes):
+    for index_type in indexes:
         index_uri = os.path.join(tmp_path, f"array_{index_type}")
         ingest(
             index_type=index_type,
@@ -375,7 +431,7 @@ def test_delete_index(tmp_path):
         Index.delete_index(uri=index_uri, config={})
         assert vfs.dir_size(index_uri) == 0
         with pytest.raises(tiledb.TileDBError) as error:
-            index_class(uri=index_uri)
+            open(uri=index_uri)
         assert "does not exist" in str(error.value)
 
 
@@ -493,20 +549,3 @@ def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_pa
         # TODO:  This also throws a TypeError for incorrect dimension
         with pytest.raises(TypeError):
             index.query(np.array([1, 1, 1], dtype=np.float32), k=3)
-
-
-def test_create_metadata(tmp_path):
-    uri = os.path.join(tmp_path, "array")
-
-    # Create the metadata at the specified URI.
-    dimensions = 3
-    vector_type: np.dtype = np.dtype(np.uint8)
-    index_type: str = "IVF_FLAT"
-    storage_version: str = STORAGE_VERSION
-    group_exists: bool = False
-    create_metadata(
-        uri, dimensions, vector_type, index_type, storage_version, group_exists
-    )
-
-    # Check it contains the default metadata.
-    check_default_metadata(uri, vector_type, storage_version, index_type)

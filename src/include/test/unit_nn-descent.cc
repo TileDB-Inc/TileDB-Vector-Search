@@ -35,9 +35,7 @@
 #include "detail/graph/nn-descent.h"
 #include "detail/ivf/qv.h"
 #include "detail/linalg/compat.h"
-#include "detail/linalg/tdb_matrix.h"
 #include "test/utils/array_defs.h"
-#include "test/utils/query_common.h"
 
 #include <tiledb/tiledb>
 
@@ -88,7 +86,6 @@ TEMPLATE_TEST_CASE(
                   << std::endl;
       }
     }
-    _.stop();
   }
 }
 
@@ -222,7 +219,7 @@ TEST_CASE("nn_descent_1 vs ivf", "[nn-descent]") {
 
   //  auto&& [D00, I00] = detail::ivf::query_infinite_ram(
   //      parts, centroids, query, index, ids, nprobe, k_nn + 1, nthreads);
-  auto&& [D00, I00] = detail::ivf::query_infinite_ram(
+  auto&& [D00, I00, _] = detail::ivf::query_infinite_ram(
       mat, active_partitions, query, active_queries, k_nn + 1, nthreads);
   ivf_timer.stop();
 

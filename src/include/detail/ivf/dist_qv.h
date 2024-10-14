@@ -84,6 +84,7 @@ auto dist_qv_finite_ram_part(
     size_t upper_bound = 200000,
     size_t nthreads = std::thread::hardware_concurrency(),
     Distance&& distance = Distance{}) {
+  scoped_timer _{"dist_qv@dist_qv_finite_ram_part"};
   if (nthreads == 0) {
     nthreads = std::thread::hardware_concurrency();
   }
@@ -116,20 +117,21 @@ auto dist_qv_finite_ram_part(
       upper_bound,
       temporal_policy);
 
-  scoped_timer _i{tdb_func__ + " in RAM"};
-
   auto min_scores =
       std::vector<fixed_min_pair_heap<score_type, shuffled_ids_type>>(
           num_queries,
           fixed_min_pair_heap<score_type, shuffled_ids_type>(k_nn));
 
   size_t part_offset = 0;
+  size_t indices_offset = 0;
   while (partitioned_vectors.load()) {
-    _i.start();
+    scoped_timer _inner{"dist_qv@dist_qv_finite_ram_part@inner_loop"};
     auto current_part_size = ::num_partitions(partitioned_vectors);
     size_t parts_per_thread = (current_part_size + nthreads - 1) / nthreads;
 
-    std::vector<std::future<decltype(min_scores)>> futs;
+    std::vector<std::future<std::vector<
+        fixed_min_triplet_heap<score_type, shuffled_ids_type, size_t>>>>
+        futs;
     futs.reserve(nthreads);
 
     for (size_t n = 0; n < nthreads; ++n) {
@@ -148,7 +150,8 @@ auto dist_qv_finite_ram_part(
              k_nn,
              first_part,
              last_part,
-             part_offset]() {
+             part_offset,
+             indices_offset]() {
               return apply_query(
                   partitioned_vectors,
                   std::optional<std::vector<int>>{},
@@ -159,6 +162,7 @@ auto dist_qv_finite_ram_part(
                   first_part,
                   last_part,
                   part_offset,
+                  indices_offset,
                   distance);
             }));
       }
@@ -167,14 +171,14 @@ auto dist_qv_finite_ram_part(
       auto min_n = futs[n].get();
 
       for (size_t j = 0; j < num_queries; ++j) {
-        for (auto&& [e, f] : min_n[j]) {
+        for (auto&& [e, f, _] : min_n[j]) {
           min_scores[j].insert(e, f);
         }
       }
     }
 
     part_offset += current_part_size;
-    _i.stop();
+    indices_offset += num_vectors(partitioned_vectors);
   }
   return min_scores;
 }
@@ -270,7 +274,7 @@ auto dist_qv_finite_ram(
     size_t num_nodes,
     uint64_t timestamp = 0,
     Distance&& distance = Distance{}) {
-  scoped_timer _{tdb_func__ + " " + part_uri};
+  scoped_timer _{"dist_qv@dist_qv_finite_ram@" + part_uri};
 
   // Check that the size of the indices vector is correct
   if (size(indices) != centroids.num_cols() + 1) {

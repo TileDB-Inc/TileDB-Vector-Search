@@ -113,11 +113,12 @@ TEST_CASE("write constructor - create and read", "[vamana_group]") {
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
 
-    // We throw b/c the vamana_index_group hasn't actually been written (the
-    // write happens in the destructor).
+    // We throw b/c the vamana_index_group hasn't actually been stored yet.
     CHECK_THROWS_WITH(
         vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
+
+    x.store_metadata();
   }
 
   vamana_index_group y =
@@ -139,8 +140,7 @@ TEST_CASE("write constructor - invalid create and read", "[vamana_group]") {
     vamana_index_group x =
         vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_WRITE, {}, "", 10);
     CHECK(x.get_dimensions() == 10);
-    // We throw b/c the vamana_index_group hasn't actually been written (the
-    // write happens in the destructor).
+    // We throw b/c the vamana_index_group hasn't actually been stored yet.
     CHECK_THROWS_WITH(
         vamana_index_group<dummy_index>(ctx, tmp_uri, TILEDB_READ),
         "No ingestion timestamps found.");
@@ -161,8 +161,8 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[vamana_group]") {
   size_t expected_ingestion = 867;
   size_t expected_base = 5309;
   size_t expected_partitions = 42;
-  size_t expected_temp_size = 314159;
-  size_t expected_dimension = 128;
+  int64_t expected_temp_size = 314159;
+  uint64_t expected_dimension = 128;
 
   tiledb::Context ctx;
   tiledb::VFS vfs(ctx);
@@ -179,6 +179,7 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[vamana_group]") {
     x.append_num_edges(0);
     x.append_base_size(0);
     x.append_ingestion_timestamp(0);
+    x.store_metadata();
   }
 
   vamana_index_group x =
@@ -369,8 +370,8 @@ TEST_CASE("storage version", "[vamana_group]") {
   size_t expected_ingestion = 23094;
   size_t expected_base = 9234;
   size_t expected_partitions = 200;
-  size_t expected_temp_size = 11;
-  size_t expected_dimension = 19238;
+  int64_t expected_temp_size = 11;
+  uint64_t expected_dimension = 19238;
   auto offset = 2345;
 
   vamana_index_group x =

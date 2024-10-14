@@ -39,9 +39,8 @@
 #include <tiledb/tiledb>
 #include "detail/linalg/matrix.h"
 #include "detail/linalg/tdb_helpers.h"
-#include "utils/logging.h"
+#include "utils/logging_time.h"
 #include "utils/print_types.h"
-#include "utils/timer.h"
 
 namespace {
 
@@ -53,7 +52,7 @@ std::vector<T> read_vector_helper(
     size_t end_pos,
     TemporalPolicy temporal_policy,
     bool read_full_vector) {
-  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+  scoped_timer _{"tdb_io@read_vector_helper@" + std::string{uri}};
 
   auto array_ = tiledb_helpers::open_array(
       tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
@@ -64,7 +63,6 @@ std::vector<T> read_vector_helper(
 
   auto domain_{schema_.domain()};
 
-  auto dim_num_{domain_.ndim()};
   auto array_rows_{domain_.dimension(0)};
 
   if (read_full_vector) {
@@ -82,11 +80,9 @@ std::vector<T> read_vector_helper(
     return {};
   }
 
-  auto attr_num{schema_.attribute_num()};
   auto attr = schema_.attribute(idx);
 
   std::string attr_name = attr.name();
-  tiledb_datatype_t attr_type = attr.type();
 
   // Create a subarray that reads the array up to the specified subset.
   std::vector<int32_t> subarray_vals = {
@@ -101,7 +97,7 @@ std::vector<T> read_vector_helper(
   query.set_subarray(subarray).set_data_buffer(
       attr_name, data_.data(), vec_rows_);
   tiledb_helpers::submit_query(tdb_func__, uri, query);
-  _memory_data.insert_entry(tdb_func__, vec_rows_ * sizeof(T));
+  _memory_data.insert_entry("tdb_io@read_vector_helper", vec_rows_ * sizeof(T));
 
   array_->close();
   assert(tiledb::Query::Status::COMPLETE == query.query_status());
@@ -135,9 +131,15 @@ void create_empty_for_matrix(
   tiledb::Domain domain(ctx);
   domain
       .add_dimensions(tiledb::Dimension::create<int>(
-          ctx, "rows", {{0, std::max(0, (int)rows - 1)}}, row_extent))
+          ctx,
+          "rows",
+          {{0, std::max(0, (int)rows - 1)}},
+          static_cast<int>(row_extent)))
       .add_dimensions(tiledb::Dimension::create<int>(
-          ctx, "cols", {{0, std::max(0, (int)cols - 1)}}, col_extent));
+          ctx,
+          "cols",
+          {{0, std::max(0, (int)cols - 1)}},
+          static_cast<int>(col_extent)));
 
   tiledb::ArraySchema schema(ctx, TILEDB_DENSE);
   auto order = std::is_same_v<LayoutPolicy, stdx::layout_right> ?
@@ -195,7 +197,7 @@ void write_matrix(
     size_t start_pos = 0,
     bool create = true,
     TemporalPolicy temporal_policy = {}) {
-  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+  scoped_timer _{"tdb_io@write_matrix@" + std::string{uri}};
 
   if (create) {
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri, TILEDB_FILTER_NONE);
@@ -307,7 +309,7 @@ void write_vector(
     size_t start_pos = 0,
     bool create = true,
     TemporalPolicy temporal_policy = {}) {
-  scoped_timer _{tdb_func__ + " " + std::string{uri}};
+  scoped_timer _{"tdb_io@write_vector@" + std::string{uri}};
 
   using value_type = std::remove_const_t<std::ranges::range_value_t<V>>;
 

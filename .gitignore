@@ -107,3 +107,7 @@ documentation/reference
 
 # CMake
 */cmake-build-*
+
+# Benchmarking temporary files
+tmp/
+results/

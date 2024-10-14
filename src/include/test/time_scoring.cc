@@ -29,9 +29,7 @@
  *
  */
 
-// #include "scoring.h"
 #include "detail/linalg/matrix.h"
-#include "detail/linalg/vector.h"
 #include "test/utils/randomize.h"
 #include "utils/timer.h"
 
