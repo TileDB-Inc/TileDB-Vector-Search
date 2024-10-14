@@ -340,7 +340,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <section id="tiledb.vector_search.object_api.ObjectIndex.query" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.object_api.ObjectIndex.query">query</h3>
-<p><code>vector_search.object_api.ObjectIndex.query(query_objects, k, query_metadata=None, metadata_array_cond=None, metadata_df_filter_fn=None, return_objects=True, return_metadata=True, driver_mode=Mode.REALTIME, driver_resource_class=None, driver_resources=None, extra_driver_modules=None, driver_access_credentials_name=None, **kwargs)</code></p>
+<p><code>vector_search.object_api.ObjectIndex.query(query_objects, k, query_metadata=None, metadata_array_cond=None, metadata_df_filter_fn=None, return_objects=True, return_metadata=True, driver_mode=Mode.REALTIME, driver_resource_class=None, driver_resources=None, extra_driver_modules=None, driver_access_credentials_name=None, merge_results_result_pos_as_score=True, merge_results_reverse_dist=None, merge_results_per_query_embedding_group_fn=max, merge_results_per_query_group_fn=operator.add, **kwargs)</code></p>
 <p>Queries the index and returns the nearest neighbors for each query object.</p>
 <p>The query objects can be any type of object that is supported by the object reader. For example, if the object reader is configured to read images, then the query objects should be images.</p>
 <p>The <code>k</code> parameter specifies the number of nearest neighbors to return for each query object.</p>
@@ -355,9 +355,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 15%">
-<col style="width: 14%">
-<col style="width: 62%">
-<col style="width: 7%">
+<col style="width: 10%">
+<col style="width: 68%">
+<col style="width: 5%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -441,6 +441,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
+<td><code>merge_results_result_pos_as_score</code></td>
+<td>bool</td>
+<td>Applies only when there are multiple query embeddings per query. If True, each result score is based on the position of the result for the query embedding.</td>
+<td><code>True</code></td>
+</tr>
+<tr class="even">
+<td><code>merge_results_reverse_dist</code></td>
+<td>Optional[bool]</td>
+<td>Applies only when there are multiple query embeddings per query. If True, the distances are reversed based on their reciprocal, (1 / dist).</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td><code>merge_results_per_query_embedding_group_fn</code></td>
+<td>Callable</td>
+<td>Applies only when there are multiple query embeddings per query. Group function used to group together object scores per query embedding (i.e max, min, etc.).</td>
+<td><code>max</code></td>
+</tr>
+<tr class="even">
+<td><code>merge_results_per_query_group_fn</code></td>
+<td>Callable</td>
+<td>Applies only when there are multiple query embeddings per query. Group function used to group together object scores per query (i.e add). This is applied after <code>merge_results_per_query_embedding_group_fn</code></td>
+<td><code>operator.add</code></td>
+</tr>
+<tr class="odd">
 <td><code>**kwargs</code></td>
 <td></td>
 <td>Keyword arguments to pass to the index query method.</td>
@@ -477,7 +501,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="tiledb.vector_search.object_api.ObjectIndex.update_index" class="level3">
 <h3 class="anchored" data-anchor-id="tiledb.vector_search.object_api.ObjectIndex.update_index">update_index</h3>
-<p><code>vector_search.object_api.ObjectIndex.update_index(index_timestamp=None, workers=-1, worker_resources=None, worker_image=None, extra_worker_modules=None, driver_resources=None, driver_image=None, extra_driver_modules=None, worker_access_credentials_name=None, max_tasks_per_stage=-1, verbose=False, trace_id=None, embeddings_generation_mode=Mode.LOCAL, embeddings_generation_driver_mode=Mode.LOCAL, vector_indexing_mode=Mode.LOCAL, config=None, namespace=None, environment_variables={}, **kwargs)</code></p>
+<p><code>vector_search.object_api.ObjectIndex.update_index(index_timestamp=None, workers=-1, worker_resources=None, worker_image=None, extra_worker_modules=None, driver_resources=None, driver_image=None, extra_driver_modules=None, worker_access_credentials_name=None, max_tasks_per_stage=-1, verbose=False, trace_id=None, embeddings_generation_mode=Mode.LOCAL, embeddings_generation_driver_mode=Mode.LOCAL, vector_indexing_mode=Mode.LOCAL, config=None, namespace=None, environment_variables={}, use_updates_array=True, **kwargs)</code></p>
 <p>Updates the index with new data.</p>
 <p>This method can be used to update the index with new data. This is useful if the data that the index is built on has changed.</p>
 <p>Update uses the <code>ingest_embeddings_with_driver</code> function to add embeddings into a TileDB vector search index.</p>
