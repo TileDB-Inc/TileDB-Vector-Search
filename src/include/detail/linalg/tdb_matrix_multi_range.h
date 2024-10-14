@@ -66,9 +66,18 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   std::unique_ptr<tiledb::Array> array_;
   tiledb::ArraySchema schema_;
 
-  // The indices of all the columns to load. The size of this is the total
-  // number of columns.
+  // This class supports two ways of multi-range queries. One of these two will
+  // be used.
+  enum class QueryType { ColumnIndices, ColumnSlices };
+  QueryType query_type_{QueryType::ColumnIndices};
+
+  // 1. By passing the indices of the columns to load.
   std::vector<I> column_indices_;
+  // 2. By passing slices of the columns to load.
+  std::vector<std::pair<I, I>> column_slices_;
+
+  // The total number of columns in either column_indices_ or column_slices_.
+  size_t total_num_columns_{0};
 
   // The max number of columns that can fit in allocated memory
   size_t column_capacity_{0};
@@ -79,19 +88,12 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   // The final index numbers of the resident columns
   size_t last_resident_col_{0};
 
-  size_t get_elements_to_load() const {
-    // Note that here we try to load column_indices_.size() vectors. If we are
+  [[nodiscard]] size_t get_elements_to_load() const {
+    // Note that here we try to load the max number of vectors. If we are
     // time travelling, these vectors may not exist in the array, but we still
     // need to load them to know that they don't exist.
-    return std::min(
-        column_capacity_, column_indices_.size() - last_resident_col_);
+    return std::min(column_capacity_, total_num_columns_ - last_resident_col_);
   }
-
- public:
-  tdbBlockedMatrixMultiRange(tdbBlockedMatrixMultiRange&& rhs) = default;
-
-  /** Default destructor. array will be closed when it goes out of scope */
-  virtual ~tdbBlockedMatrixMultiRange() = default;
 
   /**
    * @brief Construct a new tdbBlockedMatrixMultiRange object, limited to
@@ -109,23 +111,30 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   tdbBlockedMatrixMultiRange(
       const tiledb::Context& ctx,
       const std::string& uri,
-      const std::vector<I>& column_indices,
       size_type dimensions,
+      QueryType query_type,
+      const std::vector<I>& column_indices,
+      const std::vector<std::pair<I, I>>& column_slices,
+      size_t total_num_columns,
       size_t upper_bound,
       TemporalPolicy temporal_policy = TemporalPolicy{})
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      : Base(dimensions, column_indices.size())
+      : Base(dimensions, total_num_columns)
+      , ctx_{ctx}
       , dimensions_{dimensions}
       , uri_{uri}
       , array_(std::make_unique<tiledb::Array>(
             ctx, uri, TILEDB_READ, temporal_policy.to_tiledb_temporal_policy()))
       , schema_{array_->schema()}
-      , column_indices_{column_indices} {
+      , query_type_{query_type}
+      , column_indices_{column_indices}
+      , column_slices_{column_slices}
+      , total_num_columns_{total_num_columns} {
     constructor_timer.stop();
 
     // The default is to load all the vectors.
-    if (upper_bound == 0 || upper_bound > column_indices_.size()) {
-      column_capacity_ = column_indices_.size();
+    if (upper_bound == 0 || upper_bound > total_num_columns_) {
+      column_capacity_ = total_num_columns_;
     } else {
       column_capacity_ = upper_bound;
     }
@@ -148,6 +157,79 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     auto data = std::unique_ptr<T[]>(new T[dimensions * column_capacity_]);
 #endif
     Base::operator=(Base{std::move(data), dimensions, column_capacity_});
+  }
+
+ public:
+  tdbBlockedMatrixMultiRange(tdbBlockedMatrixMultiRange&& rhs) = default;
+
+  /** Default destructor. array will be closed when it goes out of scope */
+  virtual ~tdbBlockedMatrixMultiRange() = default;
+
+  /**
+   * @brief Construct a new tdbBlockedMatrixMultiRange object, limited to
+   * `upper_bound` vectors. In this case, the `Matrix` is column-major, so the
+   * number of vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param column_indices The indices of the columns to read.
+   * @param dimensions The number of dimensions in each vector.
+   * @param upper_bound The maximum number of vectors to read.
+   * @param temporal_policy The TemporalPolicy to use for reading the array
+   * data.
+   */
+  tdbBlockedMatrixMultiRange(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_type dimensions,
+      const std::vector<I>& column_indices,
+      size_t upper_bound,
+      TemporalPolicy temporal_policy = TemporalPolicy{})
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrixMultiRange(
+            ctx,
+            uri,
+            dimensions,
+            QueryType::ColumnIndices,
+            column_indices,
+            {},
+            column_indices.size(),
+            upper_bound,
+            temporal_policy) {
+  }
+
+  /**
+   * @brief Construct a new tdbBlockedMatrixMultiRange object, limited to
+   * `upper_bound` vectors. In this case, the `Matrix` is column-major, so the
+   * number of vectors is the number of columns.
+   *
+   * @param ctx The TileDB context to use.
+   * @param uri URI of the TileDB array to read.
+   * @param column_slices The slices of the columns to read.
+   * @param dimensions The number of dimensions in each vector.
+   * @param upper_bound The maximum number of vectors to read.
+   * @param temporal_policy The TemporalPolicy to use for reading the array
+   * data.
+   */
+  tdbBlockedMatrixMultiRange(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_type dimensions,
+      const std::vector<std::pair<I, I>>& column_slices,
+      size_t total_slices_size,
+      size_t upper_bound,
+      TemporalPolicy temporal_policy = TemporalPolicy{})
+    requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
+      : tdbBlockedMatrixMultiRange(
+            ctx,
+            uri,
+            dimensions,
+            QueryType::ColumnSlices,
+            {},
+            column_slices,
+            total_slices_size,
+            upper_bound,
+            temporal_policy) {
   }
 
   bool load() {
@@ -180,9 +262,17 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     subarray.add_range(0, 0, static_cast<int>(dimensions_) - 1);
 
     // Setup the query ranges.
-    for (size_t i = first_resident_col; i < last_resident_col_; ++i) {
-      const auto index = static_cast<int>(column_indices_[i]);
-      subarray.add_range(1, index, index);
+    if (query_type_ == QueryType::ColumnIndices) {
+      for (size_t i = 0; i < column_indices_.size(); ++i) {
+        const auto index = static_cast<int>(column_indices_[i]);
+        subarray.add_range(1, index, index);
+      }
+    } else {
+      for (size_t i = 0; i < column_slices_.size(); ++i) {
+        const auto start = static_cast<int>(column_slices_[i].first);
+        const auto end = static_cast<int>(column_slices_[i].second);
+        subarray.add_range(1, start, end);
+      }
     }
 
     // Execute the query.
