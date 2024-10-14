@@ -254,7 +254,6 @@ void train_no_init(
   if (::num_vectors(training_set) == 0) {
     return;
   }
-  using feature_type = typename V::value_type;
   using centroid_feature_type = typename C::value_type;
   using index_type = size_t;
 
@@ -277,9 +276,9 @@ void train_no_init(
     size_t heap_size =
         std::ceil(reassign_ratio_ * static_cast<float>(num_partitions_)) + 5;
     auto high_scores = fixed_min_pair_heap<
-        feature_type,
+        float,
         index_type,
-        std::greater<feature_type>>(heap_size, std::greater<feature_type>());
+        std::greater<float>>(heap_size, std::greater<float>());
     auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
 
     // @todo parallelize -- by partition
@@ -326,7 +325,7 @@ void train_no_init(
       std::sort_heap(begin(high_scores), end(high_scores), [](auto a, auto b) {
         return std::get<0>(a) > std::get<0>(b);
       });
-      for (size_t i = 0; i < size(low_degrees) &&
+      for (size_t i = 0; i < std::min(size(low_degrees), size(high_scores)) &&
                          std::get<0>(low_degrees[i]) <= lower_degree_bound;
            ++i) {
         // std::cout << "i: " << i << " low_degrees: ("

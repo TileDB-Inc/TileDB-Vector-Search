@@ -536,7 +536,7 @@ auto qv_partition_with_scores(
 
   // Just need a single vector
   std::vector<size_t> top_k(q.num_cols());
-  std::vector<size_t> top_k_scores(q.num_cols());
+  std::vector<float> top_k_scores(q.num_cols());
 
   auto par = stdx::execution::indexed_parallel_policy{(size_t)nthreads};
   stdx::range_for_each(
