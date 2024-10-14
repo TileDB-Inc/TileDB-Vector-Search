@@ -43,6 +43,43 @@ class TestEmbedding(ObjectEmbedding):
         return embeddings
 
 
+class TestMultipleEmbeddingsPerObject(ObjectEmbedding):
+    def __init__(
+        self,
+    ):
+        self.model = None
+
+    def init_kwargs(self) -> Dict:
+        return {}
+
+    def dimensions(self) -> int:
+        return EMBED_DIM
+
+    def vector_type(self) -> np.dtype:
+        return np.float32
+
+    def load(self) -> None:
+        pass
+
+    def embed(
+        self, objects: OrderedDict, metadata: OrderedDict
+    ) -> Tuple[np.ndarray, np.array]:
+        embeddings_per_object = 10
+        num_embeddings = len(objects["object"]) * embeddings_per_object
+        embeddings = np.zeros((num_embeddings, EMBED_DIM), dtype=self.vector_type())
+        external_ids = np.zeros((num_embeddings))
+        emb_id = 0
+        for obj_id in range(len(objects["object"])):
+            for eid in range(embeddings_per_object):
+                for dim_id in range(EMBED_DIM):
+                    embeddings[emb_id, dim_id] = (
+                        objects["object"][obj_id][0] + 100000 * eid
+                    )
+                external_ids[emb_id] = metadata["external_id"][obj_id]
+                emb_id += 1
+        return embeddings, external_ids
+
+
 class TestPartition(ObjectPartition):
     def __init__(
         self,
@@ -374,6 +411,65 @@ def test_object_index(tmp_path):
             query_kwargs={"nprobe": 10, "l_search": 500},
             dim_id=2042,
             vector_dim_offset=1000,
+        )
+
+
+def test_object_index_multiple_embeddings_per_object(tmp_path):
+    from common import INDEXES
+
+    for index_type in INDEXES:
+        index_uri = os.path.join(tmp_path, f"object_index_{index_type}")
+        reader = TestReader(
+            object_id_start=0,
+            object_id_end=1000,
+            vector_dim_offset=0,
+        )
+        embedding = TestMultipleEmbeddingsPerObject()
+
+        index = object_index.create(
+            uri=index_uri,
+            index_type=index_type,
+            object_reader=reader,
+            embedding=embedding,
+            num_subspaces=4,
+        )
+
+        # Check initial ingestion
+        index.update_index(partitions=10)
+        evaluate_query(
+            index_type=index_type,
+            index_uri=index_uri,
+            query_kwargs={"nprobe": 10, "l_search": 250},
+            dim_id=42,
+            vector_dim_offset=0,
+        )
+
+        # Check that updating the same data doesn't create duplicates
+        index = object_index.ObjectIndex(uri=index_uri)
+        index.update_index(partitions=10, use_updates_array=False)
+        evaluate_query(
+            index_type=index_type,
+            index_uri=index_uri,
+            query_kwargs={"nprobe": 10, "l_search": 500},
+            dim_id=42,
+            vector_dim_offset=0,
+        )
+
+        # Add new data with a new reader
+        reader = TestReader(
+            object_id_start=1000,
+            object_id_end=2000,
+            vector_dim_offset=0,
+        )
+        index = object_index.ObjectIndex(uri=index_uri)
+        index.update_object_reader(reader)
+        index.update_index(partitions=10, use_updates_array=False)
+        evaluate_query(
+            index_type=index_type,
+            index_uri=index_uri,
+            query_kwargs={"nprobe": 10, "l_search": 500},
+            dim_id=1042,
+            vector_dim_offset=0,
         )
 
 
