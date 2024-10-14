@@ -291,17 +291,31 @@ TEST_CASE("read vector slices", "[tdb_io]") {
   std::iota(begin(vector), end(vector), 0);
   write_vector(ctx, vector, uri);
 
-  auto result = read_vector<int>(ctx, uri);
-  CHECK(vector == result);
+  // We can read the entire vector.
+  {
+    auto result = read_vector<int>(ctx, uri);
+    CHECK(vector == result);
+  }
 
-  std::vector<std::pair<uint64_t, uint64_t>> slices;
-  slices.push_back({0, 1});    // 2 elements.
-  slices.push_back({3, 3});    // 1 element.
-  slices.push_back({50, 60});  // 11 elements
-  size_t total_slices_size = 14;
+  // We can read slices of the vector.
+  {
+    std::vector<std::pair<uint64_t, uint64_t>> slices;
+    slices.push_back({0, 1});    // 2 elements.
+    slices.push_back({3, 3});    // 1 element.
+    slices.push_back({50, 60});  // 11 elements
+    size_t total_slices_size = 14;
 
-  auto result_slice = read_vector<int>(ctx, uri, slices, total_slices_size);
-  auto expected =
-      std::vector<int>{0, 1, 3, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60};
-  CHECK(result_slice == expected);
+    auto result_slice = read_vector<int>(ctx, uri, slices, total_slices_size);
+    auto expected =
+        std::vector<int>{0, 1, 3, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60};
+    CHECK(result_slice == expected);
+  }
+
+  // We don't crash with empty slices.
+  {
+    std::vector<std::pair<uint64_t, uint64_t>> slices;
+    size_t total_slices_size = 0;
+    auto result_slice = read_vector<int>(ctx, uri, slices, total_slices_size);
+    CHECK(result_slice.empty());
+  }
 }
