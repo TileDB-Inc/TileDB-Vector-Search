@@ -542,18 +542,18 @@ class Index(metaclass=ABCMeta):
             tiledb.consolidate(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
-        if self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0:
-            copy_centroids_uri = self.centroids_uri
-            if self.index_type == "IVF_FLAT" or self.index_type == "IVF_PQ":
-                # Make sure the user didn't pass an incorrect number of partitions.
-                if "partitions" in kwargs and self.partitions != kwargs["partitions"]:
-                    raise ValueError(
-                        f"The passed partitions={kwargs['partitions']} is different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with retrain_index=True, the partitions from the previous index will be used; to fix, set retrain_index=False, don't pass partitions, or pass the correct number of partitions."
-                    )
-                # We pass partitions through kwargs so that we don't pass it twice.
-                kwargs["partitions"] = self.partitions
-        else:
-            copy_centroids_uri = None
+        copy_centroids_uri = None
+        if (self.index_type == "IVF_FLAT" or self.index_type == "IVF_PQ") and not retrain_index and self.partitions > 0:
+            if self.index_type == "IVF_FLAT":
+                # TODO(paris): Update so that IVF_PQ can also copy the centroids. We also need to pass the PQ-centroids.
+                copy_centroids_uri = self.centroids_uri
+            # Make sure the user didn't pass an incorrect number of partitions.
+            if "partitions" in kwargs and self.partitions != kwargs["partitions"]:
+                raise ValueError(
+                    f"The passed partitions={kwargs['partitions']} is different than the number of partitions ({self.partitions}) from when the index was created - this is an issue because with retrain_index=True, the partitions from the previous index will be used; to fix, set retrain_index=False, don't pass partitions, or pass the correct number of partitions."
+                )
+            # We pass partitions through kwargs so that we don't pass it twice.
+            kwargs["partitions"] = self.partitions
  
         new_index = ingest(
             index_type=self.index_type,
