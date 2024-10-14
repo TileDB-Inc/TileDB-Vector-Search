@@ -1054,17 +1054,9 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   dump_logs(path, "IVF_PQ", 1, 2, 3, 4, 5.5f);
 }
 
-TEST_CASE("test", "foo") {
-  auto ctx = tiledb::Context{};
-  auto index_uri = "/tmp/ivf_pq_python_crashing";
-  auto temporal_policy = TemporalPolicy{TimeTravel, 1728437176521};
-  auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_OOC, 1, temporal_policy);
-}
-
 TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
-  // std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
-  std::string index_uri = "/tmp/api_ivf_pq_index";
+   std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);
@@ -1139,7 +1131,7 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   }
 
   {
-    // If we are to re-ingest, Python will delete the temp data group. Do that here.
+    // If we were to re-ingest, Python would delete the temp data group.
   }
 
   {
@@ -1152,8 +1144,7 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
 
 TEST_CASE("train python", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
-  // std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
-  std::string index_uri = "/tmp/api_ivf_pq_index";
+  std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);

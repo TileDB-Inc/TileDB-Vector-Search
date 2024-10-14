@@ -120,6 +120,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     if (rw == TILEDB_READ) {
       tile_size = (int32_t)(tile_size_bytes / sizeof(typename index_type::feature_type) / this->get_dimensions());
       default_compression = string_to_filter(storage_formats[this->version_]["default_attr_filters"]);
+    }
   }
 
   void append_valid_array_names_impl() {
