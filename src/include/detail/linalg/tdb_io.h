@@ -378,7 +378,8 @@ std::vector<T> read_vector(
  * @tparam T Type of data element stored.
  * @param ctx The TileDB context.
  * @param uri The URI of the TileDB array.
- * @param slices The slices to read. Each slice is a pair of [start, end] (i.e. they are inclusive).
+ * @param slices The slices to read. Each slice is a pair of [start, end] (i.e.
+ * they are inclusive).
  * @param temporal_policy The temporal policy for the read.
  * @return The vector of data.
  */
