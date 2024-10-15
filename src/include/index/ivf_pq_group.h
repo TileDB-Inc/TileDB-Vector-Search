@@ -54,9 +54,6 @@
          {"pq_ivf_indices_array_name", "partitioned_pq_vector_indexes"},
          {"pq_ivf_ids_array_name", "partitioned_pq_vector_ids"},
          {"pq_ivf_vectors_array_name", "partitioned_pq_vectors"},
-
-         // The partitioned non-PQ-encoded vectors.
-         {"partitioned_vectors_array_name", "partitioned_vectors"},
      }}};
 
 template <class index_type>
@@ -205,26 +202,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     return this->array_key_to_array_name("flat_ivf_centroids_array_name");
   }
 
-  // [[nodiscard]] auto pq_ivf_indices_uri() const {
-  //   return this->array_key_to_uri("pq_ivf_indices_array_name");
-  // }
-  // [[nodiscard]] auto pq_ivf_indices_temp_uri() const {
-  //   return this->array_key_to_temp_uri("pq_ivf_indices_array_name");
-  // }
-  // [[nodiscard]] auto pq_ivf_indices_array_name() const {
-  //   return this->array_key_to_array_name("pq_ivf_indices_array_name");
-  // }
-
-  // [[nodiscard]] auto pq_ivf_ids_uri() const {
-  //   return this->array_key_to_uri("pq_ivf_ids_array_name");
-  // }
-  // [[nodiscard]] auto pq_ivf_ids_temp_uri() const {
-  //   return this->array_key_to_temp_uri("pq_ivf_ids_array_name");
-  // }
-  // [[nodiscard]] auto pq_ivf_ids_array_name() const {
-  //   return this->array_key_to_array_name("pq_ivf_ids_array_name");
-  // }
-
   [[nodiscard]] auto pq_ivf_vectors_uri() const {
     return this->array_key_to_uri("pq_ivf_vectors_array_name");
   }
@@ -332,11 +309,7 @@ class ivf_pq_group : public base_index_group<index_type> {
         write_group,
         this->feature_vectors_index_uri(),
         this->feature_vectors_index_name());
-
     create_pq_ivf_vectors_matrix(write_group, pq_ivf_vectors_uri());
-    // create_ids_vector(write_group, pq_ivf_ids_uri(),
-    // this->pq_ivf_ids_array_name()); create_indices_vector(write_group,
-    // pq_ivf_indices_uri(), this->pq_ivf_indices_array_name());
 
     create_empty_for_matrix<
         typename index_type::flat_vector_feature_type,

@@ -338,16 +338,8 @@ void init_type_erased_module(py::module_& m) {
                     ".");
               }
             }
-            auto feature_vector_array = [&]() {
-              // One-dimensional numpy arrays show up as TILEDB_COL_MAJOR, even
-              // when they should be TILEDB_ROW_MAJOR. So here we ignore the
-              // order for one-dimensional arrays. if (info.shape[1] == 1 ||
-              // info.shape[0] == 1) {
-              //     // Always treat one-dimensional vectors as row-major to
-              //     preserve shape return FeatureVectorArray(info.shape[1],
-              //     info.shape[0], dtype_str, ids_dtype_str);
-              // }
 
+            auto feature_vector_array = [&]() {
               auto order = vectors.flags() & py::array::f_style ?
                                TILEDB_COL_MAJOR :
                                TILEDB_ROW_MAJOR;
@@ -548,12 +540,6 @@ void init_type_erased_module(py::module_& m) {
           py::arg("index_load_strategy") = IndexLoadStrategy::PQ_INDEX,
           py::arg("memory_budget") = 0,
           py::arg("temporal_policy") = std::nullopt)
-      // .def(
-      //     "__init__",
-      //     [](IndexIVFPQ& instance, py::kwargs kwargs) {
-      //       auto args = kwargs_to_map(kwargs);
-      //       new (&instance) IndexIVFPQ(args);
-      //     })
       .def(
           "create_temp_data_group",
           [](IndexIVFPQ& index) { index.create_temp_data_group(); })
@@ -626,40 +612,12 @@ void init_type_erased_module(py::module_& m) {
           py::arg("partition_id_start"),
           py::arg("partition_id_end"),
           py::arg("batch"))
-
-      // OLD:
-      // .def(
-      //   // KEEPS IN MEMORY
-      //     "train_don't write",
-      //     [](IndexIVFPQ& index,
-      //        const FeatureVectorArray& vectors,
-      //        std::optional<size_t> partitions) { index.train(vectors,
-      //        partitions); },
-      //     py::arg("vectors"),
-      //     py::arg("partitions") = std::nullopt)
       .def(
-          "ingest_all",
+          "ingest",
           [](IndexIVFPQ& index, const FeatureVectorArray& input_vectors) {
             index.ingest(input_vectors);
           },
           py::arg("input_vectors"))
-      // .def(
-      //     "write_index",
-      //     [](IndexIVFPQ& index,
-      //        const tiledb::Context& ctx,
-      //        const std::string& index_uri,
-      //        std::optional<TemporalPolicy> temporal_policy,
-      //        const std::string& storage_version) {
-      //       index.write_index(ctx, index_uri, temporal_policy,
-      //       storage_version);
-      //     },
-      //     py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
-      //     py::arg("ctx"),
-      //     py::arg("index_uri"),
-      //     py::arg("temporal_policy") = std::nullopt,
-      //     py::arg("storage_version") = "")
-
-      // USED BY BOTH:
       .def(
           "query",
           [](IndexIVFPQ& index,

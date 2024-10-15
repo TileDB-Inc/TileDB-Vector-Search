@@ -206,25 +206,6 @@ class IndexIVFPQ {
       throw std::runtime_error("Unsupported datatype combination");
     }
 
-    // if (n_list.has_value()) {
-    //   n_list_ = *n_list;
-    // }
-
-    // Create a new index. Note that we may have already loaded an existing
-    // index by URI. In that case, we have updated our local state (i.e.
-    // num_subspaces_, etc.), but we should also use the timestamp from that
-    // already loaded index.
-    // index_ = create_dispatch_table.at(type)(
-    //     n_list_,
-    //     num_subspaces_,
-    //     max_iterations_,
-    //     convergence_tolerance_,
-    //     reassign_ratio_,
-    //     index_ ?
-    //     std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
-    //              std::nullopt,
-    //     distance_metric_);
-
     index_->train(training_set, nlist, temporal_policy);
     n_list_ = index_->nlist();
 
@@ -240,6 +221,7 @@ class IndexIVFPQ {
   /**
    * @brief Add a set of vectors to a trained index.
    * @param input_vectors The set of vectors to add to the index.
+   * @param external_ids The ids of vectors to add to the index.
    * @param deleted_ids The ids of vectors to delete from the index.
    *
    */
@@ -279,19 +261,6 @@ class IndexIVFPQ {
     index_->ingest(input_vectors, external_ids);
   }
 
-  // void ingest(const FeatureVectorArray& input_vectors) {
-  //   if (feature_datatype_ != input_vectors.feature_type()) {
-  //     throw std::runtime_error(
-  //         "[ivf_pq_index@ingest] Feature datatype mismatch: " +
-  //         datatype_to_string(feature_datatype_) +
-  //         " != " + datatype_to_string(input_vectors.feature_type()));
-  //   }
-  //   if (!index_) {
-  //     throw std::runtime_error("Cannot ingest() because there is no index.");
-  //   }
-  //   index_->ingest(input_vectors);
-  // }
-
   void consolidate_partitions(
       size_t partitions,
       size_t work_items,
@@ -318,18 +287,6 @@ class IndexIVFPQ {
     }
     return index_->query(vectors, top_k, nprobe, k_factor);
   }
-
-  // void write_index(
-  //     const tiledb::Context& ctx,
-  //     const std::string& group_uri,
-  //     std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-  //     const std::string& storage_version = "") {
-  //   if (!index_) {
-  //     throw std::runtime_error(
-  //         "Cannot write_index() because there is no index.");
-  //   }
-  //   index_->write_index(ctx, group_uri, temporal_policy, storage_version);
-  // }
 
   static void clear_history(
       const tiledb::Context& ctx,
@@ -556,16 +513,6 @@ class IndexIVFPQ {
           extents(training_set)[0],
           extents(training_set)[1]};
       impl_index_.train(fspan, nlist, temporal_policy);
-      //      using id_type = typename T::id_type;
-      //      if (num_ids(training_set) > 0) {
-      //        auto ids = std::span<id_type>(
-      //            (id_type*)training_set.ids(), training_set.num_vectors());
-      //        impl_index_.train(fspan, ids);
-      //      } else {
-      //        auto ids = std::vector<id_type>(::num_vectors(training_set));
-      //        std::iota(ids.begin(), ids.end(), 0);
-      //        impl_index_.train(fspan, ids);
-      //      }
     }
 
     void ingest_parts(
@@ -600,39 +547,6 @@ class IndexIVFPQ {
             partition_start);
       }
     }
-
-    // void ingest(
-    //   const FeatureVectorArray& input_vectors,
-    //   const FeatureVector& external_ids) override {
-    //   using feature_type = typename T::feature_type;
-    //   using id_type = typename T::id_type;
-    //   auto fspan = MatrixView<feature_type, stdx::layout_left>{
-    //       (feature_type*)input_vectors.data(),
-    //       extents(input_vectors)[0],
-    //       extents(input_vectors)[1]};
-
-    //  if (external_ids.has_value()) {
-    //    auto ids = std::span<id_type>((id_type*)external_ids->data(),
-    //    external_ids->dimensions()); impl_index_.ingest(fspan, ids);
-    //  } else {
-    //     auto ids = std::vector<id_type>(::num_vectors(input_vectors));
-    //     std::iota(ids.begin(), ids.end(), 0);
-    //     impl_index_.ingest(fspan, ids);
-    //  }
-    // }
-
-    //   void ingest(
-    //     const FeatureVectorArray& input_vectors) override {
-    //     using feature_type = typename T::feature_type;
-    //     using id_type = typename T::id_type;
-    //     auto fspan = MatrixView<feature_type, stdx::layout_left>{
-    //         (feature_type*)input_vectors.data(),
-    //         extents(input_vectors)[0],
-    //         extents(input_vectors)[1]};
-    //     auto ids = std::vector<id_type>(::num_vectors(input_vectors));
-    //     std::iota(ids.begin(), ids.end(), 0);
-    //     impl_index_.ingest(fspan, ids);
-    // }
 
     void ingest(
         const FeatureVectorArray& input_vectors,

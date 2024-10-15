@@ -306,9 +306,6 @@ def test_ivf_pq_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     if os.path.exists(uri):
         os.rmdir(uri)
-    # uri = "/tmp/ivf_pq_python"
-    # if os.path.exists(uri):
-    #     shutil.rmtree(uri)
 
     vector_type = np.float32
 
@@ -322,6 +319,7 @@ def test_ivf_pq_index(tmp_path):
     ingestion_timestamps, base_sizes = load_metadata(uri)
     assert base_sizes == [0]
     assert ingestion_timestamps == [0]
+
     queries = np.array([[2, 2, 2]], dtype=np.float32)
     distances, ids = index.query(queries, k=1)
     assert distances.shape == (1, 1)
@@ -334,23 +332,17 @@ def test_ivf_pq_index(tmp_path):
     )
     check_default_metadata(uri, vector_type, STORAGE_VERSION, "IVF_PQ")
 
-    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-    print("[test_index] group.meta", group.meta)
-
     update_vectors = np.empty([5], dtype=object)
     update_vectors[0] = np.array([0, 0, 0], dtype=np.dtype(np.float32))
     update_vectors[1] = np.array([1, 1, 1], dtype=np.dtype(np.float32))
     update_vectors[2] = np.array([2, 2, 2], dtype=np.dtype(np.float32))
     update_vectors[3] = np.array([3, 3, 3], dtype=np.dtype(np.float32))
     update_vectors[4] = np.array([4, 4, 4], dtype=np.dtype(np.float32))
-    print("[test_index] index.update_batch() ===============================")
     index.update_batch(
         vectors=update_vectors,
         external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
     )
 
-    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-    print("[test_index] group.meta", group.meta)
     query_and_check_distances(
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )
@@ -363,16 +355,10 @@ def test_ivf_pq_index(tmp_path):
         k_factor=2.0,
     )
 
-    print("[test_index] index.consolidate_updates() ===============================")
     index = index.consolidate_updates()
-
-    group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-    print("[test_index] group.meta", group.meta)
 
     # During the first ingestion we overwrite the metadata and end up with a single base size and ingestion timestamp.
     ingestion_timestamps, base_sizes = load_metadata(uri)
-    print("[test_index] ingestion_timestamps:", ingestion_timestamps)
-    print("[test_index] base_sizes:", base_sizes)
     assert base_sizes == [5]
     timestamp_5_minutes_from_now = int((time.time() + 5 * 60) * 1000)
     timestamp_5_minutes_ago = int((time.time() - 5 * 60) * 1000)

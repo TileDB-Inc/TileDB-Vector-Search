@@ -777,7 +777,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         training_vector_array, partitions, TemporalPolicy(TimeTravel, 99));
     CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.n_list() == partitions);
-    return;
     index.ingest(training_vector_array, training_ids);
 
     // This also updates the timestamp of the index - we're now at timestamp 99.
