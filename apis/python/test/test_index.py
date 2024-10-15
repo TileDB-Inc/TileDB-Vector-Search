@@ -35,7 +35,6 @@ def check_default_metadata(
     uri, expected_vector_type, expected_storage_version, expected_index_type
 ):
     group = tiledb.Group(uri, "r", ctx=tiledb.Ctx(None))
-    print("[check_default_metadata] group.meta", group.meta)
     assert "dataset_type" in group.meta
     assert group.meta["dataset_type"] == DATASET_TYPE
     assert type(group.meta["dataset_type"]) == str
@@ -306,7 +305,6 @@ def test_ivf_pq_index(tmp_path):
     uri = os.path.join(tmp_path, "array")
     if os.path.exists(uri):
         os.rmdir(uri)
-
     vector_type = np.float32
 
     index = ivf_pq_index.create(
@@ -342,7 +340,6 @@ def test_ivf_pq_index(tmp_path):
         vectors=update_vectors,
         external_ids=np.array([0, 1, 2, 3, 4], dtype=np.dtype(np.uint32)),
     )
-
     query_and_check_distances(
         index, np.array([[2, 2, 2]], dtype=np.float32), 2, [[0, 3]], [[2, 1]]
     )

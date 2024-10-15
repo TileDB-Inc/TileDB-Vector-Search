@@ -133,7 +133,7 @@ int ivf_pq_index(
   // Find the centroid that is closest to each input vector.
   auto parts = detail::flat::qv_partition(centroids, input_vectors, nthreads);
   {
-    scoped_timer _{"shuffling data"};
+    scoped_timer _{"index@ivf_pq_index@shuffling_data"};
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
     auto indices = compute_indices<
@@ -274,7 +274,7 @@ int ivf_index(
   // Find the centroid that is closest to each input vector.
   auto parts = detail::flat::qv_partition(centroids, input_vectors, nthreads);
   {
-    scoped_timer _{"shuffling data"};
+    scoped_timer _{"index@ivf_index@shuffling_data"};
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
 

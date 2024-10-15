@@ -823,6 +823,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     // We then load the trained index and don't set a timestamp (which means
     // we'll load it at timestamp 99).
     auto index = IndexIVFPQ(ctx, index_uri);
+
     // Check that we can do finite and infinite queries and then train + write
     // the index.
     {
@@ -879,7 +880,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}}};
     auto&& [scores, ids] =
         index.query(FeatureVectorArray(queries), top_k, nprobe);
-
     check_single_vector_equals(
         scores, ids, {0, 0, 0, 0, 0}, {11, 22, 33, 44, 55});
 
@@ -976,7 +976,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         all_ingestion_timestamps.end(),
         std::vector<uint64_t>{99, 100}.begin()));
   }
-
   // Load it at timestamp 5 (before ingestion) and make sure we can query and be
   // returned fill values.
   for (auto upper_bound : std::vector<size_t>{0, 4}) {

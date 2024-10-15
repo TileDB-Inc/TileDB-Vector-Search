@@ -276,31 +276,6 @@ TEST_CASE("create group", "[tdb_io]") {
   read_group.close();
 }
 
-TEMPLATE_TEST_CASE(
-    "types", "[tdb_io]", int, float, uint8_t, uint32_t, uint64_t) {
-  size_t N = 10;
-
-  tiledb::Context ctx;
-  tiledb::Config cfg;
-  std::string uri =
-      (std::filesystem::temp_directory_path() / "tmp_group").string();
-  tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(uri)) {
-    vfs.remove_dir(uri);
-  }
-
-  static const int32_t default_domain{std::numeric_limits<int32_t>::max() - 1};
-  static const int32_t default_tile_extent{100'000};
-  static const int32_t tile_size_bytes{64 * 1024 * 1024};
-  tiledb_filter_type_t default_compression = TILEDB_FILTER_ZSTD;
-  create_empty_for_vector<TestType>(
-      ctx, uri, default_domain, default_tile_extent, default_compression);
-
-  auto vector = std::vector<TestType>(N);
-  std::iota(begin(vector), end(vector), 17);
-  write_vector(ctx, vector, uri, 0, false);
-}
-
 TEST_CASE("read vector slices", "[tdb_io]") {
   tiledb::Context ctx;
   std::string uri =

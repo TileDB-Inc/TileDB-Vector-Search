@@ -805,7 +805,19 @@ class ivf_pq_index {
         num_clusters_,
         num_subspaces_);
 
-    write_group.set_num_partitions(num_partitions_);
+    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
+        write_group.get_previous_ingestion_timestamp() == 0 &&
+        write_group.get_all_base_sizes().size() == 1 &&
+        write_group.get_previous_base_size() == 0) {
+      write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
+      write_group.set_base_size(0);
+      write_group.set_num_partitions(num_partitions_);
+    } else {
+      write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
+      write_group.append_base_size(0);
+      write_group.append_num_partitions(num_partitions_);
+    }
+
     write_group.store_metadata();
 
     // 4. Write the centroids.
@@ -945,7 +957,7 @@ class ivf_pq_index {
       for (size_t partition_id = 0; partition_id < partitions; ++partition_id) {
         auto slice = std::make_pair(
             static_cast<int>(prev_index),
-            static_cast<int>(partial_indexes[i] - 1));
+            static_cast<int>(partial_indexes[i]) - 1);
         if (slice.first <= slice.second &&
             slice.first != std::numeric_limits<uint64_t>::max()) {
           partition_slices[partition_id].push_back(slice);
@@ -1052,19 +1064,7 @@ class ivf_pq_index {
         num_clusters_,
         num_subspaces_);
 
-    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
-        write_group.get_previous_ingestion_timestamp() == 0 &&
-        write_group.get_all_base_sizes().size() == 1 &&
-        write_group.get_previous_base_size() == 0) {
-      write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
-      write_group.set_base_size(write_group.get_temp_size());
-      write_group.set_num_partitions(num_partitions_);
-    } else {
-      write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
-      write_group.append_base_size(write_group.get_temp_size());
-      write_group.append_num_partitions(num_partitions_);
-    }
-
+    write_group.set_base_size(write_group.get_temp_size());
     write_group.store_metadata();
   }
 
@@ -1099,19 +1099,7 @@ class ivf_pq_index {
         dimensions_,
         num_clusters_,
         num_subspaces_);
-    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
-        write_group.get_previous_ingestion_timestamp() == 0 &&
-        write_group.get_all_base_sizes().size() == 1 &&
-        write_group.get_previous_base_size() == 0) {
-      write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
-      write_group.set_base_size(::num_vectors(vectors));
-      write_group.set_num_partitions(num_partitions_);
-    } else {
-      write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
-      write_group.append_base_size(::num_vectors(vectors));
-      write_group.append_num_partitions(num_partitions_);
-    }
-
+    write_group.set_base_size(::num_vectors(vectors));
     write_group.store_metadata();
   }
 
@@ -1360,7 +1348,6 @@ class ivf_pq_index {
     auto&& [active_partitions, active_queries] =
         detail::ivf::partition_ivf_flat_index<indices_type>(
             flat_ivf_centroids_, query_vectors, nprobe, num_threads_);
-
     auto query_to_pq_centroid_distance_tables =
         std::move(*generate_query_to_pq_centroid_distance_tables<
                   Q,
@@ -1379,6 +1366,7 @@ class ivf_pq_index {
             make_pq_distance_query_to_pq_centroid_distance_tables<
                 std::span<float>,
                 decltype(pq_storage_type{}[0])>());
+
     return rerank(
         std::move(initial_distances),
         std::move(initial_ids),
@@ -1420,15 +1408,6 @@ class ivf_pq_index {
           }
         }
       }
-
-      auto all_feature_vectors =
-          tdbColMajorMatrixWithIds<feature_type, id_type>(
-              group_->cached_ctx(),
-              group_->feature_vectors_uri(),
-              group_->ids_uri(),
-              100,
-              temporal_policy_);
-      all_feature_vectors.load();
 
       auto feature_vectors =
           tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
