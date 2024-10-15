@@ -275,10 +275,9 @@ void train_no_init(
     // How many centroids should we try to fix up
     size_t heap_size =
         std::ceil(reassign_ratio_ * static_cast<float>(num_partitions_)) + 5;
-    auto high_scores = fixed_min_pair_heap<
-        float,
-        index_type,
-        std::greater<float>>(heap_size, std::greater<float>());
+    auto high_scores =
+        fixed_min_pair_heap<float, index_type, std::greater<float>>(
+            heap_size, std::greater<float>());
     auto low_degrees = fixed_min_pair_heap<index_type, index_type>(heap_size);
 
     // @todo parallelize -- by partition

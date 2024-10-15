@@ -71,8 +71,12 @@ inline std::string array_name_to_uri(
 }
 
 inline std::string array_name_to_temp_uri(
-    const std::string& group_uri, const std::string& temp_group_name, const std::string& array_name) {
-  return (std::filesystem::path{group_uri} / std::filesystem::path{temp_group_name} / std::filesystem::path{array_name})
+    const std::string& group_uri,
+    const std::string& temp_group_name,
+    const std::string& array_name) {
+  return (std::filesystem::path{group_uri} /
+          std::filesystem::path{temp_group_name} /
+          std::filesystem::path{array_name})
       .string();
 }
 template <class index_type>
@@ -126,8 +130,10 @@ class base_index_group {
       array_key_to_array_name_[array_key] = array_name;
       array_name_to_uri_[array_name] =
           array_name_to_uri(group_uri_, array_name);
-      array_name_to_temp_uri_[array_name] =
-          array_name_to_temp_uri(group_uri_, storage_formats[version_]["partial_write_array_dir"], array_name);
+      array_name_to_temp_uri_[array_name] = array_name_to_temp_uri(
+          group_uri_,
+          storage_formats[version_]["partial_write_array_dir"],
+          array_name);
     }
     static_cast<group_type*>(this)->append_valid_array_names_impl();
   }
@@ -269,19 +275,21 @@ class base_index_group {
     auto name = array_key_to_array_name(array_key);
     if (array_name_to_uri_.find(name) == array_name_to_uri_.end()) {
       throw std::runtime_error(
-          "[index_group@array_key_to_uri] Invalid key when getting the URI: " + array_key +
-          ". Name does not exist: " + name);
+          "[index_group@array_key_to_uri] Invalid key when getting the URI: " +
+          array_key + ". Name does not exist: " + name);
     }
 
     return array_name_to_uri_.at(name);
   }
 
-  constexpr std::string array_key_to_temp_uri(const std::string& array_key) const {
+  constexpr std::string array_key_to_temp_uri(
+      const std::string& array_key) const {
     auto name = array_key_to_array_name(array_key);
     if (array_name_to_temp_uri_.find(name) == array_name_to_temp_uri_.end()) {
       throw std::runtime_error(
-          "[index_group@array_key_to_temp_uri] Invalid key when getting the URI: " + array_key +
-          ". Name does not exist: " + name);
+          "[index_group@array_key_to_temp_uri] Invalid key when getting the "
+          "URI: " +
+          array_key + ". Name does not exist: " + name);
     }
 
     return array_name_to_temp_uri_.at(name);
@@ -337,7 +345,7 @@ class base_index_group {
     if (opened_for_ == TILEDB_WRITE) {
       set_dimensions(dimensions);
     }
-     if (empty(this->version_)) {
+    if (empty(this->version_)) {
       this->version_ = current_storage_version;
     }
     if (storage_formats.find(this->version_) == storage_formats.end()) {
@@ -484,7 +492,7 @@ class base_index_group {
   [[nodiscard]] std::string ids_array_name() const {
     return array_key_to_array_name("ids_array_name");
   }
-  
+
   [[nodiscard]] std::string feature_vectors_uri() const {
     return array_key_to_uri("parts_array_name");
   }
@@ -512,14 +520,14 @@ class base_index_group {
     return array_key_to_array_name("partial_write_array_dir");
   }
 
-  [[nodiscard]] tiledb::Context &cached_ctx() {
+  [[nodiscard]] tiledb::Context& cached_ctx() {
     return cached_ctx_;
   }
-  [[nodiscard]] const tiledb::Context &cached_ctx() const {
+  [[nodiscard]] const tiledb::Context& cached_ctx() const {
     return cached_ctx_;
   }
 
-  const std::string &storage_version() const {
+  const std::string& storage_version() const {
     return version_;
   }
 

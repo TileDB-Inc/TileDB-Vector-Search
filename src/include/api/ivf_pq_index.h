@@ -89,7 +89,7 @@ class IndexIVFPQ {
    */
   static void create(
       const tiledb::Context& ctx,
-      const std::string &group_uri,
+      const std::string& group_uri,
       uint64_t dimensions,
       tiledb_datatype_t feature_datatype = TILEDB_UINT32,
       tiledb_datatype_t id_datatype = TILEDB_UINT32,
@@ -100,10 +100,12 @@ class IndexIVFPQ {
       float reassign_ratio = 0.075f,
       std::optional<TemporalPolicy> optional_temporal_policy = std::nullopt,
       DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES,
-      const std::string& storage_version = ""
-  ) {
-    if (distance_metric != DistanceMetric::SUM_OF_SQUARES && distance_metric != DistanceMetric::L2) {
-      throw std::runtime_error("Invalid distance metric value, only SUM_OF_SQUARES and L2 are supported");
+      const std::string& storage_version = "") {
+    if (distance_metric != DistanceMetric::SUM_OF_SQUARES &&
+        distance_metric != DistanceMetric::L2) {
+      throw std::runtime_error(
+          "Invalid distance metric value, only SUM_OF_SQUARES and L2 are "
+          "supported");
     }
     auto type =
         std::tuple{feature_datatype, id_datatype, partitioning_index_datatype};
@@ -172,7 +174,8 @@ class IndexIVFPQ {
 
   void create_temp_data_group() {
     if (!index_) {
-      throw std::runtime_error("Cannot create_temp_data_group() because there is no index.");
+      throw std::runtime_error(
+          "Cannot create_temp_data_group() because there is no index.");
     }
     index_->create_temp_data_group();
   }
@@ -217,7 +220,8 @@ class IndexIVFPQ {
     //     max_iterations_,
     //     convergence_tolerance_,
     //     reassign_ratio_,
-    //     index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
+    //     index_ ?
+    //     std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
     //              std::nullopt,
     //     distance_metric_);
 
@@ -226,7 +230,8 @@ class IndexIVFPQ {
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
-          "[ivf_pq_index@train] Dimensions mismatch: " + std::to_string(dimensions_) +
+          "[ivf_pq_index@train] Dimensions mismatch: " +
+          std::to_string(dimensions_) +
           " != " + std::to_string(index_->dimensions()));
     }
     dimensions_ = index_->dimensions();
@@ -236,9 +241,15 @@ class IndexIVFPQ {
    * @brief Add a set of vectors to a trained index.
    * @param input_vectors The set of vectors to add to the index.
    * @param deleted_ids The ids of vectors to delete from the index.
-   * 
+   *
    */
-  void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) {
+  void ingest_parts(
+      const FeatureVectorArray& input_vectors,
+      const FeatureVector& external_ids,
+      const FeatureVector& deleted_ids,
+      size_t start,
+      size_t end,
+      size_t partition_start) {
     if (feature_datatype_ != input_vectors.feature_type()) {
       throw std::runtime_error(
           "[ivf_pq_index@ingest_parts] Feature datatype mismatch: " +
@@ -246,12 +257,16 @@ class IndexIVFPQ {
           " != " + datatype_to_string(input_vectors.feature_type()));
     }
     if (!index_) {
-      throw std::runtime_error("Cannot ingest_parts() because there is no index.");
+      throw std::runtime_error(
+          "Cannot ingest_parts() because there is no index.");
     }
-    index_->ingest_parts(input_vectors, external_ids, deleted_ids, start, end, partition_start);
+    index_->ingest_parts(
+        input_vectors, external_ids, deleted_ids, start, end, partition_start);
   }
 
-  void ingest(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids = FeatureVector(0, "float32")) {
+  void ingest(
+      const FeatureVectorArray& input_vectors,
+      const FeatureVector& external_ids = FeatureVector(0, "float32")) {
     if (feature_datatype_ != input_vectors.feature_type()) {
       throw std::runtime_error(
           "[ivf_pq_index@ingest] Feature datatype mismatch: " +
@@ -278,15 +293,18 @@ class IndexIVFPQ {
   // }
 
   void consolidate_partitions(
-            size_t partitions, 
-            size_t work_items, 
-            size_t partition_id_start, 
-            size_t partition_id_end, 
-            size_t batch) { 
+      size_t partitions,
+      size_t work_items,
+      size_t partition_id_start,
+      size_t partition_id_end,
+      size_t batch) {
     if (!index_) {
-      throw std::runtime_error("[ivf_pq_index@consolidate_partitions] Cannot consolidate_partitions() because there is no index.");
+      throw std::runtime_error(
+          "[ivf_pq_index@consolidate_partitions] Cannot "
+          "consolidate_partitions() because there is no index.");
     }
-    index_->consolidate_partitions(partitions, work_items, partition_id_start, partition_id_end, batch); 
+    index_->consolidate_partitions(
+        partitions, work_items, partition_id_start, partition_id_end, batch);
   }
 
   [[nodiscard]] auto query(
@@ -295,7 +313,8 @@ class IndexIVFPQ {
       size_t nprobe,
       float k_factor = 1.f) {
     if (!index_) {
-      throw std::runtime_error("[ivf_pq_index@query] Cannot query() because there is no index.");
+      throw std::runtime_error(
+          "[ivf_pq_index@query] Cannot query() because there is no index.");
     }
     return index_->query(vectors, top_k, nprobe, k_factor);
   }
@@ -439,18 +458,29 @@ class IndexIVFPQ {
 
     virtual void create_temp_data_group() = 0;
 
-    virtual void train(const FeatureVectorArray& training_set, size_t nlist, std::optional<TemporalPolicy> temporal_policy) = 0;
+    virtual void train(
+        const FeatureVectorArray& training_set,
+        size_t nlist,
+        std::optional<TemporalPolicy> temporal_policy) = 0;
 
-    virtual void ingest_parts(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids, const FeatureVector& deleted_ids, size_t start, size_t end, size_t partition_start) = 0;
+    virtual void ingest_parts(
+        const FeatureVectorArray& input_vectors,
+        const FeatureVector& external_ids,
+        const FeatureVector& deleted_ids,
+        size_t start,
+        size_t end,
+        size_t partition_start) = 0;
     // virtual void ingest(const FeatureVectorArray& input_vectors) = 0;
-    virtual void ingest(const FeatureVectorArray& input_vectors, const FeatureVector& external_ids) = 0;
+    virtual void ingest(
+        const FeatureVectorArray& input_vectors,
+        const FeatureVector& external_ids) = 0;
 
     virtual void consolidate_partitions(
-            size_t partitions, 
-            size_t work_items, 
-            size_t partition_id_start, 
-            size_t partition_id_end, 
-            size_t batch) = 0;
+        size_t partitions,
+        size_t work_items,
+        size_t partition_id_start,
+        size_t partition_id_end,
+        size_t batch) = 0;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query(
@@ -516,51 +546,63 @@ class IndexIVFPQ {
       impl_index_.create_temp_data_group();
     }
 
-    void train(const FeatureVectorArray& training_set, size_t nlist, std::optional<TemporalPolicy> temporal_policy) override {
+    void train(
+        const FeatureVectorArray& training_set,
+        size_t nlist,
+        std::optional<TemporalPolicy> temporal_policy) override {
       using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)training_set.data(),
           extents(training_set)[0],
           extents(training_set)[1]};
       impl_index_.train(fspan, nlist, temporal_policy);
-//      using id_type = typename T::id_type;
-//      if (num_ids(training_set) > 0) {
-//        auto ids = std::span<id_type>(
-//            (id_type*)training_set.ids(), training_set.num_vectors());
-//        impl_index_.train(fspan, ids);
-//      } else {
-//        auto ids = std::vector<id_type>(::num_vectors(training_set));
-//        std::iota(ids.begin(), ids.end(), 0);
-//        impl_index_.train(fspan, ids);
-//      }
+      //      using id_type = typename T::id_type;
+      //      if (num_ids(training_set) > 0) {
+      //        auto ids = std::span<id_type>(
+      //            (id_type*)training_set.ids(), training_set.num_vectors());
+      //        impl_index_.train(fspan, ids);
+      //      } else {
+      //        auto ids = std::vector<id_type>(::num_vectors(training_set));
+      //        std::iota(ids.begin(), ids.end(), 0);
+      //        impl_index_.train(fspan, ids);
+      //      }
     }
 
     void ingest_parts(
-      const FeatureVectorArray& input_vectors, 
-      const FeatureVector& external_ids, 
-      const FeatureVector& deleted_ids, 
-      size_t start, 
-      size_t end, 
-      size_t partition_start) override {
+        const FeatureVectorArray& input_vectors,
+        const FeatureVector& external_ids,
+        const FeatureVector& deleted_ids,
+        size_t start,
+        size_t end,
+        size_t partition_start) override {
       using feature_type = typename T::feature_type;
       using id_type = typename T::id_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)input_vectors.data(),
           extents(input_vectors)[0],
           extents(input_vectors)[1]};
-      auto deleted_ids_span = std::span<id_type>((id_type*)deleted_ids.data(), deleted_ids.dimensions());
+      auto deleted_ids_span = std::span<id_type>(
+          (id_type*)deleted_ids.data(), deleted_ids.dimensions());
       if (external_ids.dimensions() == 0) {
         auto ids = std::vector<id_type>(::num_vectors(input_vectors));
         std::iota(ids.begin(), ids.end(), start);
-        impl_index_.ingest_parts(fspan, ids, deleted_ids_span, start, end, partition_start);
+        impl_index_.ingest_parts(
+            fspan, ids, deleted_ids_span, start, end, partition_start);
       } else {
-        auto external_ids_span = std::span<id_type>((id_type*)external_ids.data(), external_ids.dimensions());
-        impl_index_.ingest_parts(fspan, external_ids_span, deleted_ids_span, start, end, partition_start);
+        auto external_ids_span = std::span<id_type>(
+            (id_type*)external_ids.data(), external_ids.dimensions());
+        impl_index_.ingest_parts(
+            fspan,
+            external_ids_span,
+            deleted_ids_span,
+            start,
+            end,
+            partition_start);
       }
     }
 
     // void ingest(
-    //   const FeatureVectorArray& input_vectors, 
+    //   const FeatureVectorArray& input_vectors,
     //   const FeatureVector& external_ids) override {
     //   using feature_type = typename T::feature_type;
     //   using id_type = typename T::id_type;
@@ -568,10 +610,10 @@ class IndexIVFPQ {
     //       (feature_type*)input_vectors.data(),
     //       extents(input_vectors)[0],
     //       extents(input_vectors)[1]};
-      
+
     //  if (external_ids.has_value()) {
-    //    auto ids = std::span<id_type>((id_type*)external_ids->data(), external_ids->dimensions());
-    //    impl_index_.ingest(fspan, ids);
+    //    auto ids = std::span<id_type>((id_type*)external_ids->data(),
+    //    external_ids->dimensions()); impl_index_.ingest(fspan, ids);
     //  } else {
     //     auto ids = std::vector<id_type>(::num_vectors(input_vectors));
     //     std::iota(ids.begin(), ids.end(), 0);
@@ -579,22 +621,22 @@ class IndexIVFPQ {
     //  }
     // }
 
-  //   void ingest(
-  //     const FeatureVectorArray& input_vectors) override {
-  //     using feature_type = typename T::feature_type;
-  //     using id_type = typename T::id_type;
-  //     auto fspan = MatrixView<feature_type, stdx::layout_left>{
-  //         (feature_type*)input_vectors.data(),
-  //         extents(input_vectors)[0],
-  //         extents(input_vectors)[1]};
-  //     auto ids = std::vector<id_type>(::num_vectors(input_vectors));
-  //     std::iota(ids.begin(), ids.end(), 0);
-  //     impl_index_.ingest(fspan, ids);
-  // }
+    //   void ingest(
+    //     const FeatureVectorArray& input_vectors) override {
+    //     using feature_type = typename T::feature_type;
+    //     using id_type = typename T::id_type;
+    //     auto fspan = MatrixView<feature_type, stdx::layout_left>{
+    //         (feature_type*)input_vectors.data(),
+    //         extents(input_vectors)[0],
+    //         extents(input_vectors)[1]};
+    //     auto ids = std::vector<id_type>(::num_vectors(input_vectors));
+    //     std::iota(ids.begin(), ids.end(), 0);
+    //     impl_index_.ingest(fspan, ids);
+    // }
 
     void ingest(
-      const FeatureVectorArray& input_vectors, 
-      const FeatureVector& external_ids) override {
+        const FeatureVectorArray& input_vectors,
+        const FeatureVector& external_ids) override {
       using feature_type = typename T::feature_type;
       using id_type = typename T::id_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
@@ -606,18 +648,20 @@ class IndexIVFPQ {
         std::iota(ids.begin(), ids.end(), 0);
         impl_index_.ingest(fspan, ids);
       } else {
-        auto ids = std::span<id_type>((id_type*)external_ids.data(), external_ids.dimensions());
+        auto ids = std::span<id_type>(
+            (id_type*)external_ids.data(), external_ids.dimensions());
         impl_index_.ingest(fspan, ids);
       }
     }
 
     void consolidate_partitions(
-            size_t partitions, 
-            size_t work_items, 
-            size_t partition_id_start, 
-            size_t partition_id_end, 
-            size_t batch) override {
-      impl_index_.consolidate_partitions(partitions, work_items, partition_id_start, partition_id_end, batch);
+        size_t partitions,
+        size_t work_items,
+        size_t partition_id_start,
+        size_t partition_id_end,
+        size_t batch) override {
+      impl_index_.consolidate_partitions(
+          partitions, work_items, partition_id_start, partition_id_end, batch);
     }
 
     /**

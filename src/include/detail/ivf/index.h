@@ -51,55 +51,66 @@
 namespace detail::ivf {
 
 namespace {
-  // Compute indices.
-  template <typename FeatureType, class Vector, class IdsType, class IndicesType, class CentroidsType>
-  std::vector<IndicesType> compute_indices(
-      const Vector& external_ids,          // IN
-      const std::unordered_set<IdsType> &deleted_ids_set,           // IN
-      const ColMajorMatrix<CentroidsType> &centroids,    // IN
-      const std::vector<size_t>& parts) {
-    // The number of vectors assigned to each centroid.
-    std::vector<size_t> degrees(centroids.num_cols());
-    if (deleted_ids_set.empty()) {
-      for (size_t i = 0; i < external_ids.size(); ++i) {
+// Compute indices.
+template <
+    typename FeatureType,
+    class Vector,
+    class IdsType,
+    class IndicesType,
+    class CentroidsType>
+std::vector<IndicesType> compute_indices(
+    const Vector& external_ids,                          // IN
+    const std::unordered_set<IdsType>& deleted_ids_set,  // IN
+    const ColMajorMatrix<CentroidsType>& centroids,      // IN
+    const std::vector<size_t>& parts) {
+  // The number of vectors assigned to each centroid.
+  std::vector<size_t> degrees(centroids.num_cols());
+  if (deleted_ids_set.empty()) {
+    for (size_t i = 0; i < external_ids.size(); ++i) {
+      auto j = parts[i];
+      ++degrees[j];
+    }
+  } else {
+    for (size_t i = 0; i < external_ids.size(); ++i) {
+      if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
         auto j = parts[i];
         ++degrees[j];
       }
-    } else {
-      for (size_t i = 0; i < external_ids.size(); ++i) {
-        if (deleted_ids_set.find(external_ids[i]) == deleted_ids_set.end()) {
-          auto j = parts[i];
-          ++degrees[j];
-        }
-      }
     }
-
-    // The starting index of each partition in the shuffled data.
-    std::vector<IndicesType> indices(centroids.num_cols() + 1);
-    indices[0] = 0;
-    std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
-
-    return indices;
   }
 
+  // The starting index of each partition in the shuffled data.
+  std::vector<IndicesType> indices(centroids.num_cols() + 1);
+  indices[0] = 0;
+  std::inclusive_scan(begin(degrees), end(degrees), begin(indices) + 1);
+
+  return indices;
 }
+
+}  // namespace
 
 /**
  * Partitions a set of vectors, given a set of centroids.
  * @return
  */
-template <typename MatrixType, typename FeatureType, typename PQFeatureType, class IdsType, class IndicesType, class CentroidsType>
+template <
+    typename MatrixType,
+    typename FeatureType,
+    typename PQFeatureType,
+    class IdsType,
+    class IndicesType,
+    class CentroidsType>
 int ivf_pq_index(
     tiledb::Context& ctx,
-    const MatrixType& input_vectors,  // IN
+    const MatrixType& input_vectors,                        // IN
     const ColMajorMatrix<PQFeatureType>& input_pq_vectors,  // IN
-    const std::span<IdsType>& external_ids,          // IN
-    const std::span<IdsType>& deleted_ids,           // IN
-    const ColMajorMatrix<CentroidsType> &centroids,    // IN
-    const std::string& parts_uri,      // OUT (to array at parts_uri)
-    const std::string& index_uri,      // OUT (to array at index_uri)
-    const std::string& id_uri,         // OUT (to array at id_uri)
-    const std::string& pq_parts_uri,      // OUT (to array at parts_uri)
+    const std::span<IdsType>& external_ids,                 // IN
+    const std::span<IdsType>& deleted_ids,                  // IN
+    const ColMajorMatrix<CentroidsType>& centroids,         // IN
+    const std::string& parts_uri,     // OUT (to array at parts_uri)
+    const std::string& index_uri,     // OUT (to array at index_uri)
+    const std::string& id_uri,        // OUT (to array at id_uri)
+    const std::string& pq_parts_uri,  // OUT (to array at parts_uri)
     size_t start_pos,
     size_t end_pos,
     size_t nthreads,
@@ -107,7 +118,8 @@ int ivf_pq_index(
     size_t partition_start = 0) {
   if (input_vectors.num_cols() != input_pq_vectors.num_cols()) {
     throw std::runtime_error(
-        "[index@ivf_pq_index] input_vectors.num_cols() != input_pq_vectors.num_cols()");
+        "[index@ivf_pq_index] input_vectors.num_cols() != "
+        "input_pq_vectors.num_cols()");
   }
   if (input_vectors.num_cols() != external_ids.size()) {
     throw std::runtime_error(
@@ -124,8 +136,12 @@ int ivf_pq_index(
     scoped_timer _{"shuffling data"};
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
-    auto indices = compute_indices<FeatureType, std::span<IdsType>, IdsType, IndicesType, CentroidsType>(
-        external_ids, deleted_ids_set, centroids, parts);
+    auto indices = compute_indices<
+        FeatureType,
+        std::span<IdsType>,
+        IdsType,
+        IndicesType,
+        CentroidsType>(external_ids, deleted_ids_set, centroids, parts);
 
     // Array for storing the shuffled data
     auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
@@ -160,7 +176,8 @@ int ivf_pq_index(
           shuffled_pq_input_vectors(j, ibin) = input_pq_vectors(j, i);
         }
 
-        // Increment indices so that the next vector in this bin goes to the next spot.
+        // Increment indices so that the next vector in this bin goes to the
+        // next spot.
         ++indices[bin];
       }
     } else {
@@ -221,17 +238,19 @@ int ivf_pq_index(
       write_vector(
           ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
     }
-    
-//    if (!pq_index_uri.empty()) {
-//      debug_vector(indices);
-//      write_vector(
-//          ctx, indices, pq_index_uri, partition_start, false, temporal_policy);
-//    }
-//    if (!pq_id_uri.empty()) {
-//      debug_vector(shuffled_ids);
-//      write_vector(
-//          ctx, shuffled_ids, pq_id_uri, start_pos, false, temporal_policy);
-//    }
+
+    //    if (!pq_index_uri.empty()) {
+    //      debug_vector(indices);
+    //      write_vector(
+    //          ctx, indices, pq_index_uri, partition_start, false,
+    //          temporal_policy);
+    //    }
+    //    if (!pq_id_uri.empty()) {
+    //      debug_vector(shuffled_ids);
+    //      write_vector(
+    //          ctx, shuffled_ids, pq_id_uri, start_pos, false,
+    //          temporal_policy);
+    //    }
   }
   return 0;
 }
@@ -240,16 +259,20 @@ int ivf_pq_index(
  * Partitions a set of vectors, given a set of centroids.
  * @return
  */
-template <typename FeatureType, class IdsType, class IndicesType, class CentroidsType>
+template <
+    typename FeatureType,
+    class IdsType,
+    class IndicesType,
+    class CentroidsType>
 int ivf_index(
     tiledb::Context& ctx,
     const ColMajorMatrix<FeatureType>& input_vectors,  // IN
     const std::vector<IdsType>& external_ids,          // IN
     const std::vector<IdsType>& deleted_ids,           // IN
-    const ColMajorMatrix<CentroidsType> &centroids,    // IN
-    const std::string& parts_uri,      // OUT (to array at parts_uri)
-    const std::string& index_uri,      // OUT (to array at index_uri)
-    const std::string& id_uri,         // OUT (to array at id_uri)
+    const ColMajorMatrix<CentroidsType>& centroids,    // IN
+    const std::string& parts_uri,  // OUT (to array at parts_uri)
+    const std::string& index_uri,  // OUT (to array at index_uri)
+    const std::string& id_uri,     // OUT (to array at id_uri)
     size_t start_pos,
     size_t end_pos,
     size_t nthreads,
@@ -270,9 +293,13 @@ int ivf_index(
     std::unordered_set<IdsType> deleted_ids_set(
         deleted_ids.begin(), deleted_ids.end());
 
-    auto indices = compute_indices<FeatureType, std::vector<IdsType>, IdsType, IndicesType, CentroidsType>(
-        external_ids, deleted_ids_set, centroids, parts);
-    
+    auto indices = compute_indices<
+        FeatureType,
+        std::vector<IdsType>,
+        IdsType,
+        IndicesType,
+        CentroidsType>(external_ids, deleted_ids_set, centroids, parts);
+
     // Array for storing the shuffled data
     auto shuffled_input_vectors = ColMajorMatrix<FeatureType>{
         input_vectors.num_rows(), input_vectors.num_cols()};
@@ -301,7 +328,8 @@ int ivf_index(
           shuffled_input_vectors(j, ibin) = input_vectors(j, i);
         }
 
-        // Increment indices so that the next vector in this bin goes to the next spot.
+        // Increment indices so that the next vector in this bin goes to the
+        // next spot.
         ++indices[bin];
       }
     } else {
@@ -371,50 +399,50 @@ int ivf_index(
     size_t nthreads,
     uint64_t timestamp,
     size_t partition_start = 0) {
-    // NOTE(paris): Is it correct to do `TimestampStartEnd, timestamp, timestamp`?
-    auto centroid_read_temporal_policy =
-        (timestamp == 0) ?
-            TemporalPolicy() :
-            TemporalPolicy(TimestampStartEnd, timestamp, timestamp);
-    tiledb::Array array(
-        ctx,
-        centroids_uri,
-        TILEDB_READ,
-        centroid_read_temporal_policy.to_tiledb_temporal_policy());
-    auto non_empty = array.non_empty_domain<int32_t>();
-    auto partitions = non_empty[1].second.second + 1;
+  // NOTE(paris): Is it correct to do `TimestampStartEnd, timestamp, timestamp`?
+  auto centroid_read_temporal_policy =
+      (timestamp == 0) ?
+          TemporalPolicy() :
+          TemporalPolicy(TimestampStartEnd, timestamp, timestamp);
+  tiledb::Array array(
+      ctx,
+      centroids_uri,
+      TILEDB_READ,
+      centroid_read_temporal_policy.to_tiledb_temporal_policy());
+  auto non_empty = array.non_empty_domain<int32_t>();
+  auto partitions = non_empty[1].second.second + 1;
 
-    // Read all rows from column 0 -> `partitions`. Set no upper_bound.
-    auto centroids = tdbColMajorMatrix<CentroidsType>(
-        ctx,
-        centroids_uri,
-        0,
-        std::nullopt,
-        0,
-        partitions,
-        0,
-        centroid_read_temporal_policy);
-    centroids.load();
+  // Read all rows from column 0 -> `partitions`. Set no upper_bound.
+  auto centroids = tdbColMajorMatrix<CentroidsType>(
+      ctx,
+      centroids_uri,
+      0,
+      std::nullopt,
+      0,
+      partitions,
+      0,
+      centroid_read_temporal_policy);
+  centroids.load();
 
-    TemporalPolicy temporal_policy = (timestamp == 0) ?
-                                      TemporalPolicy() :
-                                      TemporalPolicy(TimeTravel, timestamp);
+  TemporalPolicy temporal_policy = (timestamp == 0) ?
+                                       TemporalPolicy() :
+                                       TemporalPolicy(TimeTravel, timestamp);
 
-    return ivf_index<FeatureType, IdsType, IdsType, CentroidsType>(
-        ctx,
-        input_vectors,
-        external_ids,
-        deleted_ids,
-        centroids,
-        parts_uri,
-        index_uri,
-        id_uri,
-        start_pos,
-        end_pos,
-        nthreads,
-        temporal_policy,
-        partition_start);
-  }
+  return ivf_index<FeatureType, IdsType, IdsType, CentroidsType>(
+      ctx,
+      input_vectors,
+      external_ids,
+      deleted_ids,
+      centroids,
+      parts_uri,
+      index_uri,
+      id_uri,
+      start_pos,
+      end_pos,
+      nthreads,
+      temporal_policy,
+      partition_start);
+}
 
 /**
  * Open db and set up external ids to either be a contiguous set of integers

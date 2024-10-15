@@ -233,6 +233,7 @@ def test_numpy_to_feature_vector_array_with_ids():
     assert b.num_ids() == 10000
     assert b.ids_type_string() == "uint64"
 
+
 def test_numpy_to_feature_vector_single_item():
     a = np.array([1], dtype=np.float32)
     assert a.ndim == 1
@@ -244,6 +245,7 @@ def test_numpy_to_feature_vector_single_item():
     assert c.ndim == 1
     assert c.shape == (1,)
     assert (a == c).all()
+
 
 # def test_numpy_to_feature_vector_array_two_dimensions():
 #     print('\ntest_numpy_to_feature_vector_array_two_dimensions ------------')
@@ -259,7 +261,7 @@ def test_numpy_to_feature_vector_single_item():
 #     assert c.ndim == 2
 #     assert c.shape == (4,2)
 #     assert (a == c).all()
-    
+
 # def test_numpy_to_feature_vector_array_one_dimension():
 #     print('\ntest_numpy_to_feature_vector_array_one_dimension ------------')
 #     # Create four vectors, each with one dimension.
@@ -298,12 +300,25 @@ def test_numpy_to_feature_vector_single_item():
 #     assert c.shape == (1,4)
 #     assert (a == c).all()
 
+
 def test_numpy_feature_vector_array():
     test_cases = [
-        {"description": "Row-major, 2D (4x1)", "data": np.array([[1], [2], [3], [4]], dtype=np.float32, order='C')},
-        {"description": "Col-major, 2D (4x1)", "data": np.array([[1], [2], [3], [4]], dtype=np.float32, order='F')},
-        {"description": "Row-major, 2D (1x4)", "data": np.array([[1, 2, 3, 4]], dtype=np.float32, order='C')},
-        {"description": "Col-major, 2D (1x4)", "data": np.array([[1, 2, 3, 4]], dtype=np.float32, order='F')},
+        {
+            "description": "Row-major, 2D (4x1)",
+            "data": np.array([[1], [2], [3], [4]], dtype=np.float32, order="C"),
+        },
+        {
+            "description": "Col-major, 2D (4x1)",
+            "data": np.array([[1], [2], [3], [4]], dtype=np.float32, order="F"),
+        },
+        {
+            "description": "Row-major, 2D (1x4)",
+            "data": np.array([[1, 2, 3, 4]], dtype=np.float32, order="C"),
+        },
+        {
+            "description": "Col-major, 2D (1x4)",
+            "data": np.array([[1, 2, 3, 4]], dtype=np.float32, order="F"),
+        },
     ]
 
     for test_case in test_cases:
@@ -311,16 +326,24 @@ def test_numpy_feature_vector_array():
         a = test_case["data"]
 
         # Ensure the shape and dimensionality are as expected
-        assert a.ndim == 2, f"Failed on {description}: Expected ndim == 2 but got {a.ndim}"
+        assert (
+            a.ndim == 2
+        ), f"Failed on {description}: Expected ndim == 2 but got {a.ndim}"
         expected_shape = a.shape
         b = vspy.FeatureVectorArray(a)
 
         # Convert back to a NumPy array and validate its shape and content
         c = np.array(b)
 
-        assert c.ndim == 2, f"Failed on {description}: Expected ndim == 2 but got {c.ndim}"
-        assert c.shape == expected_shape, f"Failed on {description}: Expected shape {expected_shape} but got {c.shape}"
-        assert (a == c).all(), f"Failed on {description}: Data mismatch between original and recovered array"
+        assert (
+            c.ndim == 2
+        ), f"Failed on {description}: Expected ndim == 2 but got {c.ndim}"
+        assert (
+            c.shape == expected_shape
+        ), f"Failed on {description}: Expected shape {expected_shape} but got {c.shape}"
+        assert (
+            a == c
+        ).all(), f"Failed on {description}: Data mismatch between original and recovered array"
 
 
 def test_TemporalPolicy():
@@ -533,14 +556,14 @@ def test_construct_IndexIVFPQ(tmp_path):
         index_uri=index_uri,
         dimensions=9,
         num_subspaces=3,
-        feature_type="float32"
+        feature_type="float32",
     )
     a = vspy.IndexIVFPQ(ctx, index_uri)
     assert a.feature_type_string() == "float32"
     assert a.id_type_string() == "uint64"
     assert a.partitioning_index_type_string() == "uint64"
     assert a.dimensions() == 9
-    
+
     if os.path.exists(index_uri):
         shutil.rmtree(index_uri)
     vspy.IndexIVFPQ.create(
@@ -548,9 +571,9 @@ def test_construct_IndexIVFPQ(tmp_path):
         index_uri=index_uri,
         dimensions=99,
         num_subspaces=33,
-        feature_type="uint8", 
-        id_type="uint64", 
-        partitioning_index_type="uint64"
+        feature_type="uint8",
+        id_type="uint64",
+        partitioning_index_type="uint64",
     )
     a = vspy.IndexIVFPQ(ctx, index_uri)
     assert a.feature_type_string() == "uint8"
@@ -565,9 +588,9 @@ def test_construct_IndexIVFPQ(tmp_path):
         index_uri=index_uri,
         dimensions=999,
         num_subspaces=333,
-        feature_type="float32", 
-        id_type="uint32", 
-        partitioning_index_type="uint64"
+        feature_type="float32",
+        id_type="uint32",
+        partitioning_index_type="uint64",
     )
     a = vspy.IndexIVFPQ(ctx, index_uri)
     assert a.feature_type_string() == "float32"
@@ -592,7 +615,7 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     k_nn = 10
     index_uri = os.path.join(tmp_path, "array")
     dimensions = 128
-    partitions= 100
+    partitions = 100
     feature_type = "float32"
     id_type = "uint64"
     partitioning_index_type = "uint64"
@@ -651,7 +674,7 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
 
     nprobe = 100
     k_nn = 10
-    partitions=100
+    partitions = 100
 
     vspy.IndexIVFPQ.create(
         ctx=ctx,

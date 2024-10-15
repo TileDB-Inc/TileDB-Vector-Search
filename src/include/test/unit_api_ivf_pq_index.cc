@@ -35,575 +35,657 @@
 #include "test/utils/test_utils.h"
 
 TEST_CASE("init constructor", "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  auto ctx = tiledb::Context{};
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
- SECTION("default") {
-   CHECK_THROWS(IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_ANY, TILEDB_UINT32, TILEDB_UINT32));
- }
+  SECTION("default") {
+    CHECK_THROWS(IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_ANY, TILEDB_UINT32, TILEDB_UINT32));
+  }
 
- SECTION("float uint32 uint32") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_FLOAT32);
-   CHECK(a.id_type() == TILEDB_UINT32);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
-   CHECK(dimensions(a) == 16);
-}
+  SECTION("float uint32 uint32") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT32);
+    CHECK(dimensions(a) == 16);
+  }
 
-SECTION("int8 uint32 uint32") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT32, TILEDB_UINT32);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_INT8);
-   CHECK(a.id_type() == TILEDB_UINT32);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
-}
+  SECTION("int8 uint32 uint32") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT32, TILEDB_UINT32);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT32);
+  }
 
-SECTION("uint8 uint32 uint32") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_UINT8);
-   CHECK(a.id_type() == TILEDB_UINT32);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
-}
+  SECTION("uint8 uint32 uint32") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT32);
+  }
 
-SECTION("float uint64 uint32") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_FLOAT32);
-   CHECK(a.id_type() == TILEDB_UINT64);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
-}
+  SECTION("float uint64 uint32") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT32);
+  }
 
-SECTION("float uint32 uint64") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_FLOAT32);
-   CHECK(a.id_type() == TILEDB_UINT32);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT64);
-}
+  SECTION("float uint32 uint64") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT64);
+  }
 
-SECTION("int8 uint64 uint32") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT64, TILEDB_UINT32);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_INT8);
-   CHECK(a.id_type() == TILEDB_UINT64);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
-}
+  SECTION("int8 uint64 uint32") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT64, TILEDB_UINT32);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT32);
+  }
 
-SECTION("uint8 uint64 uint32") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT32);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_UINT8);
-   CHECK(a.id_type() == TILEDB_UINT64);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT32);
-}
+  SECTION("uint8 uint64 uint32") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT32);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT32);
+  }
 
-SECTION("int8 uint32 uint64") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT32, TILEDB_UINT64);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_INT8);
-   CHECK(a.id_type() == TILEDB_UINT32);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT64);
-}
+  SECTION("int8 uint32 uint64") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT32, TILEDB_UINT64);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT64);
+  }
 
-SECTION("uint8 uint32 uint64") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT64);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_UINT8);
-   CHECK(a.id_type() == TILEDB_UINT32);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT64);
-}
+  SECTION("uint8 uint32 uint64") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT64);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT32);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT64);
+  }
 
-SECTION("float uint64 uint64") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_FLOAT32);
-   CHECK(a.id_type() == TILEDB_UINT64);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT64);
-}
+  SECTION("float uint64 uint64") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_FLOAT32);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT64);
+  }
 
-SECTION("int8 uint64 uint64") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT64, TILEDB_UINT64);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_INT8);
-   CHECK(a.id_type() == TILEDB_UINT64);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT64);
-}
+  SECTION("int8 uint64 uint64") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_INT8, TILEDB_UINT64, TILEDB_UINT64);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_INT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT64);
+  }
 
-SECTION("uint8 uint64 uint64") {
-   IndexIVFPQ::create(ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT64);
-   auto a = IndexIVFPQ(ctx, index_uri);
-   CHECK(a.feature_type() == TILEDB_UINT8);
-   CHECK(a.id_type() == TILEDB_UINT64);
-   CHECK(a.partitioning_index_type() == TILEDB_UINT64);
-}
+  SECTION("uint8 uint64 uint64") {
+    IndexIVFPQ::create(
+        ctx, index_uri, 16, TILEDB_UINT8, TILEDB_UINT64, TILEDB_UINT64);
+    auto a = IndexIVFPQ(ctx, index_uri);
+    CHECK(a.feature_type() == TILEDB_UINT8);
+    CHECK(a.id_type() == TILEDB_UINT64);
+    CHECK(a.partitioning_index_type() == TILEDB_UINT64);
+  }
 }
 
 TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- using feature_type_type = uint8_t;
- auto feature_type = "uint8";
- auto id_type = "uint32";
- auto partitioning_index_type = "uint32";
- uint64_t dimensions = 3;
- size_t partitions = 1;
- uint32_t num_subspaces = 3;
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto partitioning_index_type = "uint32";
+  uint64_t dimensions = 3;
+  size_t partitions = 1;
+  uint32_t num_subspaces = 3;
 
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
- auto queries = ColMajorMatrix<feature_type_type>{
-     {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
+  auto queries = ColMajorMatrix<feature_type_type>{
+      {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
 
- {
-   IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32, num_subspaces);
-   auto index = IndexIVFPQ(ctx, index_uri);
+  {
+    IndexIVFPQ::create(
+        ctx,
+        index_uri,
+        dimensions,
+        TILEDB_UINT8,
+        TILEDB_UINT32,
+        TILEDB_UINT32,
+        num_subspaces);
+    auto index = IndexIVFPQ(ctx, index_uri);
 
-   size_t num_vectors = 0;
-   auto empty_training_vector_array =
-       FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
-   auto empty_feature_vector = FeatureVector(num_vectors, id_type);
-   index.train(empty_training_vector_array, partitions);
-   index.ingest(empty_training_vector_array);
+    size_t num_vectors = 0;
+    auto empty_training_vector_array =
+        FeatureVectorArray(dimensions, num_vectors, feature_type, id_type);
+    auto empty_feature_vector = FeatureVector(num_vectors, id_type);
+    index.train(empty_training_vector_array, partitions);
+    index.ingest(empty_training_vector_array);
 
-   CHECK(index.feature_type_string() == feature_type);
-   CHECK(index.id_type_string() == id_type);
-   CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-   CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
 
-//    Make sure we can query with k_factor > 1 on an empty index that is not
-//    loaded by URI.
-   size_t top_k = 1;
-   size_t nprobe = 1;
-   float k_factor = 2.f;
-   auto&& [scores, ids] =
-       index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
-   auto default_score = std::numeric_limits<float>::max();
-   auto default_id = std::numeric_limits<uint32_t>::max();
-   check_single_vector_equals(
-       scores,
-       ids,
-       {default_score, default_score, default_score, default_score},
-       {default_id, default_id, default_id, default_id});
- }
+    //    Make sure we can query with k_factor > 1 on an empty index that is not
+    //    loaded by URI.
+    size_t top_k = 1;
+    size_t nprobe = 1;
+    float k_factor = 2.f;
+    auto&& [scores, ids] =
+        index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
+    auto default_score = std::numeric_limits<float>::max();
+    auto default_id = std::numeric_limits<uint32_t>::max();
+    check_single_vector_equals(
+        scores,
+        ids,
+        {default_score, default_score, default_score, default_score},
+        {default_id, default_id, default_id, default_id});
+  }
 
- // Check IndexLoadStrategy.
- {
-   CHECK_THROWS(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 0));
-   CHECK_NOTHROW(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 10));
+  // Check IndexLoadStrategy.
+  {
+    CHECK_THROWS(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 0));
+    CHECK_NOTHROW(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 10));
 
-   CHECK_NOTHROW(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0));
-   CHECK_THROWS(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 10));
+    CHECK_NOTHROW(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0));
+    CHECK_THROWS(IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 10));
 
-   CHECK_NOTHROW(IndexIVFPQ(
-       ctx, index_uri, IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS, 0));
-   CHECK_THROWS(IndexIVFPQ(
-       ctx, index_uri, IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS, 10));
- }
+    CHECK_NOTHROW(IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS, 0));
+    CHECK_THROWS(IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS, 10));
+  }
 
- // We can open, train, and query an infinite index.
- {
-   std::unique_ptr<IndexIVFPQ> index;
-   SECTION("infinite") {
-       std::cout << "index ctor() -----------------------------------------" << std::endl;
-     index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
-   }
-   SECTION("finite") {
-     size_t upper_bound = 97;
-     index = std::make_unique<IndexIVFPQ>(
-         ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
-     CHECK(index->upper_bound() == upper_bound);
-   }
+  // We can open, train, and query an infinite index.
+  {
+    std::unique_ptr<IndexIVFPQ> index;
+    SECTION("infinite") {
+      std::cout << "index ctor() -----------------------------------------"
+                << std::endl;
+      index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
+    }
+    SECTION("finite") {
+      size_t upper_bound = 97;
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
+      CHECK(index->upper_bound() == upper_bound);
+    }
 
-   CHECK(index->feature_type_string() == feature_type);
-   CHECK(index->id_type_string() == id_type);
-   CHECK(index->partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index->feature_type_string() == feature_type);
+    CHECK(index->id_type_string() == id_type);
+    CHECK(index->partitioning_index_type_string() == partitioning_index_type);
 
-   auto training = ColMajorMatrix<feature_type_type>{
-       {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
-   auto training_vector_array = FeatureVectorArray(training);
-   std::cout << "index.train() -----------------------------------------" << std::endl;
-   index->train(training_vector_array);
-   std::cout << "index.ingest() -----------------------------------------" << std::endl;
-   index->ingest(training_vector_array);
-   CHECK(index->feature_type_string() == feature_type);
-   CHECK(index->id_type_string() == id_type);
-   CHECK(index->partitioning_index_type_string() == partitioning_index_type);
+    auto training = ColMajorMatrix<feature_type_type>{
+        {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
+    auto training_vector_array = FeatureVectorArray(training);
+    std::cout << "index.train() -----------------------------------------"
+              << std::endl;
+    index->train(training_vector_array);
+    std::cout << "index.ingest() -----------------------------------------"
+              << std::endl;
+    index->ingest(training_vector_array);
+    CHECK(index->feature_type_string() == feature_type);
+    CHECK(index->id_type_string() == id_type);
+    CHECK(index->partitioning_index_type_string() == partitioning_index_type);
 
-   size_t top_k = 1;
-   size_t nprobe = 1;
-   std::cout << "index.query() -----------------------------------------" << std::endl;
-   auto&& [scores, ids] =
-       index->query(FeatureVectorArray(queries), top_k, nprobe);
-   check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {0, 1, 2, 3});
- }
+    size_t top_k = 1;
+    size_t nprobe = 1;
+    std::cout << "index.query() -----------------------------------------"
+              << std::endl;
+    auto&& [scores, ids] =
+        index->query(FeatureVectorArray(queries), top_k, nprobe);
+    check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {0, 1, 2, 3});
+  }
 }
 
 TEST_CASE(
-   "create empty index and then train and query with external IDs",
-   "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- using feature_type_type = uint8_t;
- using id_type_type = uint32_t;
- auto feature_type = "uint8";
- auto id_type = "uint32";
- auto partitioning_index_type = "uint32";
- size_t partitions = 5;
- uint64_t dimensions = 3;
- uint32_t num_subspaces = 1;
- uint32_t max_iterations = 2;
- float convergence_tolerance = 0.000025f;
- float reassign_ratio = 0.075f;
- auto distance_metric = DistanceMetric::L2;
+    "create empty index and then train and query with external IDs",
+    "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto partitioning_index_type = "uint32";
+  size_t partitions = 5;
+  uint64_t dimensions = 3;
+  uint32_t num_subspaces = 1;
+  uint32_t max_iterations = 2;
+  float convergence_tolerance = 0.000025f;
+  float reassign_ratio = 0.075f;
+  auto distance_metric = DistanceMetric::L2;
 
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
+  {
+    IndexIVFPQ::create(
+        ctx,
+        index_uri,
+        dimensions,
+        TILEDB_UINT8,
+        TILEDB_UINT32,
+        TILEDB_UINT32,
+        num_subspaces,
+        max_iterations,
+        convergence_tolerance,
+        reassign_ratio,
+        std::nullopt,
+        distance_metric);
+    auto index = IndexIVFPQ(ctx, index_uri);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
+  }
 
- {
-   IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32, num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, std::nullopt, distance_metric);
-   auto index = IndexIVFPQ(ctx, index_uri);
-   CHECK(index.feature_type_string() == feature_type);
-   CHECK(index.id_type_string() == id_type);
-   CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-   CHECK(index.dimensions() == dimensions);
-   CHECK(index.num_subspaces() == num_subspaces);
-   CHECK(index.distance_metric() == distance_metric);
- }
+  {
+    auto index = IndexIVFPQ(ctx, index_uri);
 
- {
-   auto index = IndexIVFPQ(ctx, index_uri);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
+    auto training = ColMajorMatrix<feature_type_type>{
+        {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
+    auto training_ids =
+        FeatureVector(std::vector<id_type_type>{10, 11, 12, 13});
 
-   CHECK(index.feature_type_string() == feature_type);
-   CHECK(index.id_type_string() == id_type);
-   CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-   CHECK(index.dimensions() == dimensions);
-   CHECK(index.num_subspaces() == num_subspaces);
-   CHECK(index.distance_metric() == distance_metric);
-   auto training = ColMajorMatrix<feature_type_type>{
-       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
-       auto training_ids = FeatureVector(std::vector<id_type_type>{10, 11, 12, 13});
+    auto training_vector_array = FeatureVectorArray(training);
+    index.train(training_vector_array, partitions);
+    index.ingest(training_vector_array, training_ids);
 
-   auto training_vector_array = FeatureVectorArray(training);
-   index.train(training_vector_array, partitions);
-   index.ingest(training_vector_array, training_ids);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.dimensions() == dimensions);
+    CHECK(index.num_subspaces() == num_subspaces);
+    CHECK(index.distance_metric() == distance_metric);
 
-   CHECK(index.feature_type_string() == feature_type);
-   CHECK(index.id_type_string() == id_type);
-   CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-   CHECK(index.dimensions() == dimensions);
-   CHECK(index.num_subspaces() == num_subspaces);
-   CHECK(index.distance_metric() == distance_metric);
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
 
-   auto queries = ColMajorMatrix<feature_type_type>{
-       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
+    auto&& [scores, ids] = index.query(FeatureVectorArray(queries), 1, 1);
+    check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {10, 11, 12, 13});
+  }
 
-   auto&& [scores, ids] = index.query(FeatureVectorArray(queries), 1, 1);
-   check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {10, 11, 12, 13});
- }
+  {
+    size_t top_k = 1;
+    size_t nprobe = 1;
 
- {
-   size_t top_k = 1;
-   size_t nprobe = 1;
+    std::unique_ptr<IndexIVFPQ> index;
+    SECTION("infinite") {
+      index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
+    }
+    SECTION("finite") {
+      size_t upper_bound = GENERATE(3, 4, 5, 100);
+      index = std::make_unique<IndexIVFPQ>(
+          ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
+      CHECK(index->upper_bound() == upper_bound);
+    }
 
-   std::unique_ptr<IndexIVFPQ> index;
-   SECTION("infinite") {
-     index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
-   }
-   SECTION("finite") {
-     size_t upper_bound = GENERATE(3, 4, 5, 100);
-     index = std::make_unique<IndexIVFPQ>(
-         ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
-     CHECK(index->upper_bound() == upper_bound);
-   }
+    CHECK(index->feature_type_string() == feature_type);
+    CHECK(index->id_type_string() == id_type);
+    CHECK(index->partitioning_index_type_string() == partitioning_index_type);
 
-   CHECK(index->feature_type_string() == feature_type);
-   CHECK(index->id_type_string() == id_type);
-   CHECK(index->partitioning_index_type_string() == partitioning_index_type);
-
-   auto queries = ColMajorMatrix<feature_type_type>{
-       {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
-   auto&& [scores, ids] =
-       index->query(FeatureVectorArray(queries), top_k, nprobe);
-   check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {10, 11, 12, 13});
- }
+    auto queries = ColMajorMatrix<feature_type_type>{
+        {{8, 6, 7}, {5, 3, 0}, {9, 5, 0}, {2, 7, 3}}};
+    auto&& [scores, ids] =
+        index->query(FeatureVectorArray(queries), top_k, nprobe);
+    check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {10, 11, 12, 13});
+  }
 }
 
 TEST_CASE(
-   "query finite & infinite, with re-ranking and without",
-   "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- size_t k_nn = 10;
- size_t partitions = 100;
- auto feature_type = "float32";
- auto id_type = "uint32";
- auto partitioning_index_type = "uint32";
+    "query finite & infinite, with re-ranking and without",
+    "[api_ivf_pq_index]") {
+  auto ctx = tiledb::Context{};
+  size_t k_nn = 10;
+  size_t partitions = 100;
+  auto feature_type = "float32";
+  auto id_type = "uint32";
+  auto partitioning_index_type = "uint32";
 
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
- {
+  {
+    IndexIVFPQ::create(
+        ctx,
+        index_uri,
+        siftsmall_dimensions,
+        TILEDB_FLOAT32,
+        TILEDB_UINT32,
+        TILEDB_UINT32,
+        siftsmall_dimensions / 4);
+    auto index = IndexIVFPQ(ctx, index_uri);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
+  }
 
-   IndexIVFPQ::create(ctx, index_uri, siftsmall_dimensions, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32, siftsmall_dimensions / 4);
-       auto index = IndexIVFPQ(ctx, index_uri);
-   CHECK(index.feature_type_string() == feature_type);
-   CHECK(index.id_type_string() == id_type);
-   CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-   CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
- }
+  {
+    auto index = IndexIVFPQ(ctx, index_uri);
 
- {
-   auto index = IndexIVFPQ(ctx, index_uri);
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
-   CHECK(index.feature_type_string() == feature_type);
-   CHECK(index.id_type_string() == id_type);
-   CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+    index.train(training_set, partitions);
+    index.ingest(training_set, FeatureVector(0, id_type));
 
-   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
-   index.train(training_set, partitions);
-   index.ingest(training_set, FeatureVector(0, id_type));
+    CHECK(index.feature_type_string() == feature_type);
+    CHECK(index.id_type_string() == id_type);
+    CHECK(index.partitioning_index_type_string() == partitioning_index_type);
 
-   CHECK(index.feature_type_string() == feature_type);
-   CHECK(index.id_type_string() == id_type);
-   CHECK(index.partitioning_index_type_string() == partitioning_index_type);
+    auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+    auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+    auto&& [scores, ids] = index.query(query_set, k_nn, 5);
+    auto intersections = count_intersections(ids, groundtruth_set, k_nn);
+    CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) > 0.7);
+  }
 
-   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
-   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
-   auto&& [scores, ids] = index.query(query_set, k_nn, 5);
-   auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-   CHECK((intersections / static_cast<double>(num_vectors(ids) * k_nn)) > 0.7);
- }
+  {
+    float k_factor = 20.f;
+    auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+    auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
- {
-   float k_factor = 20.f;
-   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
-   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+    auto index = IndexIVFPQ(ctx, index_uri);
+    auto index_finite =
+        IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 450);
 
-   auto index = IndexIVFPQ(ctx, index_uri);
-   auto index_finite =
-       IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 450);
+    for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
+         std::vector<std::tuple<int, float, float>>{
+             {1, .4f, .45f},
+             {2, .5f, .6f},
+             {5, .7f, .7f},
+             {10, .75f, .9f},
+             {100, .8f, 1.f}}) {
+      auto&& [distances, ids] = index.query(query_set, k_nn, nprobe);
+      auto intersections = count_intersections(ids, groundtruth_set, k_nn);
+      CHECK(
+          (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
+          expected_accuracy);
 
-   for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
-        std::vector<std::tuple<int, float, float>>{
-            {1, .4f, .45f},
-            {2, .5f, .6f},
-            {5, .7f, .7f},
-            {10, .75f, .9f},
-            {100, .8f, 1.f}}) {
-     auto&& [distances, ids] = index.query(query_set, k_nn, nprobe);
-     auto intersections = count_intersections(ids, groundtruth_set, k_nn);
-     CHECK(
-         (intersections / static_cast<double>(num_vectors(ids) * k_nn)) >=
-         expected_accuracy);
+      auto&& [distances_with_reranking, ids_with_reranking] =
+          index.query(query_set, k_nn, nprobe, k_factor);
+      auto intersections_with_reranking =
+          count_intersections(ids_with_reranking, groundtruth_set, k_nn);
+      CHECK(
+          (intersections_with_reranking /
+           static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >=
+          expected_accuracy_with_reranking);
 
-     auto&& [distances_with_reranking, ids_with_reranking] =
-         index.query(query_set, k_nn, nprobe, k_factor);
-     auto intersections_with_reranking =
-         count_intersections(ids_with_reranking, groundtruth_set, k_nn);
-     CHECK(
-         (intersections_with_reranking /
-          static_cast<double>(num_vectors(ids_with_reranking) * k_nn)) >=
-         expected_accuracy_with_reranking);
+      auto&& [distances_finite, ids_finite] =
+          index_finite.query(query_set, k_nn, nprobe);
+      CHECK(are_equal(ids_finite, ids));
+      CHECK(are_equal(distances_finite, distances));
 
-     auto&& [distances_finite, ids_finite] =
-         index_finite.query(query_set, k_nn, nprobe);
-     CHECK(are_equal(ids_finite, ids));
-     CHECK(are_equal(distances_finite, distances));
-
-     auto&& [distances_finite_with_reranking, ids_finite_with_reranking] =
-         index_finite.query(query_set, k_nn, nprobe, k_factor);
-     CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
-     CHECK(
-         are_equal(distances_finite_with_reranking, distances_with_reranking));
-   }
- }
+      auto&& [distances_finite_with_reranking, ids_finite_with_reranking] =
+          index_finite.query(query_set, k_nn, nprobe, k_factor);
+      CHECK(are_equal(ids_finite_with_reranking, ids_with_reranking));
+      CHECK(
+          are_equal(distances_finite_with_reranking, distances_with_reranking));
+    }
+  }
 }
 
 TEST_CASE("write and read", "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  auto ctx = tiledb::Context{};
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
- IndexIVFPQ::create(ctx, index_uri, siftsmall_dimensions, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32, 1);
- auto a = IndexIVFPQ(ctx, index_uri);
- auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
- a.train(training_set);
- a.ingest(training_set);
+  IndexIVFPQ::create(
+      ctx,
+      index_uri,
+      siftsmall_dimensions,
+      TILEDB_FLOAT32,
+      TILEDB_UINT32,
+      TILEDB_UINT32,
+      1);
+  auto a = IndexIVFPQ(ctx, index_uri);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  a.train(training_set);
+  a.ingest(training_set);
 
- auto b = IndexIVFPQ(ctx, index_uri);
+  auto b = IndexIVFPQ(ctx, index_uri);
 
- CHECK(dimensions(a) == dimensions(b));
- CHECK(a.feature_type() == b.feature_type());
- CHECK(a.id_type() == b.id_type());
- CHECK(a.partitioning_index_type() == b.partitioning_index_type());
+  CHECK(dimensions(a) == dimensions(b));
+  CHECK(a.feature_type() == b.feature_type());
+  CHECK(a.id_type() == b.id_type());
+  CHECK(a.partitioning_index_type() == b.partitioning_index_type());
 }
 
 TEST_CASE("build index and query", "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  auto ctx = tiledb::Context{};
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
- size_t partitions = 10;
- size_t k_nn = 10;
- size_t nprobe = GENERATE(8, 32);
+  size_t partitions = 10;
+  size_t k_nn = 10;
+  size_t nprobe = GENERATE(8, 32);
 
- IndexIVFPQ::create(ctx, index_uri, siftsmall_dimensions, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32);
- auto a = IndexIVFPQ(ctx, index_uri);
+  IndexIVFPQ::create(
+      ctx,
+      index_uri,
+      siftsmall_dimensions,
+      TILEDB_FLOAT32,
+      TILEDB_UINT32,
+      TILEDB_UINT32);
+  auto a = IndexIVFPQ(ctx, index_uri);
 
- auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
- auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
- auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
- a.train(training_set, partitions);
- a.ingest(training_set);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+  a.train(training_set, partitions);
+  a.ingest(training_set);
 
- auto&& [s, t] = a.query(query_set, k_nn, nprobe);
+  auto&& [s, t] = a.query(query_set, k_nn, nprobe);
 
- auto intersections = count_intersections(t, groundtruth_set, k_nn);
- auto nt = num_vectors(t);
- auto recall = intersections / static_cast<double>(nt * k_nn);
- CHECK(recall > 0.6);
+  auto intersections = count_intersections(t, groundtruth_set, k_nn);
+  auto nt = num_vectors(t);
+  auto recall = intersections / static_cast<double>(nt * k_nn);
+  CHECK(recall > 0.6);
 }
 
 TEST_CASE("read index and query", "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- tiledb::VFS vfs(ctx);
+  auto ctx = tiledb::Context{};
+  tiledb::VFS vfs(ctx);
 
- size_t k_nn = 10;
+  size_t k_nn = 10;
 
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
- IndexIVFPQ::create(ctx, index_uri, sift_dimensions, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32, sift_dimensions / 4);
- auto a = IndexIVFPQ(ctx, index_uri);
+  IndexIVFPQ::create(
+      ctx,
+      index_uri,
+      sift_dimensions,
+      TILEDB_FLOAT32,
+      TILEDB_UINT32,
+      TILEDB_UINT32,
+      sift_dimensions / 4);
+  auto a = IndexIVFPQ(ctx, index_uri);
 
- auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
- a.train(training_set, 100);
- a.ingest(training_set);
+  auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
+  a.train(training_set, 100);
+  a.ingest(training_set);
 
- auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
- auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
+  auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
+  auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
- std::unique_ptr<IndexIVFPQ> b;
- SECTION("infinite") {
-   b = std::make_unique<IndexIVFPQ>(ctx, index_uri);
- }
- SECTION("finite") {
-   size_t upper_bound = GENERATE(500, 1000);
-   b = std::make_unique<IndexIVFPQ>(
-       ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
-   CHECK(b->upper_bound() == upper_bound);
- }
+  std::unique_ptr<IndexIVFPQ> b;
+  SECTION("infinite") {
+    b = std::make_unique<IndexIVFPQ>(ctx, index_uri);
+  }
+  SECTION("finite") {
+    size_t upper_bound = GENERATE(500, 1000);
+    b = std::make_unique<IndexIVFPQ>(
+        ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
+    CHECK(b->upper_bound() == upper_bound);
+  }
 
- // Make sure the same query results are returned for two different indexes.
- size_t nprobe = 5;
- auto&& [scores_1, ids_1] = a.query(query_set, k_nn, nprobe);
- auto&& [scores_2, ids_2] = b->query(query_set, k_nn, nprobe);
+  // Make sure the same query results are returned for two different indexes.
+  size_t nprobe = 5;
+  auto&& [scores_1, ids_1] = a.query(query_set, k_nn, nprobe);
+  auto&& [scores_2, ids_2] = b->query(query_set, k_nn, nprobe);
 
- CHECK(are_equal(scores_1, scores_2));
- CHECK(are_equal(ids_1, ids_2));
+  CHECK(are_equal(scores_1, scores_2));
+  CHECK(are_equal(ids_1, ids_2));
 
- auto intersections_1 = count_intersections(ids_1, groundtruth_set, k_nn);
- auto intersections_2 = count_intersections(ids_2, groundtruth_set, k_nn);
- CHECK(num_vectors(ids_1) == num_vectors(ids_2));
- auto recall =
-     intersections_1 / static_cast<double>(num_vectors(ids_1) * k_nn);
- CHECK(recall > 0.7);
+  auto intersections_1 = count_intersections(ids_1, groundtruth_set, k_nn);
+  auto intersections_2 = count_intersections(ids_2, groundtruth_set, k_nn);
+  CHECK(num_vectors(ids_1) == num_vectors(ids_2));
+  auto recall =
+      intersections_1 / static_cast<double>(num_vectors(ids_1) * k_nn);
+  CHECK(recall > 0.7);
 }
 
 TEST_CASE("storage_version", "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- size_t partitions = 5;
- uint64_t dimensions = 3;
- uint32_t num_subspaces = 1;
- uint32_t max_iterations = 2;
- float convergence_tolerance = 0.000025f;
- float reassign_ratio = 0.075f;
- auto distance_metric = DistanceMetric::L2;
+  auto ctx = tiledb::Context{};
+  size_t partitions = 5;
+  uint64_t dimensions = 3;
+  uint32_t num_subspaces = 1;
+  uint32_t max_iterations = 2;
+  float convergence_tolerance = 0.000025f;
+  float reassign_ratio = 0.075f;
+  auto distance_metric = DistanceMetric::L2;
 
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
-for (auto invalid_storage_version : {"0.1", "0.2", "invalid"}) {
-   CHECK_THROWS(
-           IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_UINT8,
-   TILEDB_UINT32, TILEDB_UINT32,  num_subspaces, max_iterations, convergence_tolerance, reassign_ratio, std::nullopt, distance_metric, invalid_storage_version));
-}
+  for (auto invalid_storage_version : {"0.1", "0.2", "invalid"}) {
+    CHECK_THROWS(IndexIVFPQ::create(
+        ctx,
+        index_uri,
+        dimensions,
+        TILEDB_UINT8,
+        TILEDB_UINT32,
+        TILEDB_UINT32,
+        num_subspaces,
+        max_iterations,
+        convergence_tolerance,
+        reassign_ratio,
+        std::nullopt,
+        distance_metric,
+        invalid_storage_version));
+  }
 }
 
 TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
- auto ctx = tiledb::Context{};
- using feature_type_type = uint8_t;
- using id_type_type = uint32_t;
- auto feature_type = "uint8";
- auto id_type = "uint32";
- auto partitioning_index_type = "uint32";
- uint64_t dimensions = 3;
- size_t partitions = 1;
- uint32_t num_subspaces = 1;
- float convergence_tolerance = 0.00003f;
- uint32_t max_iterations = 3;
+  auto ctx = tiledb::Context{};
+  using feature_type_type = uint8_t;
+  using id_type_type = uint32_t;
+  auto feature_type = "uint8";
+  auto id_type = "uint32";
+  auto partitioning_index_type = "uint32";
+  uint64_t dimensions = 3;
+  size_t partitions = 1;
+  uint32_t num_subspaces = 1;
+  float convergence_tolerance = 0.00003f;
+  uint32_t max_iterations = 3;
 
- std::string index_uri =
-     (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
- tiledb::VFS vfs(ctx);
- if (vfs.is_dir(index_uri)) {
-   vfs.remove_dir(index_uri);
- }
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  tiledb::VFS vfs(ctx);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
+  }
 
- IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32, num_subspaces, max_iterations, convergence_tolerance);
-   auto index = IndexIVFPQ(ctx, index_uri);
+  IndexIVFPQ::create(
+      ctx,
+      index_uri,
+      dimensions,
+      TILEDB_UINT8,
+      TILEDB_UINT32,
+      TILEDB_UINT32,
+      num_subspaces,
+      max_iterations,
+      convergence_tolerance);
+  auto index = IndexIVFPQ(ctx, index_uri);
 
+  auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
+      {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
+  auto training_vector_array = FeatureVectorArray(training);
+  index.train(
+      training_vector_array, partitions, TemporalPolicy(TimeTravel, 99));
+  index.ingest(training_vector_array);
 
- auto training = ColMajorMatrixWithIds<feature_type_type, id_type_type>{
-     {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}, {1, 2, 3, 4}};
- auto training_vector_array = FeatureVectorArray(training);
- index.train(training_vector_array, partitions, TemporalPolicy(TimeTravel, 99));
- index.ingest(training_vector_array);
+  auto&& [scores, ids] = index.query(training_vector_array, 1, 1);
 
- auto&& [scores, ids] = index.query(training_vector_array, 1, 1);
+  auto second_index = IndexIVFPQ(ctx, index_uri);
+  auto&& [scores_finite, ids_finite] =
+      second_index.query(training_vector_array, 1, 1);
 
- auto second_index = IndexIVFPQ(ctx, index_uri);
- auto&& [scores_finite, ids_finite] =
-     second_index.query(training_vector_array, 1, 1);
-
- // Here we check that we can clear_history() even with a index in memory. This
- // makes sure that every Array which IndexIVFPQ opens has been closed,
- // otherwise clear_history() will throw when it tries to call
- // delete_fragments() on the index Array's.
- IndexIVFPQ::clear_history(ctx, index_uri, 99);
+  // Here we check that we can clear_history() even with a index in memory. This
+  // makes sure that every Array which IndexIVFPQ opens has been closed,
+  // otherwise clear_history() will throw when it tries to call
+  // delete_fragments() on the index Array's.
+  IndexIVFPQ::clear_history(ctx, index_uri, 99);
 }
 
 TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
@@ -631,7 +713,17 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   // Create an empty index.
   {
     // We write the empty index at timestamp 0.
-    IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_UINT8, TILEDB_UINT32, TILEDB_UINT32,  num_subspaces, max_iterations, convergence_tolerance, reassign_ratio);
+    IndexIVFPQ::create(
+        ctx,
+        index_uri,
+        dimensions,
+        TILEDB_UINT8,
+        TILEDB_UINT32,
+        TILEDB_UINT32,
+        num_subspaces,
+        max_iterations,
+        convergence_tolerance,
+        reassign_ratio);
     auto index = IndexIVFPQ(ctx, index_uri);
 
     CHECK(index.dimensions() == dimensions);
@@ -689,12 +781,13 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto training_vector_array = FeatureVectorArray(training);
     // We then write the index at timestamp 99.
     CHECK(index.temporal_policy().timestamp_end() != 99);
-    index.train(training_vector_array, partitions, TemporalPolicy(TimeTravel, 99));
+    index.train(
+        training_vector_array, partitions, TemporalPolicy(TimeTravel, 99));
     CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.n_list() == partitions);
     return;
     index.ingest(training_vector_array, training_ids);
-    
+
     // This also updates the timestamp of the index - we're now at timestamp 99.
     CHECK(index.temporal_policy().timestamp_end() == 99);
     CHECK(index.feature_type_string() == feature_type);
@@ -772,8 +865,10 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.reassign_ratio() == reassign_ratio);
 
     auto training = ColMajorMatrix<feature_type_type>{
-        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}},};
-    auto training_ids = FeatureVector(std::vector<id_type_type>{11, 22, 33, 44, 55});
+        {{11, 11, 11}, {22, 22, 22}, {33, 33, 33}, {44, 44, 44}, {55, 55, 55}},
+    };
+    auto training_ids =
+        FeatureVector(std::vector<id_type_type>{11, 22, 33, 44, 55});
 
     auto training_vector_array = FeatureVectorArray(training);
     // We then write the index at timestamp 100.
@@ -796,7 +891,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     check_single_vector_equals(
         scores, ids, {0, 0, 0, 0, 0}, {11, 22, 33, 44, 55});
-    
+
     auto typed_index = ivf_pq_index<
         feature_type_type,
         id_type_type,
@@ -1041,76 +1136,109 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
 TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
-   std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);
   }
 
   using feature_type = float;
-  
+
   uint64_t dimensions = 4;
   size_t n_list = 0;
   uint32_t num_subspaces = 2;
 
-  IndexIVFPQ::create(ctx, index_uri, dimensions, TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32, num_subspaces);
+  IndexIVFPQ::create(
+      ctx,
+      index_uri,
+      dimensions,
+      TILEDB_FLOAT32,
+      TILEDB_UINT32,
+      TILEDB_UINT32,
+      num_subspaces);
 
   auto temporal_policy = TemporalPolicy{TimeTravel, 100};
-  auto vectors = ColMajorMatrix<feature_type>{{{1.0f, 1.1f, 1.2f, 1.3f}, {2.0f, 2.1f, 2.2f, 2.3f}}};
-  
+  auto vectors = ColMajorMatrix<feature_type>{
+      {{1.0f, 1.1f, 1.2f, 1.3f}, {2.0f, 2.1f, 2.2f, 2.3f}}};
+
   {
-    std::cout << "index() ==============================================" << std::endl;
-    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
-    std::cout << "index.train() ==============================================" << std::endl;
+    std::cout << "index() =============================================="
+              << std::endl;
+    auto index = IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    std::cout << "index.train() =============================================="
+              << std::endl;
     index.train(FeatureVectorArray(vectors), n_list, temporal_policy);
   }
   {
-    std::cout << "index() ==============================================" << std::endl;
-    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    std::cout << "index() =============================================="
+              << std::endl;
+    auto index = IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
     size_t part = 0;
     size_t part_end = 2;
     size_t part_id = 0;
-    std::cout << "index.ingest_parts() ==============================================" << std::endl;
-    index.ingest_parts(FeatureVectorArray(vectors), FeatureVector(0, "uint64"), FeatureVector(0, "uint64"), part, part_end, part_id);
+    std::cout
+        << "index.ingest_parts() =============================================="
+        << std::endl;
+    index.ingest_parts(
+        FeatureVectorArray(vectors),
+        FeatureVector(0, "uint64"),
+        FeatureVector(0, "uint64"),
+        part,
+        part_end,
+        part_id);
   }
   {
-    // Here is where Python does compute_partition_indexes_udf. We simulate that by copying the indices from temp to permanent.
-    auto group = ivf_pq_group<ivf_pq_index<feature_type>>(ctx, index_uri, TILEDB_READ, temporal_policy);
+    // Here is where Python does compute_partition_indexes_udf. We simulate that
+    // by copying the indices from temp to permanent.
+    auto group = ivf_pq_group<ivf_pq_index<feature_type>>(
+        ctx, index_uri, TILEDB_READ, temporal_policy);
     auto total_partitions = 2;
-    std::cout << "read_vector() ==============================================" << std::endl;
+    std::cout << "read_vector() =============================================="
+              << std::endl;
     auto indexes = read_vector<uint32_t>(
-          ctx,
-          group.feature_vectors_index_temp_uri(),
-          0,
-          total_partitions,
-          temporal_policy);
+        ctx,
+        group.feature_vectors_index_temp_uri(),
+        0,
+        total_partitions,
+        temporal_policy);
     debug_vector(indexes, "indexes");
-    std::cout << "write_vector() ==============================================" << std::endl;
+    std::cout << "write_vector() =============================================="
+              << std::endl;
     write_vector(
-          ctx,
-          indexes,
-          group.feature_vectors_index_uri(),
-          0,
-          false,
-          temporal_policy);
+        ctx,
+        indexes,
+        group.feature_vectors_index_uri(),
+        0,
+        false,
+        temporal_policy);
   }
 
   {
-    std::cout << "index() ==============================================" << std::endl;
-    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    std::cout << "index() =============================================="
+              << std::endl;
+    auto index = IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
     size_t partitions = 1;
     size_t work_items = 1;
     size_t partition_id_start = 0;
     size_t partition_id_end = 1;
     size_t batch = 33554432;
-    std::cout << "index.consolidate_partitions() ==============================================" << std::endl;
-    index.consolidate_partitions(partitions, work_items, partition_id_start, partition_id_end, batch);
+    std::cout << "index.consolidate_partitions() "
+                 "=============================================="
+              << std::endl;
+    index.consolidate_partitions(
+        partitions, work_items, partition_id_start, partition_id_end, batch);
   }
 
   {
-    std::cout << "index() ==============================================" << std::endl;
-    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0);
-    std::cout << "index.query() ==============================================" << std::endl;
+    std::cout << "index() =============================================="
+              << std::endl;
+    auto index = IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0);
+    std::cout << "index.query() =============================================="
+              << std::endl;
     auto&& [scores, ids] = index.query(FeatureVectorArray(vectors), 1, 1);
     check_single_vector_equals(scores, ids, {0, 0}, {0, 1});
   }
@@ -1120,62 +1248,67 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   }
 
   {
-    std::cout << "index() ==============================================" << std::endl;
-    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0);
-    std::cout << "index.create_temp_data_group() ==============================================" << std::endl;
+    std::cout << "index() =============================================="
+              << std::endl;
+    auto index = IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0);
+    std::cout << "index.create_temp_data_group() "
+                 "=============================================="
+              << std::endl;
     index.create_temp_data_group();
   }
 }
 
 TEST_CASE("train python", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
-  std::string index_uri = (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
+  std::string index_uri =
+      (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
   if (vfs.is_dir(index_uri)) {
     vfs.remove_dir(index_uri);
   }
 
   using feature_type = uint8_t;
-  
+
   uint64_t dimensions = 6;
   uint32_t num_subspaces = dimensions;
   uint32_t max_iterations = 2;
   float convergence_tolerance = 0.000025f;
   float reassign_ratio = 0.075f;
 
-
   IndexIVFPQ::create(
-    ctx,
+      ctx,
       index_uri,
       dimensions,
       TILEDB_UINT8,
       TILEDB_UINT64,
       TILEDB_UINT64,
-    num_subspaces,
-    max_iterations,
-    convergence_tolerance,
-    reassign_ratio,
-    std::make_optional<TemporalPolicy>(TemporalPolicy{TimeTravel, 0})
-    );
+      num_subspaces,
+      max_iterations,
+      convergence_tolerance,
+      reassign_ratio,
+      std::make_optional<TemporalPolicy>(TemporalPolicy{TimeTravel, 0}));
 
   auto vectors = ColMajorMatrix<feature_type>{{
-    {  7   ,6 ,249   ,3   ,2   ,2},
-    {254 ,249   ,7   ,0   ,9   ,3},
-    {248 ,255   ,4   ,0 ,249   ,0},
-    {251 ,249 ,245   ,3 ,250 ,252},
-    {249 ,248 ,250   ,0   ,5 ,251},
-    {254   ,7   ,1   ,4   ,1   ,2},
-    {  5 ,254   ,2   ,0 ,253 ,255},
-    {  3   ,5 ,250 ,245 ,249   ,0},
-    {250 ,252   ,6   ,7 ,252   ,5},
-    {  4   ,5   ,9   ,9 ,248 ,252},
+      {7, 6, 249, 3, 2, 2},
+      {254, 249, 7, 0, 9, 3},
+      {248, 255, 4, 0, 249, 0},
+      {251, 249, 245, 3, 250, 252},
+      {249, 248, 250, 0, 5, 251},
+      {254, 7, 1, 4, 1, 2},
+      {5, 254, 2, 0, 253, 255},
+      {3, 5, 250, 245, 249, 0},
+      {250, 252, 6, 7, 252, 5},
+      {4, 5, 9, 9, 248, 252},
   }};
   {
     size_t partitions = 2;
     auto temporal_policy = TemporalPolicy{TimeTravel, 1};
-    std::cout << "index() ==============================================" << std::endl;
-    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
-    std::cout << "index.train() ==============================================" << std::endl;
+    std::cout << "index() =============================================="
+              << std::endl;
+    auto index = IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    std::cout << "index.train() =============================================="
+              << std::endl;
     index.train(FeatureVectorArray(vectors), partitions, temporal_policy);
     index.ingest(FeatureVectorArray(vectors));
   }
@@ -1183,7 +1316,8 @@ TEST_CASE("train python", "[api_ivf_pq_index]") {
   {
     size_t partitions = 3;
     auto temporal_policy = TemporalPolicy{TimeTravel, 5};
-    auto index = IndexIVFPQ(ctx,  index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    auto index = IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
     index.train(FeatureVectorArray(vectors), partitions, temporal_policy);
   }
 }

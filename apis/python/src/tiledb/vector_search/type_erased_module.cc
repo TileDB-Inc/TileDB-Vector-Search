@@ -189,23 +189,23 @@ void init_type_erased_module(py::module_& m) {
              size_t first_col,
              size_t last_col,
              std::optional<TemporalPolicy> temporal_policy) {
-            new (&instance) FeatureVector(
-                ctx, uri, first_col, last_col, temporal_policy);
+            new (&instance)
+                FeatureVector(ctx, uri, first_col, last_col, temporal_policy);
           },
           py::keep_alive<1, 2>(),
           py::arg("ctx"),
           py::arg("uri"),
-          py::arg("first_col") = 0, 
-          py::arg("first_col") = 0, 
+          py::arg("first_col") = 0,
+          py::arg("first_col") = 0,
           py::arg("temporal_policy") = std::nullopt)
 
       // .def(
-      //     py::init<const tiledb::Context&, const std::string&, size_t, size_t, std::optional<TemporalPolicy>>(),
-      //     py::keep_alive<1, 2>(),  // IndexIVFFlat should keep ctx alive.
-      //     py::arg("ctx"), 
-      //     py::arg("uri"), 
-      //     py::arg("start") = 0, 
-      //     py::arg("end") = 0, 
+      //     py::init<const tiledb::Context&, const std::string&, size_t,
+      //     size_t, std::optional<TemporalPolicy>>(), py::keep_alive<1, 2>(),
+      //     // IndexIVFFlat should keep ctx alive. py::arg("ctx"),
+      //     py::arg("uri"),
+      //     py::arg("start") = 0,
+      //     py::arg("end") = 0,
       //     py::arg("temporal_policy_input") = std::nullopt
       //     )
       .def(py::init<size_t, const std::string&>())
@@ -277,8 +277,8 @@ void init_type_erased_module(py::module_& m) {
           py::arg("ctx"),
           py::arg("uri"),
           py::arg("ids_uri") = "",
-          py::arg("first_col") = 0, 
-          py::arg("first_col") = 0, 
+          py::arg("first_col") = 0,
+          py::arg("first_col") = 0,
           // py::arg("num_vectors") = 0,
           py::arg("temporal_policy") = std::nullopt)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
@@ -350,14 +350,18 @@ void init_type_erased_module(py::module_& m) {
               }
             }
             auto feature_vector_array = [&]() {
-              // One-dimensional numpy arrays show up as TILEDB_COL_MAJOR, even when they should be 
-              // TILEDB_ROW_MAJOR. So here we ignore the order for one-dimensional arrays.
-              // if (info.shape[1] == 1 || info.shape[0] == 1) {
-              //     // Always treat one-dimensional vectors as row-major to preserve shape
-              //     return FeatureVectorArray(info.shape[1], info.shape[0], dtype_str, ids_dtype_str);
+              // One-dimensional numpy arrays show up as TILEDB_COL_MAJOR, even
+              // when they should be TILEDB_ROW_MAJOR. So here we ignore the
+              // order for one-dimensional arrays. if (info.shape[1] == 1 ||
+              // info.shape[0] == 1) {
+              //     // Always treat one-dimensional vectors as row-major to
+              //     preserve shape return FeatureVectorArray(info.shape[1],
+              //     info.shape[0], dtype_str, ids_dtype_str);
               // }
 
-              auto order = vectors.flags() & py::array::f_style ? TILEDB_COL_MAJOR : TILEDB_ROW_MAJOR;
+              auto order = vectors.flags() & py::array::f_style ?
+                               TILEDB_COL_MAJOR :
+                               TILEDB_ROW_MAJOR;
               if (order == TILEDB_COL_MAJOR) {
                 return FeatureVectorArray(
                     info.shape[0], info.shape[1], dtype_str, ids_dtype_str);
@@ -493,19 +497,18 @@ void init_type_erased_module(py::module_& m) {
       .def_static(
           "create",
           [](const tiledb::Context& ctx,
-             const std::string &index_uri,
+             const std::string& index_uri,
              uint64_t dimensions,
-             const std::string &feature_type,
-             const std::string &id_type,
-             const std::string &partitioning_index_type,
+             const std::string& feature_type,
+             const std::string& id_type,
+             const std::string& partitioning_index_type,
              uint32_t num_subspaces,
              uint32_t max_iterations,
-             float convergence_tolerance, 
-             float reassign_ratio, 
-             std::optional<TemporalPolicy> temporal_policy, 
+             float convergence_tolerance,
+             float reassign_ratio,
+             std::optional<TemporalPolicy> temporal_policy,
              DistanceMetric distance_metric,
-             const std::string& storage_version
-             ) {
+             const std::string& storage_version) {
             IndexIVFPQ::create(
                 ctx,
                 index_uri,
@@ -562,68 +565,78 @@ void init_type_erased_module(py::module_& m) {
       //       auto args = kwargs_to_map(kwargs);
       //       new (&instance) IndexIVFPQ(args);
       //     })
-      .def("create_temp_data_group", [](IndexIVFPQ& index) { 
-            index.create_temp_data_group(); 
-        })
       .def(
-        "train",
-        [](IndexIVFPQ& index,
-            const FeatureVectorArray& vectors,
-            size_t partitions,
-            std::optional<TemporalPolicy> temporal_policy = std::nullopt) { 
-              index.train(vectors, partitions, temporal_policy); 
-            },
-        py::arg("vectors"),
-        py::arg("partitions") = 0,
-        py::arg("temporal_policy") = std::nullopt)
-       .def(
-        "ingest",
-        [](IndexIVFPQ& index,
-            const FeatureVectorArray& input_vectors,
-            const FeatureVector& external_ids) { 
-              index.ingest(input_vectors, external_ids); 
-            },
-        py::arg("input_vectors"),
-        py::arg("external_ids"))
+          "create_temp_data_group",
+          [](IndexIVFPQ& index) { index.create_temp_data_group(); })
       .def(
-        "ingest",
-        [](IndexIVFPQ& index,
-            const FeatureVectorArray& input_vectors) { 
-              index.ingest(input_vectors); 
-            },
-        py::arg("input_vectors"))
+          "train",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& vectors,
+             size_t partitions,
+             std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
+            index.train(vectors, partitions, temporal_policy);
+          },
+          py::arg("vectors"),
+          py::arg("partitions") = 0,
+          py::arg("temporal_policy") = std::nullopt)
       .def(
-        "ingest_parts",
-        [](IndexIVFPQ& index,
-            const FeatureVectorArray& input_vectors,
-            const FeatureVector& external_ids,
-            const FeatureVector& deleted_ids,
-            size_t start,
-            size_t end,
-            size_t partition_start) { 
-              index.ingest_parts(input_vectors, external_ids, deleted_ids, start, end, partition_start); 
-            },
-        py::arg("input_vectors"),
-        py::arg("external_ids"),
-        py::arg("deleted_ids"),
-        py::arg("start"),
-        py::arg("end"),
-        py::arg("partition_start"))
+          "ingest",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& input_vectors,
+             const FeatureVector& external_ids) {
+            index.ingest(input_vectors, external_ids);
+          },
+          py::arg("input_vectors"),
+          py::arg("external_ids"))
       .def(
-        "consolidate_partitions",
-        [](IndexIVFPQ& index,
-            size_t partitions, 
-            size_t work_items, 
-            size_t partition_id_start, 
-            size_t partition_id_end, 
-            size_t batch) { 
-              index.consolidate_partitions(partitions, work_items, partition_id_start, partition_id_end, batch); 
-            },
-        py::arg("partitions"),
-        py::arg("work_items"),
-        py::arg("partition_id_start"),
-        py::arg("partition_id_end"),
-        py::arg("batch"))
+          "ingest",
+          [](IndexIVFPQ& index, const FeatureVectorArray& input_vectors) {
+            index.ingest(input_vectors);
+          },
+          py::arg("input_vectors"))
+      .def(
+          "ingest_parts",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& input_vectors,
+             const FeatureVector& external_ids,
+             const FeatureVector& deleted_ids,
+             size_t start,
+             size_t end,
+             size_t partition_start) {
+            index.ingest_parts(
+                input_vectors,
+                external_ids,
+                deleted_ids,
+                start,
+                end,
+                partition_start);
+          },
+          py::arg("input_vectors"),
+          py::arg("external_ids"),
+          py::arg("deleted_ids"),
+          py::arg("start"),
+          py::arg("end"),
+          py::arg("partition_start"))
+      .def(
+          "consolidate_partitions",
+          [](IndexIVFPQ& index,
+             size_t partitions,
+             size_t work_items,
+             size_t partition_id_start,
+             size_t partition_id_end,
+             size_t batch) {
+            index.consolidate_partitions(
+                partitions,
+                work_items,
+                partition_id_start,
+                partition_id_end,
+                batch);
+          },
+          py::arg("partitions"),
+          py::arg("work_items"),
+          py::arg("partition_id_start"),
+          py::arg("partition_id_end"),
+          py::arg("batch"))
 
       // OLD:
       // .def(
@@ -631,7 +644,8 @@ void init_type_erased_module(py::module_& m) {
       //     "train_don't write",
       //     [](IndexIVFPQ& index,
       //        const FeatureVectorArray& vectors,
-      //        std::optional<size_t> partitions) { index.train(vectors, partitions); },
+      //        std::optional<size_t> partitions) { index.train(vectors,
+      //        partitions); },
       //     py::arg("vectors"),
       //     py::arg("partitions") = std::nullopt)
       .def(
@@ -647,7 +661,8 @@ void init_type_erased_module(py::module_& m) {
       //        const std::string& index_uri,
       //        std::optional<TemporalPolicy> temporal_policy,
       //        const std::string& storage_version) {
-      //       index.write_index(ctx, index_uri, temporal_policy, storage_version);
+      //       index.write_index(ctx, index_uri, temporal_policy,
+      //       storage_version);
       //     },
       //     py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
       //     py::arg("ctx"),

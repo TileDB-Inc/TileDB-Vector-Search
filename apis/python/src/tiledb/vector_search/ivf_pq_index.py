@@ -108,7 +108,7 @@ class IVFPQIndex(index.Index):
         self.memory_budget = memory_budget
 
         self.dimensions = self.index.dimensions()
-        self.partitions  = self.index.partitions()
+        self.partitions = self.index.partitions()
         self.dtype = np.dtype(self.group.meta.get("dtype", None))
         self.size = self.base_size
 
@@ -228,5 +228,6 @@ def create(
         num_subspaces=num_subspaces,
         temporal_policy=vspy.TemporalPolicy(0),
         distance_metric=distance_metric,
-        storage_version=storage_version)
+        storage_version=storage_version,
+    )
     return IVFPQIndex(uri=uri, config=config)

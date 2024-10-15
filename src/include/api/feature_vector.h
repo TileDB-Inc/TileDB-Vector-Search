@@ -86,9 +86,15 @@ class FeatureVector {
    * @param ctx
    * @param uri
    */
-  FeatureVector(const tiledb::Context& ctx, const std::string& uri, size_t start = 0, size_t end = 0, std::optional<TemporalPolicy> temporal_policy_input = std::nullopt) {
+  FeatureVector(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t start = 0,
+      size_t end = 0,
+      std::optional<TemporalPolicy> temporal_policy_input = std::nullopt) {
     auto temporal_policy = temporal_policy_input.value_or(TemporalPolicy{});
-    auto array = tiledb_helpers::open_array(tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
+    auto array = tiledb_helpers::open_array(
+        tdb_func__, ctx, uri, TILEDB_READ, temporal_policy);
 
     feature_type_ = get_array_datatype(*array);
     array->close();
@@ -127,25 +133,35 @@ class FeatureVector {
    * Dispatch to the appropriate concrete class based on the datatype.
    */
   void tdb_vector_from_datatype(
-      const tiledb::Context& ctx, const std::string& uri, size_t start, size_t end, TemporalPolicy temporal_policy) {
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t start,
+      size_t end,
+      TemporalPolicy temporal_policy) {
     switch (feature_type_) {
       case TILEDB_FLOAT32:
-        vector_ = std::make_unique<vector_impl<tdbVector<float>>>(ctx, uri, start, end, temporal_policy);
+        vector_ = std::make_unique<vector_impl<tdbVector<float>>>(
+            ctx, uri, start, end, temporal_policy);
         break;
       case TILEDB_INT8:
-        vector_ = std::make_unique<vector_impl<tdbVector<int8_t>>>(ctx, uri, start, end, temporal_policy);
+        vector_ = std::make_unique<vector_impl<tdbVector<int8_t>>>(
+            ctx, uri, start, end, temporal_policy);
         break;
       case TILEDB_UINT8:
-        vector_ = std::make_unique<vector_impl<tdbVector<uint8_t>>>(ctx, uri, start, end, temporal_policy);
+        vector_ = std::make_unique<vector_impl<tdbVector<uint8_t>>>(
+            ctx, uri, start, end, temporal_policy);
         break;
       case TILEDB_INT32:
-        vector_ = std::make_unique<vector_impl<tdbVector<int32_t>>>(ctx, uri, start, end, temporal_policy);
+        vector_ = std::make_unique<vector_impl<tdbVector<int32_t>>>(
+            ctx, uri, start, end, temporal_policy);
         break;
       case TILEDB_UINT32:
-        vector_ = std::make_unique<vector_impl<tdbVector<uint32_t>>>(ctx, uri, start, end, temporal_policy);
+        vector_ = std::make_unique<vector_impl<tdbVector<uint32_t>>>(
+            ctx, uri, start, end, temporal_policy);
         break;
       case TILEDB_UINT64:
-        vector_ = std::make_unique<vector_impl<tdbVector<uint64_t>>>(ctx, uri, start, end, temporal_policy);
+        vector_ = std::make_unique<vector_impl<tdbVector<uint64_t>>>(
+            ctx, uri, start, end, temporal_policy);
         break;
       default:
         throw std::runtime_error("Unsupported attribute type");
@@ -203,7 +219,12 @@ class FeatureVector {
     explicit vector_impl(size_t size)
         : vector_(size) {
     }
-    vector_impl(const tiledb::Context& ctx, const std::string& uri, size_t start, size_t end, TemporalPolicy temporal_policy)
+    vector_impl(
+        const tiledb::Context& ctx,
+        const std::string& uri,
+        size_t start,
+        size_t end,
+        TemporalPolicy temporal_policy)
         : vector_(ctx, uri, start, end, temporal_policy) {
     }
     //[[nodiscard]] void* data() override {

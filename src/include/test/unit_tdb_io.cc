@@ -276,7 +276,8 @@ TEST_CASE("create group", "[tdb_io]") {
   read_group.close();
 }
 
-TEMPLATE_TEST_CASE("types", "[tdb_io]", int, float, uint8_t, uint32_t, uint64_t) {
+TEMPLATE_TEST_CASE(
+    "types", "[tdb_io]", int, float, uint8_t, uint32_t, uint64_t) {
   size_t N = 10;
 
   tiledb::Context ctx;
@@ -293,12 +294,7 @@ TEMPLATE_TEST_CASE("types", "[tdb_io]", int, float, uint8_t, uint32_t, uint64_t)
   static const int32_t tile_size_bytes{64 * 1024 * 1024};
   tiledb_filter_type_t default_compression = TILEDB_FILTER_ZSTD;
   create_empty_for_vector<TestType>(
-        ctx,
-        uri,
-        default_domain,
-        default_tile_extent,
-        default_compression);
-
+      ctx, uri, default_domain, default_tile_extent, default_compression);
 
   auto vector = std::vector<TestType>(N);
   std::iota(begin(vector), end(vector), 17);

@@ -203,7 +203,8 @@ void write_matrix(
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri, TILEDB_FILTER_NONE);
   }
 
-  std::cout << "[write_matrix] A.num_rows(): " << A.num_rows() << " A.num_cols(): " << A.num_cols() << std::endl;
+  std::cout << "[write_matrix] A.num_rows(): " << A.num_rows()
+            << " A.num_cols(): " << A.num_cols() << std::endl;
 
   if (A.num_rows() == 0 || A.num_cols() == 0) {
     return;
@@ -388,7 +389,7 @@ template <class T, typename Slice>
 std::vector<T> read_vector(
     const tiledb::Context& ctx,
     const std::string& uri,
-    const std::vector<std::pair<Slice, Slice>> &slices,
+    const std::vector<std::pair<Slice, Slice>>& slices,
     size_t total_slices_size,
     TemporalPolicy temporal_policy = {}) {
   if (total_slices_size == 0) {
@@ -407,8 +408,9 @@ std::vector<T> read_vector(
 
   // Create a subarray that reads the array up to the specified subset.
   tiledb::Subarray subarray(ctx, *array_);
-  for (const auto &slice: slices) {
-    subarray.add_range(0, static_cast<int>(slice.first), static_cast<int>(slice.second));
+  for (const auto& slice : slices) {
+    subarray.add_range(
+        0, static_cast<int>(slice.first), static_cast<int>(slice.second));
   }
 
   // @todo: use something non-initializing

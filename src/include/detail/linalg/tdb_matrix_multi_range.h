@@ -66,7 +66,8 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   std::unique_ptr<tiledb::Array> array_;
   tiledb::ArraySchema schema_;
 
-  // This class supports two ways of multi-range queries. One of these two will be used.
+  // This class supports two ways of multi-range queries. One of these two will
+  // be used.
   enum class QueryType { ColumnIndices, ColumnSlices };
   QueryType query_type_{QueryType::ColumnIndices};
 
@@ -91,8 +92,7 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
     // Note that here we try to load the max number of vectors. If we are
     // time travelling, these vectors may not exist in the array, but we still
     // need to load them to know that they don't exist.
-    return std::min(
-        column_capacity_, total_num_columns_ - last_resident_col_);
+    return std::min(column_capacity_, total_num_columns_ - last_resident_col_);
   }
 
   /**
@@ -165,7 +165,7 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
   /** Default destructor. array will be closed when it goes out of scope */
   virtual ~tdbBlockedMatrixMultiRange() = default;
 
-   /**
+  /**
    * @brief Construct a new tdbBlockedMatrixMultiRange object, limited to
    * `upper_bound` vectors. In this case, the `Matrix` is column-major, so the
    * number of vectors is the number of columns.
@@ -186,8 +186,17 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       size_t upper_bound,
       TemporalPolicy temporal_policy = TemporalPolicy{})
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      :   tdbBlockedMatrixMultiRange(
-             ctx, uri, dimensions,  QueryType::ColumnIndices, column_indices, {}, column_indices.size(), upper_bound, temporal_policy) {}
+      : tdbBlockedMatrixMultiRange(
+            ctx,
+            uri,
+            dimensions,
+            QueryType::ColumnIndices,
+            column_indices,
+            {},
+            column_indices.size(),
+            upper_bound,
+            temporal_policy) {
+  }
 
   /**
    * @brief Construct a new tdbBlockedMatrixMultiRange object, limited to
@@ -211,8 +220,17 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
       size_t upper_bound,
       TemporalPolicy temporal_policy = TemporalPolicy{})
     requires(std::is_same_v<LayoutPolicy, stdx::layout_left>)
-      :  tdbBlockedMatrixMultiRange(
-            ctx, uri, dimensions, QueryType::ColumnSlices, {},  column_slices, total_slices_size, upper_bound, temporal_policy) {}
+      : tdbBlockedMatrixMultiRange(
+            ctx,
+            uri,
+            dimensions,
+            QueryType::ColumnSlices,
+            {},
+            column_slices,
+            total_slices_size,
+            upper_bound,
+            temporal_policy) {
+  }
 
   bool load() {
     scoped_timer _{"tdb_matrix_multi_range@load"};

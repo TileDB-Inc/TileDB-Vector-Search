@@ -543,7 +543,11 @@ class Index(metaclass=ABCMeta):
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
         copy_centroids_uri = None
-        if (self.index_type == "IVF_FLAT" or self.index_type == "IVF_PQ") and not retrain_index and self.partitions > 0:
+        if (
+            (self.index_type == "IVF_FLAT" or self.index_type == "IVF_PQ")
+            and not retrain_index
+            and self.partitions > 0
+        ):
             if self.index_type == "IVF_FLAT":
                 # TODO(paris): Update so that IVF_PQ can also copy the centroids. We also need to pass the PQ-centroids.
                 copy_centroids_uri = self.centroids_uri
@@ -554,7 +558,7 @@ class Index(metaclass=ABCMeta):
                 )
             # We pass partitions through kwargs so that we don't pass it twice.
             kwargs["partitions"] = self.partitions
- 
+
         new_index = ingest(
             index_type=self.index_type,
             index_uri=self.uri,

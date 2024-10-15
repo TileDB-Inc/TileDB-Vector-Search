@@ -236,8 +236,17 @@ class FeatureVectorArray {
         size_t first_col,
         size_t last_col,
         TemporalPolicy temporal_policy)
-        : impl_vector_array(ctx, uri, 0, std::nullopt, first_col, last_col != 0 ? std::optional<size_t>(last_col) : std::nullopt, 0, temporal_policy) {
-        // : impl_vector_array(ctx, uri, first_row, last_row, first_col, last_col, 0, temporal_policy) {
+        : impl_vector_array(
+              ctx,
+              uri,
+              0,
+              std::nullopt,
+              first_col,
+              last_col != 0 ? std::optional<size_t>(last_col) : std::nullopt,
+              0,
+              temporal_policy) {
+      // : impl_vector_array(ctx, uri, first_row, last_row, first_col, last_col,
+      // 0, temporal_policy) {
     }
     vector_array_impl(
         const tiledb::Context& ctx,
@@ -248,7 +257,16 @@ class FeatureVectorArray {
         size_t first_col,
         size_t last_col,
         TemporalPolicy temporal_policy)
-        : impl_vector_array(ctx, uri, ids_uri, 0, std::nullopt, first_col, last_col != 0 ? std::optional<size_t>(last_col) : std::nullopt, 0, temporal_policy) {
+        : impl_vector_array(
+              ctx,
+              uri,
+              ids_uri,
+              0,
+              std::nullopt,
+              first_col,
+              last_col != 0 ? std::optional<size_t>(last_col) : std::nullopt,
+              0,
+              temporal_policy) {
     }
     vector_array_impl(size_t rows, size_t cols)
         : impl_vector_array(rows, cols) {

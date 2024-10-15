@@ -242,7 +242,12 @@ TEST_CASE("empty matrix", "[tdb_matrix_multi_range]") {
   {
     // No dimensions and no num_vectors.
     auto X = tdbColMajorMatrixMultiRange<float>(
-        ctx, tmp_matrix_uri, 0, std::vector<size_t>{}, 0, TemporalPolicy{TimeTravel, 50});
+        ctx,
+        tmp_matrix_uri,
+        0,
+        std::vector<size_t>{},
+        0,
+        TemporalPolicy{TimeTravel, 50});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(::num_vectors(X) == 0);
@@ -253,7 +258,12 @@ TEST_CASE("empty matrix", "[tdb_matrix_multi_range]") {
   {
     // All dimensions and no num_vectors.
     auto X = tdbColMajorMatrixMultiRange<float>(
-        ctx, tmp_matrix_uri, 0, std::vector<size_t>{}, 0, TemporalPolicy{TimeTravel, 50});
+        ctx,
+        tmp_matrix_uri,
+        0,
+        std::vector<size_t>{},
+        0,
+        TemporalPolicy{TimeTravel, 50});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(::num_vectors(X) == 0);
@@ -264,7 +274,12 @@ TEST_CASE("empty matrix", "[tdb_matrix_multi_range]") {
   {
     // No dimensions and all num_vectors.
     auto X = tdbColMajorMatrixMultiRange<float>(
-        ctx, tmp_matrix_uri, 0, std::vector<size_t>{}, 0, TemporalPolicy{TimeTravel, 50});
+        ctx,
+        tmp_matrix_uri,
+        0,
+        std::vector<size_t>{},
+        0,
+        TemporalPolicy{TimeTravel, 50});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(::num_vectors(X) == 0);
@@ -275,7 +290,12 @@ TEST_CASE("empty matrix", "[tdb_matrix_multi_range]") {
   {
     // No constraints.
     auto X = tdbColMajorMatrixMultiRange<float>(
-        ctx, tmp_matrix_uri, 0, std::vector<size_t>{}, 0, TemporalPolicy{TimeTravel, 50});
+        ctx,
+        tmp_matrix_uri,
+        0,
+        std::vector<size_t>{},
+        0,
+        TemporalPolicy{TimeTravel, 50});
     X.load();
     CHECK(X.num_cols() == 0);
     CHECK(::num_vectors(X) == 0);
