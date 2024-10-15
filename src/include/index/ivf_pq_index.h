@@ -1273,8 +1273,8 @@ class ivf_pq_index {
           tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
               group_->cached_ctx(),
               group_->feature_vectors_uri(),
-              vector_indices,
               dimensions_,
+              vector_indices,
               0,
               temporal_policy_);
       feature_vectors.load();
