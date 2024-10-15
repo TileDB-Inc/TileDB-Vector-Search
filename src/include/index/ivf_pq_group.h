@@ -245,9 +245,6 @@ class ivf_pq_group : public base_index_group<index_type> {
    * Create a ready-to-use group with default arrays
    ****************************************************************************/
   void create_default_impl() {
-    if (empty(this->version_)) {
-      this->version_ = current_storage_version;
-    }
     this->init_valid_array_names();
 
     static const int32_t tile_size{
