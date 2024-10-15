@@ -405,13 +405,13 @@ void init_type_erased_module(py::module_& m) {
           "__init__",
           [](IndexVamana& instance,
              const tiledb::Context& ctx,
-             const std::string& group_uri,
+             const std::string& index_uri,
              std::optional<TemporalPolicy> temporal_policy) {
-            new (&instance) IndexVamana(ctx, group_uri, temporal_policy);
+            new (&instance) IndexVamana(ctx, index_uri, temporal_policy);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
-          py::arg("group_uri"),
+          py::arg("index_uri"),
           py::arg("temporal_policy") = std::nullopt)
       .def(
           "__init__",
@@ -447,14 +447,14 @@ void init_type_erased_module(py::module_& m) {
           "write_index",
           [](IndexVamana& index,
              const tiledb::Context& ctx,
-             const std::string& group_uri,
+             const std::string& index_uri,
              std::optional<TemporalPolicy> temporal_policy,
              const std::string& storage_version) {
-            index.write_index(ctx, group_uri, temporal_policy, storage_version);
+            index.write_index(ctx, index_uri, temporal_policy, storage_version);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
-          py::arg("group_uri"),
+          py::arg("index_uri"),
           py::arg("temporal_policy") = std::nullopt,
           py::arg("storage_version") = "")
       .def("feature_type_string", &IndexVamana::feature_type_string)
@@ -465,13 +465,13 @@ void init_type_erased_module(py::module_& m) {
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,
-             const std::string& group_uri,
+             const std::string& index_uri,
              uint64_t timestamp) {
-            IndexVamana::clear_history(ctx, group_uri, timestamp);
+            IndexVamana::clear_history(ctx, index_uri, timestamp);
           },
           py::keep_alive<1, 2>(),  // IndexVamana should keep ctx alive.
           py::arg("ctx"),
-          py::arg("group_uri"),
+          py::arg("index_uri"),
           py::arg("timestamp"));
 
   py::class_<IndexIVFPQ>(m, "IndexIVFPQ")
@@ -479,20 +479,20 @@ void init_type_erased_module(py::module_& m) {
           "__init__",
           [](IndexIVFPQ& instance,
              const tiledb::Context& ctx,
-             const std::string& group_uri,
+             const std::string& index_uri,
              IndexLoadStrategy index_load_strategy,
              size_t memory_budget,
              std::optional<TemporalPolicy> temporal_policy) {
             new (&instance) IndexIVFPQ(
                 ctx,
-                group_uri,
+                index_uri,
                 index_load_strategy,
                 memory_budget,
                 temporal_policy);
           },
           py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
           py::arg("ctx"),
-          py::arg("group_uri"),
+          py::arg("index_uri"),
           py::arg("index_load_strategy") = IndexLoadStrategy::PQ_INDEX,
           py::arg("memory_budget") = 0,
           py::arg("temporal_policy") = std::nullopt)
@@ -533,14 +533,14 @@ void init_type_erased_module(py::module_& m) {
           "write_index",
           [](IndexIVFPQ& index,
              const tiledb::Context& ctx,
-             const std::string& group_uri,
+             const std::string& index_uri,
              std::optional<TemporalPolicy> temporal_policy,
              const std::string& storage_version) {
-            index.write_index(ctx, group_uri, temporal_policy, storage_version);
+            index.write_index(ctx, index_uri, temporal_policy, storage_version);
           },
           py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
           py::arg("ctx"),
-          py::arg("group_uri"),
+          py::arg("index_uri"),
           py::arg("temporal_policy") = std::nullopt,
           py::arg("storage_version") = "")
       .def("feature_type_string", &IndexIVFPQ::feature_type_string)
@@ -552,13 +552,13 @@ void init_type_erased_module(py::module_& m) {
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,
-             const std::string& group_uri,
+             const std::string& index_uri,
              uint64_t timestamp) {
-            IndexIVFPQ::clear_history(ctx, group_uri, timestamp);
+            IndexIVFPQ::clear_history(ctx, index_uri, timestamp);
           },
           py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
           py::arg("ctx"),
-          py::arg("group_uri"),
+          py::arg("index_uri"),
           py::arg("timestamp"));
 
   py::class_<IndexIVFFlat>(m, "IndexIVFFlat")

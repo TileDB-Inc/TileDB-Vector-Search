@@ -658,7 +658,7 @@ TEST_CASE("storage_version", "[api_ivf_pq_index]") {
     // Throw with the wrong version.
     CHECK_THROWS_WITH(
         index.write_index(ctx, index_uri, std::nullopt, "0.4"),
-        "Version mismatch. Requested 0.4 but found 0.3");
+        "Invalid storage version: 0.4");
     // Succeed without a version.
     index.write_index(ctx, index_uri);
     // Succeed with the same version.

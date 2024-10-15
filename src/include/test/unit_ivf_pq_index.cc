@@ -65,17 +65,6 @@ struct dummy_pq_index {
   }
 };
 
-void debug_flat_ivf_centroids(const auto& index) {
-  std::cout << "\nDebug Centroids:\n" << std::endl;
-  for (size_t j = 0; j < index.get_flat_ivf_centroids().num_rows(); ++j) {
-    for (size_t i = 0; i < index.get_flat_ivf_centroids().num_cols(); ++i) {
-      std::cout << index.get_flat_ivf_centroids()(j, i) << " ";
-    }
-    std::cout << std::endl;
-  }
-  std::cout << std::endl;
-}
-
 TEST_CASE("construct different types", "[ivf_pq_index]") {
   ivf_pq_index<int8_t, uint32_t, uint32_t> index1{};
   ivf_pq_index<uint8_t, uint32_t, uint32_t> index2{};
@@ -212,9 +201,6 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
         1e-4);
     index.set_flat_ivf_centroids(sklearn_centroids);
     index.train_ivf(training_data, kmeans_init::none);
-    if (debug) {
-      debug_flat_ivf_centroids(index);
-    }
   }
 
   SECTION("two iterations") {
@@ -229,10 +215,6 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
         1e-4);
     index.set_flat_ivf_centroids(sklearn_centroids);
     index.train_ivf(training_data, kmeans_init::none);
-    if (debug) {
-      debug_flat_ivf_centroids(index);
-    }
-    // debug_centroids(index);
   }
 
   SECTION("five iterations") {
@@ -247,10 +229,6 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
         1e-4);
     index.set_flat_ivf_centroids(sklearn_centroids);
     index.train_ivf(training_data, kmeans_init::none);
-    if (debug) {
-      debug_flat_ivf_centroids(index);
-    }
-    // debug_centroids(index);
   }
 
   SECTION("five iterations, perturbed") {
@@ -272,10 +250,6 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
         1e-4);
     index.set_flat_ivf_centroids(sklearn_centroids);
     index.train_ivf(training_data, kmeans_init::none);
-    if (debug) {
-      debug_flat_ivf_centroids(index);
-    }
-    // debug_centroids(index);
   }
 
   SECTION("five iterations") {
@@ -289,16 +263,12 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
         5,
         1e-4);
     index.train_ivf(training_data, kmeans_init::random);
-    if (debug) {
-      debug_flat_ivf_centroids(index);
-    }
-    // debug_centroids(index);
   }
 }
 
 TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   size_t dimension = 128;
-  size_t nlist = 100;
+  size_t partitions = 100;
   uint32_t num_subspaces = 16;
   uint32_t max_iterations = 4;
   size_t nprobe = 10;
@@ -318,7 +288,7 @@ TEST_CASE("ivf_index write and read", "[ivf_pq_index]") {
   std::vector<siftsmall_ids_type> ids(num_vectors(training_set));
   std::iota(begin(ids), end(ids), 0);
   auto idx = ivf_pq_index<float, uint32_t, uint32_t>(
-      nlist, num_subspaces, max_iterations);
+      partitions, num_subspaces, max_iterations);
   CHECK(idx.num_vectors() == 0);
   idx.train_ivf(training_set, kmeans_init::kmeanspp);
   idx.add(training_set, ids);
@@ -406,16 +376,16 @@ TEMPLATE_TEST_CASE(
       hypercube4(j + 9, i) = hypercube1(j, i);
     }
   }
-  SECTION("nlist = 1") {
+  SECTION("partitions = 1") {
     size_t k_nn = 6;
-    size_t nlist = 1;
+    size_t partitions = 1;
 
     auto ivf_idx2 = ivf_pq_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 2, 4, 1.e-4);  // dim nlist maxiter eps nthreads
+        /*128,*/ partitions, 2, 4, 1.e-4);  // dim partitions maxiter eps nthreads
     ivf_idx2.train_ivf(hypercube2);
     ivf_idx2.add(hypercube2, ids);
     auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 2, 4, 1.e-4);
+        /*128,*/ partitions, 2, 4, 1.e-4);
     ivf_idx4.train_ivf(hypercube4);
     ivf_idx4.add(hypercube4, ids);
 
@@ -477,12 +447,12 @@ TEMPLATE_TEST_CASE(
 
 TEST_CASE("build index and infinite query in place", "[ivf_pq_index]") {
   tiledb::Context ctx;
-  // size_t nlist = GENERATE(1, 100);
-  size_t nlist = 20;
+  // size_t partitions = GENERATE(1, 100);
+  size_t partitions = 20;
   using s = siftsmall_test_init_defaults;
   using index = ivf_pq_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init<index>(ctx, nlist, 16);
+  auto init = siftsmall_test_init<index>(ctx, partitions, 16);
 
   auto&& [nprobe, k_nn, nthreads, max_iterations, convergence_tolerance] =
       std::tie(
@@ -581,9 +551,9 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
   tiledb::VFS vfs(ctx);
   size_t num_vectors = 0;
   uint64_t dimensions = 10;
-  size_t nlist = 1;
+  size_t partitions = 1;
   auto index = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
-      nlist, dimensions / 2);
+      partitions, dimensions / 2);
   auto queries =
       ColMajorMatrix<siftsmall_feature_type>{{{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}};
 
@@ -599,7 +569,7 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
   // We can query an empty index.
   {
     size_t k_nn = 1;
-    auto&& [scores, ids] = index.query(queries, k_nn, nlist);
+    auto&& [scores, ids] = index.query(queries, k_nn, partitions);
     CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
     CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
     CHECK(_cpo::dimensions(scores) == k_nn);
@@ -625,7 +595,7 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
             ctx, ivf_index_uri);
     CHECK(index_infinite.num_vectors() == num_vectors);
     size_t k_nn = 1;
-    auto&& [scores, ids] = index_infinite.query(queries, k_nn, nlist);
+    auto&& [scores, ids] = index_infinite.query(queries, k_nn, partitions);
     CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
     CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
     CHECK(_cpo::dimensions(scores) == k_nn);
@@ -640,7 +610,7 @@ TEST_CASE("query empty index", "[ivf_pq_index]") {
             ctx, ivf_index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
     CHECK(index_finite.num_vectors() == num_vectors);
     size_t k_nn = 1;
-    auto&& [scores, ids] = index_finite.query(queries, k_nn, nlist, 9);
+    auto&& [scores, ids] = index_finite.query(queries, k_nn, partitions, 9);
     CHECK(_cpo::num_vectors(scores) == _cpo::num_vectors(queries));
     CHECK(_cpo::num_vectors(ids) == _cpo::num_vectors(queries));
     CHECK(_cpo::dimensions(scores) == k_nn);
@@ -656,7 +626,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
 
   size_t num_vectors = 4;
   uint64_t dimensions = 4;
-  size_t nlist = 1;
+  size_t partitions = 1;
   uint32_t num_subspaces = 2;
   uint32_t max_iterations = 1;
   float convergence_tolerance = 0.000025f;
@@ -665,7 +635,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
   using feature_type = float;
   using id_type = uint32_t;
   auto index = ivf_pq_index<feature_type, id_type>(
-      nlist,
+      partitions,
       num_subspaces,
       max_iterations,
       convergence_tolerance,
@@ -676,7 +646,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       (std::filesystem::temp_directory_path() / "ivf_index").string();
 
   CHECK(index.num_vectors() == 0);
-  CHECK(index.nlist() == nlist);
+  CHECK(index.partitions() == partitions);
 
   // We can train, add, query, and then write the index.
   {
@@ -689,7 +659,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     CHECK(index.num_vectors() == ::num_vectors(training));
 
     size_t k_nn = 1;
-    size_t nprobe = nlist;
+    size_t nprobe = partitions;
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
       auto queries =
@@ -722,7 +692,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
     CHECK(index2->num_vectors() == 4);
 
     size_t k_nn = 1;
-    size_t nprobe = nlist;
+    size_t nprobe = partitions;
     for (int i = 1; i <= 4; ++i) {
       auto value = static_cast<feature_type>(i);
       auto queries =
@@ -744,13 +714,13 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
 
   size_t num_vectors = 500;
   uint64_t dimensions = 4;
-  size_t nlist = 4;
+  size_t partitions = 4;
   uint32_t num_subspaces = 1;
   uint32_t max_iterations = 1;
   float convergence_tolerance = 0.000025f;
   float reassign_ratio = 0.09f;
 
-  size_t nprobe = nlist;
+  size_t nprobe = partitions;
   size_t k_nn = 40;
   float k_factor = 2.f;
   size_t upper_bound = 350;
@@ -759,7 +729,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
   using feature_type = float;
   using id_type = uint32_t;
   auto index = ivf_pq_index<feature_type, id_type>(
-      nlist,
+      partitions,
       num_subspaces,
       max_iterations,
       convergence_tolerance,
@@ -769,7 +739,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
   auto ivf_index_uri =
       (std::filesystem::temp_directory_path() / "ivf_index").string();
   CHECK(index.num_vectors() == 0);
-  CHECK(index.nlist() == nlist);
+  CHECK(index.partitions() == partitions);
 
   // We can train, add, query, and then write the index.
   std::vector<id_type> ids(num_vectors);
@@ -876,7 +846,7 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
-  size_t n_list = 1;
+  size_t partitions = 1;
   uint32_t num_subspaces = 1;
   uint32_t max_iterations = 3;
 
@@ -885,7 +855,7 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
     auto index = ivf_pq_index<
         feature_type_type,
         id_type_type,
-        partitioning_index_type_type>(n_list, dimensions / 2);
+        partitioning_index_type_type>(partitions, dimensions / 2);
     auto data =
         ColMajorMatrixWithIds<feature_type_type, id_type_type>(dimensions, 0);
     index.train(data, data.raveled_ids());
@@ -932,7 +902,7 @@ TEST_CASE("ivf_pq_index query index written twice", "[ivf_pq_index]") {
     auto queries = ColMajorMatrix<feature_type_type>{
         {{1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}}};
 
-    auto&& [scores, ids] = index->query(queries, 1, n_list, 5);
+    auto&& [scores, ids] = index->query(queries, 1, partitions, 5);
     CHECK(std::equal(
         scores.data(),
         scores.data() + 4,
@@ -947,12 +917,12 @@ TEST_CASE("pq encoding has no error with <= 256 vectors", "[ivf_pq_index]") {
   using id_type = uint32_t;
   using partitioning_index_type = uint32_t;
 
-  size_t n_list = 16;
+  size_t partitions = 16;
   size_t dimensions = 300;
   uint32_t num_subspaces = dimensions;
   for (auto num_vectors : std::vector<size_t>{255, 256, 257}) {
     auto index = ivf_pq_index<feature_type, id_type, partitioning_index_type>(
-        n_list, num_subspaces);
+        partitions, num_subspaces);
     std::vector<std::vector<feature_type>> vectors(num_vectors);
     std::vector<id_type> vector_ids(num_vectors);
     for (int i = 0; i < num_vectors; ++i) {
