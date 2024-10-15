@@ -2,70 +2,70 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Benchmarks.html</loc>
-    <lastmod>2024-10-15T17:38:37.405Z</lastmod>
+    <lastmod>2024-10-15T17:38:16.265Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.html</loc>
-    <lastmod>2024-10-15T17:54:03.679Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.664Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/open.html</loc>
-    <lastmod>2024-10-15T17:54:03.687Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.672Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/object_api.ObjectIndex.html</loc>
-    <lastmod>2024-10-15T17:54:03.763Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.748Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/flat_index.html</loc>
-    <lastmod>2024-10-15T17:54:03.723Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.712Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/object_api.create.html</loc>
-    <lastmod>2024-10-15T17:54:03.747Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.732Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ingestion.html</loc>
-    <lastmod>2024-10-15T17:54:03.707Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.692Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/storage-format-spec.html</loc>
-    <lastmod>2024-10-15T17:38:37.405Z</lastmod>
+    <lastmod>2024-10-15T17:38:16.265Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/index.html</loc>
-    <lastmod>2024-10-15T17:38:37.405Z</lastmod>
+    <lastmod>2024-10-15T17:38:16.265Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/Building.html</loc>
-    <lastmod>2024-10-15T17:38:37.405Z</lastmod>
+    <lastmod>2024-10-15T17:38:16.265Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/embeddings.ObjectEmbedding.html</loc>
-    <lastmod>2024-10-15T17:54:03.763Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.748Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ivf_pq_index.html</loc>
-    <lastmod>2024-10-15T17:54:03.743Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.728Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/object_readers.ObjectReader.html</loc>
-    <lastmod>2024-10-15T17:54:03.763Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.748Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/ivf_flat_index.html</loc>
-    <lastmod>2024-10-15T17:54:03.731Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.720Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/object_readers.ObjectPartition.html</loc>
-    <lastmod>2024-10-15T17:54:03.763Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.748Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/vamana_index.html</loc>
-    <lastmod>2024-10-15T17:54:03.739Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.724Z</lastmod>
   </url>
   <url>
     <loc>https://tiledb-inc.github.io/TileDB-Vector-Search/documentation/reference/index.Index.html</loc>
-    <lastmod>2024-10-15T17:54:03.719Z</lastmod>
+    <lastmod>2024-10-15T17:54:13.704Z</lastmod>
   </url>
 </urlset>
