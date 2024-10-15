@@ -1190,7 +1190,6 @@ def ingest(
         with tiledb.scope_ctx(ctx_or_config=config):
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
-            centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             if training_sample_size >= partitions:
                 if training_source_uri:
                     if training_source_type is None:
@@ -1261,6 +1260,7 @@ def ingest(
                 # raise ValueError(f"We have a training_sample_size of {training_sample_size} but {partitions} partitions - training_sample_size must be >= partitions")
                 centroids = np.random.rand(dimensions, partitions)
 
+            centroids_uri = group[CENTROIDS_ARRAY_NAME].uri
             logger.debug("Writing centroids to array %s", centroids_uri)
             with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
                 A[0:dimensions, 0:partitions] = centroids
