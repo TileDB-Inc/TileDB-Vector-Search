@@ -291,11 +291,11 @@ TEST_CASE(
 
 TEST_CASE("test kmeans train_no_init random data", "[kmeans]") {
   // Sample data: 6-dimensional vectors, 10 vectors total (column major)
-  std::vector<float> data = {7,   6,   249, 3,   2, 2, 254, 249, 7,   0,
-                             9,   3,   248, 255, 4, 0, 249, 0,   251, 249,
-                             245, 3,   250, 252, 6, 7, 5,   252, 4,   5,
-                             9,   9,   248, 254, 7, 1, 4,   1,   253, 5,
-                             2,   255, 250, 6,   3, 0, 2,   249, 0,   250};
+  std::vector<float> data = {
+      7, 6,   249, 3,   2,   2,   254, 249, 7,   0,  9,  3,   248, 255, 4,
+      0, 249, 0,   251, 249, 245, 3,   250, 252, 6,  7,  5,   252, 4,   5,
+      9, 9,   248, 254, 7,   1,   4,   1,   253, 5,  2,  255, 250, 6,   3,
+      0, 2,   249, 0,   250, 5,   4,   5,   2,   99, 30, 3,   1,   55,  88};
 
   ColMajorMatrix<float> training_set(6, 10);  // 6 rows, 10 columns
   std::copy(data.begin(), data.end(), training_set.data());
@@ -359,7 +359,7 @@ TEST_CASE("test kmeans train_no_init random data", "[kmeans]") {
           sum_of_squares_distance{}(centroids[i], original_centroids[i]);
       max_diff = std::max(max_diff, diff);
     }
-    REQUIRE_THAT(max_diff, Catch::Matchers::WithinAbs(89768.875f, 1e-2));
+    REQUIRE_THAT(max_diff, Catch::Matchers::WithinAbs(91858.75f, 1e-2));
   }
 }
 
