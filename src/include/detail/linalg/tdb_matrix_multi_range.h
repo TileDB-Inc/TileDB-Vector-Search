@@ -104,7 +104,13 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
    * @param uri URI of the TileDB array to read.
    * @param indices The indices of the columns to read.
    * @param dimensions The number of dimensions in each vector.
-   * @param upper_bound The maximum number of vectors to read.
+   * @param query_type The type of query to perform.
+   * @param column_indices The indices of the columns to read. Should only be
+   * passed with QueryType::ColumnIndices.
+   * @param column_slices The slices of the columns to read. Should only be
+   * passed with QueryType::ColumnSlices.
+   * @param total_num_columns The total number of columns in the array.
+   * @param upper_bound The maximum number of vectors to read in at once.
    * @param temporal_policy The TemporalPolicy to use for reading the array
    * data.
    */
@@ -172,9 +178,9 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
-   * @param column_indices The indices of the columns to read.
    * @param dimensions The number of dimensions in each vector.
-   * @param upper_bound The maximum number of vectors to read.
+   * @param column_indices The indices of the columns to read.
+   * @param upper_bound The maximum number of vectors to read in at once.
    * @param temporal_policy The TemporalPolicy to use for reading the array
    * data.
    */
@@ -205,9 +211,10 @@ class tdbBlockedMatrixMultiRange : public Matrix<T, LayoutPolicy, I> {
    *
    * @param ctx The TileDB context to use.
    * @param uri URI of the TileDB array to read.
-   * @param column_slices The slices of the columns to read.
    * @param dimensions The number of dimensions in each vector.
-   * @param upper_bound The maximum number of vectors to read.
+   * @param column_slices The slices of the columns to read.
+   * @param total_slices_size The total number of columns in the slices.
+   * @param upper_bound The maximum number of vectors to read in at once.
    * @param temporal_policy The TemporalPolicy to use for reading the array
    * data.
    */
