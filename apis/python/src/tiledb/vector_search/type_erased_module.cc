@@ -196,7 +196,7 @@ void init_type_erased_module(py::module_& m) {
           py::arg("ctx"),
           py::arg("uri"),
           py::arg("first_col") = 0,
-          py::arg("first_col") = 0,
+          py::arg("last_col") = 0,
           py::arg("temporal_policy") = std::nullopt)
       .def(py::init<size_t, const std::string&>())
       .def(py::init<size_t, void*, const std::string&>())
@@ -268,7 +268,7 @@ void init_type_erased_module(py::module_& m) {
           py::arg("uri"),
           py::arg("ids_uri") = "",
           py::arg("first_col") = 0,
-          py::arg("first_col") = 0,
+          py::arg("last_col") = 0,
           py::arg("temporal_policy") = std::nullopt)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimensions", &FeatureVectorArray::dimensions)
