@@ -324,7 +324,7 @@ void train_no_init(
       std::sort_heap(begin(high_scores), end(high_scores), [](auto a, auto b) {
         return std::get<0>(a) > std::get<0>(b);
       });
-      for (size_t i = 0; i < size(low_degrees) &&
+      for (size_t i = 0; i < std::min(size(low_degrees), size(high_scores)) &&
                          std::get<0>(low_degrees[i]) <= lower_degree_bound;
            ++i) {
         // std::cout << "i: " << i << " low_degrees: ("

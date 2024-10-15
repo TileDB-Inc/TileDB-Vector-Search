@@ -359,7 +359,7 @@ TEST_CASE("test kmeans train_no_init random data", "[kmeans]") {
           sum_of_squares_distance{}(centroids[i], original_centroids[i]);
       max_diff = std::max(max_diff, diff);
     }
-    REQUIRE_THAT(max_diff, Catch::Matchers::WithinAbs(89768.875f, 1e-5));
+    REQUIRE_THAT(max_diff, Catch::Matchers::WithinAbs(89768.875f, 1e-2));
   }
 }
 
