@@ -1661,7 +1661,12 @@ def ingest(
 
         ctx = vspy.Ctx(config)
         data = vspy.FeatureVectorArray(
-            ctx, parts_array_uri, ids_array_uri, 0, to_temporal_policy(index_timestamp)
+            ctx,
+            parts_array_uri,
+            ids_array_uri,
+            0,  # first_col
+            0,  # last_col
+            to_temporal_policy(index_timestamp),
         )
         if index_type == "VAMANA":
             index = vspy.IndexVamana(ctx, index_group_uri)

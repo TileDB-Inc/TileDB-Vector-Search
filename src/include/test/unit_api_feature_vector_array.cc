@@ -69,6 +69,16 @@ TEST_CASE("feature vector array open", "[api]") {
   CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimensions(d) == 128);
   CHECK(num_vectors(d) == num_sift_vectors);
+
+  auto e = FeatureVectorArray(ctx, sift_inputs_uri, "", 0, 100);
+  CHECK(e.feature_type() == TILEDB_FLOAT32);
+  CHECK(dimensions(e) == 128);
+  CHECK(num_vectors(e) == 100);
+
+  auto f = FeatureVectorArray(ctx, sift_inputs_uri, "", 50, 100);
+  CHECK(f.feature_type() == TILEDB_FLOAT32);
+  CHECK(dimensions(f) == 128);
+  CHECK(num_vectors(f) == 50);
 }
 
 template <query_vector_array M>
@@ -668,7 +678,12 @@ TEST_CASE("temporal_policy", "[api]") {
   // Read the data at timestamp 99.
   {
     auto feature_vector_array = FeatureVectorArray(
-        ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 99));
+        ctx,
+        feature_vectors_uri,
+        ids_uri,
+        0,
+        0,
+        TemporalPolicy(TimeTravel, 99));
     auto data = MatrixView<FeatureType, stdx::layout_left>{
         (FeatureType*)feature_vector_array.data(),
         extents(feature_vector_array)[0],
@@ -689,7 +704,12 @@ TEST_CASE("temporal_policy", "[api]") {
   // Read the data at timestamp 50.
   {
     auto feature_vector_array = FeatureVectorArray(
-        ctx, feature_vectors_uri, ids_uri, 0, TemporalPolicy(TimeTravel, 50));
+        ctx,
+        feature_vectors_uri,
+        ids_uri,
+        0,
+        0,
+        TemporalPolicy(TimeTravel, 50));
     CHECK(extents(feature_vector_array)[0] == 0);
     CHECK(extents(feature_vector_array)[1] == 0);
     CHECK(feature_vector_array.num_vectors() == 0);

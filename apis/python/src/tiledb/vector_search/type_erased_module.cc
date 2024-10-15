@@ -182,9 +182,22 @@ void init_type_erased_module(py::module_& m) {
 
   py::class_<FeatureVector>(m, "FeatureVector", py::buffer_protocol())
       .def(
-          py::init<const tiledb::Context&, const std::string&>(),
-          py::keep_alive<1, 2>()  // IndexIVFFlat should keep ctx alive.
-          )
+          "__init__",
+          [](FeatureVector& instance,
+             const tiledb::Context& ctx,
+             const std::string& uri,
+             size_t first_col,
+             size_t last_col,
+             std::optional<TemporalPolicy> temporal_policy) {
+            new (&instance)
+                FeatureVector(ctx, uri, first_col, last_col, temporal_policy);
+          },
+          py::keep_alive<1, 2>(),
+          py::arg("ctx"),
+          py::arg("uri"),
+          py::arg("first_col") = 0,
+          py::arg("last_col") = 0,
+          py::arg("temporal_policy") = std::nullopt)
       .def(py::init<size_t, const std::string&>())
       .def(py::init<size_t, void*, const std::string&>())
       .def("dimensions", &FeatureVector::dimensions)
@@ -244,16 +257,18 @@ void init_type_erased_module(py::module_& m) {
              const tiledb::Context& ctx,
              const std::string& uri,
              const std::string& ids_uri,
-             size_t num_vectors,
+             size_t first_col,
+             size_t last_col,
              std::optional<TemporalPolicy> temporal_policy) {
             new (&instance) FeatureVectorArray(
-                ctx, uri, ids_uri, num_vectors, temporal_policy);
+                ctx, uri, ids_uri, first_col, last_col, temporal_policy);
           },
           py::keep_alive<1, 2>(),  // FeatureVectorArray should keep ctx alive.
           py::arg("ctx"),
           py::arg("uri"),
           py::arg("ids_uri") = "",
-          py::arg("num_vectors") = 0,
+          py::arg("first_col") = 0,
+          py::arg("last_col") = 0,
           py::arg("temporal_policy") = std::nullopt)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimensions", &FeatureVectorArray::dimensions)

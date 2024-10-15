@@ -56,4 +56,4 @@ class SetSeedFromCatch : public Catch::EventListenerBase {
 
 CATCH_REGISTER_LISTENER(SetSeedFromCatch)
 
-#endif  //  TILEDB_TEST_SUPPORT_PRNG_H
+#endif  //  SET_SEED_FROM_CATCH_H
