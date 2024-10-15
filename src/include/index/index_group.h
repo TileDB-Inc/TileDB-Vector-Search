@@ -318,6 +318,12 @@ class base_index_group {
     if (opened_for_ == TILEDB_WRITE) {
       set_dimensions(dimensions);
     }
+    if (empty(this->version_)) {
+      this->version_ = current_storage_version;
+    }
+    if (storage_formats.find(this->version_) == storage_formats.end()) {
+      throw std::runtime_error("Invalid storage version: " + this->version_);
+    }
   }
 
   /**
