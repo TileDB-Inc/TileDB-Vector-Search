@@ -229,28 +229,13 @@ int ivf_pq_index(
           temporal_policy);
     }
     if (!index_uri.empty()) {
-      debug_vector(indices);
       write_vector(
           ctx, indices, index_uri, partition_start, false, temporal_policy);
     }
     if (!id_uri.empty()) {
-      debug_vector(shuffled_ids);
       write_vector(
           ctx, shuffled_ids, id_uri, start_pos, false, temporal_policy);
     }
-
-    //    if (!pq_index_uri.empty()) {
-    //      debug_vector(indices);
-    //      write_vector(
-    //          ctx, indices, pq_index_uri, partition_start, false,
-    //          temporal_policy);
-    //    }
-    //    if (!pq_id_uri.empty()) {
-    //      debug_vector(shuffled_ids);
-    //      write_vector(
-    //          ctx, shuffled_ids, pq_id_uri, start_pos, false,
-    //          temporal_policy);
-    //    }
   }
   return 0;
 }

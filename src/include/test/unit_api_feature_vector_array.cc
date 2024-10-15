@@ -69,6 +69,16 @@ TEST_CASE("feature vector array open", "[api]") {
   CHECK(d.feature_type() == TILEDB_FLOAT32);
   CHECK(dimensions(d) == 128);
   CHECK(num_vectors(d) == num_sift_vectors);
+
+  auto e = FeatureVectorArray(ctx, sift_inputs_uri, "", 0, 100);
+  CHECK(e.feature_type() == TILEDB_FLOAT32);
+  CHECK(dimensions(e) == 128);
+  CHECK(num_vectors(e) == 100);
+
+  auto f = FeatureVectorArray(ctx, sift_inputs_uri, "", 50, 100);
+  CHECK(f.feature_type() == TILEDB_FLOAT32);
+  CHECK(dimensions(f) == 128);
+  CHECK(num_vectors(f) == 50);
 }
 
 template <query_vector_array M>

@@ -1791,8 +1791,8 @@ def ingest(
             ctx,
             parts_array_uri,
             ids_array_uri,
-            0,
-            0,
+            0,  # first_col
+            0,  # last_col
             to_temporal_policy(index_timestamp),
         )
         index = vspy.IndexVamana(ctx, index_group_uri)

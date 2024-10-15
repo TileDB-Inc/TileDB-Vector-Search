@@ -196,18 +196,8 @@ void init_type_erased_module(py::module_& m) {
           py::arg("ctx"),
           py::arg("uri"),
           py::arg("first_col") = 0,
-          py::arg("first_col") = 0,
+          py::arg("last_col") = 0,
           py::arg("temporal_policy") = std::nullopt)
-
-      // .def(
-      //     py::init<const tiledb::Context&, const std::string&, size_t,
-      //     size_t, std::optional<TemporalPolicy>>(), py::keep_alive<1, 2>(),
-      //     // IndexIVFFlat should keep ctx alive. py::arg("ctx"),
-      //     py::arg("uri"),
-      //     py::arg("start") = 0,
-      //     py::arg("end") = 0,
-      //     py::arg("temporal_policy_input") = std::nullopt
-      //     )
       .def(py::init<size_t, const std::string&>())
       .def(py::init<size_t, void*, const std::string&>())
       .def("dimensions", &FeatureVector::dimensions)
@@ -278,8 +268,7 @@ void init_type_erased_module(py::module_& m) {
           py::arg("uri"),
           py::arg("ids_uri") = "",
           py::arg("first_col") = 0,
-          py::arg("first_col") = 0,
-          // py::arg("num_vectors") = 0,
+          py::arg("last_col") = 0,
           py::arg("temporal_policy") = std::nullopt)
       .def(py::init<size_t, size_t, const std::string&, const std::string&>())
       .def("dimensions", &FeatureVectorArray::dimensions)

@@ -203,9 +203,6 @@ void write_matrix(
     create_matrix<T, LayoutPolicy, I>(ctx, A, uri, TILEDB_FILTER_NONE);
   }
 
-  std::cout << "[write_matrix] A.num_rows(): " << A.num_rows()
-            << " A.num_cols(): " << A.num_cols() << std::endl;
-
   if (A.num_rows() == 0 || A.num_cols() == 0) {
     return;
   }
@@ -381,7 +378,8 @@ std::vector<T> read_vector(
  * @tparam T Type of data element stored.
  * @param ctx The TileDB context.
  * @param uri The URI of the TileDB array.
- * @param slices The slices to read. Each slice is a pair of start and end.
+ * @param slices The slices to read. Each slice is a pair of [start, end] (i.e.
+ * they are inclusive).
  * @param temporal_policy The temporal policy for the read.
  * @return The vector of data.
  */

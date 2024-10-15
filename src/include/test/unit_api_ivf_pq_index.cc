@@ -235,8 +235,6 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
   {
     std::unique_ptr<IndexIVFPQ> index;
     SECTION("infinite") {
-      std::cout << "index ctor() -----------------------------------------"
-                << std::endl;
       index = std::make_unique<IndexIVFPQ>(ctx, index_uri);
     }
     SECTION("finite") {
@@ -253,11 +251,7 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     auto training = ColMajorMatrix<feature_type_type>{
         {{3, 1, 4}, {1, 5, 9}, {2, 6, 5}, {3, 5, 8}}};
     auto training_vector_array = FeatureVectorArray(training);
-    std::cout << "index.train() -----------------------------------------"
-              << std::endl;
     index->train(training_vector_array);
-    std::cout << "index.ingest() -----------------------------------------"
-              << std::endl;
     index->ingest(training_vector_array);
     CHECK(index->feature_type_string() == feature_type);
     CHECK(index->id_type_string() == id_type);
@@ -265,8 +259,6 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
 
     size_t top_k = 1;
     size_t nprobe = 1;
-    std::cout << "index.query() -----------------------------------------"
-              << std::endl;
     auto&& [scores, ids] =
         index->query(FeatureVectorArray(queries), top_k, nprobe);
     check_single_vector_equals(scores, ids, {0, 0, 0, 0}, {0, 1, 2, 3});
@@ -1163,25 +1155,16 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
       {{1.0f, 1.1f, 1.2f, 1.3f}, {2.0f, 2.1f, 2.2f, 2.3f}}};
 
   {
-    std::cout << "index() =============================================="
-              << std::endl;
     auto index = IndexIVFPQ(
         ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
-    std::cout << "index.train() =============================================="
-              << std::endl;
     index.train(FeatureVectorArray(vectors), n_list, temporal_policy);
   }
   {
-    std::cout << "index() =============================================="
-              << std::endl;
     auto index = IndexIVFPQ(
         ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
     size_t part = 0;
     size_t part_end = 2;
     size_t part_id = 0;
-    std::cout
-        << "index.ingest_parts() =============================================="
-        << std::endl;
     index.ingest_parts(
         FeatureVectorArray(vectors),
         FeatureVector(0, "uint64"),
@@ -1196,17 +1179,12 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
     auto group = ivf_pq_group<ivf_pq_index<feature_type>>(
         ctx, index_uri, TILEDB_READ, temporal_policy);
     auto total_partitions = 2;
-    std::cout << "read_vector() =============================================="
-              << std::endl;
     auto indexes = read_vector<uint32_t>(
         ctx,
         group.feature_vectors_index_temp_uri(),
         0,
         total_partitions,
         temporal_policy);
-    debug_vector(indexes, "indexes");
-    std::cout << "write_vector() =============================================="
-              << std::endl;
     write_vector(
         ctx,
         indexes,
@@ -1217,8 +1195,6 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   }
 
   {
-    std::cout << "index() =============================================="
-              << std::endl;
     auto index = IndexIVFPQ(
         ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
     size_t partitions = 1;
@@ -1226,19 +1202,12 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
     size_t partition_id_start = 0;
     size_t partition_id_end = 1;
     size_t batch = 33554432;
-    std::cout << "index.consolidate_partitions() "
-                 "=============================================="
-              << std::endl;
     index.consolidate_partitions(
         partitions, work_items, partition_id_start, partition_id_end, batch);
   }
 
   {
-    std::cout << "index() =============================================="
-              << std::endl;
     auto index = IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0);
-    std::cout << "index.query() =============================================="
-              << std::endl;
     auto&& [scores, ids] = index.query(FeatureVectorArray(vectors), 1, 1);
     check_single_vector_equals(scores, ids, {0, 0}, {0, 1});
   }
@@ -1248,12 +1217,7 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   }
 
   {
-    std::cout << "index() =============================================="
-              << std::endl;
     auto index = IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0);
-    std::cout << "index.create_temp_data_group() "
-                 "=============================================="
-              << std::endl;
     index.create_temp_data_group();
   }
 }
@@ -1303,12 +1267,8 @@ TEST_CASE("train python", "[api_ivf_pq_index]") {
   {
     size_t partitions = 2;
     auto temporal_policy = TemporalPolicy{TimeTravel, 1};
-    std::cout << "index() =============================================="
-              << std::endl;
     auto index = IndexIVFPQ(
         ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
-    std::cout << "index.train() =============================================="
-              << std::endl;
     index.train(FeatureVectorArray(vectors), partitions, temporal_policy);
     index.ingest(FeatureVectorArray(vectors));
   }

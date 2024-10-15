@@ -44,11 +44,11 @@
 #if 0
 template <class T>
 std::vector<T> read_vector(
-    const tiledb::Context& ctx,
-    const std::string&,
-    size_t start_pos,
-    size_t end_pos,
-    uint64_t timestamp);
+   const tiledb::Context& ctx,
+   const std::string&,
+   size_t start_pos,
+   size_t end_pos,
+   uint64_t timestamp);
 #endif
 
 template <class M>
