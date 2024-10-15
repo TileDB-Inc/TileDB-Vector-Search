@@ -573,7 +573,7 @@ class IndexIVFPQ {
     }
 
     uint64_t nlist() const override {
-      return impl_index_.nlist();
+      return impl_index_.partitions();
     }
 
     uint32_t num_subspaces() const override {

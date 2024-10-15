@@ -1415,7 +1415,7 @@ class ivf_pq_index {
     return reassign_ratio_;
   }
 
-  uint64_t nlist() const {
+  uint64_t partitions() const {
     return num_partitions_;
   }
 
