@@ -144,6 +144,8 @@ class IndexIVFPQ {
   IndexIVFPQ(
       const tiledb::Context& ctx,
       const URI& group_uri,
+      IndexLoadStrategy index_load_strategy = IndexLoadStrategy::PQ_INDEX,
+      size_t upper_bound = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
     read_types(
         ctx,
@@ -157,13 +159,15 @@ class IndexIVFPQ {
     if (uri_dispatch_table.find(type) == uri_dispatch_table.end()) {
       throw std::runtime_error("Unsupported datatype combination");
     }
-    index_ = uri_dispatch_table.at(type)(ctx, group_uri, temporal_policy);
+    index_ = uri_dispatch_table.at(type)(
+        ctx, group_uri, index_load_strategy, upper_bound, temporal_policy);
     n_list_ = index_->nlist();
     num_subspaces_ = index_->num_subspaces();
     max_iterations_ = index_->max_iterations();
     convergence_tolerance_ = index_->convergence_tolerance();
     reassign_ratio_ = index_->reassign_ratio();
     distance_metric_ = index_->distance_metric();
+    upper_bound_ = index_->upper_bound();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -244,17 +248,14 @@ class IndexIVFPQ {
   }
 
   [[nodiscard]] auto query(
-      QueryType queryType,
       const QueryVectorArray& vectors,
       size_t top_k,
       size_t nprobe,
-      size_t upper_bound = 0,
       float k_factor = 1.f) {
     if (!index_) {
       throw std::runtime_error("Cannot query() because there is no index.");
     }
-    return index_->query(
-        queryType, vectors, top_k, nprobe, upper_bound, k_factor);
+    return index_->query(vectors, top_k, nprobe, k_factor);
   }
 
   void write_index(
@@ -302,6 +303,10 @@ class IndexIVFPQ {
 
   constexpr uint64_t dimensions() const {
     return dimensions_;
+  }
+
+  constexpr size_t upper_bound() const {
+    return upper_bound_;
   }
 
   constexpr auto n_list() const {
@@ -396,11 +401,9 @@ class IndexIVFPQ {
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query(
-        QueryType queryType,
         const QueryVectorArray& vectors,
         size_t top_k,
         size_t nprobe,
-        size_t upper_bound,
         float k_factor) = 0;
 
     virtual void write_index(
@@ -410,6 +413,7 @@ class IndexIVFPQ {
         const std::string& storage_version) = 0;
 
     [[nodiscard]] virtual uint64_t dimensions() const = 0;
+    [[nodiscard]] virtual size_t upper_bound() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
     [[nodiscard]] virtual uint64_t nlist() const = 0;
     [[nodiscard]] virtual uint32_t num_subspaces() const = 0;
@@ -450,8 +454,15 @@ class IndexIVFPQ {
     index_impl(
         const tiledb::Context& ctx,
         const URI& index_uri,
+        IndexLoadStrategy index_load_strategy,
+        size_t upper_bound,
         std::optional<TemporalPolicy> temporal_policy)
-        : impl_index_(ctx, index_uri, temporal_policy) {
+        : impl_index_(
+              ctx,
+              index_uri,
+              index_load_strategy,
+              upper_bound,
+              temporal_policy) {
     }
 
     void train(const FeatureVectorArray& training_set) override {
@@ -507,11 +518,9 @@ class IndexIVFPQ {
      * @todo Make sure the extents of the returned arrays are used correctly.
      */
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
-        QueryType queryType,
         const QueryVectorArray& vectors,
         size_t top_k,
         size_t nprobe,
-        size_t upper_bound,
         float k_factor) override {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
@@ -523,8 +532,7 @@ class IndexIVFPQ {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(
-              queryType, qspan, top_k, nprobe, upper_bound, k_factor);
+          auto [s, t] = impl_index_.query(qspan, top_k, nprobe, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -534,8 +542,7 @@ class IndexIVFPQ {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(
-              queryType, qspan, top_k, nprobe, upper_bound, k_factor);
+          auto [s, t] = impl_index_.query(qspan, top_k, nprobe, k_factor);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -557,12 +564,16 @@ class IndexIVFPQ {
       return ::dimensions(impl_index_);
     }
 
+    size_t upper_bound() const override {
+      return impl_index_.upper_bound();
+    }
+
     TemporalPolicy temporal_policy() const override {
       return impl_index_.temporal_policy();
     }
 
     uint64_t nlist() const override {
-      return impl_index_.nlist();
+      return impl_index_.partitions();
     }
 
     uint32_t num_subspaces() const override {
@@ -597,7 +608,7 @@ class IndexIVFPQ {
   using table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, constructor_function>;
   static const table_type dispatch_table;
 
-  using uri_constructor_function = std::function<std::unique_ptr<index_base>(const tiledb::Context&, const std::string&, std::optional<TemporalPolicy>)>;
+  using uri_constructor_function = std::function<std::unique_ptr<index_base>(const tiledb::Context&, const std::string&, IndexLoadStrategy, size_t, std::optional<TemporalPolicy>)>;
   using uri_table_type = std::map<std::tuple<tiledb_datatype_t, tiledb_datatype_t, tiledb_datatype_t>, uri_constructor_function>;
   static const uri_table_type uri_dispatch_table;
 
@@ -607,6 +618,7 @@ class IndexIVFPQ {
   // clang-format on
 
   uint64_t dimensions_{0};
+  size_t upper_bound_{0};
   size_t n_list_{0};
   uint32_t num_subspaces_{16};
   uint32_t max_iterations_{2};
@@ -636,18 +648,18 @@ const IndexIVFPQ::table_type IndexIVFPQ::dispatch_table = {
 };
 
 const IndexIVFPQ::uri_table_type IndexIVFPQ::uri_dispatch_table = {
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint32_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint64_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint64_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint64_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint32_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint32_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint32_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
-  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint64_t>>>(ctx, uri, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint32_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint32_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint32_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint32_t, uint64_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint32_t, uint64_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT32, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint32_t, uint64_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint32_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint32_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT32}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint32_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_INT8,    TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<int8_t,  uint64_t, uint64_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_UINT8,   TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<uint8_t, uint64_t, uint64_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
+  {{TILEDB_FLOAT32, TILEDB_UINT64, TILEDB_UINT64}, [](const tiledb::Context& ctx, const std::string& uri, IndexLoadStrategy index_load_strategy, size_t upper_bound, std::optional<TemporalPolicy> temporal_policy) { return std::make_unique<index_impl<ivf_pq_index<float,   uint64_t, uint64_t>>>(ctx, uri, index_load_strategy, upper_bound, temporal_policy); }},
 };
 
 const IndexIVFPQ::clear_history_table_type IndexIVFPQ::clear_history_dispatch_table = {

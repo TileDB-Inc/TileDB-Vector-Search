@@ -47,8 +47,16 @@ class tdbVector : public Vector<T> {
   using Base::Base;
 
  public:
-  tdbVector(const tiledb::Context& ctx, const std::string& uri)
-      : Base(read_vector<T>(ctx, uri)) {
+  tdbVector(
+      const tiledb::Context& ctx,
+      const std::string& uri,
+      size_t start,
+      size_t end,
+      TemporalPolicy temporal_policy)
+      : Base(
+            (start == 0 && end == 0) ?
+                read_vector<T>(ctx, uri, temporal_policy) :
+                read_vector<T>(ctx, uri, start, end, temporal_policy)) {
   }
 };
 

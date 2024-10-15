@@ -136,9 +136,6 @@ class ivf_flat_group : public base_index_group<index_type> {
   }
 
   void create_default_impl() {
-    if (empty(this->version_)) {
-      this->version_ = current_storage_version;
-    }
     this->init_valid_array_names();
 
     static const int32_t tile_size{

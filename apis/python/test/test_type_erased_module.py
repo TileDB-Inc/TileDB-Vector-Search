@@ -464,6 +464,13 @@ def test_construct_IndexIVFPQ():
     assert a.partitioning_index_type_string() == "uint64"
     assert a.dimensions() == 0
 
+    build_config_string = vspy.build_config_string()
+    assert build_config_string is not None
+    assert "tiledb_version" in build_config_string
+    logging_string = vspy.logging_string()
+    assert logging_string is not None
+    assert "Timers" in logging_string
+
 
 def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     nprobe = 100
@@ -499,19 +506,27 @@ def test_construct_IndexIVFPQ_with_empty_vector(tmp_path):
     a.train(training_set)
     a.add(training_set)
 
-    _, ids = a.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
+    _, ids = a.query(query_set, k_nn, nprobe)
+    accuracy = recall(ids, groundtruth_set, k_nn)
+    assert accuracy >= 0.87
 
     index_uri = os.path.join(tmp_path, "array")
     a.write_index(ctx, index_uri)
 
-    b = vspy.IndexIVFPQ(ctx, index_uri)
+    b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
+    _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
+    accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_infinite
 
-    _, ids = b.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
-
-    _, ids = b.query_finite_ram(query_set, k_nn, nprobe, 500)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
+    b_finite = vspy.IndexIVFPQ(
+        ctx,
+        index_uri,
+        index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+        memory_budget=1000,
+    )
+    _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
+    accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_finite
 
 
 def test_inplace_build_query_IndexIVFPQ(tmp_path):
@@ -535,19 +550,27 @@ def test_inplace_build_query_IndexIVFPQ(tmp_path):
     a.train(training_set)
     a.add(training_set)
 
-    _, ids = a.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
+    _, ids = a.query(query_set, k_nn, nprobe)
+    accuracy = recall(ids, groundtruth_set, k_nn)
+    assert accuracy >= 0.87
 
     index_uri = os.path.join(tmp_path, "array")
     a.write_index(ctx, index_uri)
 
-    b = vspy.IndexIVFPQ(ctx, index_uri)
+    b_infinite = vspy.IndexIVFPQ(ctx, index_uri)
+    _, ids_infinite = b_infinite.query(query_set, k_nn, nprobe)
+    accuracy_infinite = recall(ids_infinite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_infinite
 
-    _, ids = b.query_infinite_ram(query_set, k_nn, nprobe)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
-
-    _, ids = b.query_finite_ram(query_set, k_nn, nprobe, 500)
-    assert recall(ids, groundtruth_set, k_nn) >= 0.87
+    b_finite = vspy.IndexIVFPQ(
+        ctx,
+        index_uri,
+        index_load_strategy=vspy.IndexLoadStrategy.PQ_OOC,
+        memory_budget=999,
+    )
+    _, ids_finite = b_finite.query(query_set, k_nn, nprobe)
+    accuracy_finite = recall(ids_finite, groundtruth_set, k_nn)
+    assert accuracy == accuracy_finite
 
 
 def test_construct_IndexIVFFlat():

@@ -75,7 +75,7 @@ class tdbBlockedMatrix : public MatrixBase {
  protected:
   using col_domain_type = int32_t;
 
-  log_timer constructor_timer{"tdbBlockedMatrix constructor"};
+  log_timer constructor_timer{"tdb_matrix@ctor"};
 
   tiledb::Context ctx_;
   std::string uri_;
@@ -222,7 +222,7 @@ class tdbBlockedMatrix : public MatrixBase {
       , first_row_{first_row}
       , first_col_{first_col} {
     constructor_timer.stop();
-    scoped_timer _{tdb_func__ + " " + uri};
+    scoped_timer _{"tdb_matrix@ctor@" + uri};
 
     if (last_row && *last_row < first_row_) {
       throw std::runtime_error("last_row < first_row");
@@ -303,7 +303,7 @@ class tdbBlockedMatrix : public MatrixBase {
 
   // @todo Allow specification of how many columns to advance by
   virtual bool load() {
-    scoped_timer _{tdb_func__ + " " + uri_};
+    scoped_timer _{"tdb_matrix@load@" + uri_};
 
     const size_t attr_idx{0};
     auto attr = schema_.attribute(attr_idx);
@@ -349,7 +349,7 @@ class tdbBlockedMatrix : public MatrixBase {
         .set_data_buffer(attr_name, this->data(), elements_to_load * dimension);
     tiledb_helpers::submit_query(tdb_func__, uri_, query);
     _memory_data.insert_entry(
-        tdb_func__, elements_to_load * dimension * sizeof(T));
+        "tdb_matrix@load", elements_to_load * dimension * sizeof(T));
 
     // @todo Handle incomplete queries.
     if (tiledb::Query::Status::COMPLETE != query.query_status()) {

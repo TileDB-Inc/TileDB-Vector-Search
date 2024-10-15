@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from tiledb.cloud.dag import Mode
 
@@ -29,6 +29,82 @@ def ingest_embeddings_with_driver(
     environment_variables: Dict = {},
     **kwargs,
 ):
+    """
+    Ingest embeddings into a TileDB vector search index using a driver function.
+
+    This function orchestrates the embedding ingestion process by creating and executing
+    a TileDB Cloud DAG (Directed Acyclic Graph). The DAG consists of two main stages:
+
+    1. **Embeddings Generation:** This stage is responsible for computing embeddings
+    for the objects to be indexed.
+
+    2. **Vector Indexing:** This stage is responsible for ingesting the generated
+    embeddings into the TileDB vector search index.
+
+    Both stages can be be executed in one of three modes:
+
+    - **LOCAL:** Embeddings are ingested locally within the current process.
+    - **REALTIME:** Embeddings are ingested using a TileDB Cloud REALTIME TaskGraph.
+    - **BATCH:** Embeddings are ingested using a TileDB Cloud BATCH TaskGraph.
+
+    The `ingest_embeddings_with_driver` function provides flexibility in configuring
+    the execution environment for both stages. Users can specify the number of workers,
+    resources, Docker images, and extra modules for both the driver and worker nodes.
+
+    Parameters
+    ----------
+    object_index_uri: str
+        The URI of the TileDB vector search index.
+    use_updates_array: bool
+        Whether to use the updates array for ingesting embeddings.
+    embeddings_array_uri: str, optional
+        The URI of the array to store the generated embeddings. This parameter is
+        required if `use_updates_array` is set to `False`.
+    metadata_array_uri: str, optional
+        The URI of the array to store object metadata.
+    index_timestamp: int, optional
+        The timestamp to use for the ingestion. If not specified, the current time
+        will be used.
+    workers: int, optional
+        The number of workers to use for the ingestion. If not specified, the default
+        number of workers will be used.
+    worker_resources: Dict, optional
+        A dictionary specifying the resources to allocate for each worker node.
+    worker_image: str, optional
+        The name of the Docker image to use for the worker nodes.
+    extra_worker_modules: List[str], optional
+        A list of extra Python modules to install on the worker nodes.
+    driver_resources: Dict, optional
+        A dictionary specifying the resources to allocate for the driver node.
+    driver_image: str, optional
+        The name of the Docker image to use for the driver node.
+    extra_driver_modules: List[str], optional
+        A list of extra Python modules to install on the driver node.
+    worker_access_credentials_name: str, optional
+        The name of the TileDB Cloud access credentials to use for the worker nodes.
+    max_tasks_per_stage: int, optional
+        The maximum number of tasks to run per stage.
+    verbose: bool, optional
+        Whether to enable verbose logging.
+    trace_id: str, optional
+        A unique identifier for tracing the execution of the ingestion process.
+    embeddings_generation_mode: Mode, optional
+        The mode to use for generating embeddings. Defaults to `Mode.LOCAL`.
+    embeddings_generation_driver_mode: Mode, optional
+        The mode to use for running the embeddings generation driver function.
+        Defaults to `Mode.LOCAL`.
+    vector_indexing_mode: Mode, optional
+        The mode to use for indexing the generated vectors. Defaults to `Mode.LOCAL`.
+    config: Mapping[str, Any], optional
+        A dictionary containing TileDB configuration parameters.
+    namespace: str, optional
+        The TileDB Cloud namespace to use for the ingestion.
+    environment_variables: Dict, optional
+        Environment variables to set for the object reader and embedding function.
+    **kwargs
+        Additional keyword arguments to pass to the ingestion function.
+    """
+
     def ingest_embeddings(
         object_index_uri: str,
         use_updates_array: bool,
@@ -222,7 +298,11 @@ def ingest_embeddings_with_driver(
 
                     logger.debug("Embedding objects...")
                     embeddings = object_embedding.embed(objects, metadata)
-
+                    if isinstance(embeddings, Tuple):
+                        external_ids = embeddings[1]
+                        embeddings = embeddings[0]
+                    else:
+                        external_ids = objects["external_id"].astype(np.uint64)
                     logger.debug("Write embeddings partition_id: %d", partition_id)
                     if use_updates_array:
                         vectors = np.empty(embeddings.shape[0], dtype="O")
@@ -230,7 +310,7 @@ def ingest_embeddings_with_driver(
                             vectors[i] = embeddings[i].astype(vector_type)
                         obj_index.index.update_batch(
                             vectors=vectors,
-                            external_ids=objects["external_id"].astype(np.uint64),
+                            external_ids=external_ids.astype(np.uint64),
                         )
                     else:
                         embeddings_flattened = np.empty(1, dtype="O")
@@ -241,16 +321,16 @@ def ingest_embeddings_with_driver(
                         embeddings_shape[0] = np.array(
                             embeddings.shape, dtype=np.uint32
                         )
-                        external_ids = np.empty(1, dtype="O")
-                        external_ids[0] = objects["external_id"].astype(np.uint64)
+                        write_external_ids = np.empty(1, dtype="O")
+                        write_external_ids[0] = external_ids.astype(np.uint64)
                         embeddings_array[partition_id] = {
                             "vectors": embeddings_flattened,
                             "vectors_shape": embeddings_shape,
-                            "external_ids": external_ids,
+                            "external_ids": write_external_ids,
                         }
                     if metadata_array_uri is not None:
-                        external_ids = metadata.pop("external_id", None)
-                        metadata_array[external_ids] = metadata
+                        metadata_external_ids = metadata.pop("external_id", None)
+                        metadata_array[metadata_external_ids] = metadata
 
                 if not use_updates_array:
                     embeddings_array.close()

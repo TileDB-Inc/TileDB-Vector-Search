@@ -44,11 +44,11 @@
 #if 0
 template <class T>
 std::vector<T> read_vector(
-    const tiledb::Context& ctx,
-    const std::string&,
-    size_t start_pos,
-    size_t end_pos,
-    uint64_t timestamp);
+   const tiledb::Context& ctx,
+   const std::string&,
+   size_t start_pos,
+   size_t end_pos,
+   uint64_t timestamp);
 #endif
 
 template <class M>
@@ -165,7 +165,7 @@ void debug_vector(
     const V& v, const std::string& msg = "", size_t max_size = 10) {
   size_t end = std::min(max_size, dimensions(v));
   if (!msg.empty()) {
-    std::cout << msg << ": ";
+    std::cout << msg << " (" << dimensions(v) << "): ";
   }
   std::cout << "[";
   for (size_t i = 0; i < end; ++i) {
@@ -185,7 +185,7 @@ void debug_vector(
     const V& v, const std::string& msg = "", size_t max_size = 10) {
   size_t end = std::min(max_size, dimensions(v));
   if (!msg.empty()) {
-    std::cout << msg << ": ";
+    std::cout << msg << " (" << dimensions(v) << "): ";
   }
   std::cout << "[";
   size_t idx = 0;

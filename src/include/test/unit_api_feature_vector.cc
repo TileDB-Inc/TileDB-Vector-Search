@@ -141,6 +141,16 @@ TEMPLATE_LIST_TEST_CASE("api: FeatureVector read", "[api]", TestTypes) {
   auto bz = (TestType*)y.data();
   auto ez = by + dimensions(y);
   CHECK(std::equal(bz, ez, begin(x)));
+
+  if (N > 10) {
+    auto vector = FeatureVector{ctx, vname, 0, 10};
+    CHECK(dimensions(vector) == 10);
+  }
+
+  if (N > 10) {
+    auto vector = FeatureVector{ctx, vname, 5, 10};
+    CHECK(dimensions(vector) == 5);
+  }
 }
 
 TEMPLATE_TEST_CASE(
