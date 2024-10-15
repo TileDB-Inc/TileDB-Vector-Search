@@ -156,7 +156,7 @@ class ivf_flat_index {
    *
    * @param dimensions Dimensions of the vectors comprising the training set and
    * the data set.
-   * @param nlist Number of centroids / partitions to compute.
+   * @param partitions Number of centroids / partitions to compute.
    * @param max_iter Maximum number of iterations for kmans algorithm.
    * @param tol Convergence tolerance for kmeans algorithm.
    * @param timestamp Timestamp for the index.
@@ -169,7 +169,7 @@ class ivf_flat_index {
    */
   ivf_flat_index(
       // size_t dim,
-      size_t nlist = 0,
+      size_t partitions = 0,
       uint32_t max_iterations = 2,
       float tol = 0.000025,
       TemporalPolicy temporal_policy = TemporalPolicy{TimeTravel, 0})
@@ -183,7 +183,7 @@ class ivf_flat_index {
                       std::chrono::duration_cast<std::chrono::milliseconds>(
                           std::chrono::system_clock::now().time_since_epoch())
                           .count())}}
-      , num_partitions_(nlist)
+      , num_partitions_(partitions)
       , max_iterations_(max_iterations)
       , tol_(tol) {
   }

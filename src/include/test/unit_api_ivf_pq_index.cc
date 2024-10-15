@@ -382,7 +382,7 @@ TEST_CASE(
     "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
   size_t k_nn = 10;
-  size_t n_list = 100;
+  size_t partitions = 100;
   auto feature_type = "float32";
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
@@ -399,7 +399,7 @@ TEST_CASE(
         {{"feature_type", feature_type},
          {"id_type", id_type},
          {"partitioning_index_type", partitioning_index_type},
-         {"n_list", std::to_string(n_list)},
+         {"partitions", std::to_string(partitions)},
          {"num_subspaces", std::to_string(siftsmall_dimensions / 4)}}));
 
     size_t num_vectors = 0;
@@ -674,7 +674,7 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
-  size_t n_list = 1;
+  size_t partitions = 1;
   uint32_t num_subspaces = 1;
   float convergence_tolerance = 0.00003f;
   uint32_t max_iterations = 3;
@@ -690,7 +690,7 @@ TEST_CASE("clear history with an open index", "[api_ivf_pq_index]") {
       {{"feature_type", feature_type},
        {"id_type", id_type},
        {"partitioning_index_type", partitioning_index_type},
-       {"n_list", std::to_string(n_list)},
+       {"partitions", std::to_string(partitions)},
        {"num_subspaces", std::to_string(num_subspaces)},
        {"convergence_tolerance", std::to_string(convergence_tolerance)},
        {"max_iterations", std::to_string(max_iterations)}}));
@@ -724,7 +724,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
   auto id_type = "uint32";
   auto partitioning_index_type = "uint32";
   uint64_t dimensions = 3;
-  size_t n_list = 1;
+  size_t partitions = 1;
   uint32_t num_subspaces = 1;
   uint32_t max_iterations = 3;
   float convergence_tolerance = 0.00003f;
@@ -744,7 +744,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         {"feature_type", feature_type},
         {"id_type", id_type},
         {"partitioning_index_type", partitioning_index_type},
-        {"n_list", std::to_string(n_list)},
+        {"partitions", std::to_string(partitions)},
         {"num_subspaces", std::to_string(num_subspaces)},
         {"max_iterations", std::to_string(max_iterations)},
         {"convergence_tolerance", std::to_string(convergence_tolerance)},
@@ -760,7 +760,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
 
     CHECK(index.temporal_policy().timestamp_end() == 0);
     CHECK(index.dimensions() == dimensions);
-    CHECK(index.n_list() == n_list);
+    CHECK(index.partitions() == partitions);
     CHECK(index.num_subspaces() == num_subspaces);
     CHECK(index.max_iterations() == max_iterations);
     CHECK(index.convergence_tolerance() == convergence_tolerance);
@@ -784,7 +784,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(typed_index.group().get_all_base_sizes().size() == 1);
     CHECK(typed_index.group().get_all_ingestion_timestamps().size() == 1);
 
-    CHECK(typed_index.group().get_all_num_partitions()[0] == n_list);
+    CHECK(typed_index.group().get_all_num_partitions()[0] == partitions);
     CHECK(typed_index.group().get_all_base_sizes()[0] == 0);
     CHECK(typed_index.group().get_all_ingestion_timestamps()[0] == 0);
   }
@@ -800,7 +800,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         index.temporal_policy().timestamp_end() ==
         std::numeric_limits<uint64_t>::max());
     CHECK(index.dimensions() == dimensions);
-    CHECK(index.n_list() == n_list);
+    CHECK(index.partitions() == partitions);
     CHECK(index.num_subspaces() == num_subspaces);
     CHECK(index.max_iterations() == max_iterations);
     CHECK(index.convergence_tolerance() == convergence_tolerance);
