@@ -421,8 +421,6 @@ TEST_CASE("ivf_pq_index write and read", "[ivf_pq_index]") {
     idx.train(
         training_set, partitions, TemporalPolicy(TimeTravel, write_timestamp));
     idx.ingest(training_set, ids);
-    //  idx.write_index(
-    //      ctx, index_uri, TemporalPolicy(TimeTravel, write_timestamp));
   }
 
   {
@@ -585,7 +583,6 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
       auto queries =
           ColMajorMatrix<feature_type>{{{value, value, value, value}}};
       auto&& [scores, ids] = index.query(queries, k_nn, nprobe);
-
       CHECK(scores(0, 0) == 0);
       CHECK(ids(0, 0) == i * 11);
     }
@@ -709,6 +706,7 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
       CHECK(
           k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
+
       auto&& [scores_no_reranking, ids_no_reranking] =
           index_infinite.query(queries, k_nn, nprobe, 1.f);
       CHECK(
@@ -728,7 +726,6 @@ TEST_CASE("k_factor", "[ivf_pq_index]") {
       CHECK(
           k_nn == check_single_vector_num_equal<uint32_t>(ids_reranking, ids));
       CHECK(scores_reranking(0, 0) == 0);
-
       auto&& [scores_no_reranking, ids_no_reranking] =
           index_finite.query(queries, k_nn, nprobe, 1.f);
       CHECK(

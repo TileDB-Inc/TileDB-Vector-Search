@@ -427,7 +427,7 @@ class IndexIVFPQ {
         size_t start,
         size_t end,
         size_t partition_start) = 0;
-    // virtual void ingest(const FeatureVectorArray& input_vectors) = 0;
+
     virtual void ingest(
         const FeatureVectorArray& input_vectors,
         const FeatureVector& external_ids) = 0;

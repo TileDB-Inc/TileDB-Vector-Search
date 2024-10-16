@@ -201,8 +201,8 @@ TEST_CASE("create empty index and then train and query", "[api_ivf_pq_index]") {
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
     CHECK(index.distance_metric() == DistanceMetric::SUM_OF_SQUARES);
 
-    //    Make sure we can query with k_factor > 1 on an empty index that is not
-    //    loaded by URI.
+    // Make sure we can query with k_factor > 1 on an empty index that is not
+    // loaded by URI.
     size_t top_k = 1;
     size_t nprobe = 1;
     float k_factor = 2.f;
@@ -976,6 +976,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         all_ingestion_timestamps.end(),
         std::vector<uint64_t>{99, 100}.begin()));
   }
+
   // Load it at timestamp 5 (before ingestion) and make sure we can query and be
   // returned fill values.
   for (auto upper_bound : std::vector<size_t>{0, 4}) {

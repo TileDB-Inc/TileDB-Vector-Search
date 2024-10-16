@@ -1855,7 +1855,6 @@ def ingest(
         partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
         partial_write_array_index_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
 
-        # start=0, end=100, batch=10
         ctx = vspy.Ctx(config) if index_type == "IVF_PQ" else None
         index = (
             vspy.IndexIVFPQ(
@@ -1874,7 +1873,6 @@ def ingest(
             if part_end > end:
                 part_end = end
 
-            # part_id = 0
             part_id = int(part / batch)
 
             logger.debug("Input vectors start_pos: %d, end_pos: %d", part, part_end)
@@ -2096,16 +2094,6 @@ def ingest(
         with tiledb.scope_ctx(ctx_or_config=config):
             group = tiledb.Group(index_group_uri)
             index_array_uri = group[INDEX_ARRAY_NAME].uri
-            # TODO(paris): We will need to adjust this, as Python does:
-            # PARTIAL_WRITE_ARRAY_DIR = (
-            #     storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
-            #     + "_"
-            #     + "".join(random.choices(string.ascii_letters, k=10))
-            # )
-            # But in C++ we'll have a different URI.
-            # In python they do it in case a previous ingestio fails / does not complete, the old
-            # URI will be sitting there.
-            # https://github.com/TileDB-Inc/TileDB-Vector-Search/pull/357
             partial_write_array_dir_uri = group[PARTIAL_WRITE_ARRAY_DIR].uri
             partial_write_array_group = tiledb.Group(partial_write_array_dir_uri)
             partial_index_array_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
@@ -2166,8 +2154,6 @@ def ingest(
             partitions, work_items, partition_id_start, partition_id_end, batch
         )
 
-    # Reads from a set of input ranges and writes a set of output ranges. For every array you need
-    # you need to do the same thing. We can do this in C++.
     def consolidate_partition_udf(
         index_group_uri: str,
         partitions: int,
@@ -2923,8 +2909,6 @@ def ingest(
                 ingest_nodes.append(ingest_additions_node)
 
             work_items = len(ingest_nodes) * input_vectors_work_items_per_worker
-            # Computes the sizes for each partitions (sizes for each parition as well as the indexes).
-            # Can leave this.
             compute_indexes_node = submit(
                 compute_partition_indexes_udf,
                 index_group_uri=index_group_uri,
@@ -3001,9 +2985,6 @@ def ingest(
         We also don't consolidate type-erased indexes because they are only written once. If we add
         distributed ingestion we should write a C++ method to consolidate them.
         """
-
-        # TODO: We need to do this for IVF_PQ as part of these changes.
-
         with tiledb.Group(index_group_uri) as group:
             write_group = tiledb.Group(index_group_uri, "w")
 
@@ -3089,7 +3070,7 @@ def ingest(
                             uri=index_group_uri,
                             dimensions=dimensions,
                             vector_type=vector_type,
-                            num_subspaces=int(num_subspaces),
+                            num_subspaces=num_subspaces,
                             partitions=partitions,
                             config=config,
                             storage_version=storage_version,

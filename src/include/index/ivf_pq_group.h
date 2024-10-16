@@ -339,7 +339,6 @@ class ivf_pq_group : public base_index_group<index_type> {
 
     create_temp_data_group();
 
-    // Store the metadata if all the arrays were created successfully
     metadata_.store_metadata(write_group);
   }
 
