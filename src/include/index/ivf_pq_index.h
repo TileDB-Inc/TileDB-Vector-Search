@@ -1665,6 +1665,8 @@ class ivf_pq_index {
                 << " num_vectors(rhs): " << ::num_vectors(rhs) << std::endl;
       std::cout << "dimensions(lhs): " << ::dimensions(lhs)
                 << " dimensions(rhs): " << ::dimensions(rhs) << std::endl;
+      debug_matrix(lhs, "[ivf_pq_index@compare_feature_vector_arrays] lhs");
+      debug_matrix(rhs, "[ivf_pq_index@compare_feature_vector_arrays] rhs");
       return false;
     }
     for (size_t i = 0; i < ::num_vectors(lhs); ++i) {
@@ -1737,6 +1739,9 @@ class ivf_pq_index {
       return true;
     }
     if (!partitioned_pq_vectors_ || !rhs.partitioned_pq_vectors_) {
+      std::cout << "[ivf_pq_index@compare_ivf_index] partitioned_pq_vectors_ "
+                   "|| rhs.partitioned_pq_vectors_ is nullptr"
+                << std::endl;
       return false;
     }
     return compare_feature_vectors(
@@ -1750,6 +1755,9 @@ class ivf_pq_index {
       return true;
     }
     if (!partitioned_pq_vectors_ || !rhs.partitioned_pq_vectors_) {
+      std::cout << "[ivf_pq_index@compare_ivf_ids] partitioned_pq_vectors_ || "
+                   "rhs.partitioned_pq_vectors_ is nullptr"
+                << std::endl;
       return false;
     }
     return compare_feature_vectors(
