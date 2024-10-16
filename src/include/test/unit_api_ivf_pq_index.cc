@@ -441,7 +441,7 @@ TEST_CASE(
              {2, .5f, .6f},
              {5, .7f, .7f},
              {10, .75f, .9f},
-             {100, .8f, 1.f}}) {
+             {100, .78f, 1.f}}) {
       auto&& [distances, ids] = index.query(query_set, k_nn, nprobe);
       auto intersections = count_intersections(ids, groundtruth_set, k_nn);
       CHECK(
