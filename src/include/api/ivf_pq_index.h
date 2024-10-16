@@ -156,7 +156,7 @@ class IndexIVFPQ {
     }
     index_ = uri_dispatch_table.at(type)(
         ctx, group_uri, index_load_strategy, upper_bound, temporal_policy);
-    n_list_ = index_->nlist();
+    partitions_ = index_->partitions();
     num_subspaces_ = index_->num_subspaces();
     max_iterations_ = index_->max_iterations();
     convergence_tolerance_ = index_->convergence_tolerance();
@@ -183,13 +183,13 @@ class IndexIVFPQ {
   /**
    * @brief Train the index based on the given training set.
    * @param training_set The training input vectors.
-   * @param n_list The number of clusters to use in the index. Can be passed to
-   * override the value we used when we first created the index.
+   * @param partitions The number of clusters to use in the index. Can be passed
+   * to override the value we used when we first created the index.
    */
   // @todo -- infer feature type from input
   void train(
       const FeatureVectorArray& training_set,
-      size_t nlist = 0,
+      size_t partitions = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
@@ -206,8 +206,8 @@ class IndexIVFPQ {
       throw std::runtime_error("Unsupported datatype combination");
     }
 
-    index_->train(training_set, nlist, temporal_policy);
-    n_list_ = index_->nlist();
+    index_->train(training_set, partitions, temporal_policy);
+    partitions_ = index_->partitions();
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -327,8 +327,8 @@ class IndexIVFPQ {
     return upper_bound_;
   }
 
-  constexpr auto n_list() const {
-    return n_list_;
+  constexpr auto partitions() const {
+    return partitions_;
   }
 
   constexpr uint32_t num_subspaces() const {
@@ -417,7 +417,7 @@ class IndexIVFPQ {
 
     virtual void train(
         const FeatureVectorArray& training_set,
-        size_t nlist,
+        size_t partitions,
         std::optional<TemporalPolicy> temporal_policy) = 0;
 
     virtual void ingest_parts(
@@ -449,7 +449,7 @@ class IndexIVFPQ {
     [[nodiscard]] virtual uint64_t dimensions() const = 0;
     [[nodiscard]] virtual size_t upper_bound() const = 0;
     [[nodiscard]] virtual TemporalPolicy temporal_policy() const = 0;
-    [[nodiscard]] virtual uint64_t nlist() const = 0;
+    [[nodiscard]] virtual uint64_t partitions() const = 0;
     [[nodiscard]] virtual uint32_t num_subspaces() const = 0;
     [[nodiscard]] virtual uint32_t max_iterations() const = 0;
     [[nodiscard]] virtual float convergence_tolerance() const = 0;
@@ -468,7 +468,7 @@ class IndexIVFPQ {
     }
 
     index_impl(
-        size_t n_list,
+        size_t partitions,
         uint32_t num_subspaces,
         uint32_t max_iterations,
         float convergence_tolerance,
@@ -476,7 +476,7 @@ class IndexIVFPQ {
         std::optional<TemporalPolicy> temporal_policy,
         DistanceMetric distance_metric)
         : impl_index_(
-              n_list,
+              partitions,
               num_subspaces,
               max_iterations,
               convergence_tolerance,
@@ -505,14 +505,14 @@ class IndexIVFPQ {
 
     void train(
         const FeatureVectorArray& training_set,
-        size_t nlist,
+        size_t partitions,
         std::optional<TemporalPolicy> temporal_policy) override {
       using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)training_set.data(),
           extents(training_set)[0],
           extents(training_set)[1]};
-      impl_index_.train(fspan, nlist, temporal_policy);
+      impl_index_.train(fspan, partitions, temporal_policy);
     }
 
     void ingest_parts(
@@ -639,7 +639,7 @@ class IndexIVFPQ {
       return impl_index_.temporal_policy();
     }
 
-    uint64_t nlist() const override {
+    uint64_t partitions() const override {
       return impl_index_.partitions();
     }
 
@@ -686,7 +686,7 @@ class IndexIVFPQ {
 
   uint64_t dimensions_{0};
   size_t upper_bound_{0};
-  size_t n_list_{0};
+  size_t partitions_{0};
   uint32_t num_subspaces_{16};
   uint32_t max_iterations_{2};
   float convergence_tolerance_{0.000025f};

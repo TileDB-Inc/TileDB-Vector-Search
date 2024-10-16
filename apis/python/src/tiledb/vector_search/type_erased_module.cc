@@ -638,7 +638,7 @@ void init_type_erased_module(py::module_& m) {
           "partitioning_index_type_string",
           &IndexIVFPQ::partitioning_index_type_string)
       .def("dimensions", &IndexIVFPQ::dimensions)
-      .def("partitions", &IndexIVFPQ::n_list)
+      .def("partitions", &IndexIVFPQ::partitions)
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,

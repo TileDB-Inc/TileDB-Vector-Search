@@ -282,7 +282,7 @@ class ivf_pq_index {
    * parameters to be used subsequently in training. To fully create an index
    * we will need to call `train()` and `add()`.
    *
-   * @param nlist Number of centroids / partitions to compute.
+   * @param partitions Number of centroids / partitions to compute.
    * @param num_subspaces Number of subspaces to use for pq compression. This is
    * the number of sections to divide the vector into.
    * @param max_iterations Maximum number of iterations for kmeans algorithm.

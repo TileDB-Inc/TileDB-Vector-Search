@@ -776,7 +776,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     index.train(
         training_vector_array, partitions, TemporalPolicy(TimeTravel, 99));
     CHECK(index.temporal_policy().timestamp_end() == 99);
-    CHECK(index.n_list() == partitions);
+    CHECK(index.partitions() == partitions);
     index.ingest(training_vector_array, training_ids);
 
     // This also updates the timestamp of the index - we're now at timestamp 99.
@@ -784,7 +784,7 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     CHECK(index.feature_type_string() == feature_type);
     CHECK(index.id_type_string() == id_type);
     CHECK(index.partitioning_index_type_string() == partitioning_index_type);
-    CHECK(index.n_list() == partitions);
+    CHECK(index.partitions() == partitions);
 
     size_t top_k = 1;
     size_t nprobe = 1;
@@ -1137,7 +1137,7 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   using feature_type = float;
 
   uint64_t dimensions = 4;
-  size_t n_list = 0;
+  size_t partitions = 0;
   uint32_t num_subspaces = 2;
 
   IndexIVFPQ::create(
@@ -1156,7 +1156,7 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   {
     auto index = IndexIVFPQ(
         ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
-    index.train(FeatureVectorArray(vectors), n_list, temporal_policy);
+    index.train(FeatureVectorArray(vectors), partitions, temporal_policy);
   }
   {
     auto index = IndexIVFPQ(
