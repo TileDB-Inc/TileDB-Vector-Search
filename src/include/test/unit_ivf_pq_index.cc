@@ -130,8 +130,6 @@ TEST_CASE("test kmeans initializations", "[ivf_pq_index][init]") {
   CHECK(index.get_flat_ivf_centroids().num_cols() == 3);
   CHECK(index.get_flat_ivf_centroids().num_rows() == 4);
 
-  // debug_centroids(index);
-
   for (size_t i = 0; i < index.get_flat_ivf_centroids().num_cols() - 1; ++i) {
     for (size_t j = i + 1; j < index.get_flat_ivf_centroids().num_cols(); ++j) {
       CHECK(!std::equal(

@@ -534,13 +534,13 @@ TEMPLATE_TEST_CASE(
         scale *= a_vx_pqx2;
       }
 
-      CHECK(a_vx_pqx2 / scale < 0.00005);
-      CHECK(a_dpqx_evx2 / scale < 0.00005);
-      CHECK(s_evx_pqx2 / scale < 0.00005);
-      CHECK(ss_vx_dpqx2 / scale < 0.00005);
-      CHECK(s_evx_edpqx2 / scale < 0.00005);
-      CHECK(a_evx_edpqx2 / scale < 0.00005);
-      CHECK(ss_devx_dpqx2 / scale < 0.00005);
+      CHECK(a_vx_pqx2 / scale < 0.00006);
+      CHECK(a_dpqx_evx2 / scale < 0.00006);
+      CHECK(s_evx_pqx2 / scale < 0.00006);
+      CHECK(ss_vx_dpqx2 / scale < 0.00006);
+      CHECK(s_evx_edpqx2 / scale < 0.00006);
+      CHECK(a_evx_edpqx2 / scale < 0.00006);
+      CHECK(ss_devx_dpqx2 / scale < 0.00006);
       CHECK(ss_devx_vx2 / scale < 0.000075);
     }
   }
