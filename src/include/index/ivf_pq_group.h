@@ -77,6 +77,16 @@ class ivf_pq_group : public base_index_group<index_type> {
   int32_t tile_size{0};
   tiledb_filter_type_t default_compression;
 
+  int32_t compute_tile_size() const {
+    if (this->get_dimensions() == 0) {
+      return (int32_t)(tile_size_bytes /
+                       sizeof(typename index_type::feature_type) / 100);
+    }
+    return (int32_t)(tile_size_bytes /
+                     sizeof(typename index_type::feature_type) /
+                     this->get_dimensions());
+  }
+
  public:
   ivf_pq_group(
       const tiledb::Context& ctx,
@@ -103,9 +113,7 @@ class ivf_pq_group : public base_index_group<index_type> {
 
     // If we are creating a new group, we set these before load().
     if (rw == TILEDB_WRITE) {
-      tile_size = (int32_t)(tile_size_bytes /
-                            sizeof(typename index_type::feature_type) /
-                            this->get_dimensions());
+      tile_size = compute_tile_size();
       default_compression = string_to_filter(
           storage_formats[this->version_]["default_attr_filters"]);
     }
@@ -116,9 +124,7 @@ class ivf_pq_group : public base_index_group<index_type> {
 
     // Else if we are reading a group, we set these after load().
     if (rw == TILEDB_READ) {
-      tile_size = (int32_t)(tile_size_bytes /
-                            sizeof(typename index_type::feature_type) /
-                            this->get_dimensions());
+      tile_size = compute_tile_size();
       default_compression = string_to_filter(
           storage_formats[this->version_]["default_attr_filters"]);
     }
