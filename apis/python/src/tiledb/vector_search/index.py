@@ -542,10 +542,15 @@ class Index(metaclass=ABCMeta):
             tiledb.consolidate(self.updates_array_uri, config=conf)
 
         # We don't copy the centroids if self.partitions=0 because this means our index was previously empty.
-        should_pass_copy_centroids_uri = (
-            self.index_type == "IVF_FLAT" and not retrain_index and self.partitions > 0
-        )
-        if should_pass_copy_centroids_uri:
+        copy_centroids_uri = None
+        if (
+            (self.index_type == "IVF_FLAT" or self.index_type == "IVF_PQ")
+            and not retrain_index
+            and self.partitions > 0
+        ):
+            if self.index_type == "IVF_FLAT":
+                # TODO(paris): Update so that IVF_PQ can also copy the centroids. We also need to pass the PQ-centroids.
+                copy_centroids_uri = self.centroids_uri
             # Make sure the user didn't pass an incorrect number of partitions.
             if "partitions" in kwargs and self.partitions != kwargs["partitions"]:
                 raise ValueError(
@@ -565,9 +570,7 @@ class Index(metaclass=ABCMeta):
             index_timestamp=max_timestamp,
             distance_metric=self.distance_metric,
             storage_version=self.storage_version,
-            copy_centroids_uri=self.centroids_uri
-            if should_pass_copy_centroids_uri
-            else None,
+            copy_centroids_uri=copy_centroids_uri,
             config=self.config,
             **kwargs,
         )

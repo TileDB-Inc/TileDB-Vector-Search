@@ -234,6 +234,19 @@ def test_numpy_to_feature_vector_array_with_ids():
     assert b.ids_type_string() == "uint64"
 
 
+def test_numpy_to_feature_vector_single_item():
+    a = np.array([1], dtype=np.float32)
+    assert a.ndim == 1
+    assert a.shape == (1,)
+    b = vspy.FeatureVector(a)
+    assert b.dimensions() == 1
+    assert b.feature_type_string() == "float32"
+    c = np.array(b)
+    assert c.ndim == 1
+    assert c.shape == (1,)
+    assert (a == c).all()
+
+
 def test_TemporalPolicy():
     temporal_policy = vspy.TemporalPolicy()
     assert temporal_policy.timestamp_start() == 0

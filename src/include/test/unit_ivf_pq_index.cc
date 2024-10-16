@@ -102,23 +102,15 @@ TEST_CASE("test kmeans initializations", "[ivf_pq_index][init]") {
   index.set_flat_ivf_centroids(ColMajorMatrix<float>(4, 3));
 
   SECTION("random") {
-    if (debug) {
-      std::cout << "random" << std::endl;
-    }
     index.kmeans_random_init(training_data);
   }
 
   SECTION("kmeans++") {
-    if (debug) {
-      std::cout << "kmeans++" << std::endl;
-    }
     index.kmeans_pp(training_data);
   }
 
   CHECK(index.get_flat_ivf_centroids().num_cols() == 3);
   CHECK(index.get_flat_ivf_centroids().num_rows() == 4);
-
-  // debug_centroids(index);
 
   for (size_t i = 0; i < index.get_flat_ivf_centroids().num_cols() - 1; ++i) {
     for (size_t j = i + 1; j < index.get_flat_ivf_centroids().num_cols(); ++j) {
@@ -145,8 +137,6 @@ TEST_CASE("test kmeans initializations", "[ivf_pq_index][init]") {
 }
 
 TEST_CASE("test kmeans", "[ivf_pq_index][kmeans]") {
-  const bool debug = false;
-
   std::vector<float> data = {8, 6, 7, 5, 3, 3, 7, 2, 1, 4, 1, 3, 0, 5, 1, 2,
                              9, 9, 5, 9, 2, 0, 2, 7, 7, 9, 8, 6, 7, 9, 6, 6};
 
@@ -157,16 +147,10 @@ TEST_CASE("test kmeans", "[ivf_pq_index][kmeans]") {
       /*4,*/ 3, 2, 10, 1e-4);
 
   SECTION("random") {
-    if (debug) {
-      std::cout << "random" << std::endl;
-    }
     index.train_ivf(training_data, kmeans_init::random);
   }
 
   SECTION("kmeans++") {
-    if (debug) {
-      std::cout << "kmeans++" << std::endl;
-    }
     index.train_ivf(training_data, kmeans_init::kmeanspp);
   }
 }
@@ -190,9 +174,6 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
        {0.7306664, 5.7294807}}};
 
   SECTION("one iteration") {
-    if (debug) {
-      std::cout << "one iteration" << std::endl;
-    }
     auto index = ivf_pq_index<float, size_t, size_t>(
         /*sklearn_centroids.num_rows(),*/
         sklearn_centroids.num_cols(),
@@ -204,37 +185,20 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
   }
 
   SECTION("two iterations") {
-    if (debug) {
-      std::cout << "two iterations" << std::endl;
-    }
     auto index = ivf_pq_index<float, size_t, size_t>(
-        /*sklearn_centroids.num_rows(),*/
-        sklearn_centroids.num_cols(),
-        2,
-        2,
-        1e-4);
+        sklearn_centroids.num_cols(), 2, 2, 1e-4);
     index.set_flat_ivf_centroids(sklearn_centroids);
     index.train_ivf(training_data, kmeans_init::none);
   }
 
   SECTION("five iterations") {
-    if (debug) {
-      std::cout << "five iterations" << std::endl;
-    }
     auto index = ivf_pq_index<float, size_t, size_t>(
-        /* sklearn_centroids.num_rows(), */
-        sklearn_centroids.num_cols(),
-        2,
-        5,
-        1e-4);
+        sklearn_centroids.num_cols(), 2, 5, 1e-4);
     index.set_flat_ivf_centroids(sklearn_centroids);
     index.train_ivf(training_data, kmeans_init::none);
   }
 
   SECTION("five iterations, perturbed") {
-    if (debug) {
-      std::cout << "five iterations, perturbed" << std::endl;
-    }
     for (size_t i = 0; i < sklearn_centroids.num_cols(); ++i) {
       for (size_t j = 0; j < sklearn_centroids.num_rows(); ++j) {
         sklearn_centroids(j, i) *= 0.8;
@@ -253,9 +217,6 @@ TEST_CASE("debug w/ sk", "[ivf_pq_index]") {
   }
 
   SECTION("five iterations") {
-    if (debug) {
-      std::cout << "five iterations" << std::endl;
-    }
     auto index = ivf_pq_index<float, size_t, size_t>(
         /* sklearn_centroids.num_rows(), */
         sklearn_centroids.num_cols(),
@@ -470,21 +431,16 @@ TEST_CASE("build index and infinite query in place", "[ivf_pq_index]") {
 
   std::tie(top_k_ivf_scores, top_k_ivf) = idx.query(query_set, k_nn, nprobe);
 
-  // NOTE: Can be used to debug the results:
-  // debug_slice(top_k_ivf, "top_k_ivf");
-  // debug_slice(top_k_ivf_scores, "top_k_ivf_scores");
-  // debug_slice(groundtruth_set, "groundtruth_set");
-
   init.verify(top_k_ivf);
 }
 
 TEST_CASE("ivf_pq_index write and read", "[ivf_pq_index]") {
   tiledb::Context ctx;
-  std::string ivf_pq_index_uri =
+  std::string index_uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(ivf_pq_index_uri)) {
-    vfs.remove_dir(ivf_pq_index_uri);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
   }
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
@@ -496,14 +452,13 @@ TEST_CASE("ivf_pq_index write and read", "[ivf_pq_index]") {
   idx.train(training_set, ids);
   idx.add(training_set, ids);
   uint64_t write_timestamp = 1000;
-  idx.write_index(
-      ctx, ivf_pq_index_uri, TemporalPolicy(TimeTravel, write_timestamp));
+  idx.write_index(ctx, index_uri, TemporalPolicy(TimeTravel, write_timestamp));
   CHECK(idx.num_vectors() == ::num_vectors(training_set));
 
   {
     // Load the index and check metadata.
     auto idx2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
-        ctx, ivf_pq_index_uri);
+        ctx, index_uri);
     CHECK(idx2.num_vectors() == ::num_vectors(training_set));
     CHECK(idx2.group().get_dimensions() == sift_dimensions);
     CHECK(idx2.group().get_temp_size() == 0);
@@ -521,16 +476,16 @@ TEST_CASE("ivf_pq_index write and read", "[ivf_pq_index]") {
     // CHECK(idx.compare_group(idx2));
 
     auto idx3 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
-        ctx, ivf_pq_index_uri);
+        ctx, index_uri);
     CHECK(idx2 == idx3);
   }
 
   {
     // Clear history.
     ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>::clear_history(
-        ctx, ivf_pq_index_uri, write_timestamp + 10);
+        ctx, index_uri, write_timestamp + 10);
     auto idx2 = ivf_pq_index<siftsmall_feature_type, siftsmall_ids_type>(
-        ctx, ivf_pq_index_uri);
+        ctx, index_uri);
 
     CHECK(idx2.num_vectors() == 0);
     CHECK(idx2.group().get_dimensions() == sift_dimensions);
@@ -650,7 +605,7 @@ TEST_CASE("query simple", "[ivf_pq_index]") {
 
   // We can train, add, query, and then write the index.
   {
-    auto training = ColMajorMatrixWithIds<feature_type>{
+    auto training = ColMajorMatrixWithIds<feature_type, id_type>{
         {{1, 1, 1, 1}, {2, 2, 2, 2}, {3, 3, 3, 3}, {4, 4, 4, 4}},
         {11, 22, 33, 44}};
     index.train(training, training.raveled_ids());

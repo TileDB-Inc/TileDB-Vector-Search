@@ -509,11 +509,11 @@ TEST_CASE("infer dimension", "[api_ivf_pq_index]") {
 
 TEST_CASE("write and read", "[api_ivf_pq_index]") {
   auto ctx = tiledb::Context{};
-  std::string api_ivf_pq_index_uri =
+  std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
   tiledb::VFS vfs(ctx);
-  if (vfs.is_dir(api_ivf_pq_index_uri)) {
-    vfs.remove_dir(api_ivf_pq_index_uri);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
   }
 
   auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
@@ -524,9 +524,9 @@ TEST_CASE("write and read", "[api_ivf_pq_index]") {
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set);
   a.add(training_set);
-  a.write_index(ctx, api_ivf_pq_index_uri);
+  a.write_index(ctx, index_uri);
 
-  auto b = IndexIVFPQ(ctx, api_ivf_pq_index_uri);
+  auto b = IndexIVFPQ(ctx, index_uri);
 
   CHECK(dimensions(a) == dimensions(b));
   CHECK(a.feature_type() == b.feature_type());
@@ -561,10 +561,10 @@ TEST_CASE("read index and query", "[api_ivf_pq_index]") {
 
   size_t k_nn = 10;
 
-  std::string api_ivf_pq_index_uri =
+  std::string index_uri =
       (std::filesystem::temp_directory_path() / "api_ivf_pq_index").string();
-  if (vfs.is_dir(api_ivf_pq_index_uri)) {
-    vfs.remove_dir(api_ivf_pq_index_uri);
+  if (vfs.is_dir(index_uri)) {
+    vfs.remove_dir(index_uri);
   }
 
   auto a = IndexIVFPQ(std::make_optional<IndexOptions>(
@@ -576,19 +576,19 @@ TEST_CASE("read index and query", "[api_ivf_pq_index]") {
   auto training_set = FeatureVectorArray(ctx, siftsmall_inputs_uri);
   a.train(training_set);
   a.add(training_set);
-  a.write_index(ctx, api_ivf_pq_index_uri);
+  a.write_index(ctx, index_uri);
 
   auto query_set = FeatureVectorArray(ctx, siftsmall_query_uri);
   auto groundtruth_set = FeatureVectorArray(ctx, siftsmall_groundtruth_uri);
 
   std::unique_ptr<IndexIVFPQ> b;
   SECTION("infinite") {
-    b = std::make_unique<IndexIVFPQ>(ctx, api_ivf_pq_index_uri);
+    b = std::make_unique<IndexIVFPQ>(ctx, index_uri);
   }
   SECTION("finite") {
     size_t upper_bound = GENERATE(500, 1000);
     b = std::make_unique<IndexIVFPQ>(
-        ctx, api_ivf_pq_index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
+        ctx, index_uri, IndexLoadStrategy::PQ_OOC, upper_bound);
     CHECK(b->upper_bound() == upper_bound);
   }
 

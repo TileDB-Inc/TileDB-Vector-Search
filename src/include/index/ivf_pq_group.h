@@ -163,34 +163,38 @@ class ivf_pq_group : public base_index_group<index_type> {
   /*****************************************************************************
    * Inverted index information: centroids, index, pq_parts, ids
    ****************************************************************************/
-  [[nodiscard]] auto cluster_centroids_uri() const {
-    return this->array_key_to_uri("cluster_centroids_array_name");
-  }
   [[nodiscard]] auto flat_ivf_centroids_uri() const {
     return this->array_key_to_uri("flat_ivf_centroids_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_indices_uri() const {
-    return this->array_key_to_uri("pq_ivf_indices_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_ids_uri() const {
-    return this->array_key_to_uri("pq_ivf_ids_array_name");
-  }
-  [[nodiscard]] auto pq_ivf_vectors_uri() const {
-    return this->array_key_to_uri("pq_ivf_vectors_array_name");
-  }
-
-  [[nodiscard]] auto cluster_centroids_array_name() const {
-    return this->array_key_to_array_name("cluster_centroids_array_name");
   }
   [[nodiscard]] auto flat_ivf_centroids_array_name() const {
     return this->array_key_to_array_name("flat_ivf_centroids_array_name");
   }
+
+  [[nodiscard]] auto cluster_centroids_uri() const {
+    return this->array_key_to_uri("cluster_centroids_array_name");
+  }
+  [[nodiscard]] auto cluster_centroids_array_name() const {
+    return this->array_key_to_array_name("cluster_centroids_array_name");
+  }
+
+  [[nodiscard]] auto pq_ivf_indices_uri() const {
+    return this->array_key_to_uri("pq_ivf_indices_array_name");
+  }
   [[nodiscard]] auto pq_ivf_indices_array_name() const {
     return this->array_key_to_array_name("pq_ivf_indices_array_name");
+  }
+
+  [[nodiscard]] auto pq_ivf_ids_uri() const {
+    return this->array_key_to_uri("pq_ivf_ids_array_name");
   }
   [[nodiscard]] auto pq_ivf_ids_array_name() const {
     return this->array_key_to_array_name("pq_ivf_ids_array_name");
   }
+
+  [[nodiscard]] auto pq_ivf_vectors_uri() const {
+    return this->array_key_to_uri("pq_ivf_vectors_array_name");
+  }
+
   [[nodiscard]] auto pq_ivf_vectors_array_name() const {
     return this->array_key_to_array_name("pq_ivf_vectors_array_name");
   }
@@ -205,6 +209,9 @@ class ivf_pq_group : public base_index_group<index_type> {
     metadata_.num_subspaces_ = num_subspaces;
   }
 
+  uint32_t get_sub_dimensions() const {
+    return metadata_.sub_dimensions_;
+  }
   void set_sub_dimensions(uint32_t sub_dimensions) {
     metadata_.sub_dimensions_ = sub_dimensions;
   }

@@ -495,28 +495,28 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
     # number of columns in the indexed data.
     size = 1000
     indexes = ["FLAT", "IVF_FLAT", "VAMANA", "IVF_PQ"]
-    num_columns_in_vector = [1, 2, 3, 4, 5, 10]
+    dimensions_in_ingestion = [1, 2, 3, 4, 5, 10]
     for index_type in indexes:
-        for num_columns in num_columns_in_vector:
-            index_uri = os.path.join(tmp_path, f"array_{index_type}_{num_columns}")
-            dataset_dir = os.path.join(tmp_path, f"dataset_{index_type}_{num_columns}")
+        for dimensions in dimensions_in_ingestion:
+            index_uri = os.path.join(tmp_path, f"array_{index_type}_{dimensions}")
+            dataset_dir = os.path.join(tmp_path, f"dataset_{index_type}_{dimensions}")
             create_random_dataset_f32_only_data(
-                nb=size, d=num_columns, centers=1, path=dataset_dir
+                nb=size, d=dimensions, centers=1, path=dataset_dir
             )
             index = ingest(
                 index_type=index_type,
                 index_uri=index_uri,
                 source_uri=os.path.join(dataset_dir, "data.f32bin"),
-                num_subspaces=num_columns,
+                num_subspaces=dimensions,
                 partitions=1,
             )
 
-            # We have created a dataset with num_columns in each vector. Let's try creating queries
+            # We have created a dataset with dimensions in each vector. Let's try creating queries
             # with different numbers of columns and confirming incorrect ones will throw.
-            for num_columns_for_query in range(1, num_columns + 2):
-                query_shape = (1, num_columns_for_query)
+            for dimensions_in_query in range(1, dimensions + 2):
+                query_shape = (1, dimensions_in_query)
                 query = np.random.rand(*query_shape).astype(np.float32)
-                if query.shape[1] == num_columns:
+                if query.shape[1] == dimensions:
                     index.query(query, k=1, nprobe=1)
                 else:
                     with pytest.raises(TypeError):

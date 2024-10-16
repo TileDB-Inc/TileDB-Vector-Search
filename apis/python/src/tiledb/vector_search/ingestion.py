@@ -1738,9 +1738,7 @@ def ingest(
             if part_end > end:
                 part_end = end
 
-            str(part) + "-" + str(part_end)
             part_id = int(part / batch)
-            part_id * (partitions + 1)
 
             logger.debug("Input vectors start_pos: %d, end_pos: %d", part, part_end)
             updated_ids = read_updated_ids(
