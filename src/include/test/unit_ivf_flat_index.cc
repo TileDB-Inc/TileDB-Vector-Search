@@ -239,7 +239,7 @@ TEST_CASE("debug w/ sk", "[ivf_index]") {
 
 TEST_CASE("ivf_index write and read", "[ivf_index]") {
   size_t dimension = 128;
-  size_t nlist = 100;
+  size_t partitions = 100;
   size_t k_nn = 10;
   size_t nthreads = 1;
 
@@ -253,8 +253,8 @@ TEST_CASE("ivf_index write and read", "[ivf_index]") {
   auto training_set = tdbColMajorMatrix<float>(ctx, siftsmall_inputs_uri, 0);
   load(training_set);
 
-  auto idx =
-      ivf_flat_index<float, uint32_t, uint32_t>(/*dimension,*/ nlist, nthreads);
+  auto idx = ivf_flat_index<float, uint32_t, uint32_t>(
+      /*dimension,*/ partitions, nthreads);
 
   idx.train(training_set, kmeans_init::kmeanspp);
   idx.add(training_set);
@@ -295,17 +295,17 @@ TEMPLATE_TEST_CASE(
   }
 
   // Test with just a single partition -- should match flat index
-  SECTION("nlist = 1") {
+  SECTION("partitions = 1") {
     size_t k_nn = 6;
-    size_t nlist = 1;
+    size_t partitions = 1;
 
     auto ivf_idx2 = ivf_flat_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 4, 1.e-4);  // dim nlist maxiter eps nthreads
+        /*128,*/ partitions, 4, 1.e-4);  // dim partitions maxiter eps nthreads
     ivf_idx2.train(hypercube2);
     ivf_idx2.add(hypercube2);
 
     auto ivf_idx4 = ivf_flat_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ nlist, 4, 1.e-4);
+        /*128,*/ partitions, 4, 1.e-4);
     ivf_idx4.train(hypercube4);
     ivf_idx4.add(hypercube4);
 
@@ -372,11 +372,11 @@ TEMPLATE_TEST_CASE(
 // @todo Use a fixed seed for initializing kmeans
 TEST_CASE("Build index and query in place, infinite", "[ivf_index]") {
   tiledb::Context ctx;
-  size_t nlist = GENERATE(1, 100);
+  size_t partitions = GENERATE(1, 100);
   using s = siftsmall_test_init_defaults;
   using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init<index>(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, partitions);
 
   auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
       init.nprobe,
@@ -419,11 +419,11 @@ TEST_CASE("Build index and query in place, infinite", "[ivf_index]") {
 
 TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
   tiledb::Context ctx;
-  size_t nlist = GENERATE(/*1,*/ 100);
+  size_t partitions = GENERATE(/*1,*/ 100);
   using s = siftsmall_test_init_defaults;
   using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init<index>(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, partitions);
 
   auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
       init.nprobe,
@@ -467,11 +467,11 @@ TEST_CASE("Build index, write, read and query, infinite", "[ivf_index]") {
 
 TEST_CASE("Build index, write, read and query, finite", "[ivf_index]") {
   tiledb::Context ctx;
-  size_t nlist = GENERATE(/*1,*/ 100);
+  size_t partitions = GENERATE(/*1,*/ 100);
   using s = siftsmall_test_init_defaults;
   using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init<index>(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, partitions);
 
   auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
       init.nprobe,
@@ -510,12 +510,12 @@ TEST_CASE("Build index, write, read and query, finite", "[ivf_index]") {
 TEST_CASE(
     "Build index, write, read and query, finite, out of core", "[ivf_index]") {
   tiledb::Context ctx;
-  size_t nlist = 100;
+  size_t partitions = 100;
   size_t upper_bound = GENERATE(1000, 5000);
   using s = siftsmall_test_init_defaults;
   using index = ivf_flat_index<s::feature_type, s::id_type, s::px_type>;
 
-  auto init = siftsmall_test_init<index>(ctx, nlist);
+  auto init = siftsmall_test_init<index>(ctx, partitions);
 
   auto&& [nprobe, k_nn, nthreads, max_iterations, tolerance] = std::tie(
       init.nprobe,
@@ -563,7 +563,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
 
   auto k_nn = 10;
   auto nprobe = 20;
-  auto nlist = 100;
+  auto partitions = 100;
 
   tiledb::Context ctx;
   auto query_set = tdbColMajorMatrix<float>(ctx, siftsmall_query_uri);
@@ -578,7 +578,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
 
   auto init =
       siftsmall_test_init<ivf_flat_index<feature_type, id_type, px_type>>(
-          ctx, nlist);
+          ctx, partitions);
   std::string tmp_ivf_index_uri =
       (std::filesystem::temp_directory_path() / "tmp_ivf_index").string();
   tiledb::VFS vfs(ctx);
@@ -627,7 +627,7 @@ TEST_CASE("Read from externally written index", "[ivf_index]") {
   size_t intersections1 = count_intersections(top_k_ivf, groundtruth_set, k_nn);
   double recall1 =
       intersections1 / static_cast<double>(top_k_ivf.num_cols() * k_nn);
-  if (nlist == 1) {
+  if (partitions == 1) {
     CHECK(intersections1 == num_vectors(top_k_ivf) * dimensions(top_k_ivf));
     CHECK(recall1 == 1.0);
   }

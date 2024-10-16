@@ -226,7 +226,7 @@ def create(
         id_type=np.dtype(np.uint64).name,
         partitioning_index_type=np.dtype(np.uint64).name,
         dimensions=dimensions,
-        n_list=partitions if (partitions is not None and partitions != -1) else 0,
+        partitions=partitions if (partitions is not None and partitions != -1) else 0,
         num_subspaces=num_subspaces,
         distance_metric=int(distance_metric),
     )

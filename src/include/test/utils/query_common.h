@@ -153,7 +153,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
   using px_type = Base::px_type;
 
   tiledb::Context ctx_;
-  size_t nlist;
+  size_t partitions;
   size_t nprobe;
 
   siftsmall_test_init(
@@ -162,8 +162,8 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
       uint32_t num_subspaces = 0,
       size_t num_vectors = 0)
       : ctx_{ctx}
-      , nlist(nl)
-      , nprobe(std::min<size_t>(10, nlist))
+      , partitions(nl)
+      , nprobe(std::min<size_t>(10, partitions))
       , training_set(tdbColMajorMatrix<feature_type>(
             ctx_, siftsmall_inputs_uri, num_vectors))
       , query_set(tdbColMajorMatrix<feature_type>(ctx_, siftsmall_query_uri))
@@ -172,12 +172,12 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     if constexpr (std::is_same_v<
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
-      idx = IndexType(nlist, max_iterations, convergence_tolerance);
+      idx = IndexType(partitions, max_iterations, convergence_tolerance);
     } else if constexpr (std::is_same_v<
                              IndexType,
                              ivf_pq_index<feature_type, id_type, px_type>>) {
       idx = IndexType(
-          nlist, num_subspaces, max_iterations, convergence_tolerance);
+          partitions, num_subspaces, max_iterations, convergence_tolerance);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }
@@ -236,7 +236,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
 
     size_t intersectionsm1 = count_intersections(top_k, groundtruth_set, k_nn);
     double recallm1 = intersectionsm1 / ((double)top_k.num_cols() * k_nn);
-    if (nlist == 1) {
+    if (partitions == 1) {
       CHECK(
           intersectionsm1 == (size_t)(num_vectors(top_k) * dimensions(top_k)));
       CHECK(recallm1 == 1.0);
@@ -246,7 +246,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     // @todo There is randomness in initialization of kmeans, use a fixed seed
     size_t intersections0 = count_intersections(top_k_ivf, top_k, k_nn);
     double recall0 = intersections0 / ((double)top_k.num_cols() * k_nn);
-    if (nlist == 1) {
+    if (partitions == 1) {
       CHECK(intersections0 == (size_t)(num_vectors(top_k) * dimensions(top_k)));
       CHECK(recall0 == 1.0);
     }
@@ -254,7 +254,7 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     size_t intersections1 =
         (long)count_intersections(top_k_ivf, groundtruth_set, k_nn);
     double recall1 = intersections1 / ((double)top_k_ivf.num_cols() * k_nn);
-    if (nlist == 1) {
+    if (partitions == 1) {
       CHECK(intersections1 == (size_t)(num_vectors(top_k) * dimensions(top_k)));
       CHECK(recall1 == 1.0);
     }

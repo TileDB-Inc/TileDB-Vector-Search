@@ -506,9 +506,11 @@ void init_type_erased_module(py::module_& m) {
           "train",
           [](IndexIVFPQ& index,
              const FeatureVectorArray& vectors,
-             std::optional<size_t> nlist) { index.train(vectors, nlist); },
+             std::optional<size_t> partitions) {
+            index.train(vectors, partitions);
+          },
           py::arg("vectors"),
-          py::arg("nlist") = std::nullopt)
+          py::arg("partitions") = std::nullopt)
       .def(
           "add",
           [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {

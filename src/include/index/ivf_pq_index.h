@@ -283,7 +283,7 @@ class ivf_pq_index {
    * parameters to be used subsequently in training. To fully create an index
    * we will need to call `train()` and `add()`.
    *
-   * @param nlist Number of centroids / partitions to compute.
+   * @param partitions Number of centroids / partitions to compute.
    * @param num_subspaces Number of subspaces to use for pq compression. This is
    * the number of sections to divide the vector into.
    * @param max_iterations Maximum number of iterations for kmeans algorithm.
@@ -304,7 +304,7 @@ class ivf_pq_index {
    * @todo -- May also want start/stop?  Use a variant?  TemporalPolicy?
    */
   ivf_pq_index(
-      size_t nlist = 0,
+      size_t partitions = 0,
       uint32_t num_subspaces = 16,
       uint32_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
@@ -316,7 +316,7 @@ class ivf_pq_index {
       : temporal_policy_{
         temporal_policy.has_value() ? *temporal_policy :
         TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
-      , num_partitions_(nlist)
+      , num_partitions_(partitions)
       , num_subspaces_{num_subspaces}
       , max_iterations_(max_iterations)
       , convergence_tolerance_(convergence_tolerance)
