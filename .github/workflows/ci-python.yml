@@ -45,18 +45,21 @@ jobs:
         env:
           TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
         shell: bash -el {0}
+        # TODO(paris):  This is a temporary job where we will build with numpy2, but run with numpy1.
+        # Remove once the UDFs have numpy2 and do not fail.
+        continue-on-error: true
       - name: Check tiledb-vector-search version
         run: |
           python -c "from tiledb.vector_search.version import version; print(version)"
 
-  # This is a temporary job where we will build with numpy2, but run with numpy1.
+  # TODO(paris): This is a temporary job where we will build with numpy2, but run with numpy1.
+  # Remove once the UDFs have numpy2 and do not fail.
   run-tests-numpy-1:
     strategy:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.9"]
     runs-on: ${{ matrix.os }}
-    continue-on-error: true
     steps:
       - name: Install OpenBLAS
         run: sudo apt install libopenblas-dev

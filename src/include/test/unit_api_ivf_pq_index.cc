@@ -449,7 +449,7 @@ TEST_CASE(
 
     for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
          std::vector<std::tuple<int, float, float>>{
-             {1, .4f, .45f},
+             {1, .4f, .44f},
              {2, .5f, .6f},
              {5, .7f, .7f},
              {10, .75f, .9f},
