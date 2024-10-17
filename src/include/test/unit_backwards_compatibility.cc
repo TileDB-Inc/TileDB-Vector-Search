@@ -36,9 +36,11 @@
 #include "api/feature_vector_array.h"
 #include "api/ivf_flat_index.h"
 #include "api/vamana_index.h"
+#include "api/ivf_pq_index.h"
 #include "detail/linalg/matrix.h"
 #include "index/ivf_flat_index.h"
 #include "index/vamana_index.h"
+#include "index/ivf_pq_index.h"
 #include "mdspan/mdspan.hpp"
 #include "test/utils/array_defs.h"
 
@@ -134,6 +136,27 @@ TEST_CASE("test_query_old_indices", "[backwards_compatibility]") {
 
         // Next check that we can load the metadata.
         auto metadata = vamana_index_metadata();
+        metadata.load_metadata(read_group);
+      } else if (index_uri.find("ivf_pq") != std::string::npos) {
+        // First check that we can query the index.
+        auto index = IndexIVFPQ(ctx, index_uri);
+        auto&& [scores, ids] = index.query(queries_feature_vector_array, 1, 10);
+        auto scores_span =
+            MatrixView<siftsmall_feature_type, stdx::layout_left>{
+                (siftsmall_feature_type*)scores.data(),
+                extents(scores)[0],
+                extents(scores)[1]};
+
+        auto ids_span = MatrixView<siftsmall_ids_type, stdx::layout_left>{
+            (siftsmall_ids_type*)ids.data(), extents(ids)[0], extents(ids)[1]};
+
+        for (size_t i = 0; i < query_indices.size(); ++i) {
+          CHECK(ids_span[0][i] == query_indices[i]);
+          CHECK(scores_span[0][i] == 0);
+        }
+
+        // Next check that we can load the metadata.
+        auto metadata = ivf_pq_metadata();
         metadata.load_metadata(read_group);
       } else {
         REQUIRE(false);

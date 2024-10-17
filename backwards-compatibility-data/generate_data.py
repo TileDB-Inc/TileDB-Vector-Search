@@ -66,7 +66,7 @@ def generate_indexes(version):
     queries = base[indices]
 
     # Generate each index and query to make sure it works before we write it.
-    index_types = ["FLAT", "IVF_FLAT", "VAMANA"]
+    index_types = ["FLAT", "IVF_FLAT", "VAMANA", "IVF_PQ"]
     data_types = ["float32", "uint8"]
     for index_type in index_types:
         for data_type in data_types:
@@ -75,6 +75,7 @@ def generate_indexes(version):
                 index_type=index_type,
                 index_uri=index_uri,
                 input_vectors=base.astype(data_type),
+                num_subspaces=len(base[0])
             )
 
             result_d, result_i = index.query(queries, k=1)
