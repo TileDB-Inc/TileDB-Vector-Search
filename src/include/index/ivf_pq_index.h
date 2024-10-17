@@ -1185,11 +1185,13 @@ class ivf_pq_index {
         auto sub_end = sub_begin + sub_dimensions_;
         for (size_t centroid_id = 0; centroid_id < num_clusters_;
              ++centroid_id) {
-          float pq_distance = local_distance(
-              query_vectors[i],
-              cluster_centroids_[centroid_id],
-              sub_begin,
-              sub_end);
+          float pq_distance = centroid_id >= cluster_centroids_.num_cols() ?
+                                  std::numeric_limits<float>::max() :
+                                  local_distance(
+                                      query_vectors[i],
+                                      cluster_centroids_[centroid_id],
+                                      sub_begin,
+                                      sub_end);
           pqv[i][sub_id + centroid_id] = pq_distance;
         }
         sub_begin = sub_end;

@@ -78,13 +78,11 @@ class ivf_pq_group : public base_index_group<index_type> {
   tiledb_filter_type_t default_compression;
 
   int32_t compute_tile_size() const {
-    if (this->get_dimensions() == 0) {
-      return (int32_t)(tile_size_bytes /
-                       sizeof(typename index_type::feature_type) / 100);
-    }
-    return (int32_t)(tile_size_bytes /
-                     sizeof(typename index_type::feature_type) /
-                     this->get_dimensions());
+    auto dimensions_to_use =
+        this->get_dimensions() == 0 ? 100 : this->get_dimensions();
+    return static_cast<int32_t>(
+        tile_size_bytes / sizeof(typename index_type::feature_type) /
+        dimensions_to_use);
   }
 
  public:

@@ -155,8 +155,8 @@ TEST_CASE("write constructor - invalid create and read", "[ivf_pq_group]") {
 
   {
     uint64_t dimensions = 100;
-    auto num_clusters = 110;
-    auto num_subspaces = 120;
+    uint32_t num_clusters = 110;
+    uint32_t num_subspaces = 120;
     ivf_pq_group x = ivf_pq_group<dummy_index>(
         ctx,
         tmp_uri,
@@ -481,7 +481,7 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[ivf_pq_group]") {
   CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
-  CHECK(x.get_temp_size() == expected_temp_size + offset);
+  CHECK(x.get_temp_size() == expected_temp_size + static_cast<int64_t>(offset));
   CHECK(x.get_dimensions() == dimensions + offset);
 }
 
@@ -547,7 +547,7 @@ TEST_CASE("storage version", "[ivf_pq_group]") {
   CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_partitions() == expected_partitions + offset);
-  CHECK(x.get_temp_size() == expected_temp_size + offset);
+  CHECK(x.get_temp_size() == expected_temp_size + static_cast<int64_t>(offset));
   CHECK(x.get_dimensions() == dimensions + offset);
 }
 

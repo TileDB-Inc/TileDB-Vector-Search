@@ -1289,7 +1289,7 @@ TEST_CASE("vamana_index geometric 2D graph", "[vamana]") {
   auto idx = vamana_index<siftsmall_feature_type, siftsmall_ids_type>(
       num_vectors(training_set), l_build, r_max_degree);
   std::vector<siftsmall_ids_type> ids(num_nodes);
-  auto ids_start = 10;
+  siftsmall_ids_type ids_start = 10;
   std::iota(begin(ids), end(ids), ids_start);
   idx.train(training_set, ids);
 

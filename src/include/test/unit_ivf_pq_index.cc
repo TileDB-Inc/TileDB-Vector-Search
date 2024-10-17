@@ -54,13 +54,13 @@ struct dummy_pq_index {
   uint32_t num_subspaces() const {
     return 16;
   }
-  auto num_clusters() const {
+  uint32_t num_clusters() const {
     return 256;
   }
-  auto sub_dimensions() const {
+  uint32_t sub_dimensions() const {
     return 8;
   }
-  auto bits_per_subspace() const {
+  uint32_t bits_per_subspace() const {
     return 8;
   }
 };
@@ -821,7 +821,7 @@ TEST_CASE("pq encoding has no error with <= 256 vectors", "[ivf_pq_index]") {
   size_t partitions = 16;
   size_t dimensions = 300;
   uint32_t num_subspaces = dimensions;
-  for (auto num_vectors : std::vector<size_t>{255, 256, 257}) {
+  for (size_t num_vectors : std::vector<size_t>{255, 256, 257}) {
     if (vfs.is_dir(index_uri)) {
       vfs.remove_dir(index_uri);
     }
@@ -833,8 +833,8 @@ TEST_CASE("pq encoding has no error with <= 256 vectors", "[ivf_pq_index]") {
 
     std::vector<std::vector<feature_type>> vectors(num_vectors);
     std::vector<id_type> vector_ids(num_vectors);
-    for (int i = 0; i < num_vectors; ++i) {
-      for (int j = 0; j < dimensions; ++j) {
+    for (size_t i = 0; i < num_vectors; ++i) {
+      for (size_t j = 0; j < dimensions; ++j) {
         feature_type value = (feature_type)rand() / RAND_MAX;
         vectors[i].push_back(value);
       }

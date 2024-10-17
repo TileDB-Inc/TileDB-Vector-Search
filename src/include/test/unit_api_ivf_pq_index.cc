@@ -1003,11 +1003,13 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
     auto queries = ColMajorMatrix<feature_type_type>{{{1, 1, 1}}};
     auto&& [scores, ids] =
         index.query(FeatureVectorArray(queries), top_k, nprobe);
+
     check_single_vector_equals(
         scores,
         ids,
         {std::numeric_limits<float>::max()},
         {std::numeric_limits<uint32_t>::max()});
+
     auto&& [scores_with_reranking, ids_with_reranking] =
         index.query(FeatureVectorArray(queries), top_k, nprobe, k_factor);
     check_single_vector_equals(
@@ -1052,7 +1054,6 @@ TEST_CASE("write and load index with timestamps", "[api_ivf_pq_index]") {
         convergence_tolerance);
     CHECK(typed_index.group().get_reassign_ratio() == reassign_ratio);
   }
-
   // Clear history for <= 99 and then load at 99, then make sure we cannot
   // query.
   IndexIVFPQ::clear_history(ctx, index_uri, 99);

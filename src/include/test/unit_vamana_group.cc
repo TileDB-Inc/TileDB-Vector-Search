@@ -353,7 +353,7 @@ TEST_CASE("group metadata - bases, ingestions, partitions", "[vamana_group]") {
   CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_edges() == expected_partitions + offset);
-  CHECK(x.get_temp_size() == expected_temp_size + offset);
+  CHECK(x.get_temp_size() == expected_temp_size + static_cast<int64_t>(offset));
   CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
@@ -410,7 +410,7 @@ TEST_CASE("storage version", "[vamana_group]") {
   CHECK(x.get_previous_ingestion_timestamp() == expected_ingestion + offset);
   CHECK(x.get_previous_base_size() == expected_base + offset);
   CHECK(x.get_previous_num_edges() == expected_partitions + offset);
-  CHECK(x.get_temp_size() == expected_temp_size + offset);
+  CHECK(x.get_temp_size() == expected_temp_size + static_cast<int64_t>(offset));
   CHECK(x.get_dimensions() == expected_dimension + offset);
 }
 
