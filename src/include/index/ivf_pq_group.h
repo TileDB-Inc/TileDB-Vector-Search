@@ -347,15 +347,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     auto write_group = tiledb::Group(
         cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
 
-    // First remove the temp_data group if it exists. This can happen if we
-    // ingest multiple times.
-    // if (tiledb::Object::object(
-    //         cached_ctx_, this->temp_data_uri(partial_write_array_dir))
-    //         .type() == tiledb::Object::Type::Group) {
-    //   tiledb::Object::remove(
-    //       cached_ctx_, this->temp_data_uri(partial_write_array_dir));
-    // }
-
     // Then create the new temp data group.
     tiledb::Group::create(
         cached_ctx_, this->temp_data_uri(partial_write_array_dir));

@@ -513,11 +513,7 @@ class base_index_group {
     return (std::filesystem::path{group_uri_} /
             std::filesystem::path{partial_write_array_dir})
         .string();
-    // return array_key_to_uri("partial_write_array_dir");
   }
-  // [[nodiscard]] std::string temp_data_name() const {
-  //   return array_key_to_array_name("partial_write_array_dir");
-  // }
 
   [[nodiscard]] tiledb::Context& cached_ctx() {
     return cached_ctx_;
