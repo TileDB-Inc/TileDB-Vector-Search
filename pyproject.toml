@@ -17,12 +17,13 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
 ]
 
+# These are the runtime depdendencies.
 dependencies = [
     "tiledb-cloud>=0.11",
     "tiledb>=0.32.0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
-    "numpy<2.0.0",
+    "numpy>=1.25.0",
 ]
 
 [project.optional-dependencies]
@@ -34,8 +35,9 @@ benchmarks = ["boto3", "paramiko", "matplotlib"]
 homepage = "https://tiledb.com"
 repository = "https://github.com/TileDB-Inc/tiledb-vector-search"
 
+# These are the build-time depdendencies.
 [build-system]
-requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm"]
+requires = ["scikit-build-core[pyproject]", "pybind11", "setuptools-scm", "numpy>=2.0.0"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
@@ -64,6 +66,9 @@ TILEDB_PATH = {env="TILEDB_PATH"}
 
 [tool.setuptools_scm]
 version_file = "apis/python/src/tiledb/vector_search/version.py"
+
+[tool.ruff.lint]
+select = ["NPY201"]
 
 [tool.ruff]
 extend-select = ["I"]

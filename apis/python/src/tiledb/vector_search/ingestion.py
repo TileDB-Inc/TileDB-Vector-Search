@@ -411,13 +411,13 @@ def ingest(
     ) -> Tuple[int, int, np.dtype]:
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
-            size = schema.domain.dim(1).domain[1] + 1
-            dimensions = schema.domain.dim(0).domain[1] + 1
+            size = np.int64(schema.domain.dim(1).domain[1]) + 1
+            dimensions = np.int64(schema.domain.dim(0).domain[1]) + 1
             return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_SPARSE_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
-            size = schema.domain.dim(0).domain[1] + 1
-            dimensions = schema.domain.dim(1).domain[1] + 1
+            size = np.int64(schema.domain.dim(0).domain[1]) + 1
+            dimensions = np.int64(schema.domain.dim(1).domain[1]) + 1
             return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(source_uri, "r", config=config) as source_array:
@@ -1491,8 +1491,13 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                # NOTE: We add kind='sort' as a workaround to this bug: https://github.com/numpy/numpy/issues/26922
                 updates_filter = np.in1d(
-                    external_ids, updated_ids, assume_unique=True, invert=True
+                    external_ids,
+                    updated_ids,
+                    assume_unique=True,
+                    invert=True,
+                    kind="sort",
                 )
                 in_vectors = in_vectors[updates_filter]
                 external_ids = external_ids[updates_filter]
@@ -1613,8 +1618,13 @@ def ingest(
                 )
 
                 # Then check if the external id is in the updated ids.
+                # NOTE: We add kind='sort' as a workaround to this bug: https://github.com/numpy/numpy/issues/26922
                 updates_filter = np.in1d(
-                    external_ids, updated_ids, assume_unique=True, invert=True
+                    external_ids,
+                    updated_ids,
+                    assume_unique=True,
+                    invert=True,
+                    kind="sort",
                 )
                 # We only keep the vectors and external ids that are not in the updated ids.
                 in_vectors = in_vectors[updates_filter]
@@ -1967,7 +1977,7 @@ def ingest(
                 prev_index = partial_indexes[i]
                 i += 1
                 for partition_id in range(partitions):
-                    s = slice(int(prev_index), int(partial_indexes[i] - 1))
+                    s = slice(int(prev_index), int(partial_indexes[i]) - 1)
                     if (
                         s.start <= s.stop
                         and s.start != np.iinfo(np.dtype("uint64")).max
