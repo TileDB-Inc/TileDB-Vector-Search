@@ -75,7 +75,7 @@ def generate_indexes(version):
                 index_type=index_type,
                 index_uri=index_uri,
                 input_vectors=base.astype(data_type),
-                num_subspaces=len(base[0])
+                num_subspaces=len(base[0]),
             )
 
             result_d, result_i = index.query(queries, k=1)

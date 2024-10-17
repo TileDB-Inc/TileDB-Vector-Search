@@ -35,12 +35,12 @@
 #include <iostream>
 #include "api/feature_vector_array.h"
 #include "api/ivf_flat_index.h"
-#include "api/vamana_index.h"
 #include "api/ivf_pq_index.h"
+#include "api/vamana_index.h"
 #include "detail/linalg/matrix.h"
 #include "index/ivf_flat_index.h"
-#include "index/vamana_index.h"
 #include "index/ivf_pq_index.h"
+#include "index/vamana_index.h"
 #include "mdspan/mdspan.hpp"
 #include "test/utils/array_defs.h"
 

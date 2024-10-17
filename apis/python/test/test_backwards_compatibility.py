@@ -2,9 +2,9 @@ from common import *
 
 from tiledb.vector_search.flat_index import FlatIndex
 from tiledb.vector_search.ivf_flat_index import IVFFlatIndex
+from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 from tiledb.vector_search.utils import load_fvecs
 from tiledb.vector_search.vamana_index import VamanaIndex
-from tiledb.vector_search.ivf_pq_index import IVFPQIndex
 
 MINIMUM_ACCURACY = 0.85
 
