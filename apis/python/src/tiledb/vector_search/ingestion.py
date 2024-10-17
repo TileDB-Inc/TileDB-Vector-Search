@@ -1916,7 +1916,7 @@ def ingest(
                         start=part,
                         end=part_end,
                         partition_start=part_id * (partitions + 1),
-                        partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR
+                        partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
                     )
                 else:
                     ivf_index_tdb(
@@ -1974,7 +1974,7 @@ def ingest(
                         start=part,
                         end=part_end,
                         partition_start=part_id * (partitions + 1),
-                        partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR
+                        partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
                     )
                 else:
                     ivf_index(
@@ -2065,7 +2065,7 @@ def ingest(
                 start=write_offset,
                 end=0,
                 partition_start=partition_start,
-                partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR
+                partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
             )
         else:
             ivf_index(
@@ -2158,12 +2158,12 @@ def ingest(
             to_temporal_policy(index_timestamp),
         )
         index.consolidate_partitions(
-            partitions=partitions, 
-            work_items=work_items, 
-            partition_id_start=partition_id_start, 
-            partition_id_end=partition_id_end, 
+            partitions=partitions,
+            work_items=work_items,
+            partition_id_start=partition_id_start,
+            partition_id_end=partition_id_end,
             batch=batch,
-            partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR
+            partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
         )
 
     def consolidate_partition_udf(

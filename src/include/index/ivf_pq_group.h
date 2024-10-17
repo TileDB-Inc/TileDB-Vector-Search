@@ -338,8 +338,6 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, flat_ivf_centroids_uri(), flat_ivf_centroids_array_name());
 
-    // create_temp_data_group();
-
     metadata_.store_metadata(write_group);
   }
 
@@ -347,7 +345,7 @@ class ivf_pq_group : public base_index_group<index_type> {
     auto write_group = tiledb::Group(
         cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
 
-    // Then create the new temp data group.
+    // Create the new temp data group.
     tiledb::Group::create(
         cached_ctx_, this->temp_data_uri(partial_write_array_dir));
     tiledb_helpers::add_to_group(
@@ -355,7 +353,7 @@ class ivf_pq_group : public base_index_group<index_type> {
         this->temp_data_uri(partial_write_array_dir),
         partial_write_array_dir);
 
-    // Finally create the array's in the temp data group that we will need
+    // Then create the array's in the temp data group that we will need
     // during ingestion.
     auto temp_group = tiledb::Group(
         cached_ctx_,
