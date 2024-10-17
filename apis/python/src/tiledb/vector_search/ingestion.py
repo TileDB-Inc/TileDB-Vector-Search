@@ -317,16 +317,11 @@ def ingest(
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[storage_version][
         "EXTERNAL_IDS_ARRAY_NAME"
     ]
-    if index_type == "IVF_PQ":
-        PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version][
-            "PARTIAL_WRITE_ARRAY_DIR"
-        ]
-    else:
-        PARTIAL_WRITE_ARRAY_DIR = (
-            storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
-            + "_"
-            + "".join(random.choices(string.ascii_letters, k=10))
-        )
+    PARTIAL_WRITE_ARRAY_DIR = (
+        storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
+        + "_"
+        + "".join(random.choices(string.ascii_letters, k=10))
+    )
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
 
     # This is used to auto-configure `input_vectors_per_work_item`
@@ -603,13 +598,26 @@ def ingest(
         group: tiledb.Group,
     ) -> tiledb.Group:
         partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
-        try:
-            tiledb.group_create(partial_write_array_dir_uri)
-            add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "already exists" not in message:
-                raise err
+        if index_type == "IVF_PQ":
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexIVFPQ(
+                ctx,
+                index_group_uri,
+                vspy.IndexLoadStrategy.PQ_INDEX,
+                0,
+                to_temporal_policy(index_timestamp),
+            )
+            index.create_temp_data_group(PARTIAL_WRITE_ARRAY_DIR)
+        else:
+            try:
+                tiledb.group_create(partial_write_array_dir_uri)
+                add_to_group(
+                    group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR
+                )
+            except tiledb.TileDBError as err:
+                message = str(err)
+                if "already exists" not in message:
+                    raise err
         return tiledb.Group(partial_write_array_dir_uri, "w")
 
     def create_partial_write_array_group(
@@ -779,16 +787,6 @@ def ingest(
                 create_index_array=True,
                 asset_creation_threads=asset_creation_threads,
             )
-        elif index_type == "IVF_PQ":
-            ctx = vspy.Ctx(config)
-            index = vspy.IndexIVFPQ(
-                ctx,
-                index_group_uri,
-                vspy.IndexLoadStrategy.PQ_INDEX,
-                0,
-                to_temporal_policy(index_timestamp),
-            )
-            index.create_temp_data_group()
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
         elif not is_type_erased_index(index_type):
@@ -1294,9 +1292,13 @@ def ingest(
             else np.empty((0, dimensions), dtype=vector_type)
         )
 
-        # Filter out the updated vectors from the sample vectors.
+        # NOTE: We add kind='sort' as a workaround to this bug: https://github.com/numpy/numpy/issues/26922
         updates_filter = np.in1d(
-            external_ids, updated_ids, assume_unique=True, invert=True
+            external_ids,
+            updated_ids,
+            assume_unique=True,
+            invert=True,
+            kind="sort",
         )
         sample_vectors = sample_vectors[updates_filter]
 
@@ -1922,6 +1924,7 @@ def ingest(
                         start=part,
                         end=part_end,
                         partition_start=part_id * (partitions + 1),
+                        partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
                     )
                 else:
                     ivf_index_tdb(
@@ -1979,6 +1982,7 @@ def ingest(
                         start=part,
                         end=part_end,
                         partition_start=part_id * (partitions + 1),
+                        partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
                     )
                 else:
                     ivf_index(
@@ -2069,6 +2073,7 @@ def ingest(
                 start=write_offset,
                 end=0,
                 partition_start=partition_start,
+                partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
             )
         else:
             ivf_index(
@@ -2161,7 +2166,12 @@ def ingest(
             to_temporal_policy(index_timestamp),
         )
         index.consolidate_partitions(
-            partitions, work_items, partition_id_start, partition_id_end, batch
+            partitions=partitions,
+            work_items=work_items,
+            partition_id_start=partition_id_start,
+            partition_id_end=partition_id_end,
+            batch=batch,
+            partial_write_array_dir=PARTIAL_WRITE_ARRAY_DIR,
         )
 
     def consolidate_partition_udf(

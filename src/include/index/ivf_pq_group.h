@@ -61,7 +61,6 @@ class ivf_pq_group : public base_index_group<index_type> {
   using Base = base_index_group<index_type>;
 
   using Base::array_key_to_array_name_;
-  using Base::array_name_to_temp_uri_;
   using Base::array_name_to_uri_;
   using Base::cached_ctx_;
   using Base::group_uri_;
@@ -135,10 +134,6 @@ class ivf_pq_group : public base_index_group<index_type> {
       array_key_to_array_name_[array_key] = array_name;
       array_name_to_uri_[array_name] =
           array_name_to_uri(group_uri_, array_name);
-      array_name_to_temp_uri_[array_name] = array_name_to_temp_uri(
-          group_uri_,
-          storage_formats[version_]["partial_write_array_dir"],
-          array_name);
     }
   }
 
@@ -209,8 +204,10 @@ class ivf_pq_group : public base_index_group<index_type> {
   [[nodiscard]] auto pq_ivf_vectors_uri() const {
     return this->array_key_to_uri("pq_ivf_vectors_array_name");
   }
-  [[nodiscard]] auto pq_ivf_vectors_temp_uri() const {
-    return this->array_key_to_temp_uri("pq_ivf_vectors_array_name");
+  [[nodiscard]] auto pq_ivf_vectors_temp_uri(
+      const std::string& partial_write_array_dir) const {
+    return this->array_key_to_temp_uri(
+        "pq_ivf_vectors_array_name", partial_write_array_dir);
   }
   [[nodiscard]] auto pq_ivf_vectors_array_name() const {
     return this->array_key_to_array_name("pq_ivf_vectors_array_name");
@@ -341,39 +338,41 @@ class ivf_pq_group : public base_index_group<index_type> {
     tiledb_helpers::add_to_group(
         write_group, flat_ivf_centroids_uri(), flat_ivf_centroids_array_name());
 
-    create_temp_data_group();
-
     metadata_.store_metadata(write_group);
   }
 
-  void create_temp_data_group() {
+  void create_temp_data_group(const std::string& partial_write_array_dir) {
     auto write_group = tiledb::Group(
         cached_ctx_, group_uri_, TILEDB_WRITE, cached_ctx_.config());
 
-    // First remove the temp_data group if it exists. This can happen if we
-    // ingest multiple times.
-    if (tiledb::Object::object(cached_ctx_, this->temp_data_uri()).type() ==
-        tiledb::Object::Type::Group) {
-      tiledb::Object::remove(cached_ctx_, this->temp_data_uri());
-    }
-
-    // Then create the new temp data group.
-    tiledb::Group::create(cached_ctx_, this->temp_data_uri());
+    // Create the new temp data group.
+    tiledb::Group::create(
+        cached_ctx_, this->temp_data_uri(partial_write_array_dir));
     tiledb_helpers::add_to_group(
-        write_group, this->temp_data_uri(), this->temp_data_name());
+        write_group,
+        this->temp_data_uri(partial_write_array_dir),
+        partial_write_array_dir);
 
-    // Finally create the array's in the temp data group that we will need
+    // Then create the array's in the temp data group that we will need
     // during ingestion.
     auto temp_group = tiledb::Group(
-        cached_ctx_, this->temp_data_uri(), TILEDB_WRITE, cached_ctx_.config());
+        cached_ctx_,
+        this->temp_data_uri(partial_write_array_dir),
+        TILEDB_WRITE,
+        cached_ctx_.config());
 
-    create_feature_vectors_matrix(temp_group, this->feature_vectors_temp_uri());
-    create_ids_vector(temp_group, this->ids_temp_uri(), this->ids_array_name());
+    create_feature_vectors_matrix(
+        temp_group, this->feature_vectors_temp_uri(partial_write_array_dir));
+    create_ids_vector(
+        temp_group,
+        this->ids_temp_uri(partial_write_array_dir),
+        this->ids_array_name());
     create_indices_vector(
         temp_group,
-        this->feature_vectors_index_temp_uri(),
+        this->feature_vectors_index_temp_uri(partial_write_array_dir),
         this->feature_vectors_index_name());
-    create_pq_ivf_vectors_matrix(temp_group, pq_ivf_vectors_temp_uri());
+    create_pq_ivf_vectors_matrix(
+        temp_group, pq_ivf_vectors_temp_uri(partial_write_array_dir));
   }
 
  private:
