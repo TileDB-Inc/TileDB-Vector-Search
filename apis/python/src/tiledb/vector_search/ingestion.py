@@ -1620,8 +1620,13 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
+                # NOTE: We add kind='sort' as a workaround to this bug: https://github.com/numpy/numpy/issues/26922
                 updates_filter = np.in1d(
-                    external_ids, updated_ids, assume_unique=True, invert=True
+                    external_ids,
+                    updated_ids,
+                    assume_unique=True,
+                    invert=True,
+                    kind="sort",
                 )
                 in_vectors = in_vectors[updates_filter]
                 external_ids = external_ids[updates_filter]

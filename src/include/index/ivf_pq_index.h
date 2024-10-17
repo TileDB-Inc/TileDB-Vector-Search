@@ -368,6 +368,11 @@ class ivf_pq_index {
     write_group.store_metadata();
   }
 
+  /**
+   * @brief Create the temp data group.
+   *
+   * @param partial_write_array_dir The directory to write the temp data group.
+   */
   void create_temp_data_group(const std::string& partial_write_array_dir) {
     auto write_group = ivf_pq_group<ivf_pq_index>(
         group_->cached_ctx(),
@@ -938,6 +943,7 @@ class ivf_pq_index {
    * @param partition_id_start The starting partition id.
    * @param partition_id_end The ending partition id.
    * @param batch The batch size.
+   * @param partial_write_array_dir The directory to write the temp arrays.
    */
   void consolidate_partitions(
       size_t partitions,
