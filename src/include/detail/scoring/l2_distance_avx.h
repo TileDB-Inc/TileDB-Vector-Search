@@ -109,7 +109,8 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           std::same_as<typename W::value_type, uint8_t>
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float avx2_sum_of_squares(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
@@ -117,25 +118,32 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
   const size_t stop = size_a - (size_a % 8);
 
   const float* a_ptr = a.data();
-  const uint8_t* b_ptr = b.data();
+  const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
   for (size_t i = start; i < stop; i += 8) {
     // Load 8 floats
-    __m256 a_floats = _mm256_loadu_ps(a_ptr + i + 0);
+    __m256 a_floats = _mm256_loadu_ps(a_ptr + i);
 
     // Load 8 bytes
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
-    __m256i b_ints = _mm256_cvtepu8_epi32(vec_b);
+    // Extend 8 bit to 32 bit ints
+    __m256i b_ints;
+    if constexpr (std::same_as<typename W::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      b_ints = _mm256_cvtepu8_epi32(vec_b);
+    } else {
+      // Sign extend int8_t to int32_t
+      b_ints = _mm256_cvtepi8_epi32(vec_b);
+    }
 
     // Convert signed integers to floats
     __m256 b_floats = _mm256_cvtepi32_ps(b_ints);
 
     // Subtract floats
-    __m256i diff = _mm256_sub_ps(a_floats, b_floats);
+    __m256 diff = _mm256_sub_ps(a_floats, b_floats);
 
     // Square and add with fmadd
     vec_sum = _mm256_fmadd_ps(diff, diff, vec_sum);
@@ -167,15 +175,16 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
  * uint8_t - float
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float avx2_sum_of_squares(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const uint8_t* a_ptr = a.data();
+  const auto* a_ptr = a.data();
   const float* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
@@ -183,18 +192,22 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
   for (size_t i = start; i < stop; i += 8) {
     // Load 8 bytes
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
+    __m256 b_floats = _mm256_loadu_ps(b_ptr + i);
 
-    // Load 8 floats
-    __m256 b_floats = _mm256_loadu_ps(b_ptr + i + 0);
-
-    // Zero extend 8bit to 32bit ints
-    __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
+    __m256i a_ints;
+    if constexpr (std::same_as<typename V::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      a_ints = _mm256_cvtepu8_epi32(vec_a);
+    } else {
+      // Sign extend int8_t to int32_t
+      a_ints = _mm256_cvtepi8_epi32(vec_a);
+    }
 
     // Convert signed integers to floats
     __m256 a_floats = _mm256_cvtepi32_ps(a_ints);
 
     // Subtract floats
-    __m256i diff = _mm256_sub_ps(a_floats, b_floats);
+    __m256 diff = _mm256_sub_ps(a_floats, b_floats);
 
     // Square and add with fmadd
     vec_sum = _mm256_fmadd_ps(diff, diff, vec_sum);
@@ -226,16 +239,18 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
  * uint8_t - uint8_t
  */
 template <class V, class W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, uint8_t>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float avx2_sum_of_squares(const V& a, const W& b) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const uint8_t* a_ptr = a.data();
-  const uint8_t* b_ptr = b.data();
+  const auto* a_ptr = a.data();
+  const auto* b_ptr = b.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -244,36 +259,28 @@ inline float avx2_sum_of_squares(const V& a, const W& b) {
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
     __m128i vec_b = _mm_loadu_si64((__m64*)(b_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
-    __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
-    __m256i b_ints = _mm256_cvtepu8_epi32(vec_b);
+    // Extend 8 bit to 32 bit ints
+    __m256i a_ints, b_ints;
+    if constexpr (std::same_as<typename V::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      a_ints = _mm256_cvtepu8_epi32(vec_a);
+    } else {
+      // Sign extend int8_t to int32_t
+      a_ints = _mm256_cvtepi8_epi32(vec_a);
+    }
 
-    // Two alternatives for computing difference - 2nd seems faster
-#if 0
-    // Convert signed integers to floats
-    __m256 a_floats = _mm256_cvtepi32_ps(a_ints);
-    __m256 b_floats = _mm256_cvtepi32_ps(b_ints);
+    if constexpr (std::same_as<typename W::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      b_ints = _mm256_cvtepu8_epi32(vec_b);
+    } else {
+      // Sign extend int8_t to int32_t
+      b_ints = _mm256_cvtepi8_epi32(vec_b);
+    }
 
-    // Subtract floats
-    __m256i diff = _mm256_sub_ps(a_floats, b_floats);
-#else
-    // Subtract signed integers
-    __m256 i_diff = _mm256_sub_epi32(a_ints, b_ints);
-
-    // Convert integers to floats
+    __m256i i_diff = _mm256_sub_epi32(a_ints, b_ints);
     __m256 diff = _mm256_cvtepi32_ps(i_diff);
-#endif
 
-    // Two alternatives for squaring and accumulating  -- 2nd seems faster
-#if 0
-    // Square and add in two steps
-    __m256 diff_2 = _mm256_mul_ps(diff, diff);
-    vec_sum = _mm256_add_ps(vec_sum, diff_2);
-
-#else
-    // Square and add with fmadd
     vec_sum = _mm256_fmadd_ps(diff, diff, vec_sum);
-#endif
   }
 
   // 8 to 4
@@ -346,14 +353,16 @@ inline float avx2_sum_of_squares(const V& a) {
  * uint8_t
  */
 template <class V>
-  requires std::same_as<typename V::value_type, uint8_t>
+  requires(
+      std::same_as<typename V::value_type, uint8_t> ||
+      std::same_as<typename V::value_type, int8_t>)
 inline float avx2_sum_of_squares(const V& a) {
   // @todo Align on 256 bit boundaries
   const size_t start = 0;
   const size_t size_a = size(a);
   const size_t stop = size_a - (size_a % 8);
 
-  const uint8_t* a_ptr = a.data();
+  const auto* a_ptr = a.data();
 
   __m256 vec_sum = _mm256_setzero_ps();
 
@@ -361,8 +370,15 @@ inline float avx2_sum_of_squares(const V& a) {
     // Load 8 bytes == 64 bits -- zeros out top 8 bytes
     __m128i vec_a = _mm_loadu_si64((__m64*)(a_ptr + i));
 
-    // Zero extend 8bit to 32bit ints
-    __m256i a_ints = _mm256_cvtepu8_epi32(vec_a);
+    // Extend 8 bit to 32 bit ints
+    __m256i a_ints;
+    if constexpr (std::same_as<typename V::value_type, uint8_t>) {
+      // Zero extend uint8_t to int32_t
+      a_ints = _mm256_cvtepu8_epi32(vec_a);
+    } else {
+      // Sign extend int8_t to int32_t
+      a_ints = _mm256_cvtepi8_epi32(vec_a);
+    }
 
     // Convert integers to floats
     __m256 a_floats = _mm256_cvtepi32_ps(a_ints);
