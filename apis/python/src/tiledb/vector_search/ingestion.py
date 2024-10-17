@@ -598,13 +598,26 @@ def ingest(
         group: tiledb.Group,
     ) -> tiledb.Group:
         partial_write_array_dir_uri = f"{group.uri}/{PARTIAL_WRITE_ARRAY_DIR}"
-        try:
-            tiledb.group_create(partial_write_array_dir_uri)
-            add_to_group(group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR)
-        except tiledb.TileDBError as err:
-            message = str(err)
-            if "already exists" not in message:
-                raise err
+        if index_type == "IVF_PQ":
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexIVFPQ(
+                ctx,
+                index_group_uri,
+                vspy.IndexLoadStrategy.PQ_INDEX,
+                0,
+                to_temporal_policy(index_timestamp),
+            )
+            index.create_temp_data_group(PARTIAL_WRITE_ARRAY_DIR)
+        else:
+            try:
+                tiledb.group_create(partial_write_array_dir_uri)
+                add_to_group(
+                    group, partial_write_array_dir_uri, PARTIAL_WRITE_ARRAY_DIR
+                )
+            except tiledb.TileDBError as err:
+                message = str(err)
+                if "already exists" not in message:
+                    raise err
         return tiledb.Group(partial_write_array_dir_uri, "w")
 
     def create_partial_write_array_group(
@@ -774,16 +787,6 @@ def ingest(
                 create_index_array=True,
                 asset_creation_threads=asset_creation_threads,
             )
-        elif index_type == "IVF_PQ":
-            ctx = vspy.Ctx(config)
-            index = vspy.IndexIVFPQ(
-                ctx,
-                index_group_uri,
-                vspy.IndexLoadStrategy.PQ_INDEX,
-                0,
-                to_temporal_policy(index_timestamp),
-            )
-            index.create_temp_data_group(PARTIAL_WRITE_ARRAY_DIR)
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
         elif not is_type_erased_index(index_type):
