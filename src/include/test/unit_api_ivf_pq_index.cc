@@ -1154,6 +1154,12 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
   auto vectors = ColMajorMatrix<feature_type>{
       {{1.0f, 1.1f, 1.2f, 1.3f}, {2.0f, 2.1f, 2.2f, 2.3f}}};
 
+  std::string partial_write_array_dir = "temp";
+  {
+    auto index = IndexIVFPQ(
+        ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
+    index.create_temp_data_group(partial_write_array_dir);
+  }
   {
     auto index = IndexIVFPQ(
         ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0, temporal_policy);
@@ -1171,7 +1177,8 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
         FeatureVector(0, "uint64"),
         part,
         part_end,
-        part_id);
+        part_id,
+        partial_write_array_dir);
   }
   {
     // Here is where Python does compute_partition_indexes_udf. We simulate that
@@ -1181,7 +1188,7 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
     auto total_partitions = 2;
     auto indexes = read_vector<uint32_t>(
         ctx,
-        group.feature_vectors_index_temp_uri(),
+        group.feature_vectors_index_temp_uri(partial_write_array_dir),
         0,
         total_partitions,
         temporal_policy);
@@ -1203,22 +1210,18 @@ TEST_CASE("ingest_parts testing", "[api_ivf_pq_index]") {
     size_t partition_id_end = 1;
     size_t batch = 33554432;
     index.consolidate_partitions(
-        partitions, work_items, partition_id_start, partition_id_end, batch);
+        partitions,
+        work_items,
+        partition_id_start,
+        partition_id_end,
+        batch,
+        partial_write_array_dir);
   }
 
   {
     auto index = IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0);
     auto&& [scores, ids] = index.query(FeatureVectorArray(vectors), 1, 1);
     check_single_vector_equals(scores, ids, {0, 0}, {0, 1});
-  }
-
-  {
-    // If we were to re-ingest, Python would delete the temp data group.
-  }
-
-  {
-    auto index = IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_INDEX, 0);
-    index.create_temp_data_group();
   }
 }
 

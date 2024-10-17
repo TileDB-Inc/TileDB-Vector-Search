@@ -317,16 +317,11 @@ def ingest(
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[storage_version][
         "EXTERNAL_IDS_ARRAY_NAME"
     ]
-    if index_type == "IVF_PQ":
-        PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version][
-            "PARTIAL_WRITE_ARRAY_DIR"
-        ]
-    else:
-        PARTIAL_WRITE_ARRAY_DIR = (
-            storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
-            + "_"
-            + "".join(random.choices(string.ascii_letters, k=10))
-        )
+    PARTIAL_WRITE_ARRAY_DIR = (
+        storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
+        + "_"
+        + "".join(random.choices(string.ascii_letters, k=10))
+    )
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
 
     # This is used to auto-configure `input_vectors_per_work_item`
@@ -788,7 +783,7 @@ def ingest(
                 0,
                 to_temporal_policy(index_timestamp),
             )
-            index.create_temp_data_group()
+            index.create_temp_data_group(PARTIAL_WRITE_ARRAY_DIR)
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
         elif not is_type_erased_index(index_type):

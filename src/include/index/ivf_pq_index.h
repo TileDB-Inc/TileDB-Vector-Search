@@ -368,7 +368,7 @@ class ivf_pq_index {
     write_group.store_metadata();
   }
 
-  void create_temp_data_group() {
+  void create_temp_data_group(const std::string& partial_write_array_dir) {
     auto write_group = ivf_pq_group<ivf_pq_index>(
         group_->cached_ctx(),
         group_uri_,
@@ -378,7 +378,7 @@ class ivf_pq_index {
         dimensions_,
         num_clusters_,
         num_subspaces_);
-    write_group.create_temp_data_group();
+    write_group.create_temp_data_group(partial_write_array_dir);
   }
 
   /**
@@ -859,6 +859,8 @@ class ivf_pq_index {
    * @param end The ending index of the training set to ingest.
    * @param partition_start The starting index of the partitioned vectors to
    * write.
+   * @param partial_write_array_dir The directory to write the temp arrays. If
+   * not set, we will write to the main arrays instead of the temp arrays.
    * @param distance The distance function to use.
    * @param write_to_temp_arrays Whether to write to the temp arrays. True if
    * ingesting via Python.
@@ -873,8 +875,8 @@ class ivf_pq_index {
       size_t start,
       size_t end,
       size_t partition_start,
-      Distance distance = Distance{},
-      bool write_to_temp_arrays = true) {
+      const std::string& partial_write_array_dir = "",
+      Distance distance = Distance{}) {
     // 1. pq-encode the vectors.
     // This results in a matrix where we have num_vectors(training_set) columns,
     // and num_subspaces_ rows. So if we had 10 vectors, each with 16
@@ -908,14 +910,18 @@ class ivf_pq_index {
         training_set_ids,
         deleted_ids,
         flat_ivf_centroids_,
-        write_to_temp_arrays ? write_group.feature_vectors_temp_uri() :
-                               write_group.feature_vectors_uri(),
-        write_to_temp_arrays ? write_group.feature_vectors_index_temp_uri() :
-                               write_group.feature_vectors_index_uri(),
-        write_to_temp_arrays ? write_group.ids_temp_uri() :
-                               write_group.ids_uri(),
-        write_to_temp_arrays ? write_group.pq_ivf_vectors_temp_uri() :
-                               write_group.pq_ivf_vectors_uri(),
+        partial_write_array_dir.empty() ?
+            write_group.feature_vectors_uri() :
+            write_group.feature_vectors_temp_uri(partial_write_array_dir),
+        partial_write_array_dir.empty() ?
+            write_group.feature_vectors_index_uri() :
+            write_group.feature_vectors_index_temp_uri(partial_write_array_dir),
+        partial_write_array_dir.empty() ?
+            write_group.ids_uri() :
+            write_group.ids_temp_uri(partial_write_array_dir),
+        partial_write_array_dir.empty() ?
+            write_group.pq_ivf_vectors_uri() :
+            write_group.pq_ivf_vectors_temp_uri(partial_write_array_dir),
         start,
         end,
         num_threads_,
@@ -938,7 +944,8 @@ class ivf_pq_index {
       size_t work_items,
       size_t partition_id_start,
       size_t partition_id_end,
-      size_t batch) {
+      size_t batch,
+      const std::string& partial_write_array_dir) {
     std::vector<std::vector<std::pair<uint64_t, uint64_t>>> partition_slices(
         partitions);
 
@@ -946,7 +953,7 @@ class ivf_pq_index {
     std::vector<partitioning_indices_type> partial_indexes =
         read_vector<partitioning_indices_type>(
             group_->cached_ctx(),
-            group_->feature_vectors_index_temp_uri(),
+            group_->feature_vectors_index_temp_uri(partial_write_array_dir),
             0,
             total_partitions,
             temporal_policy_);
@@ -1004,14 +1011,14 @@ class ivf_pq_index {
       // Read data.
       std::vector<partitioned_ids_type> ids = read_vector<partitioned_ids_type>(
           group_->cached_ctx(),
-          group_->ids_temp_uri(),
+          group_->ids_temp_uri(partial_write_array_dir),
           read_slices,
           total_slices_size,
           temporal_policy_);
 
       auto vectors = tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
           group_->cached_ctx(),
-          group_->feature_vectors_temp_uri(),
+          group_->feature_vectors_temp_uri(partial_write_array_dir),
           dimensions_,
           read_slices,
           total_slices_size,
@@ -1021,7 +1028,7 @@ class ivf_pq_index {
 
       auto pq_vectors = tdbColMajorMatrixMultiRange<pq_code_type, uint64_t>(
           group_->cached_ctx(),
-          group_->pq_ivf_vectors_temp_uri(),
+          group_->pq_ivf_vectors_temp_uri(partial_write_array_dir),
           num_subspaces_,
           read_slices,
           total_slices_size,
@@ -1097,8 +1104,8 @@ class ivf_pq_index {
         0,
         ::num_vectors(vectors),
         0,
-        distance,
-        false);
+        "",
+        distance);
 
     auto write_group = ivf_pq_group<ivf_pq_index>(
         group_->cached_ctx(),
