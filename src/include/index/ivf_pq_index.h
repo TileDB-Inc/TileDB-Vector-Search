@@ -861,7 +861,7 @@ class ivf_pq_index {
    * write.
    * @param distance The distance function to use.
    * @param write_to_temp_arrays Whether to write to the temp arrays. True if
-   * inegsting via Python.
+   * ingesting via Python.
    */
   template <
       feature_vector_array Array,
@@ -923,6 +923,16 @@ class ivf_pq_index {
         partition_start);
   }
 
+  /**
+   * @brief Consolidate partitions. This will read the partitioned vectors and
+   * ids from the temp arrays, and write them to the main arrays.
+   *
+   * @param partitions Number of partitions.
+   * @param work_items Number of work items.
+   * @param partition_id_start The starting partition id.
+   * @param partition_id_end The ending partition id.
+   * @param batch The batch size.
+   */
   void consolidate_partitions(
       size_t partitions,
       size_t work_items,

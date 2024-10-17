@@ -328,12 +328,10 @@ TEMPLATE_TEST_CASE(
     size_t k_nn = 6;
     size_t partitions = 1;
 
-    auto ivf_idx2 = ivf_pq_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ partitions, 2, 4, 1.e-4);
+    auto ivf_idx2 = ivf_pq_index<TestType, uint32_t, uint32_t>(partitions, 2, 4, 1.e-4);
     ivf_idx2.train_ivf(hypercube2);
     ivf_idx2.add(hypercube2, ids);
-    auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(
-        /*128,*/ partitions, 2, 4, 1.e-4);
+    auto ivf_idx4 = ivf_pq_index<TestType, uint32_t, uint32_t>(partitions, 2, 4, 1.e-4);
     ivf_idx4.train_ivf(hypercube4);
     ivf_idx4.add(hypercube4, ids);
 
