@@ -2,6 +2,7 @@ from typing import Dict, Optional, OrderedDict
 
 import numpy as np
 
+
 class HuggingfaceAutoImageEmbedding:
     def __init__(
         self,
@@ -35,7 +36,8 @@ class HuggingfaceAutoImageEmbedding:
         return np.float32
 
     def load(self) -> None:
-        from transformers import AutoImageProcessor, AutoModel
+        from transformers import AutoImageProcessor
+        from transformers import AutoModel
 
         self.processor = AutoImageProcessor.from_pretrained(self.model_name_or_path)
         self.model = AutoModel.from_pretrained(self.model_name_or_path)
@@ -58,13 +60,17 @@ class HuggingfaceAutoImageEmbedding:
             if count >= self.batch_size:
                 print(image_id)
                 inputs = self.processor(images=image_batch, return_tensors="pt")
-                batch_embeddings = self.model(**inputs).last_hidden_state[:, 0].cpu().detach().numpy()
+                batch_embeddings = (
+                    self.model(**inputs).last_hidden_state[:, 0].cpu().detach().numpy()
+                )
                 embeddings[write_id : write_id + count] = batch_embeddings
                 count = 0
                 image_batch = []
 
         if count > 0:
             inputs = self.processor(images=image_batch, return_tensors="pt")
-            batch_embeddings = self.model(**inputs).last_hidden_state[:, 0].cpu().detach().numpy()
+            batch_embeddings = (
+                self.model(**inputs).last_hidden_state[:, 0].cpu().detach().numpy()
+            )
             embeddings[write_id : write_id + count] = batch_embeddings
         return embeddings
