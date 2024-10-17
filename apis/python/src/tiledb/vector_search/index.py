@@ -910,7 +910,7 @@ def create_metadata(
     """
     group.meta["dataset_type"] = DATASET_TYPE
     group.meta["dtype"] = np.dtype(vector_type).name
-    group.meta["dimensions"] = dimensions
+    group.meta["dimensions"] = np.uint64(dimensions)
     group.meta["storage_version"] = storage_version
     group.meta["index_type"] = index_type
     group.meta["base_sizes"] = json.dumps([0])
