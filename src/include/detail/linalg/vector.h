@@ -194,7 +194,7 @@ void debug_vector(
       break;
     }
     std::cout << i;
-    if (i != end - 1) {
+    if (static_cast<size_t>(i) != end - 1) {
       std::cout << ", ";
     }
   }

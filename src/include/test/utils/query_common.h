@@ -36,7 +36,6 @@
 #include <string>
 #include "detail/flat/qv.h"
 #include "index/ivf_flat_index.h"
-#include "index/ivf_pq_index.h"
 #include "linalg.h"
 #include "test/utils/array_defs.h"
 
@@ -173,11 +172,6 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
       idx = IndexType(partitions, max_iterations, convergence_tolerance);
-    } else if constexpr (std::is_same_v<
-                             IndexType,
-                             ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx = IndexType(
-          partitions, num_subspaces, max_iterations, convergence_tolerance);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }
@@ -192,18 +186,14 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
     std::tie(top_k_scores, top_k) = detail::flat::qv_query_heap(
         training_set, query_set, k_nn, 1, sum_of_squares_distance{});
 
+    idx.train(training_set);
     if constexpr (std::is_same_v<
                       IndexType,
                       ivf_flat_index<feature_type, id_type, px_type>>) {
-      idx.train(training_set);
-    } else if constexpr (std::is_same_v<
-                             IndexType,
-                             ivf_pq_index<feature_type, id_type, px_type>>) {
-      idx.train_ivf(training_set);
+      idx.add(training_set, ids);
     } else {
       std::cout << "Unsupported index type" << std::endl;
     }
-    idx.add(training_set, ids);
   }
 
   auto get_write_read_idx() {
@@ -264,12 +254,6 @@ struct siftsmall_test_init : public siftsmall_test_init_defaults {
                       ivf_flat_index<feature_type, id_type, px_type>>) {
       CHECK(recall0 > 0.95);
       CHECK(recall1 > 0.95);
-
-    } else if constexpr (std::is_same_v<
-                             IndexType,
-                             ivf_pq_index<feature_type, id_type, px_type>>) {
-      CHECK(recall0 > 0.7);
-      CHECK(recall1 > 0.7);
 
     } else {
       std::cout << "Unsupported index type" << std::endl;

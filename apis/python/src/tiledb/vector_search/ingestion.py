@@ -317,11 +317,16 @@ def ingest(
     EXTERNAL_IDS_ARRAY_NAME = storage_formats[storage_version][
         "EXTERNAL_IDS_ARRAY_NAME"
     ]
-    PARTIAL_WRITE_ARRAY_DIR = (
-        storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
-        + "_"
-        + "".join(random.choices(string.ascii_letters, k=10))
-    )
+    if index_type == "IVF_PQ":
+        PARTIAL_WRITE_ARRAY_DIR = storage_formats[storage_version][
+            "PARTIAL_WRITE_ARRAY_DIR"
+        ]
+    else:
+        PARTIAL_WRITE_ARRAY_DIR = (
+            storage_formats[storage_version]["PARTIAL_WRITE_ARRAY_DIR"]
+            + "_"
+            + "".join(random.choices(string.ascii_letters, k=10))
+        )
     DEFAULT_ATTR_FILTERS = storage_formats[storage_version]["DEFAULT_ATTR_FILTERS"]
 
     # This is used to auto-configure `input_vectors_per_work_item`
@@ -774,7 +779,16 @@ def ingest(
                 create_index_array=True,
                 asset_creation_threads=asset_creation_threads,
             )
-
+        elif index_type == "IVF_PQ":
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexIVFPQ(
+                ctx,
+                index_group_uri,
+                vspy.IndexLoadStrategy.PQ_INDEX,
+                0,
+                to_temporal_policy(index_timestamp),
+            )
+            index.create_temp_data_group()
         # Note that we don't create type-erased indexes (i.e. Vamana) here. Instead we create them
         # at very start of ingest() in C++.
         elif not is_type_erased_index(index_type):
@@ -1165,7 +1179,147 @@ def ingest(
                 f"The random sampling within a batch ran into an issue: num_sampled ({num_sampled}) != random_sample_size ({random_sample_size})"
             )
 
-    def centralised_kmeans(
+    def read_sample_vectors(
+        source_uri: str,
+        source_type: str,
+        vector_type: np.dtype,
+        dimensions: int,
+        training_sample_size: int,
+        training_source_uri: Optional[str],
+        training_source_type: Optional[str],
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+        trace_id: Optional[str] = None,
+    ):
+        if training_source_uri:
+            if training_source_type is None:
+                training_source_type = autodetect_source_type(
+                    source_uri=training_source_uri
+                )
+            (
+                training_in_size,
+                training_dimensions,
+                training_vector_type,
+            ) = read_source_metadata(
+                source_uri=training_source_uri, source_type=training_source_type
+            )
+            if dimensions != training_dimensions:
+                raise ValueError(
+                    f"When training centroids, the index data dimensions ({dimensions}) != the training data dimensions ({training_dimensions})"
+                )
+            return read_input_vectors(
+                source_uri=training_source_uri,
+                source_type=training_source_type,
+                vector_type=training_vector_type,
+                dimensions=dimensions,
+                start_pos=0,
+                end_pos=training_in_size,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+        else:
+            return read_input_vectors(
+                source_uri=source_uri,
+                source_type=source_type,
+                vector_type=vector_type,
+                dimensions=dimensions,
+                start_pos=0,
+                end_pos=training_sample_size,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+
+    def ivf_pq_train_udf(
+        index_group_uri: str,
+        source_uri: str,
+        source_type: str,
+        vector_type: np.dtype,
+        dimensions: int,
+        partitions: int,
+        training_sample_size: int,
+        training_source_uri: Optional[str],
+        training_source_type: Optional[str],
+        updates_uri: Optional[str],
+        normalized: bool = False,
+        config: Optional[Mapping[str, Any]] = None,
+        verbose: bool = False,
+        trace_id: Optional[str] = None,
+    ):
+        ctx = vspy.Ctx(config)
+        index = vspy.IndexIVFPQ(
+            ctx,
+            index_group_uri,
+            vspy.IndexLoadStrategy.PQ_INDEX,
+            0,
+            to_temporal_policy(index_timestamp),
+        )
+
+        updated_ids = read_updated_ids(
+            updates_uri=updates_uri,
+            config=config,
+            verbose=verbose,
+            trace_id=trace_id,
+        )
+
+        external_ids = (
+            read_external_ids(
+                external_ids_uri=external_ids_uri,
+                external_ids_type=external_ids_type,
+                start_pos=0,
+                end_pos=training_sample_size,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+            if training_sample_size > 0
+            else np.empty((0, 1), dtype=vector_type)
+        )
+
+        sample_vectors = (
+            read_sample_vectors(
+                source_uri=source_uri,
+                source_type=source_type,
+                vector_type=vector_type,
+                dimensions=dimensions,
+                training_sample_size=training_sample_size,
+                training_source_uri=training_source_uri,
+                training_source_type=training_source_type,
+                config=config,
+                verbose=verbose,
+                trace_id=trace_id,
+            )
+            if training_sample_size > 0
+            else np.empty((0, dimensions), dtype=vector_type)
+        )
+
+        # Filter out the updated vectors from the sample vectors.
+        updates_filter = np.in1d(
+            external_ids, updated_ids, assume_unique=True, invert=True
+        )
+        sample_vectors = sample_vectors[updates_filter]
+
+        # Then add any new vectors.
+        additions_vectors, _ = read_additions(
+            updates_uri=updates_uri,
+            config=config,
+            verbose=verbose,
+            trace_id=trace_id,
+        )
+        if distance_metric == vspy.DistanceMetric.COSINE and not normalized:
+            additions_vectors = normalize_vectors(additions_vectors)
+        if additions_vectors is not None:
+            sample_vectors = np.concatenate((sample_vectors, additions_vectors))
+
+        sample_vectors_array = vspy.FeatureVectorArray(
+            np.transpose(sample_vectors).astype(vector_type)
+        )
+        index.train(
+            sample_vectors_array, partitions, to_temporal_policy(index_timestamp)
+        )
+
+    def centralised_kmeans_udf(
         index_group_uri: str,
         source_uri: str,
         source_type: str,
@@ -1191,45 +1345,18 @@ def ingest(
             logger = setup(config, verbose)
             group = tiledb.Group(index_group_uri)
             if training_sample_size >= partitions:
-                if training_source_uri:
-                    if training_source_type is None:
-                        training_source_type = autodetect_source_type(
-                            source_uri=training_source_uri
-                        )
-                    (
-                        training_in_size,
-                        training_dimensions,
-                        training_vector_type,
-                    ) = read_source_metadata(
-                        source_uri=training_source_uri, source_type=training_source_type
-                    )
-                    if dimensions != training_dimensions:
-                        raise ValueError(
-                            f"When training centroids, the index data dimensions ({dimensions}) != the training data dimensions ({training_dimensions})"
-                        )
-                    sample_vectors = read_input_vectors(
-                        source_uri=training_source_uri,
-                        source_type=training_source_type,
-                        vector_type=training_vector_type,
-                        dimensions=dimensions,
-                        start_pos=0,
-                        end_pos=training_in_size,
-                        config=config,
-                        verbose=verbose,
-                        trace_id=trace_id,
-                    ).astype(np.float32)
-                else:
-                    sample_vectors = read_input_vectors(
-                        source_uri=source_uri,
-                        source_type=source_type,
-                        vector_type=vector_type,
-                        dimensions=dimensions,
-                        start_pos=0,
-                        end_pos=training_sample_size,
-                        config=config,
-                        verbose=verbose,
-                        trace_id=trace_id,
-                    ).astype(np.float32)
+                sample_vectors = read_sample_vectors(
+                    source_uri=source_uri,
+                    source_type=source_type,
+                    vector_type=vector_type,
+                    dimensions=dimensions,
+                    training_sample_size=training_sample_size,
+                    training_source_uri=training_source_uri,
+                    training_source_type=training_source_type,
+                    config=config,
+                    verbose=verbose,
+                    trace_id=trace_id,
+                ).astype(np.float32)
 
                 logger.debug("Start kmeans training")
                 if use_sklearn:
@@ -1535,7 +1662,7 @@ def ingest(
             parts_array.close()
             ids_array.close()
 
-    def ingest_type_erased(
+    def ingest_vamana(
         index_type: str,
         index_group_uri: str,
         source_uri: str,
@@ -1678,14 +1805,8 @@ def ingest(
             0,  # last_col
             to_temporal_policy(index_timestamp),
         )
-        if index_type == "VAMANA":
-            index = vspy.IndexVamana(ctx, index_group_uri)
-            index.train(data)
-        elif index_type == "IVF_PQ":
-            index = vspy.IndexIVFPQ(ctx, index_group_uri)
-            index.train(data, partitions)
-        else:
-            raise ValueError(f"Unsupported index type: {index_type}")
+        index = vspy.IndexVamana(ctx, index_group_uri)
+        index.train(data)
         index.add(data)
         index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
 
@@ -1710,6 +1831,7 @@ def ingest(
     # vector ingestion UDFs
     # --------------------------------------------------------------------
     def ingest_vectors_udf(
+        index_type: str,
         index_group_uri: str,
         source_uri: str,
         source_type: str,
@@ -1743,6 +1865,19 @@ def ingest(
         partial_write_array_parts_uri = partial_write_array_group[PARTS_ARRAY_NAME].uri
         partial_write_array_index_uri = partial_write_array_group[INDEX_ARRAY_NAME].uri
 
+        ctx = vspy.Ctx(config) if index_type == "IVF_PQ" else None
+        index = (
+            vspy.IndexIVFPQ(
+                ctx,
+                index_group_uri,
+                vspy.IndexLoadStrategy.PQ_OOC,
+                1,
+                to_temporal_policy(index_timestamp),
+            )
+            if index_type == "IVF_PQ"
+            else None
+        )
+
         for part in range(start, end, batch):
             part_end = part + batch
             if part_end > end:
@@ -1759,26 +1894,56 @@ def ingest(
             )
             if source_type == "TILEDB_ARRAY":
                 logger.debug("Start indexing")
-                ivf_index_tdb(
-                    dtype=vector_type,
-                    db_uri=source_uri,
-                    external_ids_uri=external_ids_uri,
-                    deleted_ids=StdVector_u64(updated_ids),
-                    centroids_uri=centroids_uri,
-                    parts_uri=partial_write_array_parts_uri,
-                    index_array_uri=partial_write_array_index_uri,
-                    id_uri=partial_write_array_ids_uri,
-                    start=part,
-                    end=part_end,
-                    partition_start=part_id * (partitions + 1),
-                    nthreads=threads,
-                    **(
-                        {"timestamp": index_timestamp}
-                        if index_timestamp is not None
-                        else {}
-                    ),
-                    config=config,
-                )
+                if index_type == "IVF_PQ":
+                    input_vectors = vspy.FeatureVectorArray(
+                        ctx,
+                        source_uri,
+                        "",
+                        part,
+                        part_end,
+                        to_temporal_policy(index_timestamp),
+                    )
+                    external_ids = (
+                        vspy.FeatureVector(
+                            ctx,
+                            external_ids_uri,
+                            part,
+                            part_end,
+                            to_temporal_policy(index_timestamp),
+                        )
+                        if external_ids_uri
+                        else vspy.FeatureVector(0, np.dtype(np.uint64).name)
+                    )
+                    deleted_ids = vspy.FeatureVector(updated_ids)
+                    index.ingest_parts(
+                        input_vectors=input_vectors,
+                        external_ids=external_ids,
+                        deleted_ids=deleted_ids,
+                        start=part,
+                        end=part_end,
+                        partition_start=part_id * (partitions + 1),
+                    )
+                else:
+                    ivf_index_tdb(
+                        dtype=vector_type,
+                        db_uri=source_uri,
+                        external_ids_uri=external_ids_uri,
+                        deleted_ids=StdVector_u64(updated_ids),
+                        centroids_uri=centroids_uri,
+                        parts_uri=partial_write_array_parts_uri,
+                        index_array_uri=partial_write_array_index_uri,
+                        id_uri=partial_write_array_ids_uri,
+                        start=part,
+                        end=part_end,
+                        partition_start=part_id * (partitions + 1),
+                        nthreads=threads,
+                        **(
+                            {"timestamp": index_timestamp}
+                            if index_timestamp is not None
+                            else {}
+                        ),
+                        config=config,
+                    )
             else:
                 in_vectors = read_input_vectors(
                     source_uri=source_uri,
@@ -1801,26 +1966,43 @@ def ingest(
                     trace_id=trace_id,
                 )
                 logger.debug("Start indexing")
-                ivf_index(
-                    dtype=vector_type,
-                    db=array_to_matrix(np.transpose(in_vectors).astype(vector_type)),
-                    external_ids=StdVector_u64(external_ids),
-                    deleted_ids=StdVector_u64(updated_ids),
-                    centroids_uri=centroids_uri,
-                    parts_uri=partial_write_array_parts_uri,
-                    index_array_uri=partial_write_array_index_uri,
-                    id_uri=partial_write_array_ids_uri,
-                    start=part,
-                    end=part_end,
-                    partition_start=part_id * (partitions + 1),
-                    nthreads=threads,
-                    **(
-                        {"timestamp": index_timestamp}
-                        if index_timestamp is not None
-                        else {}
-                    ),
-                    config=config,
-                )
+                if index_type == "IVF_PQ":
+                    input_vectors = vspy.FeatureVectorArray(
+                        np.transpose(in_vectors).astype(vector_type)
+                    )
+                    external_ids = vspy.FeatureVector(external_ids)
+                    deleted_ids = vspy.FeatureVector(updated_ids)
+                    index.ingest_parts(
+                        input_vectors=input_vectors,
+                        external_ids=external_ids,
+                        deleted_ids=deleted_ids,
+                        start=part,
+                        end=part_end,
+                        partition_start=part_id * (partitions + 1),
+                    )
+                else:
+                    ivf_index(
+                        dtype=vector_type,
+                        db=array_to_matrix(
+                            np.transpose(in_vectors).astype(vector_type)
+                        ),
+                        external_ids=StdVector_u64(external_ids),
+                        deleted_ids=StdVector_u64(updated_ids),
+                        centroids_uri=centroids_uri,
+                        parts_uri=partial_write_array_parts_uri,
+                        index_array_uri=partial_write_array_index_uri,
+                        id_uri=partial_write_array_ids_uri,
+                        start=part,
+                        end=part_end,
+                        partition_start=part_id * (partitions + 1),
+                        nthreads=threads,
+                        **(
+                            {"timestamp": index_timestamp}
+                            if index_timestamp is not None
+                            else {}
+                        ),
+                        config=config,
+                    )
 
     def ingest_additions_udf(
         index_group_uri: str,
@@ -1859,29 +2041,56 @@ def ingest(
             return
 
         if (
-            index_type == "IVF_FLAT"
+            (index_type == "IVF_FLAT" or index_type == "IVF_PQ")
             and distance_metric == vspy.DistanceMetric.COSINE
             and not normalized
         ):
             additions_vectors = normalize_vectors(additions_vectors)
 
         logger.debug(f"Ingesting additions {partial_write_array_index_uri}")
-        ivf_index(
-            dtype=vector_type,
-            db=array_to_matrix(np.transpose(additions_vectors).astype(vector_type)),
-            external_ids=StdVector_u64(additions_external_ids),
-            deleted_ids=StdVector_u64(np.array([], np.uint64)),
-            centroids_uri=centroids_uri,
-            parts_uri=partial_write_array_parts_uri,
-            index_array_uri=partial_write_array_index_uri,
-            id_uri=partial_write_array_ids_uri,
-            start=write_offset,
-            end=0,
-            partition_start=partition_start,
-            nthreads=threads,
-            **({"timestamp": index_timestamp} if index_timestamp is not None else {}),
-            config=config,
-        )
+        if index_type == "IVF_PQ":
+            ctx = vspy.Ctx(config)
+            index = vspy.IndexIVFPQ(
+                ctx,
+                index_group_uri,
+                vspy.IndexLoadStrategy.PQ_OOC,
+                1,
+                to_temporal_policy(index_timestamp),
+            )
+            input_vectors = vspy.FeatureVectorArray(
+                np.transpose(additions_vectors).astype(vector_type)
+            )
+            external_ids = vspy.FeatureVector(additions_external_ids)
+            deleted_ids = vspy.FeatureVector(np.array([], np.uint64))
+            index.ingest_parts(
+                input_vectors=input_vectors,
+                external_ids=external_ids,
+                deleted_ids=deleted_ids,
+                start=write_offset,
+                end=0,
+                partition_start=partition_start,
+            )
+        else:
+            ivf_index(
+                dtype=vector_type,
+                db=array_to_matrix(np.transpose(additions_vectors).astype(vector_type)),
+                external_ids=StdVector_u64(additions_external_ids),
+                deleted_ids=StdVector_u64(np.array([], np.uint64)),
+                centroids_uri=centroids_uri,
+                parts_uri=partial_write_array_parts_uri,
+                index_array_uri=partial_write_array_index_uri,
+                id_uri=partial_write_array_ids_uri,
+                start=write_offset,
+                end=0,
+                partition_start=partition_start,
+                nthreads=threads,
+                **(
+                    {"timestamp": index_timestamp}
+                    if index_timestamp is not None
+                    else {}
+                ),
+                config=config,
+            )
 
     def compute_partition_indexes_udf(
         index_group_uri: str,
@@ -1934,6 +2143,27 @@ def ingest(
             )
             index_array[0 : partitions + 1] = indexes
 
+    def ivf_pq_consolidate_partition_udf(
+        index_group_uri: str,
+        partitions: int,
+        work_items: int,
+        partition_id_start: int,
+        partition_id_end: int,
+        batch: int,
+        config: Optional[Mapping[str, Any]] = None,
+    ):
+        ctx = vspy.Ctx(config)
+        index = vspy.IndexIVFPQ(
+            ctx,
+            index_group_uri,
+            vspy.IndexLoadStrategy.PQ_OOC,
+            1,
+            to_temporal_policy(index_timestamp),
+        )
+        index.consolidate_partitions(
+            partitions, work_items, partition_id_start, partition_id_end, batch
+        )
+
     def consolidate_partition_udf(
         index_group_uri: str,
         partitions: int,
@@ -1941,7 +2171,6 @@ def ingest(
         partition_id_start: int,
         partition_id_end: int,
         batch: int,
-        dimensions: int,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -2311,9 +2540,9 @@ def ingest(
                 **kwargs,
             )
             return d
-        elif is_type_erased_index(index_type):
+        elif index_type == "VAMANA":
             ingest_node = submit(
-                ingest_type_erased,
+                ingest_vamana,
                 index_type=index_type,
                 index_group_uri=index_group_uri,
                 source_uri=source_uri,
@@ -2335,7 +2564,7 @@ def ingest(
                 **kwargs,
             )
             return d
-        elif index_type == "IVF_FLAT":
+        elif index_type == "IVF_FLAT" or index_type == "IVF_PQ":
             if copy_centroids_uri is not None:
                 centroids_node = submit(
                     copy_centroids,
@@ -2470,27 +2699,54 @@ def ingest(
                     for random_sample_node in random_sample_nodes:
                         random_sample_node.depends_on(node)
 
-                if training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE:
-                    centroids_node = submit(
-                        centralised_kmeans,
-                        index_group_uri=index_group_uri,
-                        source_uri=source_uri,
-                        source_type=source_type,
-                        vector_type=vector_type,
-                        partitions=partitions,
-                        dimensions=dimensions,
-                        training_sample_size=training_sample_size,
-                        training_source_uri=training_source_uri,
-                        training_source_type=training_source_type,
-                        config=config,
-                        verbose=verbose,
-                        trace_id=trace_id,
-                        use_sklearn=use_sklearn,
-                        name="kmeans",
-                        resources=kmeans_resources,
-                        image_name=DEFAULT_IMG_NAME,
-                        **kwargs,
-                    )
+                # IVF_PQ currently only supports centralized k-means.
+                if (
+                    training_sample_size <= CENTRALISED_KMEANS_MAX_SAMPLE_SIZE
+                    or index_type == "IVF_PQ"
+                ):
+                    if index_type == "IVF_PQ":
+                        centroids_node = submit(
+                            ivf_pq_train_udf,
+                            index_group_uri=index_group_uri,
+                            source_uri=source_uri,
+                            source_type=source_type,
+                            vector_type=vector_type,
+                            partitions=partitions,
+                            dimensions=dimensions,
+                            training_sample_size=training_sample_size,
+                            training_source_uri=training_source_uri,
+                            training_source_type=training_source_type,
+                            updates_uri=updates_uri,
+                            normalized=normalized,
+                            config=config,
+                            verbose=verbose,
+                            trace_id=trace_id,
+                            name="ivf_pq_train_udf",
+                            resources=kmeans_resources,
+                            image_name=DEFAULT_IMG_NAME,
+                            **kwargs,
+                        )
+                    else:
+                        centroids_node = submit(
+                            centralised_kmeans_udf,
+                            index_group_uri=index_group_uri,
+                            source_uri=source_uri,
+                            source_type=source_type,
+                            vector_type=vector_type,
+                            partitions=partitions,
+                            dimensions=dimensions,
+                            training_sample_size=training_sample_size,
+                            training_source_uri=training_source_uri,
+                            training_source_type=training_source_type,
+                            config=config,
+                            verbose=verbose,
+                            trace_id=trace_id,
+                            use_sklearn=use_sklearn,
+                            name="kmeans",
+                            resources=kmeans_resources,
+                            image_name=DEFAULT_IMG_NAME,
+                            **kwargs,
+                        )
 
                     for random_sample_node in random_sample_nodes:
                         centroids_node.depends_on(random_sample_node)
@@ -2612,6 +2868,7 @@ def ingest(
                     end = size
                 ingest_node = submit(
                     ingest_vectors_udf,
+                    index_type=index_type,
                     index_group_uri=index_group_uri,
                     source_uri=source_uri,
                     source_type=source_type,
@@ -2687,23 +2944,38 @@ def ingest(
                 end = i + partitions_batch
                 if end > partitions:
                     end = partitions
-                consolidate_partition_node = submit(
-                    consolidate_partition_udf,
-                    index_group_uri=index_group_uri,
-                    partitions=partitions,
-                    work_items=work_items,
-                    partition_id_start=start,
-                    partition_id_end=end,
-                    batch=table_partitions_per_work_item,
-                    dimensions=dimensions,
-                    config=config,
-                    verbose=verbose,
-                    trace_id=trace_id,
-                    name="consolidate-partition-" + str(task_id),
-                    resources=consolidate_partition_resources,
-                    image_name=DEFAULT_IMG_NAME,
-                    **kwargs,
-                )
+                if index_type == "IVF_PQ":
+                    consolidate_partition_node = submit(
+                        ivf_pq_consolidate_partition_udf,
+                        index_group_uri=index_group_uri,
+                        partitions=partitions,
+                        work_items=work_items,
+                        partition_id_start=start,
+                        partition_id_end=end,
+                        batch=table_partitions_per_work_item,
+                        config=config,
+                        name="ivf-pq-consolidate-partition-" + str(task_id),
+                        resources=consolidate_partition_resources,
+                        image_name=DEFAULT_IMG_NAME,
+                        **kwargs,
+                    )
+                else:
+                    consolidate_partition_node = submit(
+                        consolidate_partition_udf,
+                        index_group_uri=index_group_uri,
+                        partitions=partitions,
+                        work_items=work_items,
+                        partition_id_start=start,
+                        partition_id_end=end,
+                        batch=table_partitions_per_work_item,
+                        config=config,
+                        verbose=verbose,
+                        trace_id=trace_id,
+                        name="consolidate-partition-" + str(task_id),
+                        resources=consolidate_partition_resources,
+                        image_name=DEFAULT_IMG_NAME,
+                        **kwargs,
+                    )
                 consolidate_partition_node.depends_on(compute_indexes_node)
                 task_id += 1
             return d
@@ -2808,7 +3080,7 @@ def ingest(
                             uri=index_group_uri,
                             dimensions=dimensions,
                             vector_type=vector_type,
-                            num_subspaces=num_subspaces,
+                            num_subspaces=int(num_subspaces),
                             partitions=partitions,
                             config=config,
                             storage_version=storage_version,

@@ -91,6 +91,12 @@ struct sum_of_squares_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return avx2_sum_of_squares(a, b);
   }
 
@@ -101,6 +107,12 @@ struct sum_of_squares_distance {
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return unroll4_sum_of_squares(a, b);
   }
 
@@ -115,6 +127,12 @@ struct sqrt_sum_of_squares_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return sqrt(avx2_sum_of_squares(a, b));
   }
 
@@ -126,6 +144,12 @@ struct sqrt_sum_of_squares_distance {
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return sqrt(unroll4_sum_of_squares(a, b));
   }
 
@@ -145,6 +169,12 @@ struct counting_sum_of_squares_distance {
 
   template <class V, class U>
   constexpr auto operator()(const V& a, const U& b) {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     num_comps_++;
     return unroll4_sum_of_squares(a, b);
   }
@@ -172,6 +202,12 @@ struct logging_sum_of_squares_distance {
 
   template <class V, class U>
   constexpr auto operator()(const V& a, const U& b) {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     ++num_comps_;
     return unroll4_sum_of_squares(a, b);
   }
@@ -252,6 +288,12 @@ struct cached_sub_sum_of_squares_distance {
   // @todo AVX implementation
   template <feature_vector V, feature_vector U>
   constexpr auto operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return unroll4_sum_of_squares(a, b, start_, stop_);
   }
 };
@@ -261,6 +303,12 @@ struct uncached_sub_sum_of_squares_distance {
   template <feature_vector V, feature_vector U>
   constexpr auto operator()(
       const V& a, const U& b, size_t start, size_t stop) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return unroll4_sum_of_squares(a, b, start, stop);
   }
 };
@@ -276,8 +324,14 @@ using sub_sum_of_squares_distance =
     _l2_sub_distance::cached_sub_sum_of_squares_distance;
 
 template <feature_vector U, feature_vector V>
-auto sub_l2_distance(const U& u, const V& v, size_t i, size_t j) {
-  return unroll4_sum_of_squares(u, v, i, j);
+auto sub_l2_distance(const U& a, const V& b, size_t i, size_t j) {
+  if (size(a) != size(b)) {
+    throw std::runtime_error(
+        "[scoring@sum_of_squares_distance] The size of a " +
+        std::to_string(size(a)) + " does not match the size of b " +
+        std::to_string(size(b)));
+  }
+  return unroll4_sum_of_squares(a, b, i, j);
 }
 
 /**
@@ -291,6 +345,12 @@ struct inner_product_distance {
 #ifdef __AVX2__
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return 1.0 / avx2_inner_product(a, b);
   }
 
@@ -301,6 +361,12 @@ struct inner_product_distance {
 #else
   template <feature_vector V, feature_vector U>
   constexpr inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return 1.0 / unroll4_inner_product(a, b);
   }
 
@@ -326,6 +392,12 @@ namespace _cosine_distance {
 struct cosine_distance {
   template <feature_vector V, feature_vector U>
   inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     float mag = sqrt(l2_distance(a) * l2_distance(b));
     return 1 - (1.0 / inner_product(a, b)) / (mag == 0 ? 1 : mag);
   }
@@ -334,6 +406,12 @@ struct cosine_distance {
 struct cosine_distance_normalized {
   template <feature_vector V, feature_vector U>
   inline float operator()(const V& a, const U& b) const {
+    if (size(a) != size(b)) {
+      throw std::runtime_error(
+          "[scoring@sum_of_squares_distance] The size of a " +
+          std::to_string(size(a)) + " does not match the size of b " +
+          std::to_string(size(b)));
+    }
     return 1 - (1.0 / inner_product(a, b));
   }
 };

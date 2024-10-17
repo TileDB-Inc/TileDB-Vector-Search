@@ -190,6 +190,7 @@ class ivf_pq_index {
   /****************************************************************************
    * Index group information
    ****************************************************************************/
+  std::string group_uri_;
   size_t upper_bound_{0};
   TemporalPolicy temporal_policy_;
   IndexLoadStrategy index_load_strategy_{IndexLoadStrategy::PQ_INDEX};
@@ -201,7 +202,6 @@ class ivf_pq_index {
 
   // Cached information about the partitioned vectors in the index
   uint64_t dimensions_{0};
-  uint64_t num_vectors_{0};
   uint64_t num_partitions_{0};
 
   // Cached information about the pq encoding
@@ -246,8 +246,7 @@ class ivf_pq_index {
   // sections, and for each section we find the closest centroid from
   // cluster_centroids_ and appen that index as the next number in the
   // pq_vector.
-  std::unique_ptr<ColMajorMatrixWithIds<pq_code_type, id_type>>
-      unpartitioned_pq_vectors_;
+  std::unique_ptr<ColMajorMatrix<pq_code_type>> unpartitioned_pq_vectors_;
   // Or should these just be
   // pq_storage_type partitioned_pq_vectors_;
   // flat_storage_type unpartitioned_pq_vectors_;
@@ -303,31 +302,83 @@ class ivf_pq_index {
    * to indicate "no time traveling"
    * @todo -- May also want start/stop?  Use a variant?  TemporalPolicy?
    */
-  ivf_pq_index(
-      size_t partitions = 0,
+  static void create(
+      const tiledb::Context& ctx,
+      const std::string& group_uri,
+      uint64_t dimensions,
       uint32_t num_subspaces = 16,
       uint32_t max_iterations = 2,
       float convergence_tolerance = 0.000025f,
       float reassign_ratio = 0.075f,
-      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
+      std::optional<TemporalPolicy> optional_temporal_policy = std::nullopt,
       DistanceMetric distance_metric = DistanceMetric::SUM_OF_SQUARES,
-      uint64_t seed = std::random_device{}()
-      )
-      : temporal_policy_{
-        temporal_policy.has_value() ? *temporal_policy :
-        TemporalPolicy{TimeTravel, static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count())}}
-      , num_partitions_(partitions)
-      , num_subspaces_{num_subspaces}
-      , max_iterations_(max_iterations)
-      , convergence_tolerance_(convergence_tolerance)
-      , reassign_ratio_(reassign_ratio)
-      , distance_metric_{distance_metric}
-      {
-    if (num_subspaces_ <= 0) {
+      const std::string& storage_version = "",
+      uint64_t seed = std::random_device{}()) {
+    if (num_subspaces <= 0) {
       throw std::runtime_error(
-          "num_subspaces (" + std::to_string(num_subspaces_) +
+          "num_subspaces (" + std::to_string(num_subspaces) +
           ") must be greater than zero");
     }
+    if (dimensions % num_subspaces != 0) {
+      throw std::runtime_error(
+          "Dimension must be divisible by the number of subspaces - "
+          "dimensions: " +
+          std::to_string(dimensions) +
+          ", num_subspaces: " + std::to_string(num_subspaces));
+    }
+    if (num_clusters_ != 1 << bits_per_subspace_) {
+      throw std::runtime_error(
+          "[ivf_pq_index@write_index] num_clusters_ != 1 << "
+          "bits_per_subspace_");
+    }
+    auto temporal_policy =
+        optional_temporal_policy.has_value() ?
+            *optional_temporal_policy :
+            TemporalPolicy{
+                TimeTravel,
+                static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::system_clock::now().time_since_epoch())
+                        .count())};
+
+    auto sub_dimensions = dimensions / num_subspaces;
+    auto write_group = ivf_pq_group<ivf_pq_index>(
+        ctx,
+        group_uri,
+        TILEDB_WRITE,
+        temporal_policy,
+        storage_version,
+        dimensions,
+        num_clusters_,
+        num_subspaces);
+    write_group.set_dimensions(dimensions);
+    write_group.set_num_subspaces(num_subspaces);
+    write_group.set_sub_dimensions(sub_dimensions);
+    write_group.set_bits_per_subspace(bits_per_subspace_);
+    write_group.set_num_clusters(num_clusters_);
+    write_group.set_max_iterations(max_iterations);
+    write_group.set_convergence_tolerance(convergence_tolerance);
+    write_group.set_reassign_ratio(reassign_ratio);
+    write_group.set_distance_metric(distance_metric);
+
+    write_group.append_ingestion_timestamp(0);
+    write_group.append_base_size(0);
+    write_group.append_num_partitions(0);
+
+    write_group.store_metadata();
+  }
+
+  void create_temp_data_group() {
+    auto write_group = ivf_pq_group<ivf_pq_index>(
+        group_->cached_ctx(),
+        group_uri_,
+        TILEDB_WRITE,
+        temporal_policy_,
+        group_->storage_version(),
+        dimensions_,
+        num_clusters_,
+        num_subspaces_);
+    write_group.create_temp_data_group();
   }
 
   /**
@@ -357,7 +408,8 @@ class ivf_pq_index {
       IndexLoadStrategy index_load_strategy = IndexLoadStrategy::PQ_INDEX,
       size_t upper_bound = 0,
       std::optional<TemporalPolicy> temporal_policy = std::nullopt)
-      : upper_bound_{upper_bound}
+      : group_uri_{uri}
+      , upper_bound_{upper_bound}
       , temporal_policy_{temporal_policy.has_value() ? *temporal_policy : TemporalPolicy()}
       , index_load_strategy_{index_load_strategy}
       , group_{std::make_unique<ivf_pq_group<ivf_pq_index>>(
@@ -376,10 +428,9 @@ class ivf_pq_index {
      * in at this same timestamp.
      */
     dimensions_ = group_->get_dimensions();
-    num_vectors_ = group_->get_base_size();
     num_partitions_ = group_->get_num_partitions();
     num_subspaces_ = group_->get_num_subspaces();
-    sub_dimensions_ = dimensions_ / num_subspaces_;
+    sub_dimensions_ = group_->get_sub_dimensions();
     max_iterations_ = group_->get_max_iterations();
     convergence_tolerance_ = group_->get_convergence_tolerance();
     reassign_ratio_ = group_->get_reassign_ratio();
@@ -404,51 +455,56 @@ class ivf_pq_index {
             temporal_policy_);
 
     if (upper_bound == 0) {
-      // Read the the complete index arrays into ("infinite") memory. This will
-      // read the centroids, indices, partitioned_ids, and and the complete set
-      // of partitioned_pq_vectors, along with metadata from a group_uri. Load
-      // all partitions for infinite query Note that the constructor will move
-      // the infinite_parts vector
-      auto infinite_parts =
-          std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
-      std::iota(begin(infinite_parts), end(infinite_parts), 0);
-      partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
-          group_->cached_ctx(),
-          group_->pq_ivf_vectors_uri(),
-          group_->pq_ivf_indices_uri(),
-          group_->get_num_partitions() + 1,
-          group_->pq_ivf_ids_uri(),
-          infinite_parts,
-          0,
-          temporal_policy_);
-
-      partitioned_pq_vectors_->load();
-
-      if (::num_vectors(*partitioned_pq_vectors_) !=
-          size(partitioned_pq_vectors_->ids())) {
-        throw std::runtime_error(
-            "[ivf_flat_index@ivf_pq_index] "
-            "::num_vectors(*partitioned_pq_vectors_) != "
-            "size(partitioned_pq_vectors_->ids())");
-      }
-      if (size(partitioned_pq_vectors_->indices()) !=
-          ::num_vectors(flat_ivf_centroids_) + 1) {
-        throw std::runtime_error(
-            "[ivf_flat_index@ivf_pq_index] "
-            "size(partitioned_pq_vectors_->indices()) != "
-            "::num_vectors(flat_ivf_centroids_) + 1");
-      }
+      read_index_infinite();
     }
     if (index_load_strategy_ ==
         IndexLoadStrategy::PQ_INDEX_AND_RERANKING_VECTORS) {
+      auto num_vectors = group_->get_base_size();
       feature_vectors_ = tdbColMajorPreLoadMatrixWithIds<feature_type, id_type>(
           group_->cached_ctx(),
           group_->feature_vectors_uri(),
           group_->ids_uri(),
           dimensions_,
-          num_vectors_,
+          num_vectors,
           0,
           temporal_policy_);
+    }
+  }
+
+  void read_index_infinite() {
+    // Read the the complete index arrays into ("infinite") memory. This will
+    // read the centroids, indices, partitioned_ids, and and the complete set
+    // of partitioned_pq_vectors, along with metadata from a group_uri. Load
+    // all partitions for infinite query.
+    auto infinite_parts =
+        std::vector<indices_type>(::num_vectors(flat_ivf_centroids_));
+    std::iota(begin(infinite_parts), end(infinite_parts), 0);
+
+    partitioned_pq_vectors_ = std::make_unique<tdb_pq_storage_type>(
+        group_->cached_ctx(),
+        group_->pq_ivf_vectors_uri(),
+        group_->feature_vectors_index_uri(),
+        group_->get_num_partitions() + 1,
+        group_->ids_uri(),
+        infinite_parts,
+        0,
+        temporal_policy_);
+
+    partitioned_pq_vectors_->load();
+
+    if (::num_vectors(*partitioned_pq_vectors_) !=
+        size(partitioned_pq_vectors_->ids())) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "::num_vectors(*partitioned_pq_vectors_) != "
+          "size(partitioned_pq_vectors_->ids())");
+    }
+    if (size(partitioned_pq_vectors_->indices()) !=
+        ::num_vectors(flat_ivf_centroids_) + 1) {
+      throw std::runtime_error(
+          "[ivf_flat_index@read_index_infinite] "
+          "size(partitioned_pq_vectors_->indices()) != "
+          "::num_vectors(flat_ivf_centroids_) + 1");
     }
   }
 
@@ -493,20 +549,6 @@ class ivf_pq_index {
         typename ColMajorMatrix<flat_vector_feature_type>::span_type>
   auto train_pq(const V& training_set, kmeans_init init = kmeans_init::random) {
     scoped_timer _{"ivf_pq_index@train_pq"};
-    dimensions_ = ::dimensions(training_set);
-    if (num_subspaces_ <= 0) {
-      throw std::runtime_error(
-          "num_subspaces (" + std::to_string(num_subspaces_) +
-          ") must be greater than zero");
-    }
-    sub_dimensions_ = dimensions_ / num_subspaces_;
-    if (dimensions_ % num_subspaces_ != 0) {
-      throw std::runtime_error(
-          "Dimension must be divisible by the number of subspaces - "
-          "dimensions: " +
-          std::to_string(dimensions_) +
-          ", num_subspaces: " + std::to_string(num_subspaces_));
-    }
 
     // This basically the same thing we do in ivf_flat, but we perform it
     // num_subspaces_ times, once for each subspace.
@@ -715,39 +757,29 @@ class ivf_pq_index {
    */
   template <
       feature_vector_array Array,
-      feature_vector Vector,
       class Distance = sum_of_squares_distance>
   void train(
       const Array& training_set,
-      const Vector& training_set_ids,
+      size_t num_partitions = 0,
+      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer _{"ivf_pq_index@train"};
-    dimensions_ = ::dimensions(training_set);
-  }
+    if (num_subspaces_ <= 0) {
+      throw std::runtime_error(
+          "num_subspaces (" + std::to_string(num_subspaces_) +
+          ") must be greater than zero");
+    }
 
-  /**
-   * @brief Build the index from a training set, given the centroids. This
-   * will partition the training set into a contiguous array, with one
-   * partition per centroid. It will also create an array to record the
-   * original ids locations of each vector (their locations in the original
-   * training set) as well as a partitioning index array demarcating the
-   * boundaries of each partition (including the very end of the array).
-   *
-   * @param training_set Array of vectors to partition.
-   * @param training_set_ids IDs for each vector.
-   *
-   * @todo Create and write index that is larger than RAM
-   */
-  template <
-      feature_vector_array Array,
-      feature_vector Vector,
-      class Distance = sum_of_squares_distance>
-  void add(
-      const Array& training_set,
-      const Vector& training_set_ids,
-      Distance distance = Distance{}) {
-    scoped_timer _{"ivf_pq_index@add"};
-    num_vectors_ = ::num_vectors(training_set);
+    if (temporal_policy.has_value()) {
+      temporal_policy_ = *temporal_policy;
+    }
+
+    if (num_partitions != 0) {
+      num_partitions_ = num_partitions;
+    }
+    if (num_partitions_ == 0) {
+      num_partitions_ = std::sqrt(::num_vectors(training_set));
+    }
 
     // 1. Fill in cluster_centroids_.
     // cluster_centroids_ holds the num_clusters_ (256) centroids for each
@@ -759,66 +791,336 @@ class ivf_pq_index {
     // This is the same as IVF_FLAT and has nothing to do with PQ.
     train_ivf(training_set);
 
-    // 3. pq-encode the vectors.
+    // Need so that we can keep using the index without re-opening the group.
+    group_->set_num_partitions(num_partitions_);
+
+    // 3. Update our metadata.
+    auto write_group = ivf_pq_group<ivf_pq_index>(
+        group_->cached_ctx(),
+        group_uri_,
+        TILEDB_WRITE,
+        temporal_policy_,
+        group_->storage_version(),
+        dimensions_,
+        num_clusters_,
+        num_subspaces_);
+
+    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
+        write_group.get_previous_ingestion_timestamp() == 0 &&
+        write_group.get_all_base_sizes().size() == 1 &&
+        write_group.get_previous_base_size() == 0) {
+      write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
+      write_group.set_base_size(0);
+      write_group.set_num_partitions(num_partitions_);
+    } else {
+      write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
+      write_group.append_base_size(0);
+      write_group.append_num_partitions(num_partitions_);
+    }
+
+    write_group.store_metadata();
+
+    // 4. Write the centroids.
+    write_matrix(
+        group_->cached_ctx(),
+        cluster_centroids_,
+        write_group.cluster_centroids_uri(),
+        0,
+        false,
+        temporal_policy_);
+
+    write_matrix(
+        group_->cached_ctx(),
+        flat_ivf_centroids_,
+        write_group.flat_ivf_centroids_uri(),
+        0,
+        false,
+        temporal_policy_);
+
+    // 5. Clear partitioned_pq_vectors_ so that we re-load it when we next
+    // query().
+    partitioned_pq_vectors_ = nullptr;
+  }
+
+  /**
+   * @brief Build the index from a training set, given the centroids. This
+   * will partition the training set into a contiguous array, with one
+   * partition per centroid. It will also create an array to record the
+   * original ids locations of each vector (their locations in the original
+   * training set) as well as a partitioning index array demarcating the
+   * boundaries of each partition (including the very end of the array).
+   * Note that we will write using the temporal_policy set in train(), and if
+   * that was not set, in the construtor.
+   *
+   * @param training_set Array of vectors to partition.
+   * @param training_set_ids IDs for each vector.
+   * @param deleted_ids IDs of vectors to delete.
+   * @param start The starting index of the training set to ingest.
+   * @param end The ending index of the training set to ingest.
+   * @param partition_start The starting index of the partitioned vectors to
+   * write.
+   * @param distance The distance function to use.
+   * @param write_to_temp_arrays Whether to write to the temp arrays. True if
+   * ingesting via Python.
+   */
+  template <
+      feature_vector_array Array,
+      class Distance = sum_of_squares_distance>
+  void ingest_parts(
+      const Array& training_set,
+      const std::span<partitioned_ids_type>& training_set_ids,
+      const std::span<partitioned_ids_type>& deleted_ids,
+      size_t start,
+      size_t end,
+      size_t partition_start,
+      Distance distance = Distance{},
+      bool write_to_temp_arrays = true) {
+    // 1. pq-encode the vectors.
     // This results in a matrix where we have num_vectors(training_set) columns,
     // and num_subspaces_ rows. So if we had 10 vectors, each with 16
     // dimensions, and 2 num_subspaces_, we store 16 columns and 2 rows. Note
     // that we don't actually need this as a member variable, but do so for unit
     // tests.
     unpartitioned_pq_vectors_ =
-        pq_encode<Array, ColMajorMatrixWithIds<pq_code_type, id_type>>(
-            training_set);
-    std::copy(
-        training_set_ids.begin(),
-        training_set_ids.end(),
-        unpartitioned_pq_vectors_->ids());
+        pq_encode<Array, ColMajorMatrix<pq_code_type>>(training_set);
 
-    // 4. Assign each vector to a centroid.
-    // flat_ivf_centroids_ holds the uncompressed centroids for the uncompressed
-    // vectors. Here we are looking at each vector in the training_set and
-    // assigning it to a partition. This is the same thing as IVF_FLAT does.
-    auto partition_labels = detail::flat::qv_partition(
-        flat_ivf_centroids_, training_set, num_threads_, distance);
+    // 2. Write the partitioned original vectors and the partitioned pq-encoded
+    // vectors.
+    auto write_group = ivf_pq_group<ivf_pq_index>(
+        group_->cached_ctx(),
+        group_uri_,
+        TILEDB_WRITE,
+        temporal_policy_,
+        group_->storage_version(),
+        dimensions_,
+        num_clusters_,
+        num_subspaces_);
+    detail::ivf::ivf_pq_index<
+        Array,
+        partitioned_pq_vectors_feature_type,
+        pq_code_type,
+        partitioned_ids_type,
+        partitioning_indices_type,
+        flat_vector_feature_type>(
+        group_->cached_ctx(),
+        training_set,
+        *unpartitioned_pq_vectors_,
+        training_set_ids,
+        deleted_ids,
+        flat_ivf_centroids_,
+        write_to_temp_arrays ? write_group.feature_vectors_temp_uri() :
+                               write_group.feature_vectors_uri(),
+        write_to_temp_arrays ? write_group.feature_vectors_index_temp_uri() :
+                               write_group.feature_vectors_index_uri(),
+        write_to_temp_arrays ? write_group.ids_temp_uri() :
+                               write_group.ids_uri(),
+        write_to_temp_arrays ? write_group.pq_ivf_vectors_temp_uri() :
+                               write_group.pq_ivf_vectors_uri(),
+        start,
+        end,
+        num_threads_,
+        temporal_policy_,
+        partition_start);
+  }
 
-    // 5. Now that we know which centroids each vector should go in, reorder our
-    // pq-encoded vectors based on partition_labels. With this change, at search
-    // time we can now:
-    //   a. First find which partition(s) in flat_ivf_centroids_ the query
-    //   belongs to.
-    //   b. Search the partition(s) and find the closest vectors. Note that we
-    //   do this part of the search with pq-encoded vectors to be faster and use
-    //   less memory.
-    auto num_unique_labels = ::num_vectors(flat_ivf_centroids_);
-    partitioned_pq_vectors_ = std::make_unique<pq_storage_type>(
-        *unpartitioned_pq_vectors_, partition_labels, num_unique_labels);
+  /**
+   * @brief Consolidate partitions. This will read the partitioned vectors and
+   * ids from the temp arrays, and write them to the main arrays.
+   *
+   * @param partitions Number of partitions.
+   * @param work_items Number of work items.
+   * @param partition_id_start The starting partition id.
+   * @param partition_id_end The ending partition id.
+   * @param batch The batch size.
+   */
+  void consolidate_partitions(
+      size_t partitions,
+      size_t work_items,
+      size_t partition_id_start,
+      size_t partition_id_end,
+      size_t batch) {
+    std::vector<std::vector<std::pair<uint64_t, uint64_t>>> partition_slices(
+        partitions);
 
-    // 6. Store the raw feature vectors so that we can retrain the index easily.
-    // We shuffle them so that they are aligned with the partitioned_pq_vectors_
-    // - this lets us easily get the unencoded vectors for use in re-ranking.
-    auto feature_vectors =
-        ColMajorPartitionedMatrix<feature_type, id_type, indices_type>(
-            training_set, partition_labels, num_unique_labels);
-    // TODO(paris): Figure out how to cast directly from
-    // ColMajorPartitionedMatrix to ColMajorMatrixWithIds to avoid copy.
-    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
-        ::dimensions(training_set), ::num_vectors(training_set)));
-    std::copy(
-        feature_vectors.data(),
-        feature_vectors.data() +
-            ::dimensions(feature_vectors) * ::num_vectors(feature_vectors),
-        feature_vectors_.data());
-    std::copy(
-        feature_vectors.ids().begin(),
-        feature_vectors.ids().end(),
-        feature_vectors_.ids());
+    auto total_partitions = work_items * (partitions + 1);
+    std::vector<partitioning_indices_type> partial_indexes =
+        read_vector<partitioning_indices_type>(
+            group_->cached_ctx(),
+            group_->feature_vectors_index_temp_uri(),
+            0,
+            total_partitions,
+            temporal_policy_);
+
+    std::vector<partitioning_indices_type> index_array =
+        read_vector<partitioning_indices_type>(
+            group_->cached_ctx(),
+            group_->feature_vectors_index_uri(),
+            0,
+            total_partitions,
+            temporal_policy_);
+
+    size_t i = 0;
+    uint64_t prev_index = 0;
+    for (size_t work_item_id = 0; work_item_id < work_items; ++work_item_id) {
+      prev_index = partial_indexes[i];
+      i++;
+      for (size_t partition_id = 0; partition_id < partitions; ++partition_id) {
+        auto slice = std::make_pair(
+            static_cast<int>(prev_index),
+            static_cast<int>(partial_indexes[i]) - 1);
+        if (slice.first <= slice.second &&
+            slice.first != std::numeric_limits<uint64_t>::max()) {
+          partition_slices[partition_id].push_back(slice);
+        }
+        prev_index = partial_indexes[i];
+        i++;
+      }
+    }
+
+    for (size_t part = partition_id_start; part < partition_id_end;
+         part += batch) {
+      size_t part_end = std::min(part + batch, partition_id_end);
+
+      std::vector<std::pair<uint64_t, uint64_t>> read_slices;
+      size_t total_slices_size = 0;
+      for (size_t p = part; p < part_end; ++p) {
+        for (const auto& partition_slice : partition_slices[p]) {
+          read_slices.push_back(partition_slice);
+          total_slices_size +=
+              partition_slice.second - partition_slice.first + 1;
+        }
+      }
+
+      // Read from index array.
+      uint64_t start_pos = index_array[part];
+      uint64_t end_pos = index_array[part_end];
+
+      if (read_slices.empty()) {
+        if (start_pos != end_pos) {
+          throw std::runtime_error("Incorrect partition size.");
+        }
+        continue;
+      }
+      // Read data.
+      std::vector<partitioned_ids_type> ids = read_vector<partitioned_ids_type>(
+          group_->cached_ctx(),
+          group_->ids_temp_uri(),
+          read_slices,
+          total_slices_size,
+          temporal_policy_);
+
+      auto vectors = tdbColMajorMatrixMultiRange<feature_type, uint64_t>(
+          group_->cached_ctx(),
+          group_->feature_vectors_temp_uri(),
+          dimensions_,
+          read_slices,
+          total_slices_size,
+          0,
+          temporal_policy_);
+      vectors.load();
+
+      auto pq_vectors = tdbColMajorMatrixMultiRange<pq_code_type, uint64_t>(
+          group_->cached_ctx(),
+          group_->pq_ivf_vectors_temp_uri(),
+          num_subspaces_,
+          read_slices,
+          total_slices_size,
+          0,
+          temporal_policy_);
+      pq_vectors.load();
+
+      // Write data to the arrays.
+      write_vector(
+          group_->cached_ctx(),
+          ids,
+          group_->ids_uri(),
+          start_pos,
+          false,
+          temporal_policy_);
+
+      write_vector(
+          group_->cached_ctx(),
+          ids,
+          group_->ids_uri(),
+          start_pos,
+          false,
+          temporal_policy_);
+
+      write_matrix(
+          group_->cached_ctx(),
+          vectors,
+          group_->feature_vectors_uri(),
+          start_pos,
+          false,
+          temporal_policy_);
+
+      write_matrix(
+          group_->cached_ctx(),
+          pq_vectors,
+          group_->pq_ivf_vectors_uri(),
+          start_pos,
+          false,
+          temporal_policy_);
+    }
+
+    // Now update the metadata.
+    auto write_group = ivf_pq_group<ivf_pq_index>(
+        group_->cached_ctx(),
+        group_uri_,
+        TILEDB_WRITE,
+        temporal_policy_,
+        group_->storage_version(),
+        dimensions_,
+        num_clusters_,
+        num_subspaces_);
+
+    write_group.set_base_size(write_group.get_temp_size());
+    write_group.store_metadata();
+  }
+
+  // This will call ingest_parts and then consolidate_partitions() on the
+  // training set. Can be used if you do not want to ingest part by part and
+  // want to do it all at once. Note that we will write using the
+  // temporal_policy set in train(), and if that was not set, in the construtor.
+  template <
+      feature_vector_array Array,
+      class Distance = sum_of_squares_distance>
+  void ingest(
+      const Array& vectors,
+      const std::span<partitioned_ids_type>& external_ids,
+      const std::span<partitioned_ids_type>& deleted_ids = {},
+      Distance distance = Distance{}) {
+    ingest_parts(
+        vectors,
+        external_ids,
+        deleted_ids,
+        0,
+        ::num_vectors(vectors),
+        0,
+        distance,
+        false);
+
+    auto write_group = ivf_pq_group<ivf_pq_index>(
+        group_->cached_ctx(),
+        group_uri_,
+        TILEDB_WRITE,
+        temporal_policy_,
+        group_->storage_version(),
+        dimensions_,
+        num_clusters_,
+        num_subspaces_);
+    write_group.set_base_size(::num_vectors(vectors));
+    write_group.store_metadata();
   }
 
   template <
-      feature_vector V,
-      feature_vector W,
+      feature_vector Vector,
+      feature_vector PQVector,
       class SubDistance = uncached_sub_sum_of_squares_distance>
   auto pq_encode_one(
-      const V& v, W&& pq, SubDistance sub_distance = SubDistance{}) const {
+      const Vector& v,
+      PQVector&& pq,
+      SubDistance sub_distance = SubDistance{}) const {
     // We have broken the vector into num_subspaces_ subspaces, and we will look
     // in cluster_centroids_ and find the closest cluster_centroids_ to that
     // chunk of the vector.
@@ -840,13 +1142,14 @@ class ivf_pq_index {
   }
 
   template <
-      feature_vector_array U,
-      class Matrix,
+      feature_vector_array Array,
+      feature_vector_array PQArray,
       class Distance = uncached_sub_sum_of_squares_distance>
-  auto pq_encode(const U& training_set, Distance distance = Distance{}) const {
+  auto pq_encode(
+      const Array& training_set, Distance distance = Distance{}) const {
     scoped_timer _{"ivf_pq_index@pq_encode"};
     auto pq_vectors =
-        std::make_unique<Matrix>(num_subspaces_, ::num_vectors(training_set));
+        std::make_unique<PQArray>(num_subspaces_, ::num_vectors(training_set));
     auto& pqv = *pq_vectors;
     for (size_t i = 0; i < ::num_vectors(training_set); ++i) {
       pq_encode_one(training_set[i], pqv[i], distance);
@@ -892,11 +1195,13 @@ class ivf_pq_index {
         auto sub_end = sub_begin + sub_dimensions_;
         for (size_t centroid_id = 0; centroid_id < num_clusters_;
              ++centroid_id) {
-          float pq_distance = local_distance(
-              query_vectors[i],
-              cluster_centroids_[centroid_id],
-              sub_begin,
-              sub_end);
+          float pq_distance = centroid_id >= cluster_centroids_.num_cols() ?
+                                  std::numeric_limits<float>::max() :
+                                  local_distance(
+                                      query_vectors[i],
+                                      cluster_centroids_[centroid_id],
+                                      sub_begin,
+                                      sub_end);
           pqv[i][sub_id + centroid_id] = pq_distance;
         }
         sub_begin = sub_end;
@@ -904,164 +1209,6 @@ class ivf_pq_index {
       }
     }
     return pq_vectors;
-  }
-
-  /**
-   * @brief Write the index to storage. This would typically be done after a
-   * set of input vectors has been read and a new group is created. Or after
-   * consolidation.
-   *
-   * We assume we have all of the data in memory, and that we are writing
-   * all of it to a TileDB group. Since we have all of it in memory,
-   * we write from the PartitionedMatrix base class.
-   *
-   * @param ctx TileDB context
-   * @param group_uri The URI of the TileDB group where the index will be saved
-   * @param temporal_policy If set, we'll use the end timestamp of the policy as
-   * the write timestamp.
-   * @param storage_version The storage version to use. If empty, use the most
-   * defult version.
-   * @return Whether the write was successful
-   */
-  auto write_index(
-      const tiledb::Context& ctx,
-      const std::string& group_uri,
-      std::optional<TemporalPolicy> temporal_policy = std::nullopt,
-      const std::string& storage_version = "") {
-    if (!partitioned_pq_vectors_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@write_index] partitioned_pq_vectors_ is not "
-          "initialized. This happens if you train the index, query with finite "
-          "RAM, and then try to write. Make sure to write before the query.");
-    }
-    if (temporal_policy.has_value()) {
-      temporal_policy_ = *temporal_policy;
-    }
-
-    auto write_group = ivf_pq_group<ivf_pq_index>(
-        ctx,
-        group_uri,
-        TILEDB_WRITE,
-        temporal_policy_,
-        storage_version,
-        dimensions_,
-        num_clusters_,
-        num_subspaces_);
-    write_group.set_dimensions(dimensions_);
-    write_group.set_num_subspaces(num_subspaces_);
-    write_group.set_sub_dimensions(sub_dimensions_);
-    write_group.set_bits_per_subspace(bits_per_subspace_);
-    write_group.set_num_clusters(num_clusters_);
-    write_group.set_max_iterations(max_iterations_);
-    write_group.set_convergence_tolerance(convergence_tolerance_);
-    write_group.set_reassign_ratio(reassign_ratio_);
-    write_group.set_distance_metric(distance_metric_);
-
-    if (num_subspaces_ * sub_dimensions_ != dimensions_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@write_index] num_subspaces_ * sub_dimensions_ != "
-          "dimensions_");
-    }
-    // The code below checks if the number of clusters is equal to
-    // 2^bits_per_subspace_.
-    if (num_clusters_ != 1 << bits_per_subspace_) {
-      throw std::runtime_error(
-          "[ivf_pq_index@write_index] num_clusters_ != 1 << "
-          "bits_per_subspace_");
-    }
-
-    // When we create an index with Python, we will call write_index() twice,
-    // once with empty data and once with the actual data. Here we add custom
-    // logic so that during that second call to write_index(), we will overwrite
-    // the metadata lists. If we don't do this we will end up with
-    // ingestion_timestamps = [0, timestamp] and base_sizes = [0, initial size],
-    // whereas indexes created just in Python will end up with
-    // ingestion_timestamps = [timestamp] and base_sizes = [initial size]. If we
-    // have 2 item lists it causes crashes and subtle issues when we try to
-    // modify the index later (i.e. through index.update() / Index.clear()). So
-    // here we make sure we end up with the same metadata that Python indexes
-    // do.
-    if (write_group.get_all_ingestion_timestamps().size() == 1 &&
-        write_group.get_previous_ingestion_timestamp() == 0 &&
-        write_group.get_all_base_sizes().size() == 1 &&
-        write_group.get_previous_base_size() == 0) {
-      write_group.set_ingestion_timestamp(temporal_policy_.timestamp_end());
-      write_group.set_base_size(::num_vectors(*partitioned_pq_vectors_));
-      write_group.set_num_partitions(num_partitions_);
-    } else {
-      write_group.append_ingestion_timestamp(temporal_policy_.timestamp_end());
-      write_group.append_base_size(::num_vectors(*partitioned_pq_vectors_));
-      write_group.append_num_partitions(num_partitions_);
-    }
-
-    write_group.store_metadata();
-
-    // When creating from Python we initially call write_index() at timestamp 0.
-    // The goal here is just to create the arrays and save metadata. Return here
-    // so that we don't write the arrays, as if we write with timestamp=0 then
-    // TileDB Core will interpret this as the current timestamp instead, leading
-    // to array fragments created at the current time.
-    if (temporal_policy_.timestamp_end() == 0) {
-      return true;
-    }
-
-    // flat_ivf_centroids_, cluster_centroids_,
-    // partitioned_pq_vectors_, unpartitioned_pq_vectors_
-
-    write_matrix(
-        ctx,
-        feature_vectors_,
-        write_group.feature_vectors_uri(),
-        0,
-        false,
-        temporal_policy_);
-    write_vector(
-        ctx,
-        feature_vectors_.raveled_ids(),
-        write_group.ids_uri(),
-        0,
-        false,
-        temporal_policy_);
-
-    write_matrix(
-        ctx,
-        cluster_centroids_,
-        write_group.cluster_centroids_uri(),
-        0,
-        false,
-        temporal_policy_);
-
-    write_matrix(
-        ctx,
-        flat_ivf_centroids_,
-        write_group.flat_ivf_centroids_uri(),
-        0,
-        false,
-        temporal_policy_);
-
-    write_vector(
-        ctx,
-        partitioned_pq_vectors_->indices(),
-        write_group.pq_ivf_indices_uri(),
-        0,
-        false,
-        temporal_policy_);
-    write_vector(
-        ctx,
-        partitioned_pq_vectors_->ids(),
-        write_group.pq_ivf_ids_uri(),
-        0,
-        false,
-        temporal_policy_);
-    write_matrix(
-        ctx,
-        *partitioned_pq_vectors_,
-        write_group.pq_ivf_vectors_uri(),
-        0,
-        false,
-        temporal_policy_);
-
-    return true;
   }
 
   static void clear_history(
@@ -1170,9 +1317,9 @@ class ivf_pq_index {
       auto partitioned_pq_vectors = std::make_unique<tdb_pq_storage_type>(
           group_->cached_ctx(),
           group_->pq_ivf_vectors_uri(),
-          group_->pq_ivf_indices_uri(),
+          group_->feature_vectors_index_uri(),
           group_->get_num_partitions() + 1,
-          group_->pq_ivf_ids_uri(),
+          group_->ids_uri(),
           active_partitions,
           upper_bound_,
           temporal_policy_);
@@ -1200,6 +1347,11 @@ class ivf_pq_index {
           query_vectors,
           k_initial,
           k_nn);
+    }
+
+    if (!partitioned_pq_vectors_ ||
+        ::num_vectors(*partitioned_pq_vectors_) == 0) {
+      read_index_infinite();
     }
 
     // This function searches for the nearest neighbors using "infinite RAM". We
@@ -1360,10 +1512,6 @@ class ivf_pq_index {
 
   uint64_t dimensions() const {
     return dimensions_;
-  }
-
-  uint64_t num_vectors() const {
-    return num_vectors_;
   }
 
   size_t upper_bound() const {
@@ -1611,9 +1759,6 @@ class ivf_pq_index {
     if (dimensions_ != rhs.dimensions_) {
       return false;
     }
-    if (num_vectors_ != rhs.num_vectors_) {
-      return false;
-    }
     if (num_partitions_ != rhs.num_partitions_) {
       return false;
     }
@@ -1817,6 +1962,7 @@ class ivf_pq_index {
   }
 
   auto set_flat_ivf_centroids(const ColMajorMatrix<feature_type>& centroids) {
+    num_partitions_ = centroids.num_cols();
     flat_ivf_centroids_ = flat_ivf_centroid_storage_type(
         ::dimensions(centroids), ::num_vectors(centroids));
     std::copy(

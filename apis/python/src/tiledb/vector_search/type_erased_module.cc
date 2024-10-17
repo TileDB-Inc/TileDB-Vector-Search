@@ -475,6 +475,50 @@ void init_type_erased_module(py::module_& m) {
           py::arg("timestamp"));
 
   py::class_<IndexIVFPQ>(m, "IndexIVFPQ")
+      .def_static(
+          "create",
+          [](const tiledb::Context& ctx,
+             const std::string& index_uri,
+             uint64_t dimensions,
+             const std::string& feature_type,
+             const std::string& id_type,
+             const std::string& partitioning_index_type,
+             uint32_t num_subspaces,
+             uint32_t max_iterations,
+             float convergence_tolerance,
+             float reassign_ratio,
+             std::optional<TemporalPolicy> temporal_policy,
+             DistanceMetric distance_metric,
+             const std::string& storage_version) {
+            IndexIVFPQ::create(
+                ctx,
+                index_uri,
+                dimensions,
+                string_to_datatype(feature_type),
+                string_to_datatype(id_type),
+                string_to_datatype(partitioning_index_type),
+                num_subspaces,
+                max_iterations,
+                convergence_tolerance,
+                reassign_ratio,
+                temporal_policy,
+                distance_metric,
+                storage_version);
+          },
+          py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
+          py::arg("ctx"),
+          py::arg("index_uri"),
+          py::arg("dimensions"),
+          py::arg("feature_type"),
+          py::arg("id_type") = "uint64",
+          py::arg("partitioning_index_type") = "uint64",
+          py::arg("num_subspaces") = 16,
+          py::arg("max_iterations") = 10,
+          py::arg("convergence_tolerance") = 0.0001f,
+          py::arg("reassign_ratio") = 0.075f,
+          py::arg("temporal_policy") = std::nullopt,
+          py::arg("distance_metric") = DistanceMetric::SUM_OF_SQUARES,
+          py::arg("storage_version") = "")
       .def(
           "__init__",
           [](IndexIVFPQ& instance,
@@ -497,26 +541,83 @@ void init_type_erased_module(py::module_& m) {
           py::arg("memory_budget") = 0,
           py::arg("temporal_policy") = std::nullopt)
       .def(
-          "__init__",
-          [](IndexIVFPQ& instance, py::kwargs kwargs) {
-            auto args = kwargs_to_map(kwargs);
-            new (&instance) IndexIVFPQ(args);
-          })
+          "create_temp_data_group",
+          [](IndexIVFPQ& index) { index.create_temp_data_group(); })
       .def(
           "train",
           [](IndexIVFPQ& index,
              const FeatureVectorArray& vectors,
-             std::optional<size_t> partitions) {
-            index.train(vectors, partitions);
+             size_t partitions,
+             std::optional<TemporalPolicy> temporal_policy = std::nullopt) {
+            index.train(vectors, partitions, temporal_policy);
           },
           py::arg("vectors"),
-          py::arg("partitions") = std::nullopt)
+          py::arg("partitions") = 0,
+          py::arg("temporal_policy") = std::nullopt)
       .def(
-          "add",
-          [](IndexIVFPQ& index, const FeatureVectorArray& vectors) {
-            index.add(vectors);
+          "ingest",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& input_vectors,
+             const FeatureVector& external_ids) {
+            index.ingest(input_vectors, external_ids);
           },
-          py::arg("vectors"))
+          py::arg("input_vectors"),
+          py::arg("external_ids"))
+      .def(
+          "ingest",
+          [](IndexIVFPQ& index, const FeatureVectorArray& input_vectors) {
+            index.ingest(input_vectors);
+          },
+          py::arg("input_vectors"))
+      .def(
+          "ingest_parts",
+          [](IndexIVFPQ& index,
+             const FeatureVectorArray& input_vectors,
+             const FeatureVector& external_ids,
+             const FeatureVector& deleted_ids,
+             size_t start,
+             size_t end,
+             size_t partition_start) {
+            index.ingest_parts(
+                input_vectors,
+                external_ids,
+                deleted_ids,
+                start,
+                end,
+                partition_start);
+          },
+          py::arg("input_vectors"),
+          py::arg("external_ids"),
+          py::arg("deleted_ids"),
+          py::arg("start"),
+          py::arg("end"),
+          py::arg("partition_start"))
+      .def(
+          "consolidate_partitions",
+          [](IndexIVFPQ& index,
+             size_t partitions,
+             size_t work_items,
+             size_t partition_id_start,
+             size_t partition_id_end,
+             size_t batch) {
+            index.consolidate_partitions(
+                partitions,
+                work_items,
+                partition_id_start,
+                partition_id_end,
+                batch);
+          },
+          py::arg("partitions"),
+          py::arg("work_items"),
+          py::arg("partition_id_start"),
+          py::arg("partition_id_end"),
+          py::arg("batch"))
+      .def(
+          "ingest",
+          [](IndexIVFPQ& index, const FeatureVectorArray& input_vectors) {
+            index.ingest(input_vectors);
+          },
+          py::arg("input_vectors"))
       .def(
           "query",
           [](IndexIVFPQ& index,
@@ -531,26 +632,13 @@ void init_type_erased_module(py::module_& m) {
           py::arg("k"),
           py::arg("nprobe"),
           py::arg("k_factor") = 1.f)
-      .def(
-          "write_index",
-          [](IndexIVFPQ& index,
-             const tiledb::Context& ctx,
-             const std::string& index_uri,
-             std::optional<TemporalPolicy> temporal_policy,
-             const std::string& storage_version) {
-            index.write_index(ctx, index_uri, temporal_policy, storage_version);
-          },
-          py::keep_alive<1, 2>(),  // IndexIVFPQ should keep ctx alive.
-          py::arg("ctx"),
-          py::arg("index_uri"),
-          py::arg("temporal_policy") = std::nullopt,
-          py::arg("storage_version") = "")
       .def("feature_type_string", &IndexIVFPQ::feature_type_string)
       .def("id_type_string", &IndexIVFPQ::id_type_string)
       .def(
           "partitioning_index_type_string",
           &IndexIVFPQ::partitioning_index_type_string)
       .def("dimensions", &IndexIVFPQ::dimensions)
+      .def("partitions", &IndexIVFPQ::partitions)
       .def_static(
           "clear_history",
           [](const tiledb::Context& ctx,
