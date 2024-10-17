@@ -1,5 +1,4 @@
-from .bioimage_reader import BioImagePartition
-from .bioimage_reader import BioImageReader
+from .bioimage_reader import BioImageDirectoryReader
 from .directory_reader import DirectoryImageReader
 from .directory_reader import DirectoryPartition
 from .directory_reader import DirectoryReader
@@ -18,8 +17,7 @@ __all__ = [
     "SomaAnnDataReader",
     "TileDB1DArrayPartition",
     "TileDB1DArrayReader",
-    "BioImagePartition",
-    "BioImageReader",
+    "BioImageDirectoryReader",
     "DirectoryReader",
     "DirectoryTextReader",
     "DirectoryImageReader",
