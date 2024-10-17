@@ -136,6 +136,18 @@ def find_uris_tiledb_group(
                 results.append(uri)
         elif obj_type == "group":
             with tiledb.Group(uri) as grp:
+                if "dataset_type" in grp.meta:
+                    match = match_uri(
+                        search_uri="/",
+                        file_uri=path,
+                        include=include,
+                        exclude=exclude,
+                        suffixes=suffixes,
+                    )
+                    if match:
+                        results.append(uri)
+                        return
+
                 for child in list(grp):
                     find(
                         uri=child.uri,

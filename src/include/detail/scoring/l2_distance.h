@@ -78,11 +78,12 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
 }
 
 /**
- * Compute l2 distance between vector of float and vector of uint8_t
+ * Compute l2 distance between vector of float and vector of uint8_t or int8_t
  */
 template <feature_vector V, feature_vector W>
   requires std::same_as<typename V::value_type, float> &&
-           std::same_as<typename W::value_type, uint8_t>
+           (std::same_as<typename W::value_type, uint8_t> ||
+            std::same_as<typename W::value_type, int8_t>)
 inline float naive_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
@@ -94,11 +95,12 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
 }
 
 /**
- * Compute l2 distance between vector of uint8_t and vector of float
+ * Compute l2 distance between vector of uint8_t or int8_t and vector of float
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, float>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          std::same_as<typename W::value_type, float>
 inline float naive_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
@@ -110,11 +112,14 @@ inline float naive_sum_of_squares(const V& a, const W& b) {
 }
 
 /**
- * Compute l2 distance between vector of uint8_t and vector of uint8_t
+ * Compute l2 distance between vector of uint8_t or int8_t and vector of uint8_t
+ * or int8_t
  */
 template <feature_vector V, feature_vector W>
-  requires std::same_as<typename V::value_type, uint8_t> &&
-           std::same_as<typename W::value_type, uint8_t>
+  requires(std::same_as<typename V::value_type, uint8_t> ||
+           std::same_as<typename V::value_type, int8_t>) &&
+          (std::same_as<typename W::value_type, uint8_t> ||
+           std::same_as<typename W::value_type, int8_t>)
 inline float naive_sum_of_squares(const V& a, const W& b) {
   size_t size_a = size(a);
   float sum = 0.0;
