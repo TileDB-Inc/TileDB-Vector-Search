@@ -172,12 +172,12 @@ class IndexIVFPQ {
     dimensions_ = index_->dimensions();
   }
 
-  void create_temp_data_group() {
+  void create_temp_data_group(const std::string& partial_write_array_dir) {
     if (!index_) {
       throw std::runtime_error(
           "Cannot create_temp_data_group() because there is no index.");
     }
-    index_->create_temp_data_group();
+    index_->create_temp_data_group(partial_write_array_dir);
   }
 
   /**
@@ -231,7 +231,8 @@ class IndexIVFPQ {
       const FeatureVector& deleted_ids,
       size_t start,
       size_t end,
-      size_t partition_start) {
+      size_t partition_start,
+      const std::string& partial_write_array_dir) {
     if (feature_datatype_ != input_vectors.feature_type()) {
       throw std::runtime_error(
           "[ivf_pq_index@ingest_parts] Feature datatype mismatch: " +
@@ -243,7 +244,13 @@ class IndexIVFPQ {
           "Cannot ingest_parts() because there is no index.");
     }
     index_->ingest_parts(
-        input_vectors, external_ids, deleted_ids, start, end, partition_start);
+        input_vectors,
+        external_ids,
+        deleted_ids,
+        start,
+        end,
+        partition_start,
+        partial_write_array_dir);
   }
 
   void ingest(
@@ -266,14 +273,20 @@ class IndexIVFPQ {
       size_t work_items,
       size_t partition_id_start,
       size_t partition_id_end,
-      size_t batch) {
+      size_t batch,
+      const std::string& partial_write_array_dir) {
     if (!index_) {
       throw std::runtime_error(
           "[ivf_pq_index@consolidate_partitions] Cannot "
           "consolidate_partitions() because there is no index.");
     }
     index_->consolidate_partitions(
-        partitions, work_items, partition_id_start, partition_id_end, batch);
+        partitions,
+        work_items,
+        partition_id_start,
+        partition_id_end,
+        batch,
+        partial_write_array_dir);
   }
 
   [[nodiscard]] auto query(
@@ -413,7 +426,8 @@ class IndexIVFPQ {
   struct index_base {
     virtual ~index_base() = default;
 
-    virtual void create_temp_data_group() = 0;
+    virtual void create_temp_data_group(
+        const std::string& partial_write_array_dir) = 0;
 
     virtual void train(
         const FeatureVectorArray& training_set,
@@ -426,7 +440,8 @@ class IndexIVFPQ {
         const FeatureVector& deleted_ids,
         size_t start,
         size_t end,
-        size_t partition_start) = 0;
+        size_t partition_start,
+        const std::string& partial_write_array_dir) = 0;
 
     virtual void ingest(
         const FeatureVectorArray& input_vectors,
@@ -437,7 +452,8 @@ class IndexIVFPQ {
         size_t work_items,
         size_t partition_id_start,
         size_t partition_id_end,
-        size_t batch) = 0;
+        size_t batch,
+        const std::string& partial_write_array_dir) = 0;
 
     [[nodiscard]] virtual std::tuple<FeatureVectorArray, FeatureVectorArray>
     query(
@@ -499,8 +515,9 @@ class IndexIVFPQ {
               temporal_policy) {
     }
 
-    void create_temp_data_group() override {
-      impl_index_.create_temp_data_group();
+    void create_temp_data_group(
+        const std::string& partial_write_array_dir) override {
+      impl_index_.create_temp_data_group(partial_write_array_dir);
     }
 
     void train(
@@ -521,7 +538,8 @@ class IndexIVFPQ {
         const FeatureVector& deleted_ids,
         size_t start,
         size_t end,
-        size_t partition_start) override {
+        size_t partition_start,
+        const std::string& partial_write_array_dir) override {
       using feature_type = typename T::feature_type;
       using id_type = typename T::id_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
@@ -534,7 +552,13 @@ class IndexIVFPQ {
         auto ids = std::vector<id_type>(::num_vectors(input_vectors));
         std::iota(ids.begin(), ids.end(), start);
         impl_index_.ingest_parts(
-            fspan, ids, deleted_ids_span, start, end, partition_start);
+            fspan,
+            ids,
+            deleted_ids_span,
+            start,
+            end,
+            partition_start,
+            partial_write_array_dir);
       } else {
         auto external_ids_span = std::span<id_type>(
             (id_type*)external_ids.data(), external_ids.dimensions());
@@ -544,7 +568,8 @@ class IndexIVFPQ {
             deleted_ids_span,
             start,
             end,
-            partition_start);
+            partition_start,
+            partial_write_array_dir);
       }
     }
 
@@ -573,9 +598,15 @@ class IndexIVFPQ {
         size_t work_items,
         size_t partition_id_start,
         size_t partition_id_end,
-        size_t batch) override {
+        size_t batch,
+        const std::string& partial_write_array_dir) override {
       impl_index_.consolidate_partitions(
-          partitions, work_items, partition_id_start, partition_id_end, batch);
+          partitions,
+          work_items,
+          partition_id_start,
+          partition_id_end,
+          batch,
+          partial_write_array_dir);
     }
 
     /**

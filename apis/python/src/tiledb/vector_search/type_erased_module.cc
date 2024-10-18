@@ -542,7 +542,10 @@ void init_type_erased_module(py::module_& m) {
           py::arg("temporal_policy") = std::nullopt)
       .def(
           "create_temp_data_group",
-          [](IndexIVFPQ& index) { index.create_temp_data_group(); })
+          [](IndexIVFPQ& index, const std::string& partial_write_array_dir) {
+            index.create_temp_data_group(partial_write_array_dir);
+          },
+          py::arg("partial_write_array_dir"))
       .def(
           "train",
           [](IndexIVFPQ& index,
@@ -577,21 +580,24 @@ void init_type_erased_module(py::module_& m) {
              const FeatureVector& deleted_ids,
              size_t start,
              size_t end,
-             size_t partition_start) {
+             size_t partition_start,
+             const std::string& partial_write_array_dir) {
             index.ingest_parts(
                 input_vectors,
                 external_ids,
                 deleted_ids,
                 start,
                 end,
-                partition_start);
+                partition_start,
+                partial_write_array_dir);
           },
           py::arg("input_vectors"),
           py::arg("external_ids"),
           py::arg("deleted_ids"),
           py::arg("start"),
           py::arg("end"),
-          py::arg("partition_start"))
+          py::arg("partition_start"),
+          py::arg("partial_write_array_dir"))
       .def(
           "consolidate_partitions",
           [](IndexIVFPQ& index,
@@ -599,19 +605,22 @@ void init_type_erased_module(py::module_& m) {
              size_t work_items,
              size_t partition_id_start,
              size_t partition_id_end,
-             size_t batch) {
+             size_t batch,
+             const std::string& partial_write_array_dir) {
             index.consolidate_partitions(
                 partitions,
                 work_items,
                 partition_id_start,
                 partition_id_end,
-                batch);
+                batch,
+                partial_write_array_dir);
           },
           py::arg("partitions"),
           py::arg("work_items"),
           py::arg("partition_id_start"),
           py::arg("partition_id_end"),
-          py::arg("batch"))
+          py::arg("batch"),
+          py::arg("partial_write_array_dir"))
       .def(
           "ingest",
           [](IndexIVFPQ& index, const FeatureVectorArray& input_vectors) {
