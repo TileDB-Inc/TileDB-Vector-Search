@@ -146,7 +146,6 @@ class IVFPQIndex(index.Index):
             Number of partitions to check per query.
             Use this parameter to trade-off accuracy for latency and cost.
         """
-        warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
         if self.size == 0:
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
                 (queries.shape[0], k), MAX_UINT64
@@ -195,7 +194,6 @@ def create(
         The TileDB vector search storage version to use.
         If not provided, use the latest stable storage version.
     """
-    warnings.warn("The IVF PQ index is not yet supported, please use with caution.")
     validate_storage_version(storage_version)
     # TODO(SC-49166): Support old storage versions with type-erased indexes.
     if storage_version == "0.1" or storage_version == "0.2":
