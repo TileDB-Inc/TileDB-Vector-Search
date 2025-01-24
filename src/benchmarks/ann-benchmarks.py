@@ -18,6 +18,27 @@ from datetime import datetime
 import boto3
 import paramiko
 
+
+# Obtain session token programmatically
+def get_temporary_session_token():
+    sts_client = boto3.client("sts")
+    response = sts_client.get_session_token(DurationSeconds=3600)
+    return response["Credentials"]
+
+
+# Retrieve temporary credentials
+temp_credentials = get_temporary_session_token()
+
+# Initialize a session using the temporary credentials
+session = boto3.Session(
+    aws_access_key_id=temp_credentials["AccessKeyId"],
+    aws_secret_access_key=temp_credentials["SecretAccessKey"],
+    aws_session_token=temp_credentials["SessionToken"],
+)
+
+# Use the session to create a client
+ec2 = session.client("ec2")
+
 installations = ["tiledb"]
 algorithms = ["tiledb-ivf-flat", "tiledb-ivf-pq", "tiledb-flat", "tiledb-vamana"]
 
@@ -27,16 +48,21 @@ if also_benchmark_others:
     installations += [
         "flann",
         "faiss",
+        "faiss_hnsw",
         "hnswlib",
         # "weaviate"
         # "milvus",
         "pgvector",
+        "annoy",
+        "qdrant",
+        "elasticsearch",
     ]
     algorithms += [
         "flann",
         "faiss-ivf",
         # "faiss-lsh",
         "faiss-ivfpqfs",
+        "hnsw(faiss)",
         "hnswlib",
         # "weaviate",
         # "milvus-flat",
@@ -45,6 +71,9 @@ if also_benchmark_others:
         # "milvus-scann",
         # "milvus-hnsw",
         "pgvector",
+        "annoy",
+        "qdrant",
+        "elasticsearch",
     ]
 
 # If you want to skip running benchmarks and keep the instance running after the script finishes,
@@ -72,6 +101,7 @@ connect_to_running_instance_public_dns = ""
 connect_to_running_instance_id = ""
 
 # You do not need to change these.
+# Note this security group is in eu-central-1 (Frankfurt).
 security_group_ids = ["sg-04258b401ce76d246"]
 # 64 vCPU, 512 GiB, EBS-Only.
 instance_type = "r6i.16xlarge"
