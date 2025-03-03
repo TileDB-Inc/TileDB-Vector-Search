@@ -1536,23 +1536,24 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
     centroids = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
     centroids_in_size = centroids.shape[0]
     dimensions = centroids.shape[1]
+    domain = tiledb.Domain(
+        *[
+            tiledb.Dim(
+                name="rows",
+                domain=(0, dimensions - 1),
+                tile=dimensions,
+                dtype=np.dtype(np.int32),
+            ),
+            tiledb.Dim(
+                name="cols",
+                domain=(0, np.iinfo(np.dtype("int32")).max),
+                tile=100000,
+                dtype=np.dtype(np.int32),
+            ),
+        ]
+    )
     schema = tiledb.ArraySchema(
-        domain=tiledb.Domain(
-            *[
-                tiledb.Dim(
-                    name="rows",
-                    domain=(0, dimensions - 1),
-                    tile=dimensions,
-                    dtype=np.dtype(np.int32),
-                ),
-                tiledb.Dim(
-                    name="cols",
-                    domain=(0, np.iinfo(np.dtype("int32")).max),
-                    tile=100000,
-                    dtype=np.dtype(np.int32),
-                ),
-            ]
-        ),
+        domain=domain,
         sparse=False,
         attrs=[
             tiledb.Attr(
@@ -1569,6 +1570,17 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
     index_timestamp = int(time.time() * 1000)
     with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
         A[0:dimensions, 0:centroids_in_size] = centroids.transpose()
+
+        ctx = tiledb.Ctx()
+        ndrect = tiledb.NDRectangle(ctx, domain)
+        range_one = (0, 1)
+        range_two = (0, 2)
+        ndrect.set_range(0, range_one[0], range_one[1])
+        ndrect.set_range(1, range_two[0], range_two[1])
+
+        current_domain = tiledb.CurrentDomain(ctx)
+        current_domain.set_ndrectangle(ndrect)
+        A.schema.set_current_domain(current_domain)
 
     # Create the index.
     index_uri = os.path.join(tmp_path, "array")
@@ -2010,3 +2022,83 @@ def test_ivf_flat_taskgraph_query(tmp_path):
         queries, k=k, nprobe=nprobe, nthreads=8, mode=Mode.LOCAL, num_partitions=10
     )
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
+
+
+# def test_ingestion_current_domain(tmp_path):
+#     # ################################################################################################
+#     # # First set up the data.
+#     # ################################################################################################
+#     # data = np.array(
+#     #     [
+#     #         [1.0, 1.1, 1.2, 1.3],
+#     #         [2.0, 2.1, 2.2, 2.3],
+#     #         [3.0, 3.1, 3.2, 3.3],
+#     #         [4.0, 4.1, 4.2, 4.3],
+#     #         [5.0, 5.1, 5.2, 5.3],
+#     #     ],
+#     #     dtype=np.float32,
+#     # )
+#     # training_data = data[1:3]
+
+#     # ################################################################################################
+#     # # Test we can ingest, query, update, and consolidate.
+#     # ################################################################################################
+#     # index_uri = os.path.join(tmp_path, "array")
+#     # index = ingest(
+#     #     index_type="IVF_FLAT",
+#     #     index_uri=index_uri,
+#     #     input_vectors=data,
+#     #     training_input_vectors=training_data,
+#     # )
+
+#     # ======
+
+#     dimensions = 128
+#     schema = tiledb.ArraySchema(
+#         domain=tiledb.Domain(
+#             *[
+#                 tiledb.Dim(
+#                     name="rows",
+#                     domain=(0, dimensions - 1),
+#                     tile=dimensions,
+#                     dtype=np.dtype(np.int32),
+#                 ),
+#                 tiledb.Dim(
+#                     name="cols",
+#                     domain=(0, np.iinfo(np.dtype("int32")).max),
+#                     tile=100000,
+#                     dtype=np.dtype(np.int32),
+#                 ),
+#             ]
+#         ),
+#         sparse=False,
+#         attrs=[
+#             tiledb.Attr(
+#                 name="attr",
+#                 dtype="float32",
+#                 filters=tiledb.FilterList([tiledb.ZstdFilter()]),
+#             )
+#         ],
+#         cell_order="col-major",
+#         tile_order="col-major",
+#     )
+#     uri = os.path.join(tmp_path, "array")
+#     tiledb.Array.create(uri, schema)
+
+#     index_timestamp = int(time.time() * 1000)
+#     with tiledb.open(uri, mode="w", timestamp=index_timestamp) as A:
+#         A[0:dimensions, 0:dimensions] = np.random.rand(dimensions, dimensions).astype(
+#             np.float32
+#         )
+
+#     data = np.random.rand(1000, dimensions).astype(np.float32)
+
+#     # Create the index.
+#     index_uri = os.path.join(tmp_path, "array")
+#     index = ingest(
+#         index_type="IVF_FLAT",
+#         index_uri=index_uri,
+#         input_vectors=data,
+#         copy_centroids_uri=uri,
+#         partitions=centroids_in_size,
+#     )
