@@ -79,7 +79,7 @@ def test_vamana_ingestion_u8(tmp_path):
 
     assert vfs.dir_size(index_uri) > 0
     Index.delete_index(uri=index_uri, config={})
-    assert vfs.dir_size(index_uri) == 0
+    assert not vfs.is_dir(index_uri)
 
 
 def test_flat_ingestion_u8(tmp_path):
@@ -376,7 +376,7 @@ def test_ingestion_fvec(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_numpy(tmp_path):
@@ -430,7 +430,7 @@ def test_ingestion_numpy(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_numpy_i8(tmp_path):
@@ -486,7 +486,7 @@ def test_ingestion_numpy_i8(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_multiple_workers(tmp_path):
@@ -541,7 +541,7 @@ def test_ingestion_multiple_workers(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_external_ids_numpy(tmp_path):
@@ -590,7 +590,7 @@ def test_ingestion_external_ids_numpy(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_timetravel(tmp_path):
@@ -935,7 +935,7 @@ def test_ingestion_with_updates(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_with_batch_updates(tmp_path):
@@ -1003,7 +1003,7 @@ def test_ingestion_with_batch_updates(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_with_updates_and_timetravel(tmp_path):
@@ -1277,7 +1277,7 @@ def test_ingestion_with_updates_and_timetravel(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ingestion_with_additions_and_timetravel(tmp_path):
@@ -1335,7 +1335,7 @@ def test_ingestion_with_additions_and_timetravel(tmp_path):
 
         assert vfs.dir_size(index_uri) > 0
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
 
 
 def test_ivf_flat_ingestion_tdb_random_sampling_policy(tmp_path):
