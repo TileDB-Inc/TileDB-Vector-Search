@@ -16,6 +16,8 @@ jobs:
       - name: Install OpenBLAS
         if: ${{ runner.os == 'Linux' }}
         run: sudo apt install libopenblas-dev
+      - name: Install CMake
+        run: pip install cmake<4
       - uses: actions/checkout@v3
       - name: Configure CMake
         run: cmake -S ./src -B ./src/build -DCMAKE_BUILD_TYPE=Debug -DTILEDB_VS_ENABLE_BLAS=ON
