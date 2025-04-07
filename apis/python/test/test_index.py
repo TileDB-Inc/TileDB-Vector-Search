@@ -111,7 +111,7 @@ def test_flat_index(tmp_path):
     vfs = tiledb.VFS()
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
-    assert vfs.dir_size(uri) == 0
+    assert not vfs.is_dir(uri)
 
 
 def test_ivf_flat_index(tmp_path):
@@ -196,7 +196,7 @@ def test_ivf_flat_index(tmp_path):
     vfs = tiledb.VFS()
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
-    assert vfs.dir_size(uri) == 0
+    assert not vfs.is_dir(uri)
 
 
 def test_vamana_index_simple(tmp_path):
@@ -217,7 +217,7 @@ def test_vamana_index_simple(tmp_path):
     vfs = tiledb.VFS()
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
-    assert vfs.dir_size(uri) == 0
+    assert not vfs.is_dir(uri)
 
 
 def test_vamana_index(tmp_path):
@@ -298,7 +298,7 @@ def test_vamana_index(tmp_path):
     vfs = tiledb.VFS()
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
-    assert vfs.dir_size(uri) == 0
+    assert not vfs.is_dir(uri)
 
 
 def test_ivf_pq_index(tmp_path):
@@ -407,7 +407,7 @@ def test_ivf_pq_index(tmp_path):
     vfs = tiledb.VFS()
     assert vfs.dir_size(uri) > 0
     Index.delete_index(uri=uri, config={})
-    assert vfs.dir_size(uri) == 0
+    assert not vfs.is_dir(uri)
 
 
 def test_delete_invalid_index(tmp_path):
@@ -429,7 +429,7 @@ def test_delete_index(tmp_path):
             num_subspaces=1,
         )
         Index.delete_index(uri=index_uri, config={})
-        assert vfs.dir_size(index_uri) == 0
+        assert not vfs.is_dir(index_uri)
         with pytest.raises(tiledb.TileDBError) as error:
             open(uri=index_uri)
         assert "does not exist" in str(error.value)
@@ -459,7 +459,7 @@ def test_index_with_incorrect_dimensions(tmp_path):
 
         assert vfs.dir_size(uri) > 0
         Index.delete_index(uri=uri, config={})
-        assert vfs.dir_size(uri) == 0
+        assert not vfs.is_dir(uri)
 
 
 def test_index_with_incorrect_num_of_query_columns_simple(tmp_path):
@@ -524,7 +524,7 @@ def test_index_with_incorrect_num_of_query_columns_complex(tmp_path):
 
             assert vfs.dir_size(index_uri) > 0
             Index.delete_index(uri=index_uri, config={})
-            assert vfs.dir_size(index_uri) == 0
+            assert not vfs.is_dir(index_uri)
 
 
 def test_index_with_incorrect_num_of_query_columns_in_single_vector_query(tmp_path):
