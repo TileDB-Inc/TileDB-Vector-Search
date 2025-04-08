@@ -58,9 +58,6 @@ wheel.packages = ["apis/python/src/tiledb"]
 # thus not including .git to generate it later
 sdist.cmake = true
 
-cmake.build-type = "RelWithDebInfo"
-install.strip = false
-
 [tool.scikit-build.cmake.define]
 TILEDB_VS_PYTHON = "ON"
 TILEDB_PATH = {env="TILEDB_PATH"}
