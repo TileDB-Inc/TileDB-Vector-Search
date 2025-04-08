@@ -34,13 +34,13 @@ jobs:
           pip list
 
           cd apis/python
+          export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
           pytest -n logical --durations=0
           # TODO: fix editable on linux
           #pip uninstall -y tiledb.vector_search
           #pip install -e .
           #pytest
           pip install -r test/ipynb/requirements.txt
-          export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
           pytest -n logical --durations=0 --nbmake test/ipynb
         env:
           TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
@@ -87,13 +87,13 @@ jobs:
           pip list
 
           cd apis/python
+          export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
           pytest -n logical --durations=0
           # TODO: fix editable on linux
           #pip uninstall -y tiledb.vector_search
           #pip install -e .
           #pytest
           pip install -r test/ipynb/requirements.txt numpy==1.25.0
-          export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
           pytest -n logical --durations=0 --nbmake test/ipynb
         env:
           TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
