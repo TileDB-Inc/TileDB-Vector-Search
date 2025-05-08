@@ -20,7 +20,7 @@ classifiers = [
 # These are the runtime depdendencies.
 dependencies = [
     "tiledb-cloud>=0.11",
-    "tiledb>=0.33.3rc0",
+    "tiledb>=0.34.0rc0",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
     "numpy>=1.25.0",
