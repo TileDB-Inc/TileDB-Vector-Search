@@ -110,27 +110,13 @@ jobs:
           brew update
           brew install automake pkg-config ninja llvm
 
-          
-      - name: Install GCC 10 (on Ubuntu)
-        if: ${{ matrix.buildplat[0] == 'ubuntu-22.04' }}
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-10 g++-10
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
-          gcc --version
-          g++ --version
-
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: pypa/cibuildwheel@v2.23.3
         env:
-          CIBW_BUILD_VERBOSITY: 3
+          CIBW_BUILD_VERBOSITY: 1
           CIBW_ENVIRONMENT_MACOS: >
             CC=clang
             CXX=clang++
-          CIBW_ENVIRONMENT_LINUX: >
-            CC=gcc-10
-            CXX=g++-10
           MACOSX_DEPLOYMENT_TARGET: "12.0"
           CIBW_ARCHS: all
           CIBW_PRERELEASE_PYTHONS: True
