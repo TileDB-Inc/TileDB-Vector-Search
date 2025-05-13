@@ -117,6 +117,9 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: >
             CC=clang
             CXX=clang++
+          CIBW_ENVIRONMENT_LINUX: >
+            CC=gcc-10
+            CXX=g++-10
           MACOSX_DEPLOYMENT_TARGET: "12.0"
           CIBW_ARCHS: all
           CIBW_PRERELEASE_PYTHONS: True
