@@ -57,13 +57,13 @@ else()
     # - Copy the release hash from the `releases.csv.sha256` file in the release.
     if(DOWNLOAD_TILEDB_PREBUILT)
         fetch_prebuilt_tiledb(
-                VERSION 2.27.0
-                RELLIST_HASH SHA256=8056514b1949cdab19405376e32e299578491a6d3e953321d12d761f94dc19b9
+                VERSION 2.28.0
+                RELLIST_HASH SHA256=40c8a0b5b7ddfe6150e3ce390fd95761d2b7d5910ea3fd5c7dfb67d431e64660
         )
     else() # Build from source
         fetch_source_tiledb(
-                VERSION 2.27.0
-                RELLIST_HASH SHA256=8056514b1949cdab19405376e32e299578491a6d3e953321d12d761f94dc19b9
+                VERSION 2.28.0
+                RELLIST_HASH SHA256=40c8a0b5b7ddfe6150e3ce390fd95761d2b7d5910ea3fd5c7dfb67d431e64660
         )
     endif()
 
