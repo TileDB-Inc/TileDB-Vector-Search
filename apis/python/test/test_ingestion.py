@@ -1536,23 +1536,24 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
     centroids = np.array([[1, 1, 1, 1], [2, 2, 2, 2]], dtype=np.float32)
     centroids_in_size = centroids.shape[0]
     dimensions = centroids.shape[1]
+    domain = tiledb.Domain(
+        *[
+            tiledb.Dim(
+                name="rows",
+                domain=(0, dimensions - 1),
+                tile=dimensions,
+                dtype=np.dtype(np.int32),
+            ),
+            tiledb.Dim(
+                name="cols",
+                domain=(0, np.iinfo(np.dtype("int32")).max),
+                tile=100000,
+                dtype=np.dtype(np.int32),
+            ),
+        ]
+    )
     schema = tiledb.ArraySchema(
-        domain=tiledb.Domain(
-            *[
-                tiledb.Dim(
-                    name="rows",
-                    domain=(0, dimensions - 1),
-                    tile=dimensions,
-                    dtype=np.dtype(np.int32),
-                ),
-                tiledb.Dim(
-                    name="cols",
-                    domain=(0, np.iinfo(np.dtype("int32")).max),
-                    tile=100000,
-                    dtype=np.dtype(np.int32),
-                ),
-            ]
-        ),
+        domain=domain,
         sparse=False,
         attrs=[
             tiledb.Attr(
@@ -1569,6 +1570,17 @@ def test_ivf_flat_copy_centroids_uri(tmp_path):
     index_timestamp = int(time.time() * 1000)
     with tiledb.open(centroids_uri, mode="w", timestamp=index_timestamp) as A:
         A[0:dimensions, 0:centroids_in_size] = centroids.transpose()
+
+        ctx = tiledb.Ctx()
+        ndrect = tiledb.NDRectangle(ctx, domain)
+        range_one = (0, 1)
+        range_two = (0, 2)
+        ndrect.set_range(0, range_one[0], range_one[1])
+        ndrect.set_range(1, range_two[0], range_two[1])
+
+        current_domain = tiledb.CurrentDomain(ctx)
+        current_domain.set_ndrectangle(ndrect)
+        A.schema.set_current_domain(current_domain)
 
     # Create the index.
     index_uri = os.path.join(tmp_path, "array")
