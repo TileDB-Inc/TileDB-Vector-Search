@@ -412,12 +412,20 @@ def ingest(
         if source_type == "TILEDB_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
             size = np.int64(schema.domain.dim(1).domain[1]) + 1
-            dimensions = np.int64(schema.domain.dim(0).domain[1]) + 1
+            # In the case that current domain is non-empty, we need to consider it
+            if hasattr(schema, "current_domain") and not schema.current_domain.is_empty:
+                dimensions = np.int64(schema.current_domain.dim(0).domain[1]) + 1
+            else:
+                dimensions = np.int64(schema.domain.dim(0).domain[1]) + 1
             return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_SPARSE_ARRAY":
             schema = tiledb.ArraySchema.load(source_uri)
             size = np.int64(schema.domain.dim(0).domain[1]) + 1
-            dimensions = np.int64(schema.domain.dim(1).domain[1]) + 1
+            # In the case that current domain is non-empty, we need to consider it
+            if hasattr(schema, "current_domain") and not schema.current_domain.is_empty:
+                dimensions = np.int64(schema.current_domain.dim(1).domain[1]) + 1
+            else:
+                dimensions = np.int64(schema.domain.dim(1).domain[1]) + 1
             return size, dimensions, schema.attr(0).dtype
         if source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(source_uri, "r", config=config) as source_array:
