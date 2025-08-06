@@ -941,7 +941,8 @@ def ingest(
             ) as src_array:
                 src_array_schema = src_array.schema
                 data = src_array[start_pos:end_pos, 0:dimensions]
-                return coo_matrix(
+                
+                matrix = coo_matrix(
                     (
                         data[src_array_schema.attr(0).name],
                         (
@@ -950,6 +951,15 @@ def ingest(
                         ),
                     )
                 ).toarray()
+
+                if matrix.shape[1] < dimensions:
+                    matrix = np.concatenate([
+                        matrix,
+                        np.zeros(shape=(matrix.shape[0], dimensions - matrix.shape[1]))
+                    ], axis=1)
+
+                return matrix
+
         elif source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(
                 source_uri, "r", timestamp=index_timestamp, config=config
