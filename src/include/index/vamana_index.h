@@ -735,8 +735,8 @@ class vamana_index {
           r_max_degree_,
           distance_function_);
 
-      // Also ensure medoid appears as a neighbor in other nodes' adjacency lists
-      // (for good reverse connectivity)
+      // Also ensure medoid appears as a neighbor in other nodes' adjacency
+      // lists (for good reverse connectivity)
       for (auto&& [score, neighbor_id] : graph_.out_edges(medoid_)) {
         auto tmp = std::vector<id_type>(graph_.out_degree(neighbor_id) + 1);
         tmp.push_back(medoid_);

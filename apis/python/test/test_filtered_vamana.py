@@ -327,7 +327,9 @@ def test_unfiltered_query_on_filtered_index(tmp_path):
 
     # Filtered-Vamana optimizes for filtered queries; unfiltered recall is lower
     # This threshold reflects the algorithm's behavior, not a performance target
-    assert recall >= 0.25, f"Unfiltered recall {recall:.2f} < 0.25 on filtered index (got {recall:.2f}, filtered algorithm limitation)"
+    assert (
+        recall >= 0.25
+    ), f"Unfiltered recall {recall:.2f} < 0.25 on filtered index (got {recall:.2f}, filtered algorithm limitation)"
 
     Index.delete_index(uri=uri, config={})
 
