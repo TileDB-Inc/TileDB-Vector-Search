@@ -49,6 +49,7 @@ def ingest(
     external_ids: Optional[np.array] = None,
     external_ids_uri: Optional[str] = "",
     external_ids_type: Optional[str] = None,
+    filter_labels: Optional[Mapping[Any, Sequence[str]]] = None,
     updates_uri: Optional[str] = None,
     index_timestamp: Optional[int] = None,
     config: Optional[Mapping[str, Any]] = None,
@@ -1682,6 +1683,7 @@ def ingest(
         size: int,
         batch: int,
         partitions: int,
+        filter_labels: Optional[Mapping[Any, Sequence[str]]] = None,
         config: Optional[Mapping[str, Any]] = None,
         verbose: bool = False,
         trace_id: Optional[str] = None,
@@ -1813,7 +1815,46 @@ def ingest(
             to_temporal_policy(index_timestamp),
         )
         index = vspy.IndexVamana(ctx, index_group_uri)
-        index.train(data)
+
+        # Process filter_labels if provided
+        if filter_labels is not None:
+            # Build label enumeration: string → uint32
+            label_to_enum = {}
+            next_enum_id = 0
+            for labels_list in filter_labels.values():
+                for label_str in labels_list:
+                    if label_str not in label_to_enum:
+                        label_to_enum[label_str] = next_enum_id
+                        next_enum_id += 1
+
+            # Read the external_ids array to map positions to external_ids
+            ids_array_read = tiledb.open(ids_array_uri, mode="r", timestamp=index_timestamp)
+            external_ids_ordered = ids_array_read[0:end]["values"]
+            ids_array_read.close()
+
+            # Convert filter_labels to enumerated format
+            # C++ expects: vector<unordered_set<uint32_t>> indexed by vector position
+            # Python provides: dict[external_id] -> list[label_strings]
+            enumerated_labels = []
+            for vector_idx in range(end):
+                external_id = external_ids_ordered[vector_idx]
+                labels_set = set()
+                if external_id in filter_labels:
+                    # Convert string labels to enumeration IDs
+                    for label_str in filter_labels[external_id]:
+                        labels_set.add(label_to_enum[label_str])
+                enumerated_labels.append(labels_set)
+
+            # Pass enumerated_labels and label_to_enum to train
+            print(f"DEBUG: filter_labels has {len(enumerated_labels)} vectors")
+            print(f"DEBUG: label_to_enum = {label_to_enum}")
+            print(f"DEBUG: First few enumerated_labels: {enumerated_labels[:3]}")
+            index.train(
+                vectors=data, filter_labels=enumerated_labels, label_to_enum=label_to_enum
+            )
+        else:
+            index.train(vectors=data)
+
         index.add(data)
         index.write_index(ctx, index_group_uri, to_temporal_policy(index_timestamp))
 
@@ -2570,6 +2611,7 @@ def ingest(
                 size=size,
                 batch=input_vectors_batch_size,
                 partitions=partitions,
+                filter_labels=filter_labels,
                 config=config,
                 verbose=verbose,
                 trace_id=trace_id,

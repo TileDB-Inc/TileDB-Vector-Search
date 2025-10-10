@@ -486,7 +486,8 @@ class vamana_index {
   void train(
       const Array& training_set,
       const Vector& training_set_ids,
-      const std::vector<std::unordered_set<uint32_t>>& filter_labels = {}) {
+      const std::vector<std::unordered_set<uint32_t>>& filter_labels = {},
+      const std::unordered_map<std::string, uint32_t>& label_to_enum = {}) {
     scoped_timer _{"vamana_index@train"};
 
     // Validate training data
@@ -526,6 +527,15 @@ class vamana_index {
     if (filter_enabled_) {
       // Store filter labels
       filter_labels_ = filter_labels;
+
+      // Store label enumeration mapping
+      label_to_enum_ = label_to_enum;
+
+      // Build reverse mapping
+      enum_to_label_.clear();
+      for (const auto& [str, id] : label_to_enum_) {
+        enum_to_label_[id] = str;
+      }
 
       // Find start nodes (load-balanced) using find_medoid
       // find_medoid returns std::unordered_map<uint32_t, size_t>, so convert to

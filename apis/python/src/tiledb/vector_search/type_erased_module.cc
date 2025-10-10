@@ -421,10 +421,15 @@ void init_type_erased_module(py::module_& m) {
           })
       .def(
           "train",
-          [](IndexVamana& index, const FeatureVectorArray& vectors) {
-            index.train(vectors);
+          [](IndexVamana& index,
+             const FeatureVectorArray& vectors,
+             const std::vector<std::unordered_set<uint32_t>>& filter_labels,
+             const std::unordered_map<std::string, uint32_t>& label_to_enum) {
+            index.train(vectors, filter_labels, label_to_enum);
           },
-          py::arg("vectors"))
+          py::arg("vectors"),
+          py::arg("filter_labels") = std::vector<std::unordered_set<uint32_t>>{},
+          py::arg("label_to_enum") = std::unordered_map<std::string, uint32_t>{})
       .def(
           "add",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {
