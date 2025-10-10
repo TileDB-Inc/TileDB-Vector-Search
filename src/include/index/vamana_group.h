@@ -178,6 +178,53 @@ class vamana_index_group : public base_index_group<index_type> {
     metadata_.distance_metric_ = metric;
   }
 
+  /*
+   * Filter support for Filtered-Vamana
+   */
+  bool get_filter_enabled() const {
+    return metadata_.filter_enabled_;
+  }
+  void set_filter_enabled(bool enabled) {
+    metadata_.filter_enabled_ = enabled;
+  }
+
+  // Get label enumeration as unordered_map from JSON string
+  std::unordered_map<std::string, uint32_t> get_label_enumeration() const {
+    if (metadata_.label_enumeration_str_.empty()) {
+      return {};
+    }
+    auto json = nlohmann::json::parse(metadata_.label_enumeration_str_);
+    return json.get<std::unordered_map<std::string, uint32_t>>();
+  }
+
+  // Set label enumeration from unordered_map, converting to JSON string
+  void set_label_enumeration(
+      const std::unordered_map<std::string, uint32_t>& label_enum) {
+    nlohmann::json json = label_enum;
+    metadata_.label_enumeration_str_ = json.dump();
+  }
+
+  // Get start nodes as unordered_map from JSON string
+  std::unordered_map<uint32_t, uint64_t> get_start_nodes() const {
+    if (metadata_.start_nodes_str_.empty()) {
+      return {};
+    }
+    auto json = nlohmann::json::parse(metadata_.start_nodes_str_);
+    return json.get<std::unordered_map<uint32_t, uint64_t>>();
+  }
+
+  // Set start nodes from unordered_map, converting to JSON string
+  void set_start_nodes(
+      const std::unordered_map<uint32_t, uint64_t>& start_nodes) {
+    nlohmann::json json = start_nodes;
+    metadata_.start_nodes_str_ = json.dump();
+  }
+
+  // Check if filter metadata is present (for backward compatibility)
+  bool has_filter_metadata() const {
+    return metadata_.filter_enabled_;
+  }
+
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
   }

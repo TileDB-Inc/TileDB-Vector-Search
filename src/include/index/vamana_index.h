@@ -360,6 +360,23 @@ class vamana_index {
 
     distance_function_ = Distance{};
 
+    // NEW: Load filter metadata if present
+    filter_enabled_ = group_->has_filter_metadata();
+    if (filter_enabled_) {
+      // Load label enumeration
+      label_to_enum_ = group_->get_label_enumeration();
+      // Build reverse mapping
+      for (const auto& [str, id] : label_to_enum_) {
+        enum_to_label_[id] = str;
+      }
+
+      // Load start nodes and convert from uint64_t to id_type
+      auto start_nodes_u64 = group_->get_start_nodes();
+      for (const auto& [label, node_id] : start_nodes_u64) {
+        start_nodes_[label] = static_cast<id_type>(node_id);
+      }
+    }
+
     if (group_->should_skip_query()) {
       num_vectors_ = 0;
     }
@@ -928,6 +945,18 @@ class vamana_index {
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
     write_group.set_distance_metric(distance_metric_);
+
+    // NEW: Write filter metadata if filtering is enabled
+    write_group.set_filter_enabled(filter_enabled_);
+    if (filter_enabled_) {
+      // Convert start_nodes_ from unordered_map<uint32_t, id_type> to unordered_map<uint32_t, uint64_t>
+      std::unordered_map<uint32_t, uint64_t> start_nodes_u64;
+      for (const auto& [label, node_id] : start_nodes_) {
+        start_nodes_u64[label] = static_cast<uint64_t>(node_id);
+      }
+      write_group.set_label_enumeration(label_to_enum_);
+      write_group.set_start_nodes(start_nodes_u64);
+    }
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
