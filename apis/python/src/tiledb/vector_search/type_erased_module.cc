@@ -436,13 +436,16 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& index,
              const FeatureVectorArray& vectors,
              size_t k,
-             uint32_t l_search) {
-            auto r = index.query(vectors, k, l_search);
+             uint32_t l_search,
+             std::optional<std::unordered_set<uint32_t>> query_filter =
+                 std::nullopt) {
+            auto r = index.query(vectors, k, l_search, query_filter);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
           py::arg("k"),
-          py::arg("l_search"))
+          py::arg("l_search"),
+          py::arg("query_filter") = std::nullopt)
       .def(
           "write_index",
           [](IndexVamana& index,

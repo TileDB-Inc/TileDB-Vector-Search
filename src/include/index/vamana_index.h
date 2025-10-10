@@ -811,6 +811,7 @@ class vamana_index {
    * @param query_set Container of query vectors
    * @param k How many nearest neighbors to return
    * @param l_search How deep to search
+   * @param query_filter Optional filter labels for filtered search
    * @return Tuple of top k scores and top k ids
    */
   template <query_vector_array Q>
@@ -818,6 +819,7 @@ class vamana_index {
       const Q& query_set,
       size_t k,
       std::optional<uint32_t> l_search = std::nullopt,
+      std::optional<std::unordered_set<filter_label_type>> query_filter = std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer _("vamana_index@query");
 
@@ -833,18 +835,50 @@ class vamana_index {
 
     stdx::range_for_each(
         std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
-          auto&& [tk_scores, tk, V] = greedy_search(
-              graph_,
-              feature_vectors_,
-              medoid_,
-              query_vec,
-              k,
-              L,
-              distance_function_,
-              true);
-          std::copy(
-              tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
-          std::copy(tk.data(), tk.data() + k, top_k[i].data());
+          // NEW: Use filtered or unfiltered search based on query_filter
+          if (filter_enabled_ && query_filter.has_value()) {
+            // Determine start nodes for ALL labels in query filter (multi-start)
+            std::vector<id_type> start_nodes_for_query;
+            for (uint32_t label : *query_filter) {
+              if (start_nodes_.find(label) != start_nodes_.end()) {
+                start_nodes_for_query.push_back(start_nodes_.at(label));
+              }
+            }
+
+            if (start_nodes_for_query.empty()) {
+              throw std::runtime_error(
+                  "No start nodes found for query filter labels");
+            }
+
+            auto&& [tk_scores, tk, V] = filtered_greedy_search_multi_start(
+                graph_,
+                feature_vectors_,
+                filter_labels_,
+                start_nodes_for_query,
+                query_vec,
+                *query_filter,
+                k,
+                L,
+                distance_function_,
+                true);
+            std::copy(
+                tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
+            std::copy(tk.data(), tk.data() + k, top_k[i].data());
+          } else {
+            // Unfiltered search
+            auto&& [tk_scores, tk, V] = greedy_search(
+                graph_,
+                feature_vectors_,
+                medoid_,
+                query_vec,
+                k,
+                L,
+                distance_function_,
+                true);
+            std::copy(
+                tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
+            std::copy(tk.data(), tk.data() + k, top_k[i].data());
+          }
         });
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
@@ -857,6 +891,7 @@ class vamana_index {
    * @param query_vec The vector to query
    * @param k How many nearest neighbors to return
    * @param l_search How deep to search
+   * @param query_filter Optional filter labels for filtered search
    * @return Top k scores and top k ids
    */
   template <query_vector Q>
@@ -864,19 +899,52 @@ class vamana_index {
       const Q& query_vec,
       size_t k,
       std::optional<uint32_t> l_search = std::nullopt,
+      std::optional<std::unordered_set<filter_label_type>> query_filter = std::nullopt,
       Distance distance = Distance{}) {
     uint32_t L = l_search ? *l_search : l_build_;
-    auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_,
-        feature_vectors_,
-        medoid_,
-        query_vec,
-        k,
-        L,
-        distance_function_,
-        true);
 
-    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+    // NEW: Use filtered or unfiltered search based on query_filter
+    if (filter_enabled_ && query_filter.has_value()) {
+      // Determine start nodes for ALL labels in query filter (multi-start)
+      std::vector<id_type> start_nodes_for_query;
+      for (uint32_t label : *query_filter) {
+        if (start_nodes_.find(label) != start_nodes_.end()) {
+          start_nodes_for_query.push_back(start_nodes_.at(label));
+        }
+      }
+
+      if (start_nodes_for_query.empty()) {
+        throw std::runtime_error(
+            "No start nodes found for query filter labels");
+      }
+
+      auto&& [top_k_scores, top_k, V] = filtered_greedy_search_multi_start(
+          graph_,
+          feature_vectors_,
+          filter_labels_,
+          start_nodes_for_query,
+          query_vec,
+          *query_filter,
+          k,
+          L,
+          distance_function_,
+          true);
+
+      return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+    } else {
+      // Unfiltered search
+      auto&& [top_k_scores, top_k, V] = greedy_search(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          query_vec,
+          k,
+          L,
+          distance_function_,
+          true);
+
+      return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+    }
   }
 
   constexpr uint64_t dimensions() const {

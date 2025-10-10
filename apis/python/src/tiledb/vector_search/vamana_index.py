@@ -7,11 +7,13 @@ Vamana is based on Microsoft's DiskANN vector search library, as described in th
 
   Singh, Aditi, et al. FreshDiskANN: A Fast and Accurate Graph-Based ANN Index for Streaming Similarity Search. arXiv:2105.09613, arXiv, 20 May 2021, http://arxiv.org/abs/2105.09613.
 
-  Gollapudi, Siddharth, et al. “Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search with Filters.” Proceedings of the ACM Web Conference 2023, ACM, 2023, pp. 3406-16, https://doi.org/10.1145/3543507.3583552.
+  Gollapudi, Siddharth, et al. "Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search with Filters." Proceedings of the ACM Web Conference 2023, ACM, 2023, pp. 3406-16, https://doi.org/10.1145/3543507.3583552.
 ```
 """
+import json
+import re
 import warnings
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional, Set
 
 import numpy as np
 
@@ -24,6 +26,55 @@ from tiledb.vector_search.storage_formats import validate_storage_version
 from tiledb.vector_search.utils import MAX_FLOAT32
 from tiledb.vector_search.utils import MAX_UINT64
 from tiledb.vector_search.utils import to_temporal_policy
+
+
+def _parse_where_clause(where: str, label_enumeration: dict) -> Set[int]:
+    """
+    Parse a simple where clause and return a set of label IDs.
+
+    Supports basic equality conditions like: "label_col == 'value'"
+
+    Parameters
+    ----------
+    where : str
+        The where clause string to parse
+    label_enumeration : dict
+        Mapping from label strings to enumeration IDs
+
+    Returns
+    -------
+    Set[int]
+        Set of label IDs matching the where clause
+
+    Raises
+    ------
+    ValueError
+        If the where clause is invalid or references non-existent labels
+    """
+    # Simple pattern for: column_name == 'value'
+    # We support single or double quotes
+    pattern = r"\s*\w+\s*==\s*['\"]([^'\"]+)['\"]\s*"
+    match = re.match(pattern, where.strip())
+
+    if not match:
+        raise ValueError(
+            f"Invalid where clause: '{where}'. "
+            "Expected format: \"label_col == 'value'\""
+        )
+
+    label_value = match.group(1)
+
+    # Check if the label exists in the enumeration
+    if label_value not in label_enumeration:
+        available_labels = ", ".join(sorted(label_enumeration.keys()))
+        raise ValueError(
+            f"Label '{label_value}' not found in index. "
+            f"Available labels: {available_labels}"
+        )
+
+    # Return the enumeration ID for this label
+    label_id = label_enumeration[label_value]
+    return {label_id}
 
 INDEX_TYPE = "VAMANA"
 
@@ -94,6 +145,7 @@ class VamanaIndex(index.Index):
         queries: np.ndarray,
         k: int = 10,
         l_search: Optional[int] = L_SEARCH_DEFAULT,
+        where: Optional[str] = None,
         **kwargs,
     ):
         """
@@ -108,6 +160,9 @@ class VamanaIndex(index.Index):
         l_search: int
             How deep to search. Larger parameters will result in slower latencies, but higher accuracies.
             Should be >= k, and if it's not, we will set it to k.
+        where: Optional[str]
+            Optional filter condition for filtered queries.
+            Example: "label_col == 'dataset_1'"
         """
         if self.size == 0:
             return np.full((queries.shape[0], k), MAX_FLOAT32), np.full(
@@ -125,7 +180,26 @@ class VamanaIndex(index.Index):
             queries = queries.copy(order="F")
         queries_feature_vector_array = vspy.FeatureVectorArray(queries)
 
-        distances, ids = self.index.query(queries_feature_vector_array, k, l_search)
+        # NEW: Handle filtered queries
+        query_filter = None
+        if where is not None:
+            # Get label enumeration from metadata
+            label_enum_str = self.group.meta.get("label_enumeration", None)
+            if label_enum_str is None:
+                raise ValueError(
+                    "Cannot use 'where' parameter: index does not have filter metadata. "
+                    "This index was not created with filter support."
+                )
+
+            # Parse JSON string to get label enumeration
+            label_enumeration = json.loads(label_enum_str)
+
+            # Parse where clause and get filter label IDs
+            query_filter = _parse_where_clause(where, label_enumeration)
+
+        distances, ids = self.index.query(
+            queries_feature_vector_array, k, l_search, query_filter
+        )
 
         return np.array(distances, copy=False), np.array(ids, copy=False)
 
