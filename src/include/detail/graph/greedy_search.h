@@ -40,6 +40,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "detail/linalg/vector.h"
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
 

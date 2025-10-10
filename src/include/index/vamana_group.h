@@ -194,7 +194,7 @@ class vamana_index_group : public base_index_group<index_type> {
       return {};
     }
     auto json = nlohmann::json::parse(metadata_.label_enumeration_str_);
-    return json.get<std::unordered_map<std::string, uint32_t>>();
+    return json.template get<std::unordered_map<std::string, uint32_t>>();
   }
 
   // Set label enumeration from unordered_map, converting to JSON string
@@ -210,7 +210,7 @@ class vamana_index_group : public base_index_group<index_type> {
       return {};
     }
     auto json = nlohmann::json::parse(metadata_.start_nodes_str_);
-    return json.get<std::unordered_map<uint32_t, uint64_t>>();
+    return json.template get<std::unordered_map<uint32_t, uint64_t>>();
   }
 
   // Set start nodes from unordered_map, converting to JSON string

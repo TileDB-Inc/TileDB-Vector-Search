@@ -509,7 +509,11 @@ class vamana_index {
       filter_labels_ = filter_labels;
 
       // Find start nodes (load-balanced) using find_medoid
-      start_nodes_ = find_medoid(feature_vectors_, filter_labels_, distance_function_);
+      // find_medoid returns std::unordered_map<uint32_t, size_t>, so convert to id_type
+      auto start_nodes_size_t = find_medoid(feature_vectors_, filter_labels_, distance_function_);
+      for (const auto& [label, node_id] : start_nodes_size_t) {
+        start_nodes_[label] = static_cast<id_type>(node_id);
+      }
 
       // No single medoid in filtered mode
     } else {
@@ -540,9 +544,8 @@ class vamana_index {
         }
 
         // NEW: Use filtered or unfiltered search based on mode
-        std::vector<id_type> visited;
         if (filter_enabled_) {
-          auto&& [_, __, v] = filtered_greedy_search_multi_start(
+          auto&& [_, __, visited] = filtered_greedy_search_multi_start(
               graph_,
               feature_vectors_,
               filter_labels_,
@@ -553,24 +556,9 @@ class vamana_index {
               l_build_,
               distance_function_,
               true);
-          visited = std::move(v);
-        } else {
-          auto&& [_, __, v] = ::best_first_O4 /*greedy_search*/ (
-              graph_,
-              feature_vectors_,
-              medoid_,
-              feature_vectors_[p],
-              1,
-              l_build_,
-              true,
-              distance_function_);
-          visited = std::move(v);
-        }
 
-        total_visited += visited.size();
+          total_visited += visited.size();
 
-        // NEW: Use filtered or unfiltered prune based on mode
-        if (filter_enabled_) {
           filtered_robust_prune(
               graph_,
               feature_vectors_,
@@ -581,6 +569,18 @@ class vamana_index {
               r_max_degree_,
               distance_function_);
         } else {
+          auto&& [_, __, visited] = ::best_first_O4 /*greedy_search*/ (
+              graph_,
+              feature_vectors_,
+              medoid_,
+              feature_vectors_[p],
+              1,
+              l_build_,
+              true,
+              distance_function_);
+
+          total_visited += visited.size();
+
           robust_prune(
               graph_,
               feature_vectors_,
