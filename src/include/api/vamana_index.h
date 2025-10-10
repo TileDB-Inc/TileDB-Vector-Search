@@ -348,7 +348,8 @@ class IndexVamana {
     virtual void train(
         const FeatureVectorArray& training_set,
         const std::vector<std::unordered_set<uint32_t>>& filter_labels = {},
-        const std::unordered_map<std::string, uint32_t>& label_to_enum = {}) = 0;
+        const std::unordered_map<std::string, uint32_t>& label_to_enum =
+            {}) = 0;
 
     virtual void add(const FeatureVectorArray& data_set) = 0;
 

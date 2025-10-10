@@ -394,9 +394,7 @@ class vamana_index_group : public base_index_group<index_type> {
         tile_size,
         default_compression);
     tiledb_helpers::add_to_group(
-        write_group,
-        filter_labels_data_uri(),
-        filter_labels_data_array_name());
+        write_group, filter_labels_data_uri(), filter_labels_data_array_name());
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);

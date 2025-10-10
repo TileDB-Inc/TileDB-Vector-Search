@@ -1828,7 +1828,9 @@ def ingest(
                         next_enum_id += 1
 
             # Read the external_ids array to map positions to external_ids
-            ids_array_read = tiledb.open(ids_array_uri, mode="r", timestamp=index_timestamp)
+            ids_array_read = tiledb.open(
+                ids_array_uri, mode="r", timestamp=index_timestamp
+            )
             external_ids_ordered = ids_array_read[0:end]["values"]
             ids_array_read.close()
 
@@ -1847,7 +1849,9 @@ def ingest(
 
             # Pass enumerated_labels and label_to_enum to train
             index.train(
-                vectors=data, filter_labels=enumerated_labels, label_to_enum=label_to_enum
+                vectors=data,
+                filter_labels=enumerated_labels,
+                label_to_enum=label_to_enum,
             )
         else:
             index.train(vectors=data)
