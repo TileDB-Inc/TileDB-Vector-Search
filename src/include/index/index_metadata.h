@@ -170,7 +170,12 @@ class base_index_metadata {
       throw std::runtime_error(
           name + " must be a string not " + tiledb::impl::type_to_str(v_type));
     }
-    std::string tmp = std::string(static_cast<const char*>(v), v_num);
+
+    // Handle empty or null metadata values
+    std::string tmp;
+    if (v != nullptr) {
+      tmp = std::string(static_cast<const char*>(v), v_num);
+    }
 
     // Check for expected value
     if (!empty(value) && tmp != value) {
@@ -240,6 +245,9 @@ class base_index_metadata {
         break;
       case TILEDB_UINT32:
         *static_cast<uint32_t*>(value) = *static_cast<const uint32_t*>(v);
+        break;
+      case TILEDB_UINT8:
+        *static_cast<bool*>(value) = *static_cast<const uint8_t*>(v) != 0;
         break;
       default:
         throw std::runtime_error("Unhandled type");
@@ -413,6 +421,11 @@ class base_index_metadata {
             return false;
           }
           break;
+        case TILEDB_UINT8:
+          if (*static_cast<bool*>(value) != *static_cast<bool*>(rhs_value)) {
+            return false;
+          }
+          break;
         default:
           throw std::runtime_error("Unhandled type in compare_metadata");
       }
@@ -524,6 +537,10 @@ class base_index_metadata {
             std::cout << name << ": " << *static_cast<uint32_t*>(value)
                       << std::endl;
           }
+          break;
+        case TILEDB_UINT8:
+          std::cout << name << ": " << (*static_cast<bool*>(value) ? "true" : "false")
+                    << std::endl;
           break;
         default:
           throw std::runtime_error(

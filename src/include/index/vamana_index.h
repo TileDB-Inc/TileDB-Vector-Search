@@ -71,6 +71,10 @@
 template <class Distance = sum_of_squares_distance>
 auto medoid(auto&& P, Distance distance = Distance{}) {
   auto n = num_vectors(P);
+  if (n == 0) {
+    throw std::runtime_error("[medoid] Cannot compute medoid of empty vector set");
+  }
+
   auto centroid = Vector<float>(P[0].size());
   std::fill(begin(centroid), end(centroid), 0.0);
 
@@ -481,12 +485,24 @@ class vamana_index {
       const Vector& training_set_ids,
       const std::vector<std::unordered_set<uint32_t>>& filter_labels = {}) {
     scoped_timer _{"vamana_index@train"};
+
+    // Validate training data
+    auto train_dims = ::dimensions(training_set);
+    auto train_vecs = ::num_vectors(training_set);
+
+    if (train_vecs == 0) {
+      // Empty training set - nothing to do
+      dimensions_ = train_dims;
+      num_vectors_ = 0;
+      graph_ = ::detail::graph::adj_list<feature_type, id_type>(0);
+      return;
+    }
+
     feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
-        ::dimensions(training_set), ::num_vectors(training_set)));
+        train_dims, train_vecs));
     std::copy(
         training_set.data(),
-        training_set.data() +
-            ::dimensions(training_set) * ::num_vectors(training_set),
+        training_set.data() + train_dims * train_vecs,
         feature_vectors_.data());
     std::copy(
         training_set_ids.begin(),
@@ -534,7 +550,12 @@ class vamana_index {
 
         // NEW: Determine start node(s) based on filter mode
         std::vector<id_type> start_points;
-        if (filter_enabled_) {
+        bool use_filtered = false;
+        if (filter_enabled_ && p < filter_labels_.size()) {
+          use_filtered = !filter_labels_[p].empty();
+        }
+
+        if (use_filtered) {
           // Use all start nodes for labels of this vector (per paper Algorithm 4)
           for (uint32_t label : filter_labels_[p]) {
             start_points.push_back(start_nodes_[label]);
@@ -544,7 +565,7 @@ class vamana_index {
         }
 
         // NEW: Use filtered or unfiltered search based on mode
-        if (filter_enabled_) {
+        if (use_filtered) {
           auto&& [_, __, visited] = filtered_greedy_search_multi_start(
               graph_,
               feature_vectors_,
@@ -605,7 +626,12 @@ class vamana_index {
 
             if (size(tmp) > r_max_degree_) {
               // NEW: Use filtered or unfiltered prune for backlinks too
-              if (filter_enabled_) {
+              // Check if this node (j) has labels before using filtered prune
+              bool use_filtered_for_j = false;
+              if (filter_enabled_ && j < filter_labels_.size()) {
+                use_filtered_for_j = !filter_labels_[j].empty();
+              }
+              if (use_filtered_for_j) {
                 filtered_robust_prune(
                     graph_,
                     feature_vectors_,
