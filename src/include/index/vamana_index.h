@@ -576,12 +576,10 @@ class vamana_index {
       for (const auto& [label, node_id] : start_nodes_size_t) {
         start_nodes_[label] = static_cast<id_type>(node_id);
       }
-
-      // No single medoid in filtered mode
-    } else {
-      // Existing: single medoid for unfiltered
-      medoid_ = medoid(feature_vectors_, distance_function_);
     }
+
+    // Always compute medoid (needed for unfiltered queries on filtered indexes)
+    medoid_ = medoid(feature_vectors_, distance_function_);
 
     // debug_index();
 
@@ -711,6 +709,57 @@ class vamana_index {
         }
       }
       // debug_index();
+    }
+
+    // NEW: For filtered indexes, ensure medoid has good unfiltered connectivity
+    // This improves backward compatibility with unfiltered queries
+    if (filter_enabled_ && num_vectors_ > 0) {
+      // Run unfiltered search from medoid to build diverse connections
+      auto&& [_, __, visited] = ::best_first_O4(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          feature_vectors_[medoid_],
+          1,
+          std::min(l_build_ * 2, static_cast<uint32_t>(num_vectors_)),
+          true,
+          distance_function_);
+
+      // Prune edges for medoid with unfiltered connectivity
+      robust_prune(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          visited,
+          alpha_max_,
+          r_max_degree_,
+          distance_function_);
+
+      // Also ensure medoid appears as a neighbor in other nodes' adjacency lists
+      // (for good reverse connectivity)
+      for (auto&& [score, neighbor_id] : graph_.out_edges(medoid_)) {
+        auto tmp = std::vector<id_type>(graph_.out_degree(neighbor_id) + 1);
+        tmp.push_back(medoid_);
+        for (auto&& [_, k] : graph_.out_edges(neighbor_id)) {
+          tmp.push_back(k);
+        }
+        if (size(tmp) > r_max_degree_) {
+          robust_prune(
+              graph_,
+              feature_vectors_,
+              neighbor_id,
+              tmp,
+              alpha_max_,
+              r_max_degree_,
+              distance_function_);
+        } else {
+          graph_.add_edge(
+              neighbor_id,
+              medoid_,
+              distance_function_(
+                  feature_vectors_[medoid_], feature_vectors_[neighbor_id]));
+        }
+      }
     }
   }
 

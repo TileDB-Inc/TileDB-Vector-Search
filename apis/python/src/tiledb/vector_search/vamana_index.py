@@ -32,7 +32,9 @@ def _parse_where_clause(where: str, label_enumeration: dict) -> Set[int]:
     """
     Parse a simple where clause and return a set of label IDs.
 
-    Supports basic equality conditions like: "label_col == 'value'"
+    Supports:
+    - Equality: "label_col == 'value'"
+    - Set membership: "label_col IN ('value1', 'value2', ...)"
 
     Parameters
     ----------
@@ -51,30 +53,63 @@ def _parse_where_clause(where: str, label_enumeration: dict) -> Set[int]:
     ValueError
         If the where clause is invalid or references non-existent labels
     """
-    # Simple pattern for: column_name == 'value'
-    # We support single or double quotes
-    pattern = r"\s*\w+\s*==\s*['\"]([^'\"]+)['\"]\s*"
-    match = re.match(pattern, where.strip())
+    where = where.strip()
 
-    if not match:
-        raise ValueError(
-            f"Invalid where clause: '{where}'. "
-            "Expected format: \"label_col == 'value'\""
-        )
+    # Try to match IN clause first: column_name IN ('value1', 'value2', ...)
+    # Pattern supports single or double quotes
+    in_pattern = r"\s*\w+\s+IN\s+\(([^)]+)\)\s*"
+    in_match = re.match(in_pattern, where, re.IGNORECASE)
 
-    label_value = match.group(1)
+    if in_match:
+        # Extract values from the IN clause
+        values_str = in_match.group(1)
+        # Match all quoted strings (single or double quotes)
+        value_pattern = r"['\"]([^'\"]+)['\"]"
+        values = re.findall(value_pattern, values_str)
 
-    # Check if the label exists in the enumeration
-    if label_value not in label_enumeration:
-        available_labels = ", ".join(sorted(label_enumeration.keys()))
-        raise ValueError(
-            f"Label '{label_value}' not found in index. "
-            f"Available labels: {available_labels}"
-        )
+        if not values:
+            raise ValueError(
+                f"Invalid IN clause: '{where}'. "
+                "Expected format: \"label_col IN ('value1', 'value2', ...)\""
+            )
 
-    # Return the enumeration ID for this label
-    label_id = label_enumeration[label_value]
-    return {label_id}
+        # Check all values exist and collect their enumeration IDs
+        label_ids = set()
+        for label_value in values:
+            if label_value not in label_enumeration:
+                available_labels = ", ".join(sorted(label_enumeration.keys()))
+                raise ValueError(
+                    f"Label '{label_value}' not found in index. "
+                    f"Available labels: {available_labels}"
+                )
+            label_ids.add(label_enumeration[label_value])
+
+        return label_ids
+
+    # Try to match equality: column_name == 'value'
+    eq_pattern = r"\s*\w+\s*==\s*['\"]([^'\"]+)['\"]\s*"
+    eq_match = re.match(eq_pattern, where)
+
+    if eq_match:
+        label_value = eq_match.group(1)
+
+        # Check if the label exists in the enumeration
+        if label_value not in label_enumeration:
+            available_labels = ", ".join(sorted(label_enumeration.keys()))
+            raise ValueError(
+                f"Label '{label_value}' not found in index. "
+                f"Available labels: {available_labels}"
+            )
+
+        # Return the enumeration ID for this label
+        label_id = label_enumeration[label_value]
+        return {label_id}
+
+    # No pattern matched
+    raise ValueError(
+        f"Invalid where clause: '{where}'. "
+        "Expected format: \"label_col == 'value'\" or \"label_col IN ('value1', 'value2', ...)\""
+    )
 
 
 INDEX_TYPE = "VAMANA"
