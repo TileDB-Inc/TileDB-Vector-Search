@@ -452,6 +452,37 @@ class vamana_index {
         graph_.add_edge(i, adj_ids[j], adj_scores[j]);
       }
     }
+
+    // NEW: Load filter_labels from storage if filtering is enabled
+    if (filter_enabled_ && num_vectors_ > 0) {
+      // Read offsets and data arrays
+      auto filter_labels_offsets = read_vector<uint64_t>(
+          group_->cached_ctx(),
+          group_->filter_labels_offsets_uri(),
+          0,
+          num_vectors_ + 1,
+          temporal_policy_);
+
+      // Calculate total number of labels from last offset
+      size_t total_labels = filter_labels_offsets.back();
+
+      auto filter_labels_data = read_vector<uint32_t>(
+          group_->cached_ctx(),
+          group_->filter_labels_data_uri(),
+          0,
+          total_labels,
+          temporal_policy_);
+
+      // Reconstruct filter_labels_ from CSR format
+      filter_labels_.resize(num_vectors_);
+      for (size_t i = 0; i < num_vectors_; ++i) {
+        auto start_offset = filter_labels_offsets[i];
+        auto end_offset = filter_labels_offsets[i + 1];
+        for (size_t j = start_offset; j < end_offset; ++j) {
+          filter_labels_[i].insert(filter_labels_data[j]);
+        }
+      }
+    }
   }
 
   explicit vamana_index(const std::string& diskann_index) {
@@ -1160,6 +1191,44 @@ class vamana_index {
         0,
         false,
         temporal_policy_);
+
+    // NEW: Write filter_labels arrays if filtering is enabled
+    if (filter_enabled_) {
+      // Flatten filter_labels_ into CSR-like format
+      // Count total number of labels
+      size_t total_labels = 0;
+      for (const auto& label_set : filter_labels_) {
+        total_labels += label_set.size();
+      }
+
+      auto filter_labels_offsets = Vector<uint64_t>(num_vectors_ + 1);
+      auto filter_labels_data = Vector<uint32_t>(total_labels);
+
+      size_t label_offset = 0;
+      for (size_t i = 0; i < num_vectors_; ++i) {
+        filter_labels_offsets[i] = label_offset;
+        for (uint32_t label : filter_labels_[i]) {
+          filter_labels_data[label_offset] = label;
+          ++label_offset;
+        }
+      }
+      filter_labels_offsets.back() = label_offset;
+
+      write_vector(
+          ctx,
+          filter_labels_offsets,
+          write_group.filter_labels_offsets_uri(),
+          0,
+          false,
+          temporal_policy_);
+      write_vector(
+          ctx,
+          filter_labels_data,
+          write_group.filter_labels_data_uri(),
+          0,
+          false,
+          temporal_policy_);
+    }
 
     return true;
   }

@@ -1846,9 +1846,6 @@ def ingest(
                 enumerated_labels.append(labels_set)
 
             # Pass enumerated_labels and label_to_enum to train
-            print(f"DEBUG: filter_labels has {len(enumerated_labels)} vectors")
-            print(f"DEBUG: label_to_enum = {label_to_enum}")
-            print(f"DEBUG: First few enumerated_labels: {enumerated_labels[:3]}")
             index.train(
                 vectors=data, filter_labels=enumerated_labels, label_to_enum=label_to_enum
             )
