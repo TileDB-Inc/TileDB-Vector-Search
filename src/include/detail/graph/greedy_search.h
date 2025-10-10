@@ -755,11 +755,18 @@ auto filtered_greedy_search_multi_start(
   get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
 
   // Optionally convert from vector indexes to db IDs
+  // Use if constexpr to only compile this if db has an ids() method
   if (convert_to_db_ids) {
-    for (size_t i = 0; i < k_nn; ++i) {
-      if (top_k[i] != std::numeric_limits<id_type>::max()) {
-        top_k[i] = db.ids()[top_k[i]];
+    if constexpr (requires { db.ids(); }) {
+      for (size_t i = 0; i < k_nn; ++i) {
+        if (top_k[i] != std::numeric_limits<id_type>::max()) {
+          top_k[i] = db.ids()[top_k[i]];
+        }
       }
+    } else {
+      throw std::runtime_error(
+          "[filtered_greedy_search_multi_start] convert_to_db_ids=true but db type "
+          "does not have ids() method");
     }
   }
 

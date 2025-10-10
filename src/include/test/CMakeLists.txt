@@ -70,6 +70,8 @@ kmeans_add_test(unit_vamana_group)
 
 kmeans_add_test(unit_vamana_metadata)
 
+kmeans_add_test(unit_filtered_vamana)
+
 kmeans_add_test(unit_adj_list)
 
 kmeans_add_test(unit_algorithm)
