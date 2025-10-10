@@ -72,7 +72,8 @@ template <class Distance = sum_of_squares_distance>
 auto medoid(auto&& P, Distance distance = Distance{}) {
   auto n = num_vectors(P);
   if (n == 0) {
-    throw std::runtime_error("[medoid] Cannot compute medoid of empty vector set");
+    throw std::runtime_error(
+        "[medoid] Cannot compute medoid of empty vector set");
   }
 
   auto centroid = Vector<float>(P[0].size());
@@ -124,7 +125,8 @@ auto find_medoid(
   using id_type = size_t;  // Node IDs are vector indices
 
   std::unordered_map<uint32_t, id_type> start_nodes;  // label → node_id
-  std::unordered_map<id_type, size_t> load_count;     // node_id → # labels using it
+  std::unordered_map<id_type, size_t>
+      load_count;  // node_id → # labels using it
 
   // Collect all unique labels across all vectors
   std::unordered_set<uint32_t> all_labels;
@@ -184,7 +186,8 @@ auto find_medoid(
       size_t current_load = load_count[candidate];
 
       // Combine distance and load to encourage load balancing
-      // The paper doesn't specify exact formula, but we penalize high-load nodes
+      // The paper doesn't specify exact formula, but we penalize high-load
+      // nodes
       float load_penalty = static_cast<float>(current_load) * 0.1f;
       float cost = dist_to_centroid + load_penalty;
 
@@ -498,8 +501,8 @@ class vamana_index {
       return;
     }
 
-    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
-        train_dims, train_vecs));
+    feature_vectors_ = std::move(
+        ColMajorMatrixWithIds<feature_type, id_type>(train_dims, train_vecs));
     std::copy(
         training_set.data(),
         training_set.data() + train_dims * train_vecs,
@@ -525,8 +528,10 @@ class vamana_index {
       filter_labels_ = filter_labels;
 
       // Find start nodes (load-balanced) using find_medoid
-      // find_medoid returns std::unordered_map<uint32_t, size_t>, so convert to id_type
-      auto start_nodes_size_t = find_medoid(feature_vectors_, filter_labels_, distance_function_);
+      // find_medoid returns std::unordered_map<uint32_t, size_t>, so convert to
+      // id_type
+      auto start_nodes_size_t =
+          find_medoid(feature_vectors_, filter_labels_, distance_function_);
       for (const auto& [label, node_id] : start_nodes_size_t) {
         start_nodes_[label] = static_cast<id_type>(node_id);
       }
@@ -556,7 +561,8 @@ class vamana_index {
         }
 
         if (use_filtered) {
-          // Use all start nodes for labels of this vector (per paper Algorithm 4)
+          // Use all start nodes for labels of this vector (per paper Algorithm
+          // 4)
           for (uint32_t label : filter_labels_[p]) {
             start_points.push_back(start_nodes_[label]);
           }
@@ -845,7 +851,8 @@ class vamana_index {
       const Q& query_set,
       size_t k,
       std::optional<uint32_t> l_search = std::nullopt,
-      std::optional<std::unordered_set<filter_label_type>> query_filter = std::nullopt,
+      std::optional<std::unordered_set<filter_label_type>> query_filter =
+          std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer _("vamana_index@query");
 
@@ -863,7 +870,8 @@ class vamana_index {
         std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
           // NEW: Use filtered or unfiltered search based on query_filter
           if (filter_enabled_ && query_filter.has_value()) {
-            // Determine start nodes for ALL labels in query filter (multi-start)
+            // Determine start nodes for ALL labels in query filter
+            // (multi-start)
             std::vector<id_type> start_nodes_for_query;
             for (uint32_t label : *query_filter) {
               if (start_nodes_.find(label) != start_nodes_.end()) {
@@ -925,7 +933,8 @@ class vamana_index {
       const Q& query_vec,
       size_t k,
       std::optional<uint32_t> l_search = std::nullopt,
-      std::optional<std::unordered_set<filter_label_type>> query_filter = std::nullopt,
+      std::optional<std::unordered_set<filter_label_type>> query_filter =
+          std::nullopt,
       Distance distance = Distance{}) {
     uint32_t L = l_search ? *l_search : l_build_;
 
@@ -1043,7 +1052,8 @@ class vamana_index {
     // NEW: Write filter metadata if filtering is enabled
     write_group.set_filter_enabled(filter_enabled_);
     if (filter_enabled_) {
-      // Convert start_nodes_ from unordered_map<uint32_t, id_type> to unordered_map<uint32_t, uint64_t>
+      // Convert start_nodes_ from unordered_map<uint32_t, id_type> to
+      // unordered_map<uint32_t, uint64_t>
       std::unordered_map<uint32_t, uint64_t> start_nodes_u64;
       for (const auto& [label, node_id] : start_nodes_) {
         start_nodes_u64[label] = static_cast<uint64_t>(node_id);

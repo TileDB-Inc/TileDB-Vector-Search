@@ -106,6 +106,7 @@ distances, ids = index.query(
 ### Filtered Search Performance
 
 Filtered search achieves **>90% recall** even for highly selective filters:
+
 - **Specificity 10⁻³** (0.1% of data): >95% recall
 - **Specificity 10⁻⁶** (0.0001% of data): >90% recall
 

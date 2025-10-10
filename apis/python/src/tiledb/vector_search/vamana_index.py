@@ -76,6 +76,7 @@ def _parse_where_clause(where: str, label_enumeration: dict) -> Set[int]:
     label_id = label_enumeration[label_value]
     return {label_id}
 
+
 INDEX_TYPE = "VAMANA"
 
 L_BUILD_DEFAULT = 100

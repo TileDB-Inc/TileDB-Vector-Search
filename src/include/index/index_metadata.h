@@ -539,7 +539,8 @@ class base_index_metadata {
           }
           break;
         case TILEDB_UINT8:
-          std::cout << name << ": " << (*static_cast<bool*>(value) ? "true" : "false")
+          std::cout << name << ": "
+                    << (*static_cast<bool*>(value) ? "true" : "false")
                     << std::endl;
           break;
         default:

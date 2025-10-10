@@ -18,14 +18,15 @@ import numpy as np
 from sklearn.datasets import make_blobs
 from sklearn.neighbors import NearestNeighbors
 
+from tiledb.vector_search import Index
 from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.vamana_index import VamanaIndex
-from tiledb.vector_search import Index
 
 
 @dataclass
 class BenchmarkResult:
     """Container for benchmark results"""
+
     l_search: int
     recall: float
     qps: float
@@ -34,7 +35,9 @@ class BenchmarkResult:
     method: str  # "pre_filter" or "post_filter"
 
 
-def compute_filtered_groundtruth(vectors, queries, filter_labels, query_filter_labels, k):
+def compute_filtered_groundtruth(
+    vectors, queries, filter_labels, query_filter_labels, k
+):
     """Compute ground truth for filtered queries using brute force"""
     matching_indices = []
     for idx, labels in filter_labels.items():
@@ -44,16 +47,14 @@ def compute_filtered_groundtruth(vectors, queries, filter_labels, query_filter_l
     if len(matching_indices) == 0:
         return (
             np.full((queries.shape[0], k), np.iinfo(np.uint64).max, dtype=np.uint64),
-            np.full((queries.shape[0], k), np.finfo(np.float32).max, dtype=np.float32)
+            np.full((queries.shape[0], k), np.finfo(np.float32).max, dtype=np.float32),
         )
 
     matching_indices = np.array(matching_indices)
     matching_vectors = vectors[matching_indices]
 
     nbrs = NearestNeighbors(
-        n_neighbors=min(k, len(matching_indices)),
-        metric='euclidean',
-        algorithm='brute'
+        n_neighbors=min(k, len(matching_indices)), metric="euclidean", algorithm="brute"
     ).fit(matching_vectors)
     distances, indices = nbrs.kneighbors(queries)
 
@@ -61,10 +62,14 @@ def compute_filtered_groundtruth(vectors, queries, filter_labels, query_filter_l
 
     if gt_ids.shape[1] < k:
         pad_width = k - gt_ids.shape[1]
-        gt_ids = np.pad(gt_ids, ((0, 0), (0, pad_width)),
-                       constant_values=np.iinfo(np.uint64).max)
-        distances = np.pad(distances, ((0, 0), (0, pad_width)),
-                          constant_values=np.finfo(np.float32).max)
+        gt_ids = np.pad(
+            gt_ids, ((0, 0), (0, pad_width)), constant_values=np.iinfo(np.uint64).max
+        )
+        distances = np.pad(
+            distances,
+            ((0, 0), (0, pad_width)),
+            constant_values=np.finfo(np.float32).max,
+        )
 
     return gt_ids.astype(np.uint64), distances.astype(np.float32)
 
@@ -96,7 +101,7 @@ def benchmark_pre_filtering(
     k,
     l_values,
     num_warmup=5,
-    num_trials=20
+    num_trials=20,
 ) -> List[BenchmarkResult]:
     """
     Benchmark pre-filtering (FilteredVamana) approach
@@ -108,8 +113,12 @@ def benchmark_pre_filtering(
     for l_search in l_values:
         # Warmup
         for _ in range(num_warmup):
-            _, _ = index.query(queries[0:1], k=k, l_search=l_search,
-                              where=f"label == '{query_filter_label}'")
+            _, _ = index.query(
+                queries[0:1],
+                k=k,
+                l_search=l_search,
+                where=f"label == '{query_filter_label}'",
+            )
 
         # Benchmark
         start = time.perf_counter()
@@ -118,8 +127,10 @@ def benchmark_pre_filtering(
         for trial in range(num_trials):
             for query in queries:
                 distances, ids = index.query(
-                    query.reshape(1, -1), k=k, l_search=l_search,
-                    where=f"label == '{query_filter_label}'"
+                    query.reshape(1, -1),
+                    k=k,
+                    l_search=l_search,
+                    where=f"label == '{query_filter_label}'",
                 )
                 all_ids.append(ids[0])
 
@@ -132,23 +143,24 @@ def benchmark_pre_filtering(
         avg_latency_ms = (elapsed / total_queries) * 1000
 
         # Compute recall using last trial's results
-        recall = compute_recall(
-            np.array(all_ids[-len(queries):]), groundtruth, k
-        )
+        recall = compute_recall(np.array(all_ids[-len(queries) :]), groundtruth, k)
 
         # Compute specificity
-        num_matching = sum(1 for labels in filter_labels.values()
-                          if query_filter_label in labels)
+        num_matching = sum(
+            1 for labels in filter_labels.values() if query_filter_label in labels
+        )
         specificity = num_matching / len(filter_labels)
 
-        results.append(BenchmarkResult(
-            l_search=l_search,
-            recall=recall,
-            qps=qps,
-            avg_latency_ms=avg_latency_ms,
-            specificity=specificity,
-            method="pre_filter"
-        ))
+        results.append(
+            BenchmarkResult(
+                l_search=l_search,
+                recall=recall,
+                qps=qps,
+                avg_latency_ms=avg_latency_ms,
+                specificity=specificity,
+                method="pre_filter",
+            )
+        )
 
     return results
 
@@ -163,7 +175,7 @@ def benchmark_post_filtering(
     k,
     k_factors,
     num_warmup=5,
-    num_trials=20
+    num_trials=20,
 ) -> List[BenchmarkResult]:
     """
     Benchmark post-filtering baseline
@@ -194,8 +206,10 @@ def benchmark_post_filtering(
                 filtered_ids = []
                 filtered_dists = []
                 for j in range(len(ids[0])):
-                    if ids[0, j] in filter_labels and \
-                       query_filter_label in filter_labels[ids[0, j]]:
+                    if (
+                        ids[0, j] in filter_labels
+                        and query_filter_label in filter_labels[ids[0, j]]
+                    ):
                         filtered_ids.append(ids[0, j])
                         filtered_dists.append(distances[0, j])
                         if len(filtered_ids) >= k:
@@ -217,22 +231,25 @@ def benchmark_post_filtering(
 
         # Compute recall
         recall = compute_recall(
-            np.array(all_filtered_ids[-len(queries):]), groundtruth, k
+            np.array(all_filtered_ids[-len(queries) :]), groundtruth, k
         )
 
         # Specificity
-        num_matching = sum(1 for labels in filter_labels.values()
-                          if query_filter_label in labels)
+        num_matching = sum(
+            1 for labels in filter_labels.values() if query_filter_label in labels
+        )
         specificity = num_matching / len(filter_labels)
 
-        results.append(BenchmarkResult(
-            l_search=k_retrieve,  # Using k_retrieve as proxy for "L"
-            recall=recall,
-            qps=qps,
-            avg_latency_ms=avg_latency_ms,
-            specificity=specificity,
-            method="post_filter"
-        ))
+        results.append(
+            BenchmarkResult(
+                l_search=k_retrieve,  # Using k_retrieve as proxy for "L"
+                recall=recall,
+                qps=qps,
+                avg_latency_ms=avg_latency_ms,
+                specificity=specificity,
+                method="post_filter",
+            )
+        )
 
     return results
 
@@ -248,9 +265,9 @@ def bench_qps_vs_recall_curves(tmp_path):
     - Different specificity levels (10^-1, 10^-2)
     - QPS at different L values (10, 20, 50, 100, 200)
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Benchmark: QPS vs Recall Curves")
-    print("="*80)
+    print("=" * 80)
 
     num_vectors = 1000
     dimensions = 128
@@ -260,8 +277,11 @@ def bench_qps_vs_recall_curves(tmp_path):
 
     # Create dataset
     vectors, cluster_ids = make_blobs(
-        n_samples=num_vectors, n_features=dimensions,
-        centers=num_labels, cluster_std=1.0, random_state=42
+        n_samples=num_vectors,
+        n_features=dimensions,
+        centers=num_labels,
+        cluster_std=1.0,
+        random_state=42,
     )
     vectors = vectors.astype(np.float32)
 
@@ -316,15 +336,30 @@ def bench_qps_vs_recall_curves(tmp_path):
         # Benchmark pre-filtering
         l_values = [10, 20, 50, 100, 200]
         pre_results = benchmark_pre_filtering(
-            filtered_index, queries, filter_labels, query_filter_label,
-            gt_ids, k, l_values, num_warmup=3, num_trials=10
+            filtered_index,
+            queries,
+            filter_labels,
+            query_filter_label,
+            gt_ids,
+            k,
+            l_values,
+            num_warmup=3,
+            num_trials=10,
         )
 
         # Benchmark post-filtering
         k_factors = [2, 5, 10, 20, 50]
         post_results = benchmark_post_filtering(
-            unfiltered_index, vectors, queries, filter_labels,
-            query_filter_label, gt_ids, k, k_factors, num_warmup=3, num_trials=10
+            unfiltered_index,
+            vectors,
+            queries,
+            filter_labels,
+            query_filter_label,
+            gt_ids,
+            k,
+            k_factors,
+            num_warmup=3,
+            num_trials=10,
         )
 
         # Print results
@@ -332,13 +367,17 @@ def bench_qps_vs_recall_curves(tmp_path):
         print(f"{'L':>6} {'Recall':>8} {'QPS':>10} {'Latency(ms)':>12}")
         print("-" * 40)
         for res in pre_results:
-            print(f"{res.l_search:6d} {res.recall:8.3f} {res.qps:10.1f} {res.avg_latency_ms:12.2f}")
+            print(
+                f"{res.l_search:6d} {res.recall:8.3f} {res.qps:10.1f} {res.avg_latency_ms:12.2f}"
+            )
 
         print("\nPost-filtering (baseline):")
         print(f"{'k*N':>6} {'Recall':>8} {'QPS':>10} {'Latency(ms)':>12}")
         print("-" * 40)
         for res in post_results:
-            print(f"{res.l_search:6d} {res.recall:8.3f} {res.qps:10.1f} {res.avg_latency_ms:12.2f}")
+            print(
+                f"{res.l_search:6d} {res.recall:8.3f} {res.qps:10.1f} {res.avg_latency_ms:12.2f}"
+            )
 
         # Compare best recall
         best_pre_recall = max(r.recall for r in pre_results)
@@ -373,9 +412,9 @@ def bench_qps_vs_recall_curves(tmp_path):
         Index.delete_index(uri=uri, config={})
         Index.delete_index(uri=uri_unfiltered, config={})
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Benchmark completed!")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
 
 def bench_vs_post_filtering(tmp_path):
@@ -388,9 +427,9 @@ def bench_vs_post_filtering(tmp_path):
     - Recall and QPS for both approaches
     - Demonstrates advantage of pre-filtering at low specificity
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Benchmark: Pre-filtering vs Post-filtering")
-    print("="*80)
+    print("=" * 80)
 
     num_vectors = 2000
     dimensions = 128
@@ -400,8 +439,11 @@ def bench_vs_post_filtering(tmp_path):
 
     # Create dataset
     vectors, _ = make_blobs(
-        n_samples=num_vectors, n_features=dimensions,
-        centers=50, cluster_std=1.5, random_state=42
+        n_samples=num_vectors,
+        n_features=dimensions,
+        centers=50,
+        cluster_std=1.5,
+        random_state=42,
     )
     vectors = vectors.astype(np.float32)
 
@@ -454,22 +496,37 @@ def bench_vs_post_filtering(tmp_path):
     # Benchmark pre-filtering at L=100
     l_search = 100
     pre_results = benchmark_pre_filtering(
-        filtered_index, queries, filter_labels, query_filter_label,
-        gt_ids, k, [l_search], num_warmup=5, num_trials=20
+        filtered_index,
+        queries,
+        filter_labels,
+        query_filter_label,
+        gt_ids,
+        k,
+        [l_search],
+        num_warmup=5,
+        num_trials=20,
     )
 
     # Benchmark post-filtering with various k factors
     # At low specificity, need very large k to get good recall
     k_factors = [10, 50, 100, 200]
     post_results = benchmark_post_filtering(
-        unfiltered_index, vectors, queries, filter_labels,
-        query_filter_label, gt_ids, k, k_factors, num_warmup=5, num_trials=20
+        unfiltered_index,
+        vectors,
+        queries,
+        filter_labels,
+        query_filter_label,
+        gt_ids,
+        k,
+        k_factors,
+        num_warmup=5,
+        num_trials=20,
     )
 
     # Print results
-    print("\n" + "-"*60)
+    print("\n" + "-" * 60)
     print("RESULTS:")
-    print("-"*60)
+    print("-" * 60)
 
     print(f"\nPre-filtering (L={l_search}):")
     for res in pre_results:
@@ -501,12 +558,12 @@ def bench_vs_post_filtering(tmp_path):
     Index.delete_index(uri=uri_filtered, config={})
     Index.delete_index(uri=uri_unfiltered, config={})
 
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")
 
 
 if __name__ == "__main__":
-    import tempfile
     import sys
+    import tempfile
 
     with tempfile.TemporaryDirectory() as tmp_path:
         print("\nRunning Filtered-Vamana Benchmarks...")
@@ -523,5 +580,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"\n✗ Benchmark failed: {e}\n")
             import traceback
+
             traceback.print_exc()
             sys.exit(1)

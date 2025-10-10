@@ -601,8 +601,8 @@ auto robust_prune(
 }
 
 /**
- * @brief FilteredGreedySearch - Filter-aware best-first search with multiple start nodes
- *        (Algorithm 1 from Filtered-DiskANN paper)
+ * @brief FilteredGreedySearch - Filter-aware best-first search with multiple
+ * start nodes (Algorithm 1 from Filtered-DiskANN paper)
  * @tparam Distance The distance function used to compare vectors
  * @param graph Graph to be searched
  * @param db Database of vectors
@@ -618,14 +618,16 @@ auto robust_prune(
  *
  * Key differences from greedy_search:
  * 1. Accepts multiple start nodes (one per label in query filter)
- * 2. Only traverses neighbors that match at least one query label (F_p ∩ F_q ≠ ∅)
+ * 2. Only traverses neighbors that match at least one query label (F_p ∩ F_q ≠
+ * ∅)
  */
 template <class Distance = sum_of_squares_distance>
 auto filtered_greedy_search_multi_start(
     auto&& graph,
     auto&& db,
     const std::vector<std::unordered_set<uint32_t>>& filter_labels,
-    const std::vector<typename std::decay_t<decltype(graph)>::id_type>& start_nodes,
+    const std::vector<typename std::decay_t<decltype(graph)>::id_type>&
+        start_nodes,
     auto&& query,
     const std::unordered_set<uint32_t>& query_filter,
     size_t k_nn,
@@ -772,7 +774,8 @@ auto filtered_greedy_search_multi_start(
       }
     } else {
       throw std::runtime_error(
-          "[filtered_greedy_search_multi_start] convert_to_db_ids=true but db type "
+          "[filtered_greedy_search_multi_start] convert_to_db_ids=true but db "
+          "type "
           "does not have ids() method");
     }
   }
@@ -782,7 +785,8 @@ auto filtered_greedy_search_multi_start(
 }
 
 /**
- * @brief FilteredRobustPrune - Filter-aware graph pruning (Algorithm 3 from Filtered-DiskANN paper)
+ * @brief FilteredRobustPrune - Filter-aware graph pruning (Algorithm 3 from
+ * Filtered-DiskANN paper)
  * @tparam I index type
  * @tparam Distance distance functor
  * @param graph Graph
@@ -793,11 +797,12 @@ auto filtered_greedy_search_multi_start(
  * @param alpha distance threshold >= 1
  * @param R Degree bound
  *
- * This is a modified version of RobustPrune that considers filter labels when pruning edges.
- * Key difference: Only prunes edge (p, pp) via p* if p* "covers" all common labels between p and pp.
- * i.e., F_p ∩ F_pp ⊆ F_p*
+ * This is a modified version of RobustPrune that considers filter labels when
+ * pruning edges. Key difference: Only prunes edge (p, pp) via p* if p* "covers"
+ * all common labels between p and pp. i.e., F_p ∩ F_pp ⊆ F_p*
  *
- * This ensures that paths to rare labels are preserved, enabling efficient filtered search.
+ * This ensures that paths to rare labels are preserved, enabling efficient
+ * filtered search.
  */
 template <class I = size_t, class Distance = sum_of_squares_distance>
 auto filtered_robust_prune(
@@ -885,7 +890,8 @@ auto filtered_robust_prune(
         // Only prune if F_p ∩ F_pp ⊆ F_p*
         bool p_star_covers = true;
 
-        // For each label in p, check if it's common with pp and covered by p_star
+        // For each label in p, check if it's common with pp and covered by
+        // p_star
         for (const auto& label : filter_labels[p]) {
           // Is this label common to both p and pp?
           if (filter_labels[pp].count(label) > 0) {

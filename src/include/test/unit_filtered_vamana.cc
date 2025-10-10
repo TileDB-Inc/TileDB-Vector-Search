@@ -28,8 +28,8 @@
  * @section DESCRIPTION
  *
  * Unit tests for Filtered-Vamana pre-filtering implementation based on
- * "Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search with Filters"
- * (Gollapudi et al., WWW 2023)
+ * "Filtered-DiskANN: Graph Algorithms for Approximate Nearest Neighbor Search
+ * with Filters" (Gollapudi et al., WWW 2023)
  */
 
 #include <catch2/catch_all.hpp>
@@ -63,16 +63,26 @@ TEST_CASE("find_medoid with multiple labels", "[filtered_vamana]") {
   // Points 0-2: cluster around (0, 0) with label 0
   // Points 3-5: cluster around (10, 10) with label 1
   // Points 6-9: cluster around (5, 5) with labels 0 and 1 (shared)
-  training_set(0, 0) = 0.0f;  training_set(1, 0) = 0.0f;   // label 0
-  training_set(0, 1) = 0.5f;  training_set(1, 1) = 0.5f;   // label 0
-  training_set(0, 2) = 0.3f;  training_set(1, 2) = 0.2f;   // label 0
-  training_set(0, 3) = 10.0f; training_set(1, 3) = 10.0f;  // label 1
-  training_set(0, 4) = 10.5f; training_set(1, 4) = 10.5f;  // label 1
-  training_set(0, 5) = 10.3f; training_set(1, 5) = 10.2f;  // label 1
-  training_set(0, 6) = 5.0f;  training_set(1, 6) = 5.0f;   // labels 0, 1
-  training_set(0, 7) = 5.5f;  training_set(1, 7) = 5.5f;   // labels 0, 1
-  training_set(0, 8) = 5.3f;  training_set(1, 8) = 5.2f;   // labels 0, 1
-  training_set(0, 9) = 5.1f;  training_set(1, 9) = 5.3f;   // labels 0, 1
+  training_set(0, 0) = 0.0f;
+  training_set(1, 0) = 0.0f;  // label 0
+  training_set(0, 1) = 0.5f;
+  training_set(1, 1) = 0.5f;  // label 0
+  training_set(0, 2) = 0.3f;
+  training_set(1, 2) = 0.2f;  // label 0
+  training_set(0, 3) = 10.0f;
+  training_set(1, 3) = 10.0f;  // label 1
+  training_set(0, 4) = 10.5f;
+  training_set(1, 4) = 10.5f;  // label 1
+  training_set(0, 5) = 10.3f;
+  training_set(1, 5) = 10.2f;  // label 1
+  training_set(0, 6) = 5.0f;
+  training_set(1, 6) = 5.0f;  // labels 0, 1
+  training_set(0, 7) = 5.5f;
+  training_set(1, 7) = 5.5f;  // labels 0, 1
+  training_set(0, 8) = 5.3f;
+  training_set(1, 8) = 5.2f;  // labels 0, 1
+  training_set(0, 9) = 5.1f;
+  training_set(1, 9) = 5.3f;  // labels 0, 1
 
   // Define filter labels: each vector has a set of label IDs
   std::vector<std::unordered_set<uint32_t>> filter_labels(num_vectors);
@@ -123,14 +133,22 @@ TEST_CASE("filtered_greedy_search_multi_start", "[filtered_vamana]") {
   auto db = ColMajorMatrix<float>(dimensions, num_vectors);
 
   // Create 8 vectors: 4 with label 0, 4 with label 1
-  db(0, 0) = 0.0f;  db(1, 0) = 0.0f;   // label 0
-  db(0, 1) = 1.0f;  db(1, 1) = 0.0f;   // label 0
-  db(0, 2) = 0.0f;  db(1, 2) = 1.0f;   // label 0
-  db(0, 3) = 1.0f;  db(1, 3) = 1.0f;   // label 0
-  db(0, 4) = 10.0f; db(1, 4) = 10.0f;  // label 1
-  db(0, 5) = 11.0f; db(1, 5) = 10.0f;  // label 1
-  db(0, 6) = 10.0f; db(1, 6) = 11.0f;  // label 1
-  db(0, 7) = 11.0f; db(1, 7) = 11.0f;  // label 1
+  db(0, 0) = 0.0f;
+  db(1, 0) = 0.0f;  // label 0
+  db(0, 1) = 1.0f;
+  db(1, 1) = 0.0f;  // label 0
+  db(0, 2) = 0.0f;
+  db(1, 2) = 1.0f;  // label 0
+  db(0, 3) = 1.0f;
+  db(1, 3) = 1.0f;  // label 0
+  db(0, 4) = 10.0f;
+  db(1, 4) = 10.0f;  // label 1
+  db(0, 5) = 11.0f;
+  db(1, 5) = 10.0f;  // label 1
+  db(0, 6) = 10.0f;
+  db(1, 6) = 11.0f;  // label 1
+  db(0, 7) = 11.0f;
+  db(1, 7) = 11.0f;  // label 1
 
   // Create filter labels
   std::vector<std::unordered_set<uint32_t>> filter_labels(num_vectors);
@@ -223,7 +241,8 @@ TEST_CASE("filtered_greedy_search_multi_start", "[filtered_vamana]") {
  *
  * This tests Algorithm 3 from the paper: filter-aware pruning
  */
-TEST_CASE("filtered_robust_prune preserves label connectivity", "[filtered_vamana]") {
+TEST_CASE(
+    "filtered_robust_prune preserves label connectivity", "[filtered_vamana]") {
   const bool debug = false;
 
   // Create a simple dataset
@@ -232,12 +251,18 @@ TEST_CASE("filtered_robust_prune preserves label connectivity", "[filtered_vaman
   auto db = ColMajorMatrix<float>(dimensions, num_vectors);
 
   // Create vectors with different labels
-  db(0, 0) = 0.0f;  db(1, 0) = 0.0f;   // label 0
-  db(0, 1) = 1.0f;  db(1, 1) = 0.0f;   // label 1
-  db(0, 2) = 2.0f;  db(1, 2) = 0.0f;   // labels 0, 1 (shared)
-  db(0, 3) = 3.0f;  db(1, 3) = 0.0f;   // label 0
-  db(0, 4) = 4.0f;  db(1, 4) = 0.0f;   // label 1
-  db(0, 5) = 5.0f;  db(1, 5) = 0.0f;   // label 0
+  db(0, 0) = 0.0f;
+  db(1, 0) = 0.0f;  // label 0
+  db(0, 1) = 1.0f;
+  db(1, 1) = 0.0f;  // label 1
+  db(0, 2) = 2.0f;
+  db(1, 2) = 0.0f;  // labels 0, 1 (shared)
+  db(0, 3) = 3.0f;
+  db(1, 3) = 0.0f;  // label 0
+  db(0, 4) = 4.0f;
+  db(1, 4) = 0.0f;  // label 1
+  db(0, 5) = 5.0f;
+  db(1, 5) = 0.0f;  // label 0
 
   // Create filter labels
   std::vector<std::unordered_set<uint32_t>> filter_labels(num_vectors);
@@ -254,12 +279,20 @@ TEST_CASE("filtered_robust_prune preserves label connectivity", "[filtered_vaman
 
   // Test pruning from node 2 (which has labels 0 and 1)
   size_t p = 2;
-  std::vector<id_type> candidates = {0, 1, 3, 4, 5};  // All neighbors except p itself
+  std::vector<id_type> candidates = {
+      0, 1, 3, 4, 5};  // All neighbors except p itself
   float alpha = 1.2f;
   size_t R = 3;  // Max degree
 
   filtered_robust_prune(
-      graph, db, filter_labels, p, candidates, alpha, R, sum_of_squares_distance{});
+      graph,
+      db,
+      filter_labels,
+      p,
+      candidates,
+      alpha,
+      R,
+      sum_of_squares_distance{});
 
   // After pruning, node 2 should have at most R edges
   CHECK(graph.out_degree(p) <= R);
@@ -283,7 +316,8 @@ TEST_CASE("filtered_robust_prune preserves label connectivity", "[filtered_vaman
   CHECK(has_label_1_neighbor);
 
   if (debug) {
-    std::cout << "Node " << p << " has " << graph.out_degree(p) << " edges after pruning:" << std::endl;
+    std::cout << "Node " << p << " has " << graph.out_degree(p)
+              << " edges after pruning:" << std::endl;
     for (auto&& [score, neighbor] : graph.out_edges(p)) {
       std::cout << "  -> " << neighbor << " (labels: ";
       for (auto label : filter_labels[neighbor]) {
@@ -343,7 +377,8 @@ TEST_CASE("filtered vamana index end-to-end", "[filtered_vamana]") {
     std::unordered_set<uint32_t> query_filter = {0};  // Label for "dataset_A"
 
     size_t k = 5;
-    auto&& [top_k_scores, top_k] = idx.query(query, k, std::nullopt, query_filter);
+    auto&& [top_k_scores, top_k] =
+        idx.query(query, k, std::nullopt, query_filter);
 
     // All results should be from cluster 1 (indices 0-9)
     for (size_t i = 0; i < k; ++i) {
@@ -367,7 +402,8 @@ TEST_CASE("filtered vamana index end-to-end", "[filtered_vamana]") {
     std::unordered_set<uint32_t> query_filter = {1};  // Label for "dataset_B"
 
     size_t k = 5;
-    auto&& [top_k_scores, top_k] = idx.query(query, k, std::nullopt, query_filter);
+    auto&& [top_k_scores, top_k] =
+        idx.query(query, k, std::nullopt, query_filter);
 
     // All results should be from cluster 2 (indices 10-19)
     for (size_t i = 0; i < k; ++i) {
@@ -431,7 +467,8 @@ TEST_CASE("filtered vamana backward compatibility", "[filtered_vamana]") {
   uint32_t r_max_degree = 3;
 
   SECTION("Train without filters (backward compatible)") {
-    auto idx = vamana_index<float, uint64_t>(num_vectors, l_build, r_max_degree);
+    auto idx =
+        vamana_index<float, uint64_t>(num_vectors, l_build, r_max_degree);
 
     // Train WITHOUT filter labels (empty vector)
     idx.train(training_set, ids);  // No filter_labels parameter

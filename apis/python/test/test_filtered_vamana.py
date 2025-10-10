@@ -11,8 +11,8 @@ import os
 
 import numpy as np
 import pytest
-from common import create_random_dataset_f32
 from common import accuracy
+from common import create_random_dataset_f32
 from sklearn.datasets import make_blobs
 from sklearn.neighbors import NearestNeighbors
 
@@ -22,7 +22,9 @@ from tiledb.vector_search.ingestion import ingest
 from tiledb.vector_search.vamana_index import VamanaIndex
 
 
-def compute_filtered_groundtruth(vectors, queries, filter_labels, query_filter_labels, k):
+def compute_filtered_groundtruth(
+    vectors, queries, filter_labels, query_filter_labels, k
+):
     """
     Compute ground truth for filtered queries using brute force.
 
@@ -56,16 +58,16 @@ def compute_filtered_groundtruth(vectors, queries, filter_labels, query_filter_l
         # No matching vectors - return sentinel values
         return (
             np.full((queries.shape[0], k), np.iinfo(np.uint64).max, dtype=np.uint64),
-            np.full((queries.shape[0], k), np.finfo(np.float32).max, dtype=np.float32)
+            np.full((queries.shape[0], k), np.finfo(np.float32).max, dtype=np.float32),
         )
 
     matching_indices = np.array(matching_indices)
     matching_vectors = vectors[matching_indices]
 
     # Compute k-NN on filtered subset using brute force
-    nbrs = NearestNeighbors(n_neighbors=min(k, len(matching_indices)),
-                           metric='euclidean',
-                           algorithm='brute').fit(matching_vectors)
+    nbrs = NearestNeighbors(
+        n_neighbors=min(k, len(matching_indices)), metric="euclidean", algorithm="brute"
+    ).fit(matching_vectors)
     distances, indices = nbrs.kneighbors(queries)
 
     # Convert indices back to original vector IDs
@@ -74,10 +76,14 @@ def compute_filtered_groundtruth(vectors, queries, filter_labels, query_filter_l
     # Pad if necessary
     if gt_ids.shape[1] < k:
         pad_width = k - gt_ids.shape[1]
-        gt_ids = np.pad(gt_ids, ((0, 0), (0, pad_width)),
-                       constant_values=np.iinfo(np.uint64).max)
-        distances = np.pad(distances, ((0, 0), (0, pad_width)),
-                          constant_values=np.finfo(np.float32).max)
+        gt_ids = np.pad(
+            gt_ids, ((0, 0), (0, pad_width)), constant_values=np.iinfo(np.uint64).max
+        )
+        distances = np.pad(
+            distances,
+            ((0, 0), (0, pad_width)),
+            constant_values=np.finfo(np.float32).max,
+        )
 
     return gt_ids.astype(np.uint64), distances.astype(np.float32)
 
@@ -97,12 +103,20 @@ def test_filtered_query_equality(tmp_path):
 
     # Create dataset with two distinct clusters
     vectors_cluster_a, _ = make_blobs(
-        n_samples=250, n_features=dimensions, centers=1,
-        cluster_std=1.0, center_box=(0, 10), random_state=42
+        n_samples=250,
+        n_features=dimensions,
+        centers=1,
+        cluster_std=1.0,
+        center_box=(0, 10),
+        random_state=42,
     )
     vectors_cluster_b, _ = make_blobs(
-        n_samples=250, n_features=dimensions, centers=1,
-        cluster_std=1.0, center_box=(20, 30), random_state=43
+        n_samples=250,
+        n_features=dimensions,
+        centers=1,
+        cluster_std=1.0,
+        center_box=(20, 30),
+        random_state=43,
     )
     vectors = np.vstack([vectors_cluster_a, vectors_cluster_b]).astype(np.float32)
 
@@ -166,16 +180,28 @@ def test_filtered_query_in_clause(tmp_path):
 
     # Create 3 clusters with different labels
     vectors_a, _ = make_blobs(
-        n_samples=300, n_features=dimensions, centers=1,
-        cluster_std=1.0, center_box=(0, 10), random_state=42
+        n_samples=300,
+        n_features=dimensions,
+        centers=1,
+        cluster_std=1.0,
+        center_box=(0, 10),
+        random_state=42,
     )
     vectors_b, _ = make_blobs(
-        n_samples=300, n_features=dimensions, centers=1,
-        cluster_std=1.0, center_box=(20, 30), random_state=43
+        n_samples=300,
+        n_features=dimensions,
+        centers=1,
+        cluster_std=1.0,
+        center_box=(20, 30),
+        random_state=43,
     )
     vectors_c, _ = make_blobs(
-        n_samples=300, n_features=dimensions, centers=1,
-        cluster_std=1.0, center_box=(40, 50), random_state=44
+        n_samples=300,
+        n_features=dimensions,
+        centers=1,
+        cluster_std=1.0,
+        center_box=(40, 50),
+        random_state=44,
     )
     vectors = np.vstack([vectors_a, vectors_b, vectors_c]).astype(np.float32)
 
@@ -209,10 +235,13 @@ def test_filtered_query_in_clause(tmp_path):
     # Verify all results are from dataset 1 or 3 (IDs 0-299 or 600-899)
     for i in range(k):
         if ids[0, i] != np.iinfo(np.uint64).max:
-            assert (ids[0, i] < 300 or ids[0, i] >= 600), \
-                f"Expected ID from dataset_1 or dataset_3, got {ids[0, i]}"
-            assert any(label in filter_labels[ids[0, i]]
-                      for label in ["soma_dataset_1", "soma_dataset_3"])
+            assert (
+                ids[0, i] < 300 or ids[0, i] >= 600
+            ), f"Expected ID from dataset_1 or dataset_3, got {ids[0, i]}"
+            assert any(
+                label in filter_labels[ids[0, i]]
+                for label in ["soma_dataset_1", "soma_dataset_3"]
+            )
 
     # Compute recall
     gt_ids, gt_distances = compute_filtered_groundtruth(
@@ -242,8 +271,11 @@ def test_unfiltered_query_on_filtered_index(tmp_path):
 
     # Create dataset with labels
     vectors, _ = make_blobs(
-        n_samples=num_vectors, n_features=dimensions, centers=4,
-        cluster_std=2.0, random_state=42
+        n_samples=num_vectors,
+        n_features=dimensions,
+        centers=4,
+        cluster_std=2.0,
+        random_state=42,
     )
     vectors = vectors.astype(np.float32)
 
@@ -282,7 +314,9 @@ def test_unfiltered_query_on_filtered_index(tmp_path):
     # (not a strict requirement, but expected for this dataset)
 
     # Compare to brute force
-    nbrs = NearestNeighbors(n_neighbors=k, metric='euclidean', algorithm='brute').fit(vectors)
+    nbrs = NearestNeighbors(n_neighbors=k, metric="euclidean", algorithm="brute").fit(
+        vectors
+    )
     gt_distances, gt_indices = nbrs.kneighbors(query)
 
     found = len(np.intersect1d(ids[0], gt_indices[0]))
@@ -310,8 +344,11 @@ def test_low_specificity_recall(tmp_path):
 
     # Create dataset
     vectors, _ = make_blobs(
-        n_samples=num_vectors, n_features=dimensions, centers=num_labels,
-        cluster_std=1.0, random_state=42
+        n_samples=num_vectors,
+        n_features=dimensions,
+        centers=num_labels,
+        cluster_std=1.0,
+        random_state=42,
     )
     vectors = vectors.astype(np.float32)
 
@@ -342,8 +379,9 @@ def test_low_specificity_recall(tmp_path):
     # Verify all results have the correct label
     for i in range(k):
         if ids[0, i] != np.iinfo(np.uint64).max:
-            assert target_label in filter_labels[ids[0, i]], \
-                f"Result {ids[0, i]} doesn't have label {target_label}"
+            assert (
+                target_label in filter_labels[ids[0, i]]
+            ), f"Result {ids[0, i]} doesn't have label {target_label}"
 
     # Compute recall vs brute force
     gt_ids, gt_distances = compute_filtered_groundtruth(
@@ -355,8 +393,9 @@ def test_low_specificity_recall(tmp_path):
 
     # Paper claims >90% recall at 10^-6 specificity
     # We're testing at 10^-2, so should easily achieve >90%
-    assert recall >= 0.9, \
-        f"Recall {recall:.2f} < 0.9 at specificity {10/num_vectors:.2e}"
+    assert (
+        recall >= 0.9
+    ), f"Recall {recall:.2f} < 0.9 at specificity {10/num_vectors:.2e}"
 
     Index.delete_index(uri=uri, config={})
 
@@ -377,8 +416,11 @@ def test_multiple_labels_per_vector(tmp_path):
 
     # Create dataset
     vectors, cluster_ids = make_blobs(
-        n_samples=num_vectors, n_features=dimensions, centers=3,
-        cluster_std=1.0, random_state=42
+        n_samples=num_vectors,
+        n_features=dimensions,
+        centers=3,
+        cluster_std=1.0,
+        random_state=42,
     )
     vectors = vectors.astype(np.float32)
 
@@ -410,10 +452,12 @@ def test_multiple_labels_per_vector(tmp_path):
     # Verify all results have "shared" label
     for i in range(k):
         if ids[0, i] != np.iinfo(np.uint64).max:
-            assert "shared" in filter_labels[ids[0, i]], \
-                f"Result {ids[0, i]} missing 'shared' label: {filter_labels[ids[0, i]]}"
-            assert ids[0, i] % 10 == 0, \
-                f"Result {ids[0, i]} should have ID divisible by 10"
+            assert (
+                "shared" in filter_labels[ids[0, i]]
+            ), f"Result {ids[0, i]} missing 'shared' label: {filter_labels[ids[0, i]]}"
+            assert (
+                ids[0, i] % 10 == 0
+            ), f"Result {ids[0, i]} should have ID divisible by 10"
 
     Index.delete_index(uri=uri, config={})
 
@@ -471,8 +515,11 @@ def test_filtered_vamana_persistence(tmp_path):
     k = 5
 
     vectors, _ = make_blobs(
-        n_samples=num_vectors, n_features=dimensions, centers=2,
-        cluster_std=1.0, random_state=42
+        n_samples=num_vectors,
+        n_features=dimensions,
+        centers=2,
+        cluster_std=1.0,
+        random_state=42,
     )
     vectors = vectors.astype(np.float32)
 
