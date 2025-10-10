@@ -254,7 +254,7 @@ class VamanaIndex(index.Index):
         if where is not None:
             # Get label enumeration from metadata
             label_enum_str = self.group.meta.get("label_enumeration", None)
-            if label_enum_str is None:
+            if not label_enum_str:
                 raise ValueError(
                     "Cannot use 'where' parameter: index does not have filter metadata. "
                     "This index was not created with filter support."

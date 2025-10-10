@@ -141,7 +141,7 @@ def test_filtered_query_equality(tmp_path):
     index = VamanaIndex(uri=uri)
 
     # Query near cluster A with filter for dataset_A
-    query = vectors_cluster_a[0:1]  # Use first vector from cluster A
+    query = vectors[0:1]  # Use first vector from cluster A (dataset_A)
     distances, ids = index.query(query, k=k, where="label == 'dataset_A'")
 
     # Verify all results are from dataset_A (IDs 0-249)
@@ -227,7 +227,7 @@ def test_filtered_query_in_clause(tmp_path):
     index = VamanaIndex(uri=uri)
 
     # Query with IN clause for datasets 1 and 3
-    query = vectors_a[0:1]
+    query = vectors[0:1]  # Use first vector from cluster A (soma_dataset_1)
     distances, ids = index.query(
         query, k=k, where="label IN ('soma_dataset_1', 'soma_dataset_3')"
     )
