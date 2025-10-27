@@ -2,7 +2,7 @@ name: Python API CI
 
 on:
   push:
-    branches: [main]
+    branches: 
   pull_request:
     branches: [main]
 
@@ -76,6 +76,102 @@ jobs:
       - name: Build and test python
         run: |
           # This will build with numpy 2.
+          pip install .[test]
+
+          pip list
+
+          # Then we will uninstall numpy 2 and install numpy 1.
+          pip uninstall -y numpy
+          pip install numpy==1.25.0
+
+          pip list
+
+          cd apis/python
+          export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
+          pytest -n logical --durations=0
+          # TODO: fix editable on linux
+          #pip uninstall -y tiledb.vector_search
+          #pip install -e .
+          #pytest
+          pip install -r test/ipynb/requirements.txt numpy==1.25.0
+          pytest -n logical --durations=0 --nbmake test/ipynb
+        env:
+          TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
+        shell: bash -el {0}
+      - name: Check tiledb-vector-search version
+        run: |
+          python -c "from tiledb.vector_search.version import version; print(version)"
+  run-tests-tiledb-client:
+      strategy:
+        matrix:
+          os: [ubuntu-latest]
+          python-version: ["3.9"]
+      runs-on: ${{ matrix.os }}
+      continue-on-error: true
+      steps:
+        - name: Install OpenBLAS
+          run: sudo apt install libopenblas-dev
+        - uses: actions/checkout@v3
+        - name: Set up Python ${{ matrix.python-version }}
+          uses: actions/setup-python@v2
+          with:
+            python-version: ${{ matrix.python-version }}
+        - name: Print Python version
+          run: |
+            which python
+            which pip
+            python --version
+        - name: Build and test python
+          run: |
+            pip install .[test]
+            pip install tiledb-client
+
+            pip list
+
+            cd apis/python
+            export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
+            pytest -n logical --durations=0
+            # TODO: fix editable on linux
+            #pip uninstall -y tiledb.vector_search
+            #pip install -e .
+            #pytest
+            pip install -r test/ipynb/requirements.txt
+            pytest -n logical --durations=0 --nbmake test/ipynb
+          env:
+            TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
+          shell: bash -el {0}
+          # TODO(paris):  This is a temporary job where we will build with numpy2, but run with numpy1.
+          # Remove once the UDFs have numpy2 and do not fail.
+          continue-on-error: true
+        - name: Check tiledb-vector-search version
+          run: |
+            python -c "from tiledb.vector_search.version import version; print(version)"
+
+  # TODO(paris): This is a temporary job where we will build with numpy2, but run with numpy1.
+  # Remove once the UDFs have numpy2 and do not fail.
+  run-tests-tiledb-client-numpy-1:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.9"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install OpenBLAS
+        run: sudo apt install libopenblas-dev
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Print Python version
+        run: |
+          which python
+          which pip
+          python --version
+      - name: Build and test python
+        run: |
+          # This will build with numpy 2.
+          pip install tiledb-client
           pip install .[test]
 
           pip list

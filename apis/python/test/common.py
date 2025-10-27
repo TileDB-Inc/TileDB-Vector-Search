@@ -395,16 +395,19 @@ def setUpCloudToken():
 
 
 def create_cloud_uri(name, folder_name=None, aws_uri=False):
-    namespace, storage_path, _ = groups._default_ns_path_cred()
-    storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
+    try:
+        namespace, storage_path, _ = groups._default_ns_path_cred()
+        storage_path = storage_path.replace("//", "/").replace("/", "//", 1)
 
-    if not folder_name:
-        folder_name = random_name("vector_search")
+        if not folder_name:
+            folder_name = random_name("vector_search")
 
-    if aws_uri:
-        return f"{storage_path}/{folder_name}/{name}"
-    else:
-        return f"tiledb://{namespace}/{storage_path}/{folder_name}/{name}"
+        if aws_uri:
+            return f"{storage_path}/{folder_name}/{name}"
+        else:
+            return f"tiledb://{namespace}/{storage_path}/{folder_name}/{name}"
+    except Exception as e:
+        raise e
 
 
 def delete_uri(uri, config):

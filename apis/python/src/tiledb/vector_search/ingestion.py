@@ -53,6 +53,8 @@ def ingest(
     index_timestamp: Optional[int] = None,
     config: Optional[Mapping[str, Any]] = None,
     namespace: Optional[str] = None,
+    workspace: Optional[str] = None,
+    teamspace: Optional[str] = None,
     size: int = -1,
     dimensions: int = -1,
     partitions: int = -1,
@@ -120,6 +122,10 @@ def ingest(
         TileDB config dictionary.
     namespace: str
         TileDB-Cloud namespace to use for Cloud execution.
+    workspace: str
+        TileDB-Client workspace to use for distributed execution.
+    teamspace: str
+        TileDB-Client teamspace to use for distributed execution.
     size: int
         Number of input vectors, if not provided use the full size of the input dataset.
         If provided, we filter the first vectors from the input source.
@@ -2389,6 +2395,8 @@ def ingest(
         mode: Mode = Mode.LOCAL,
         acn: Optional[str] = None,
         namespace: Optional[str] = None,
+        workspace: Optional[str] = None,
+        teamspace: Optional[str] = None,
         ingest_resources: Optional[Mapping[str, Any]] = None,
         consolidate_partition_resources: Optional[Mapping[str, Any]] = None,
         copy_centroids_resources: Optional[Mapping[str, Any]] = None,
@@ -2402,6 +2410,16 @@ def ingest(
         partial_index_resources: Optional[Mapping[str, Any]] = None,
     ) -> dag.DAG:
         kwargs = {}
+
+        if teamspace is not None:
+            kwargs["teamspace"] = teamspace
+
+        workspace_or_namespace = {}
+        if workspace is not None:
+            workspace_or_namespace["workspace"] = workspace
+        elif namespace is not None:
+            workspace_or_namespace["namespace"] = namespace
+
 
         # We compute the real size of the batch in bytes.
         size_in_bytes = (
@@ -2418,7 +2436,7 @@ def ingest(
                     limit=1,
                     retry_policy="Always",
                 ),
-                namespace=namespace,
+                **workspace_or_namespace,
             )
             threads = 16
 
@@ -2428,12 +2446,17 @@ def ingest(
             if mode == Mode.LOCAL:
                 # TODO: `default` is not an actual namespace. This is a temp fix to
                 # be able to run DAGs locally.
-                namespace = "default"
+                try:
+                    import tiledb.client
+                    workspace_or_namespace["workspace"] = "default"
+                except ImportError:
+                    workspace_or_namespace["namespace"] = "default"
+
             d = dag.DAG(
                 name="vector-ingestion",
                 mode=Mode.REALTIME,
                 max_workers=workers,
-                namespace=namespace,
+                **workspace_or_namespace,
             )
             threads = multiprocessing.cpu_count()
 
@@ -3382,7 +3405,6 @@ def ingest(
             use_sklearn=use_sklearn,
             mode=mode,
             acn=acn,
-            namespace=namespace,
             ingest_resources=ingest_resources,
             consolidate_partition_resources=consolidate_partition_resources,
             copy_centroids_resources=copy_centroids_resources,
@@ -3392,6 +3414,9 @@ def ingest(
             assign_points_and_partial_new_centroids_resources=assign_points_and_partial_new_centroids_resources,
             write_centroids_resources=write_centroids_resources,
             partial_index_resources=partial_index_resources,
+            namespace=namespace,
+            workspace=workspace,
+            teamspace=teamspace
         )
         logger.debug("Submitting ingestion graph")
         d.compute()
