@@ -125,9 +125,17 @@ jobs:
         run: |
           pip install .[test]
 
+      - name: Check out TileDB-Client-Py repo
+        uses: actions/checkout@v4
+        with:
+          repository: tiledb-inc/TileDB-Client-Py
+          token: ${{ secrets.GH_TOKEN }}
+          path: tiledb-client-py
+          ref: seth/vec-11-vector-search-support-for-carrara
       - name: Install TileDB-Client-Py
         run: |
-          pip install "tiledb-client==3.0a8"
+          cd tiledb-client-py
+          pip install .
 
       - name: Test python
         run: |
@@ -174,11 +182,23 @@ jobs:
           which python
           which pip
           python --version
+      - name: Check out TileDB-Client-Py repo
+        uses: actions/checkout@v4
+        with:
+          repository: tiledb-inc/TileDB-Client-Py
+          token: ${{ secrets.GH_TOKEN }}
+          path: tiledb-client-py
+          ref: seth/vec-11-vector-search-support-for-carrara
+      - name: Build and install TileDB-Client-Py
+        run: |
+          cd tiledb-client-py
+          pip install .
+
       - name: Build and test python
         run: |
           # This will build with numpy 2.
+          # pip install tiledb-client
           pip install .[test]
-          pip install tiledb-client
 
           pip list
 
@@ -187,6 +207,16 @@ jobs:
           pip install numpy==1.25.0
 
           pip list
+
+          cd apis/python
+          export TILEDB_REST_TOKEN=$TILEDB_CLOUD_HELPER_VAR
+          pytest -n logical --durations=0
+          # TODO: fix editable on linux
+          #pip uninstall -y tiledb.vector_search
+          #pip install -e .
+          #pytest
+          pip install -r test/ipynb/requirements.txt numpy==1.25.0
+          pytest -n logical --durations=0 --nbmake test/ipynb
         env:
           TILEDB_CLOUD_HELPER_VAR: ${{ secrets.TILEDB_CLOUD_HELPER_VAR }}
         shell: bash -el {0}
