@@ -946,7 +946,7 @@ def ingest(
             ) as src_array:
                 src_array_schema = src_array.schema
                 data = src_array[start_pos:end_pos, 0:dimensions]
-                
+
                 matrix = coo_matrix(
                     (
                         data[src_array_schema.attr(0).name],
@@ -954,14 +954,9 @@ def ingest(
                             data[src_array_schema.domain.dim(0).name] - start_pos,
                             data[src_array_schema.domain.dim(1).name],
                         ),
-                    )
+                    ),
+                    shape=(end_pos - start_pos, dimensions),
                 ).toarray()
-
-                if matrix.shape[1] < dimensions:
-                    matrix = np.concatenate([
-                        matrix,
-                        np.zeros(shape=(matrix.shape[0], dimensions - matrix.shape[1]))
-                    ], axis=1)
 
                 return matrix
 
