@@ -409,7 +409,16 @@ def ingest(
         elif source_uri.endswith(".bvecs"):
             return "BVEC"
         else:
-            return "TILEDB_ARRAY"
+            # Check if it's a TileDB array and whether it's sparse or dense
+            try:
+                schema = tiledb.ArraySchema.load(source_uri)
+                if schema.sparse:
+                    return "TILEDB_SPARSE_ARRAY"
+                else:
+                    return "TILEDB_ARRAY"
+            except Exception:
+                # If we can't load the schema, assume it's a dense TileDB array
+                return "TILEDB_ARRAY"
 
     def read_source_metadata(
         source_uri: str, source_type: Optional[str] = None
