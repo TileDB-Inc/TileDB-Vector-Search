@@ -2183,3 +2183,81 @@ def test_dimensions_parameter_with_numpy_input(tmp_path):
     distances_2, indices_2 = index_2.query(queries, k=k)
     assert distances_2.shape == (nq, k)
     assert indices_2.shape == (nq, k)
+
+
+def test_sparse_array_ingestion_with_trailing_nulls(tmp_path):
+    """
+    Test that sparse matrices with trailing null columns are ingested correctly.
+
+    This test verifies the fix for a bug where sparse matrices with null entries
+    at the end were being read with incorrect dimensions. For example, a sparse
+    array with schema shape 10x100 might be read as 10x90 if columns 90-99 were
+    all empty.
+    """
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+
+    # Create a sparse array with 10 vectors of 100 dimensions
+    # Only populate columns 0-89, leaving 90-99 empty
+    num_vectors = 10
+    dimensions = 100
+    populated_dimensions = 90
+
+    # Create sparse array schema
+    schema = tiledb.ArraySchema(
+        domain=tiledb.Domain(
+            tiledb.Dim(
+                name="rows", domain=(0, num_vectors - 1), tile=10, dtype=np.int32
+            ),
+            tiledb.Dim(
+                name="cols", domain=(0, dimensions - 1), tile=dimensions, dtype=np.int32
+            ),
+        ),
+        attrs=[
+            tiledb.Attr(name="values", dtype=np.float32, var=False, nullable=False),
+        ],
+        sparse=True,
+    )
+
+    sparse_array_uri = os.path.join(dataset_dir, "sparse_data.tdb")
+    tiledb.Array.create(sparse_array_uri, schema)
+
+    # Populate the sparse array with data only in columns 0 to populated_dimensions-1
+    with tiledb.open(sparse_array_uri, "w") as A:
+        rows = []
+        cols = []
+        values = []
+        for i in range(num_vectors):
+            for j in range(populated_dimensions):
+                rows.append(i)
+                cols.append(j)
+                values.append(float(i * 100 + j))
+
+        A[rows, cols] = np.array(values, dtype=np.float32)
+
+    # Ingest into a FLAT index
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="FLAT",
+        index_uri=index_uri,
+        source_uri=sparse_array_uri,
+    )
+    index.vacuum()
+
+    # Verify the index has the correct dimensions
+    with tiledb.Group(index_uri, "r") as group:
+        assert group.meta["dimensions"] == dimensions
+
+    # Create a query vector with all dimensions populated
+    query = np.zeros((1, dimensions), dtype=np.float32)
+    query[0, :populated_dimensions] = np.arange(populated_dimensions, dtype=np.float32)
+
+    # Query the index - should return the first vector (index 0)
+    distances, indices = index.query(query, k=1)
+
+    # The closest vector should be the first one (index 0)
+    assert indices[0][0] == 0
+
+    # Verify we can query successfully (no dimension mismatch errors)
+    assert len(distances[0]) == 1
+    assert len(indices[0]) == 1

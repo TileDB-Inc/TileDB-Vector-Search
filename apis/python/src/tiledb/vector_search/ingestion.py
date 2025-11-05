@@ -409,7 +409,16 @@ def ingest(
         elif source_uri.endswith(".bvecs"):
             return "BVEC"
         else:
-            return "TILEDB_ARRAY"
+            # Check if it's a TileDB array and whether it's sparse or dense
+            try:
+                schema = tiledb.ArraySchema.load(source_uri)
+                if schema.sparse:
+                    return "TILEDB_SPARSE_ARRAY"
+                else:
+                    return "TILEDB_ARRAY"
+            except Exception:
+                # If we can't load the schema, assume it's a dense TileDB array
+                return "TILEDB_ARRAY"
 
     def read_source_metadata(
         source_uri: str, source_type: Optional[str] = None
@@ -946,15 +955,20 @@ def ingest(
             ) as src_array:
                 src_array_schema = src_array.schema
                 data = src_array[start_pos:end_pos, 0:dimensions]
-                return coo_matrix(
+
+                matrix = coo_matrix(
                     (
                         data[src_array_schema.attr(0).name],
                         (
                             data[src_array_schema.domain.dim(0).name] - start_pos,
                             data[src_array_schema.domain.dim(1).name],
                         ),
-                    )
+                    ),
+                    shape=(end_pos - start_pos, dimensions),
                 ).toarray()
+
+                return matrix
+
         elif source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(
                 source_uri, "r", timestamp=index_timestamp, config=config
