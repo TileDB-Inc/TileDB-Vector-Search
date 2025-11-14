@@ -2446,11 +2446,11 @@ def ingest(
             if mode == Mode.LOCAL:
                 # TODO: `default` is not an actual namespace. This is a temp fix to
                 # be able to run DAGs locally.
-                try:
-                    import tiledb.client
-                    workspace_or_namespace["workspace"] = "default"
-                except ImportError:
-                    workspace_or_namespace["namespace"] = "default"
+                # try:
+                    # import tiledb.client
+                    # workspace_or_namespace["workspace"] = "default"
+                # except ImportError:
+                workspace_or_namespace["namespace"] = "default"
 
             d = dag.DAG(
                 name="vector-ingestion",
