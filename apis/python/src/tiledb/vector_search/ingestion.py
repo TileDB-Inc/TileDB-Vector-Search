@@ -19,7 +19,6 @@ from typing import Any, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
-import tiledb
 from tiledb.cloud.dag import Mode
 from tiledb.vector_search import _tiledbvspy as vspy
 from tiledb.vector_search._tiledbvspy import *
