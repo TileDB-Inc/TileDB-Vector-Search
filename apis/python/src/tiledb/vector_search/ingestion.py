@@ -225,6 +225,7 @@ def ingest(
 
     import numpy as np
 
+    import tiledb
     from tiledb.cloud import dag
     from tiledb.cloud.rest_api import models
     from tiledb.cloud.utilities import get_logger
@@ -235,7 +236,6 @@ def ingest(
     from tiledb.vector_search import ivf_pq_index
     from tiledb.vector_search import vamana_index
     from tiledb.vector_search.storage_formats import storage_formats
-    import tiledb
 
     validate_storage_version(storage_version)
 
