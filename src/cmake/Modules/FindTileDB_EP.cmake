@@ -4,7 +4,7 @@
 #
 # The MIT License
 #
-# Copyright (c) 2023 TileDB, Inc.
+# Copyright (c) 2025 TileDB, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -57,13 +57,13 @@ else()
     # - Copy the release hash from the `releases.csv.sha256` file in the release.
     if(DOWNLOAD_TILEDB_PREBUILT)
         fetch_prebuilt_tiledb(
-                VERSION 2.28.0
-                RELLIST_HASH SHA256=40c8a0b5b7ddfe6150e3ce390fd95761d2b7d5910ea3fd5c7dfb67d431e64660
+                VERSION 2.29.1
+                RELLIST_HASH SHA256=fb78a3e36570b4b4ca603a1752979de36ab1fe0904bc1ec5236c03ab2b34c8c1
         )
     else() # Build from source
         fetch_source_tiledb(
-                VERSION 2.28.0
-                RELLIST_HASH SHA256=40c8a0b5b7ddfe6150e3ce390fd95761d2b7d5910ea3fd5c7dfb67d431e64660
+                VERSION 2.29.1
+                RELLIST_HASH SHA256=fb78a3e36570b4b4ca603a1752979de36ab1fe0904bc1ec5236c03ab2b34c8c1
         )
     endif()
 

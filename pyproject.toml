@@ -15,12 +15,13 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 # These are the runtime depdendencies.
 dependencies = [
     "tiledb-cloud>=0.11",
-    "tiledb>=0.34.0",
+    "tiledb>=0.35.1",
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
     "numpy>=1.25.0",

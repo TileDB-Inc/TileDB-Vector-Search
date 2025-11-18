@@ -2078,3 +2078,254 @@ def test_ollama_embedding():
 
         # Verify the callable was called with correct input parameter
         mock_callable.assert_called_once_with(input=test_texts)
+
+
+def test_dimensions_parameter_override(tmp_path):
+    """
+    Test the dimensions parameter functionality with TileDB array input.
+
+    This test verifies that the dimensions parameter can override
+    the dimensions detected from the source array, which is useful
+    for handling cases where the source array has an artificially
+    large domain (e.g., due to TileDBSOMA; https://github.com/TileDB-Inc/TileDB-Vector-Search/issues/564).
+    """
+    # Create test data
+    actual_dimensions = 64
+    nb = 1000
+    nq = 10
+    k = 5
+
+    # Create random test vectors with actual dimensions
+    test_vectors = np.random.rand(nb, actual_dimensions).astype(np.float32)
+    queries = np.random.rand(nq, actual_dimensions).astype(np.float32)
+
+    # Create a TileDB array with artificially large domain (simulating the problem)
+    source_uri = os.path.join(tmp_path, "source_array")
+    large_domain_value = 100000
+
+    # Create schema with large dimension domain
+    schema = tiledb.ArraySchema(
+        domain=tiledb.Domain(
+            tiledb.Dim(
+                name="__dim_0",
+                domain=(0, large_domain_value),
+                tile=1000,
+                dtype="int32",
+            ),
+            tiledb.Dim(
+                name="__dim_1",
+                domain=(0, large_domain_value),
+                tile=actual_dimensions,
+                dtype="int32",
+            ),
+        ),
+        attrs=[
+            tiledb.Attr(name="values", dtype="float32", var=False, nullable=False),
+        ],
+        cell_order="col-major",
+        tile_order="col-major",
+        capacity=10000,
+        sparse=False,
+    )
+
+    # Create the array and write test data
+    tiledb.Array.create(source_uri, schema)
+    with tiledb.open(source_uri, "w") as A:
+        A[0:nb, 0:actual_dimensions] = test_vectors
+
+    # Test ingestion with dimensions parameter override
+    # Without the override, the large domain would be detected as 100001 dimensions
+    # With the override, we explicitly set it to the actual dimensions (64)
+    index_uri = os.path.join(tmp_path, "test_index")
+
+    index = ingest(
+        index_type="FLAT",
+        index_uri=index_uri,
+        source_uri=source_uri,
+        source_type="TILEDB_ARRAY",
+        dimensions=actual_dimensions,  # Override the detected large dimensions
+        size=nb,
+    )
+
+    # Verify the index was created successfully
+    assert index is not None
+    index.vacuum()
+
+    # Verify the index works correctly with queries
+    distances, indices = index.query(queries, k=k)
+
+    # Basic sanity checks
+    assert distances.shape == (nq, k)
+    assert indices.shape == (nq, k)
+    assert np.all(indices >= 0)
+    assert np.all(indices < nb)
+
+    # Verify that dimensions=-1 (or not passing at all) detects large dimensions but creates unusable index
+    # This demonstrates the problem that the dimensions parameter is meant to solve
+    index_uri_2 = os.path.join(tmp_path, "test_index_2")
+
+    # Create with explicit dimensions=-1 - this will use the large detected dimensions
+    # The index creation will succeed, but queries will fail due to dimension mismatch
+    index_2 = ingest(
+        index_type="FLAT",
+        index_uri=index_uri_2,
+        source_uri=source_uri,
+        source_type="TILEDB_ARRAY",
+        dimensions=-1,  # Uses detected large dimensions (100001)
+        size=nb,
+    )
+
+    assert index_2 is not None
+    index_2.vacuum()
+
+    # Verify that the index was created with the large detected dimensions
+    assert index_2.dimensions == large_domain_value + 1  # 100001 dimensions
+
+    # Verify that queries fail due to dimension mismatch
+    # This demonstrates why the dimensions parameter override is needed
+    with pytest.raises(Exception) as exc_info:
+        index_2.query(queries, k=k)
+    assert (
+        "A query in queries has 64 dimensions, but the indexed data had 100001 dimensions"
+        in str(exc_info.value)
+    )  # Should contain dimension mismatch error
+
+
+def test_dimensions_parameter_with_numpy_input(tmp_path):
+    """
+    Test the dimensions parameter with numpy input vectors.
+
+    This is to ensure that when input_vectors is provided as a numpy array,
+    the dimensions parameter is either ignored or validated correctly.
+    """
+    # Create test data
+    nb = 100
+    actual_dimensions = 32
+    nq = 5
+    k = 3
+
+    # Create random test vectors
+    input_vectors = np.random.rand(nb, actual_dimensions).astype(np.float32)
+    queries = np.random.rand(nq, actual_dimensions).astype(np.float32)
+
+    # Ingest with numpy input and dimensions parameter (should be ignored since input_vectors is provided)
+    index_uri = os.path.join(tmp_path, "test_numpy_index")
+
+    # When input_vectors is provided, the dimensions parameter should not affect the detected dimensions
+    # but the function should still accept it without error
+    index = ingest(
+        index_type="FLAT",
+        index_uri=index_uri,
+        input_vectors=input_vectors,
+        dimensions=999,  # This should be ignored since input_vectors is provided
+    )
+
+    # Verify the index was created successfully
+    assert index is not None
+    index.vacuum()
+
+    # Test that queries work correctly
+    distances, indices = index.query(queries, k=k)
+
+    # Basic sanity checks
+    assert distances.shape == (nq, k)
+    assert indices.shape == (nq, k)
+    assert np.all(indices >= 0)
+    assert np.all(indices < nb)
+
+    # Verify that dimensions parameter doesn't cause issues with default behavior
+    index_uri_2 = os.path.join(tmp_path, "test_numpy_index_2")
+
+    # Test without dimensions parameter (default behavior)
+    index_2 = ingest(
+        index_type="FLAT",
+        index_uri=index_uri_2,
+        input_vectors=input_vectors,
+        # No dimensions parameter - should work as before
+    )
+
+    assert index_2 is not None
+    index_2.vacuum()
+
+    # Verify both indexes produce similar results
+    distances_2, indices_2 = index_2.query(queries, k=k)
+    assert distances_2.shape == (nq, k)
+    assert indices_2.shape == (nq, k)
+
+
+def test_sparse_array_ingestion_with_trailing_nulls(tmp_path):
+    """
+    Test that sparse matrices with trailing null columns are ingested correctly.
+
+    This test verifies the fix for a bug where sparse matrices with null entries
+    at the end were being read with incorrect dimensions. For example, a sparse
+    array with schema shape 10x100 might be read as 10x90 if columns 90-99 were
+    all empty.
+    """
+    dataset_dir = os.path.join(tmp_path, "dataset")
+    os.mkdir(dataset_dir)
+
+    # Create a sparse array with 10 vectors of 100 dimensions
+    # Only populate columns 0-89, leaving 90-99 empty
+    num_vectors = 10
+    dimensions = 100
+    populated_dimensions = 90
+
+    # Create sparse array schema
+    schema = tiledb.ArraySchema(
+        domain=tiledb.Domain(
+            tiledb.Dim(
+                name="rows", domain=(0, num_vectors - 1), tile=10, dtype=np.int32
+            ),
+            tiledb.Dim(
+                name="cols", domain=(0, dimensions - 1), tile=dimensions, dtype=np.int32
+            ),
+        ),
+        attrs=[
+            tiledb.Attr(name="values", dtype=np.float32, var=False, nullable=False),
+        ],
+        sparse=True,
+    )
+
+    sparse_array_uri = os.path.join(dataset_dir, "sparse_data.tdb")
+    tiledb.Array.create(sparse_array_uri, schema)
+
+    # Populate the sparse array with data only in columns 0 to populated_dimensions-1
+    with tiledb.open(sparse_array_uri, "w") as A:
+        rows = []
+        cols = []
+        values = []
+        for i in range(num_vectors):
+            for j in range(populated_dimensions):
+                rows.append(i)
+                cols.append(j)
+                values.append(float(i * 100 + j))
+
+        A[rows, cols] = np.array(values, dtype=np.float32)
+
+    # Ingest into a FLAT index
+    index_uri = os.path.join(tmp_path, "array")
+    index = ingest(
+        index_type="FLAT",
+        index_uri=index_uri,
+        source_uri=sparse_array_uri,
+    )
+    index.vacuum()
+
+    # Verify the index has the correct dimensions
+    with tiledb.Group(index_uri, "r") as group:
+        assert group.meta["dimensions"] == dimensions
+
+    # Create a query vector with all dimensions populated
+    query = np.zeros((1, dimensions), dtype=np.float32)
+    query[0, :populated_dimensions] = np.arange(populated_dimensions, dtype=np.float32)
+
+    # Query the index - should return the first vector (index 0)
+    distances, indices = index.query(query, k=1)
+
+    # The closest vector should be the first one (index 0)
+    assert indices[0][0] == 0
+
+    # Verify we can query successfully (no dimension mismatch errors)
+    assert len(distances[0]) == 1
+    assert len(indices[0]) == 1

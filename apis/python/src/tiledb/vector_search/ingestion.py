@@ -54,6 +54,7 @@ def ingest(
     config: Optional[Mapping[str, Any]] = None,
     namespace: Optional[str] = None,
     size: int = -1,
+    dimensions: int = -1,
     partitions: int = -1,
     num_subspaces: int = -1,
     l_build: int = -1,
@@ -122,6 +123,10 @@ def ingest(
     size: int
         Number of input vectors, if not provided use the full size of the input dataset.
         If provided, we filter the first vectors from the input source.
+    dimensions: int
+        Number of vector dimensions, if not provided use the dimensions detected from the input dataset.
+        If provided, this overrides the dimensions detected by read_source_metadata. This is only used when
+        the input_vectors is not provided. Otherwise, it is ignored.
     partitions: int
         For IVF_FLAT and IVF_PQ indexes, the number of partitions to generate from the data during k-means clustering.
         If not provided, is auto-configured based on the dataset size.
@@ -404,7 +409,16 @@ def ingest(
         elif source_uri.endswith(".bvecs"):
             return "BVEC"
         else:
-            return "TILEDB_ARRAY"
+            # Check if it's a TileDB array and whether it's sparse or dense
+            try:
+                schema = tiledb.ArraySchema.load(source_uri)
+                if schema.sparse:
+                    return "TILEDB_SPARSE_ARRAY"
+                else:
+                    return "TILEDB_ARRAY"
+            except Exception:
+                # If we can't load the schema, assume it's a dense TileDB array
+                return "TILEDB_ARRAY"
 
     def read_source_metadata(
         source_uri: str, source_type: Optional[str] = None
@@ -941,15 +955,20 @@ def ingest(
             ) as src_array:
                 src_array_schema = src_array.schema
                 data = src_array[start_pos:end_pos, 0:dimensions]
-                return coo_matrix(
+
+                matrix = coo_matrix(
                     (
                         data[src_array_schema.attr(0).name],
                         (
                             data[src_array_schema.domain.dim(0).name] - start_pos,
                             data[src_array_schema.domain.dim(1).name],
                         ),
-                    )
+                    ),
+                    shape=(end_pos - start_pos, dimensions),
                 ).toarray()
+
+                return matrix
+
         elif source_type == "TILEDB_PARTITIONED_ARRAY":
             with tiledb.open(
                 source_uri, "r", timestamp=index_timestamp, config=config
@@ -3052,14 +3071,22 @@ def ingest(
 
         if input_vectors is not None:
             in_size = input_vectors.shape[0]
-            dimensions = input_vectors.shape[1]
+            # When input_vectors is provided, use detected dimensions (ignore dimensions parameter)
+            dimensions = int(input_vectors.shape[1])
             vector_type = input_vectors.dtype
             source_type = "TILEDB_ARRAY"
+            logger.debug("Using dimensions from input_vectors: %d", dimensions)
         else:
             if source_type is None:
                 source_type = autodetect_source_type(source_uri=source_uri)
-            in_size, dimensions, vector_type = read_source_metadata(
+            in_size, detected_dimensions, vector_type = read_source_metadata(
                 source_uri=source_uri, source_type=source_type
+            )
+            # Use provided dimensions if specified, otherwise use detected dimensions
+            if dimensions == -1:
+                dimensions = int(detected_dimensions)
+            logger.debug(
+                "Using dimensions: %d (detected: %d)", dimensions, detected_dimensions
             )
         logger.debug("Ingesting Vectors into %r", index_group_uri)
         arrays_created = False
