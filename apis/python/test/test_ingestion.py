@@ -2012,6 +2012,74 @@ def test_ivf_flat_taskgraph_query(tmp_path):
     assert accuracy(result, gt_i) > MINIMUM_ACCURACY
 
 
+def test_ollama_embedding():
+    """Test OllamaEmbedding class with mocked ollama library."""
+    from unittest.mock import MagicMock
+    from unittest.mock import Mock
+    from unittest.mock import patch
+
+    from tiledb.vector_search.embeddings import OllamaEmbedding
+
+    # Test initialization
+    dimensions = 384
+    embedding_class = "embed"
+    embedding_kwargs = {"model": "nomic-embed-text"}
+
+    embedding = OllamaEmbedding(
+        dimensions=dimensions,
+        embedding_class=embedding_class,
+        embedding_kwargs=embedding_kwargs,
+    )
+
+    # Test dimensions() method
+    assert embedding.dimensions() == dimensions
+
+    # Test vector_type() method
+    assert embedding.vector_type() == np.float32
+
+    # Test init_kwargs() method
+    init_kwargs = embedding.init_kwargs()
+    assert init_kwargs["dimensions"] == dimensions
+    assert init_kwargs["embedding_class"] == embedding_class
+    assert init_kwargs["embedding_kwargs"] == embedding_kwargs
+
+    # Mock the ollama module
+    mock_ollama = MagicMock()
+
+    # Create a mock embedding result with the expected structure
+    mock_embed_result = Mock()
+    mock_embed_result.embeddings = [
+        [0.1] * dimensions,  # 384 dimensions for first text
+        [0.2] * dimensions,  # 384 dimensions for second text
+    ]
+
+    # Create a mock callable that will be returned by embed(**kwargs)
+    mock_callable = Mock(return_value=mock_embed_result)
+
+    # Mock the embed function to return our callable when called with **embedding_kwargs
+    mock_ollama.embed = Mock(return_value=mock_callable)
+
+    # Patch the importlib.import_module to return our mock
+    with patch("importlib.import_module", return_value=mock_ollama):
+        # Test load() method
+        embedding.load()
+
+        # Test embed() method with multiple texts
+        test_texts = ["hello world", "test document"]
+        result = embedding.embed(test_texts)
+
+        # Verify the result
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == np.float32
+        assert result.shape == (2, dimensions)
+
+        # Verify embed was called with correct kwargs during load
+        mock_ollama.embed.assert_called_once_with(model="nomic-embed-text")
+
+        # Verify the callable was called with correct input parameter
+        mock_callable.assert_called_once_with(input=test_texts)
+
+
 def test_dimensions_parameter_override(tmp_path):
     """
     Test the dimensions parameter functionality with TileDB array input.
