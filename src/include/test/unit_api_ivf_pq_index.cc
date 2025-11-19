@@ -433,7 +433,7 @@ TEST_CASE(
 
     auto index = IndexIVFPQ(ctx, index_uri);
     auto index_finite =
-        IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 450);
+        IndexIVFPQ(ctx, index_uri, IndexLoadStrategy::PQ_OOC, 500);
 
     for (auto [nprobe, expected_accuracy, expected_accuracy_with_reranking] :
          std::vector<std::tuple<int, float, float>>{

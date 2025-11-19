@@ -161,10 +161,14 @@ class IndexVamana {
   /**
    * @brief Train the index based on the given training set.
    * @param training_set
-   * @param init
+   * @param filter_labels Optional filter labels for filtered Vamana
+   * @param label_to_enum Optional label enumeration mapping
    */
   // @todo -- infer feature type from input
-  void train(const FeatureVectorArray& training_set) {
+  void train(
+      const FeatureVectorArray& training_set,
+      const std::vector<std::unordered_set<uint32_t>>& filter_labels = {},
+      const std::unordered_map<std::string, uint32_t>& label_to_enum = {}) {
     if (feature_datatype_ == TILEDB_ANY) {
       feature_datatype_ = training_set.feature_type();
     } else if (feature_datatype_ != training_set.feature_type()) {
@@ -194,7 +198,7 @@ class IndexVamana {
         index_ ? std::make_optional<TemporalPolicy>(index_->temporal_policy()) :
                  std::nullopt,
         distance_metric_);
-    index_->train(training_set);
+    index_->train(training_set, filter_labels, label_to_enum);
 
     if (dimensions_ != 0 && dimensions_ != index_->dimensions()) {
       throw std::runtime_error(
@@ -225,11 +229,12 @@ class IndexVamana {
   [[nodiscard]] auto query(
       const QueryVectorArray& vectors,
       size_t top_k,
-      std::optional<uint32_t> l_search = std::nullopt) {
+      std::optional<uint32_t> l_search = std::nullopt,
+      std::optional<std::unordered_set<uint32_t>> query_filter = std::nullopt) {
     if (!index_) {
       throw std::runtime_error("Cannot query() because there is no index.");
     }
-    return index_->query(vectors, top_k, l_search);
+    return index_->query(vectors, top_k, l_search, query_filter);
   }
 
   void write_index(
@@ -340,7 +345,11 @@ class IndexVamana {
   struct index_base {
     virtual ~index_base() = default;
 
-    virtual void train(const FeatureVectorArray& training_set) = 0;
+    virtual void train(
+        const FeatureVectorArray& training_set,
+        const std::vector<std::unordered_set<uint32_t>>& filter_labels = {},
+        const std::unordered_map<std::string, uint32_t>& label_to_enum =
+            {}) = 0;
 
     virtual void add(const FeatureVectorArray& data_set) = 0;
 
@@ -348,7 +357,8 @@ class IndexVamana {
     query(
         const QueryVectorArray& vectors,
         size_t top_k,
-        std::optional<uint32_t> l_search) = 0;
+        std::optional<uint32_t> l_search,
+        std::optional<std::unordered_set<uint32_t>> query_filter) = 0;
 
     virtual void write_index(
         const tiledb::Context& ctx,
@@ -394,7 +404,11 @@ class IndexVamana {
         : impl_index_(ctx, index_uri, temporal_policy) {
     }
 
-    void train(const FeatureVectorArray& training_set) override {
+    void train(
+        const FeatureVectorArray& training_set,
+        const std::vector<std::unordered_set<uint32_t>>& filter_labels = {},
+        const std::unordered_map<std::string, uint32_t>& label_to_enum = {})
+        override {
       using feature_type = typename T::feature_type;
       auto fspan = MatrixView<feature_type, stdx::layout_left>{
           (feature_type*)training_set.data(),
@@ -406,11 +420,11 @@ class IndexVamana {
       if (num_ids(training_set) > 0) {
         auto ids = std::span<id_type>(
             (id_type*)training_set.ids(), training_set.num_vectors());
-        impl_index_.train(fspan, ids);
+        impl_index_.train(fspan, ids, filter_labels, label_to_enum);
       } else {
         auto ids = std::vector<id_type>(::num_vectors(training_set));
         std::iota(ids.begin(), ids.end(), 0);
-        impl_index_.train(fspan, ids);
+        impl_index_.train(fspan, ids, filter_labels, label_to_enum);
       }
     }
 
@@ -436,7 +450,8 @@ class IndexVamana {
     [[nodiscard]] std::tuple<FeatureVectorArray, FeatureVectorArray> query(
         const QueryVectorArray& vectors,
         size_t top_k,
-        std::optional<uint32_t> l_search) override {
+        std::optional<uint32_t> l_search,
+        std::optional<std::unordered_set<uint32_t>> query_filter) override {
       // @todo using index_type = size_t;
       auto dtype = vectors.feature_type();
 
@@ -448,7 +463,7 @@ class IndexVamana {
               (float*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(qspan, top_k, l_search);
+          auto [s, t] = impl_index_.query(qspan, top_k, l_search, query_filter);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};
@@ -458,7 +473,7 @@ class IndexVamana {
               (uint8_t*)vectors.data(),
               extents(vectors)[0],
               extents(vectors)[1]};  // @todo ??
-          auto [s, t] = impl_index_.query(qspan, top_k, l_search);
+          auto [s, t] = impl_index_.query(qspan, top_k, l_search, query_filter);
           auto x = FeatureVectorArray{std::move(s)};
           auto y = FeatureVectorArray{std::move(t)};
           return {std::move(x), std::move(y)};

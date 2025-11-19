@@ -421,10 +421,17 @@ void init_type_erased_module(py::module_& m) {
           })
       .def(
           "train",
-          [](IndexVamana& index, const FeatureVectorArray& vectors) {
-            index.train(vectors);
+          [](IndexVamana& index,
+             const FeatureVectorArray& vectors,
+             const std::vector<std::unordered_set<uint32_t>>& filter_labels,
+             const std::unordered_map<std::string, uint32_t>& label_to_enum) {
+            index.train(vectors, filter_labels, label_to_enum);
           },
-          py::arg("vectors"))
+          py::arg("vectors"),
+          py::arg("filter_labels") =
+              std::vector<std::unordered_set<uint32_t>>{},
+          py::arg("label_to_enum") =
+              std::unordered_map<std::string, uint32_t>{})
       .def(
           "add",
           [](IndexVamana& index, const FeatureVectorArray& vectors) {
@@ -436,13 +443,16 @@ void init_type_erased_module(py::module_& m) {
           [](IndexVamana& index,
              const FeatureVectorArray& vectors,
              size_t k,
-             uint32_t l_search) {
-            auto r = index.query(vectors, k, l_search);
+             uint32_t l_search,
+             std::optional<std::unordered_set<uint32_t>> query_filter =
+                 std::nullopt) {
+            auto r = index.query(vectors, k, l_search, query_filter);
             return make_python_pair(std::move(r));
           },
           py::arg("vectors"),
           py::arg("k"),
-          py::arg("l_search"))
+          py::arg("l_search"),
+          py::arg("query_filter") = std::nullopt)
       .def(
           "write_index",
           [](IndexVamana& index,

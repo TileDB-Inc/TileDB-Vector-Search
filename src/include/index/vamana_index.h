@@ -33,11 +33,13 @@
 #ifndef TDB_VAMANA_INDEX_H
 #define TDB_VAMANA_INDEX_H
 
+#include <algorithm>
 #include <cstddef>
 #include <execution>
 #include <functional>
 #include <future>
 #include <queue>
+#include <random>
 #include <tiledb/tiledb>
 #include <unordered_set>
 
@@ -69,6 +71,11 @@
 template <class Distance = sum_of_squares_distance>
 auto medoid(auto&& P, Distance distance = Distance{}) {
   auto n = num_vectors(P);
+  if (n == 0) {
+    throw std::runtime_error(
+        "[medoid] Cannot compute medoid of empty vector set");
+  }
+
   auto centroid = Vector<float>(P[0].size());
   std::fill(begin(centroid), end(centroid), 0.0);
 
@@ -94,6 +101,108 @@ auto medoid(auto&& P, Distance distance = Distance{}) {
   }
 
   return med;
+}
+
+/**
+ * Find start nodes for each unique filter label with load balancing.
+ * This implements Algorithm 2 (FindMedoid) from the Filtered-DiskANN paper.
+ *
+ * The goal is load-balanced start node selection: no single node should be
+ * the start point for too many labels. For each label, we sample tau candidates
+ * (min(1000, label_size/10)) and select the one with the minimum load count.
+ *
+ * @tparam Distance The distance functor used to compare vectors
+ * @param P The set of feature vectors
+ * @param filter_labels The filter labels for each vector (indexed by position)
+ * @param distance The distance functor used to compare vectors
+ * @return Map from label ID → start node ID for that label
+ */
+template <class Distance = sum_of_squares_distance>
+auto find_medoid(
+    auto&& P,
+    const std::vector<std::unordered_set<uint32_t>>& filter_labels,
+    Distance distance = Distance{}) {
+  using id_type = size_t;  // Node IDs are vector indices
+
+  std::unordered_map<uint32_t, id_type> start_nodes;  // label → node_id
+  std::unordered_map<id_type, size_t>
+      load_count;  // node_id → # labels using it
+
+  // Collect all unique labels across all vectors
+  std::unordered_set<uint32_t> all_labels;
+  for (const auto& label_set : filter_labels) {
+    all_labels.insert(label_set.begin(), label_set.end());
+  }
+
+  // For each unique label, find the best start node
+  for (uint32_t label : all_labels) {
+    // Find all vectors that have this label
+    std::vector<id_type> candidates_with_label;
+    for (size_t i = 0; i < filter_labels.size(); ++i) {
+      if (filter_labels[i].count(label) > 0) {
+        candidates_with_label.push_back(i);
+      }
+    }
+
+    if (candidates_with_label.empty()) {
+      continue;  // No vectors with this label (shouldn't happen)
+    }
+
+    // Compute tau = min(1000, label_size/10) with minimum of 1
+    size_t tau = std::min<size_t>(1000, candidates_with_label.size() / 10);
+    tau = std::max<size_t>(tau, 1);
+
+    // Sample tau candidates randomly
+    std::vector<id_type> sampled_candidates;
+    std::sample(
+        candidates_with_label.begin(),
+        candidates_with_label.end(),
+        std::back_inserter(sampled_candidates),
+        tau,
+        std::mt19937{std::random_device{}()});
+
+    // Compute centroid of all vectors with this label
+    auto n = candidates_with_label.size();
+    auto centroid = Vector<float>(P[0].size());
+    std::fill(begin(centroid), end(centroid), 0.0);
+
+    for (id_type idx : candidates_with_label) {
+      auto p = P[idx];
+      for (size_t i = 0; i < p.size(); ++i) {
+        centroid[i] += static_cast<float>(p[i]);
+      }
+    }
+    for (size_t i = 0; i < centroid.size(); ++i) {
+      centroid[i] /= static_cast<float>(n);
+    }
+
+    // Find the sampled candidate with minimum cost
+    // Cost = distance_to_centroid + load_penalty
+    id_type best_candidate = sampled_candidates[0];
+    float min_cost = std::numeric_limits<float>::max();
+
+    for (id_type candidate : sampled_candidates) {
+      float dist_to_centroid = distance(P[candidate], centroid);
+      size_t current_load = load_count[candidate];
+
+      // Combine distance and load to encourage load balancing
+      // The paper doesn't specify exact formula, but we penalize high-load
+      // nodes
+      float load_penalty = static_cast<float>(current_load) * 0.1f;
+      float cost = dist_to_centroid + load_penalty;
+
+      if (cost < min_cost) {
+        min_cost = cost;
+        best_candidate = candidate;
+      }
+    }
+
+    // Assign this node as the start node for this label
+    start_nodes[label] = best_candidate;
+    load_count[best_candidate]++;
+  }
+
+  return start_nodes;
 }
 
 /**
@@ -151,6 +260,44 @@ class vamana_index {
    * one for each partition.
    */
   id_type medoid_{0};
+
+  /****************************************************************************
+   * Filter support for Filtered-Vamana
+   ****************************************************************************/
+  using filter_label_type = uint32_t;  // Enumeration ID for filter labels
+
+  /*
+   * Filter labels per vector (indexed by vector position).
+   * Each vector has a set of label IDs (from enumeration).
+   * Empty if filtering is not enabled.
+   */
+  std::vector<std::unordered_set<filter_label_type>> filter_labels_;
+
+  /*
+   * Start node for each unique label.
+   * Maps label ID → node_id to use as search starting point.
+   * Used during filtered queries to initialize search.
+   */
+  std::unordered_map<filter_label_type, id_type> start_nodes_;
+
+  /*
+   * Label string → enumeration ID mapping.
+   * Allows translation from user-facing string labels to internal IDs.
+   */
+  std::unordered_map<std::string, filter_label_type> label_to_enum_;
+
+  /*
+   * Enumeration ID → label string mapping (reverse of label_to_enum_).
+   * Used for error messages and debugging.
+   */
+  std::unordered_map<filter_label_type, std::string> enum_to_label_;
+
+  /*
+   * Flag indicating whether filtering is enabled for this index.
+   * If false, this is a regular unfiltered Vamana index.
+   * If true, the index supports filtered queries.
+   */
+  bool filter_enabled_{false};
 
   /*
    * Training parameters
@@ -220,6 +367,23 @@ class vamana_index {
 
     distance_function_ = Distance{};
 
+    // NEW: Load filter metadata if present
+    filter_enabled_ = group_->has_filter_metadata();
+    if (filter_enabled_) {
+      // Load label enumeration
+      label_to_enum_ = group_->get_label_enumeration();
+      // Build reverse mapping
+      for (const auto& [str, id] : label_to_enum_) {
+        enum_to_label_[id] = str;
+      }
+
+      // Load start nodes and convert from uint64_t to id_type
+      auto start_nodes_u64 = group_->get_start_nodes();
+      for (const auto& [label, node_id] : start_nodes_u64) {
+        start_nodes_[label] = static_cast<id_type>(node_id);
+      }
+    }
+
     if (group_->should_skip_query()) {
       num_vectors_ = 0;
     }
@@ -288,6 +452,37 @@ class vamana_index {
         graph_.add_edge(i, adj_ids[j], adj_scores[j]);
       }
     }
+
+    // NEW: Load filter_labels from storage if filtering is enabled
+    if (filter_enabled_ && num_vectors_ > 0) {
+      // Read offsets and data arrays
+      auto filter_labels_offsets = read_vector<uint64_t>(
+          group_->cached_ctx(),
+          group_->filter_labels_offsets_uri(),
+          0,
+          num_vectors_ + 1,
+          temporal_policy_);
+
+      // Calculate total number of labels from last offset
+      size_t total_labels = filter_labels_offsets.back();
+
+      auto filter_labels_data = read_vector<uint32_t>(
+          group_->cached_ctx(),
+          group_->filter_labels_data_uri(),
+          0,
+          total_labels,
+          temporal_policy_);
+
+      // Reconstruct filter_labels_ from CSR format
+      filter_labels_.resize(num_vectors_);
+      for (size_t i = 0; i < num_vectors_; ++i) {
+        auto start_offset = filter_labels_offsets[i];
+        auto end_offset = filter_labels_offsets[i + 1];
+        for (size_t j = start_offset; j < end_offset; ++j) {
+          filter_labels_[i].insert(filter_labels_data[j]);
+        }
+      }
+    }
   }
 
   explicit vamana_index(const std::string& diskann_index) {
@@ -319,14 +514,30 @@ class vamana_index {
    * (j,N_"out " (j),α,R) to update out-neighbors of j.
    */
   template <feature_vector_array Array, feature_vector Vector>
-  void train(const Array& training_set, const Vector& training_set_ids) {
+  void train(
+      const Array& training_set,
+      const Vector& training_set_ids,
+      const std::vector<std::unordered_set<uint32_t>>& filter_labels = {},
+      const std::unordered_map<std::string, uint32_t>& label_to_enum = {}) {
     scoped_timer _{"vamana_index@train"};
-    feature_vectors_ = std::move(ColMajorMatrixWithIds<feature_type, id_type>(
-        ::dimensions(training_set), ::num_vectors(training_set)));
+
+    // Validate training data
+    auto train_dims = ::dimensions(training_set);
+    auto train_vecs = ::num_vectors(training_set);
+
+    if (train_vecs == 0) {
+      // Empty training set - nothing to do
+      dimensions_ = train_dims;
+      num_vectors_ = 0;
+      graph_ = ::detail::graph::adj_list<feature_type, id_type>(0);
+      return;
+    }
+
+    feature_vectors_ = std::move(
+        ColMajorMatrixWithIds<feature_type, id_type>(train_dims, train_vecs));
     std::copy(
         training_set.data(),
-        training_set.data() +
-            ::dimensions(training_set) * ::num_vectors(training_set),
+        training_set.data() + train_dims * train_vecs,
         feature_vectors_.data());
     std::copy(
         training_set_ids.begin(),
@@ -341,6 +552,33 @@ class vamana_index {
     graph_ = ::detail::graph::adj_list<feature_type, id_type>(num_vectors_);
     // dump_edgelist("edges_" + std::to_string(0) + ".txt", graph_);
 
+    // NEW: Check if filters are provided
+    filter_enabled_ = !filter_labels.empty();
+
+    if (filter_enabled_) {
+      // Store filter labels
+      filter_labels_ = filter_labels;
+
+      // Store label enumeration mapping
+      label_to_enum_ = label_to_enum;
+
+      // Build reverse mapping
+      enum_to_label_.clear();
+      for (const auto& [str, id] : label_to_enum_) {
+        enum_to_label_[id] = str;
+      }
+
+      // Find start nodes (load-balanced) using find_medoid
+      // find_medoid returns std::unordered_map<uint32_t, size_t>, so convert to
+      // id_type
+      auto start_nodes_size_t =
+          find_medoid(feature_vectors_, filter_labels_, distance_function_);
+      for (const auto& [label, node_id] : start_nodes_size_t) {
+        start_nodes_[label] = static_cast<id_type>(node_id);
+      }
+    }
+
+    // Always compute medoid (needed for unfiltered queries on filtered indexes)
     medoid_ = medoid(feature_vectors_, distance_function_);
 
     // debug_index();
@@ -354,25 +592,72 @@ class vamana_index {
       for (size_t p = 0; p < num_vectors_; ++p) {
         ++counter;
 
-        auto&& [_, __, visited] = ::best_first_O4 /*greedy_search*/ (
-            graph_,
-            feature_vectors_,
-            medoid_,
-            feature_vectors_[p],
-            1,
-            l_build_,
-            true,
-            distance_function_);
-        total_visited += visited.size();
+        // NEW: Determine start node(s) based on filter mode
+        std::vector<id_type> start_points;
+        bool use_filtered = false;
+        if (filter_enabled_ && p < filter_labels_.size()) {
+          use_filtered = !filter_labels_[p].empty();
+        }
 
-        robust_prune(
-            graph_,
-            feature_vectors_,
-            p,
-            visited,
-            alpha,
-            r_max_degree_,
-            distance_function_);
+        if (use_filtered) {
+          // Use all start nodes for labels of this vector (per paper Algorithm
+          // 4)
+          for (uint32_t label : filter_labels_[p]) {
+            start_points.push_back(start_nodes_[label]);
+          }
+        } else {
+          start_points.push_back(medoid_);
+        }
+
+        // NEW: Use filtered or unfiltered search based on mode
+        if (use_filtered) {
+          auto&& [_, __, visited] = filtered_greedy_search_multi_start(
+              graph_,
+              feature_vectors_,
+              filter_labels_,
+              start_points,
+              feature_vectors_[p],
+              filter_labels_[p],
+              1,
+              l_build_,
+              distance_function_,
+              true);
+
+          total_visited += visited.size();
+
+          filtered_robust_prune(
+              graph_,
+              feature_vectors_,
+              filter_labels_,
+              p,
+              visited,
+              alpha,
+              r_max_degree_,
+              distance_function_);
+        } else {
+          auto&& [_, __, visited] = ::best_first_O4 /*greedy_search*/ (
+              graph_,
+              feature_vectors_,
+              medoid_,
+              feature_vectors_[p],
+              1,
+              l_build_,
+              true,
+              distance_function_);
+
+          total_visited += visited.size();
+
+          robust_prune(
+              graph_,
+              feature_vectors_,
+              p,
+              visited,
+              alpha,
+              r_max_degree_,
+              distance_function_);
+        }
+
+        // Backlinks: update neighbors of p
         {
           for (auto&& [i, j] : graph_.out_edges(p)) {
             // @todo Do this without copying -- prune should take vector of
@@ -385,14 +670,32 @@ class vamana_index {
             }
 
             if (size(tmp) > r_max_degree_) {
-              robust_prune(
-                  graph_,
-                  feature_vectors_,
-                  j,
-                  tmp,
-                  alpha,
-                  r_max_degree_,
-                  distance_function_);
+              // NEW: Use filtered or unfiltered prune for backlinks too
+              // Check if this node (j) has labels before using filtered prune
+              bool use_filtered_for_j = false;
+              if (filter_enabled_ && j < filter_labels_.size()) {
+                use_filtered_for_j = !filter_labels_[j].empty();
+              }
+              if (use_filtered_for_j) {
+                filtered_robust_prune(
+                    graph_,
+                    feature_vectors_,
+                    filter_labels_,
+                    j,
+                    tmp,
+                    alpha,
+                    r_max_degree_,
+                    distance_function_);
+              } else {
+                robust_prune(
+                    graph_,
+                    feature_vectors_,
+                    j,
+                    tmp,
+                    alpha,
+                    r_max_degree_,
+                    distance_function_);
+              }
             } else {
               graph_.add_edge(
                   j,
@@ -406,6 +709,57 @@ class vamana_index {
         }
       }
       // debug_index();
+    }
+
+    // NEW: For filtered indexes, ensure medoid has good unfiltered connectivity
+    // This improves backward compatibility with unfiltered queries
+    if (filter_enabled_ && num_vectors_ > 0) {
+      // Run unfiltered search from medoid to build diverse connections
+      auto&& [_, __, visited] = ::best_first_O4(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          feature_vectors_[medoid_],
+          1,
+          std::min(l_build_ * 2, static_cast<uint32_t>(num_vectors_)),
+          true,
+          distance_function_);
+
+      // Prune edges for medoid with unfiltered connectivity
+      robust_prune(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          visited,
+          alpha_max_,
+          r_max_degree_,
+          distance_function_);
+
+      // Also ensure medoid appears as a neighbor in other nodes' adjacency
+      // lists (for good reverse connectivity)
+      for (auto&& [score, neighbor_id] : graph_.out_edges(medoid_)) {
+        auto tmp = std::vector<id_type>(graph_.out_degree(neighbor_id) + 1);
+        tmp.push_back(medoid_);
+        for (auto&& [_, k] : graph_.out_edges(neighbor_id)) {
+          tmp.push_back(k);
+        }
+        if (size(tmp) > r_max_degree_) {
+          robust_prune(
+              graph_,
+              feature_vectors_,
+              neighbor_id,
+              tmp,
+              alpha_max_,
+              r_max_degree_,
+              distance_function_);
+        } else {
+          graph_.add_edge(
+              neighbor_id,
+              medoid_,
+              distance_function_(
+                  feature_vectors_[medoid_], feature_vectors_[neighbor_id]));
+        }
+      }
     }
   }
 
@@ -579,6 +933,7 @@ class vamana_index {
    * @param query_set Container of query vectors
    * @param k How many nearest neighbors to return
    * @param l_search How deep to search
+   * @param query_filter Optional filter labels for filtered search
    * @return Tuple of top k scores and top k ids
    */
   template <query_vector_array Q>
@@ -586,6 +941,8 @@ class vamana_index {
       const Q& query_set,
       size_t k,
       std::optional<uint32_t> l_search = std::nullopt,
+      std::optional<std::unordered_set<filter_label_type>> query_filter =
+          std::nullopt,
       Distance distance = Distance{}) {
     scoped_timer _("vamana_index@query");
 
@@ -601,18 +958,51 @@ class vamana_index {
 
     stdx::range_for_each(
         std::move(par), query_set, [&](auto&& query_vec, auto n, auto i) {
-          auto&& [tk_scores, tk, V] = greedy_search(
-              graph_,
-              feature_vectors_,
-              medoid_,
-              query_vec,
-              k,
-              L,
-              distance_function_,
-              true);
-          std::copy(
-              tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
-          std::copy(tk.data(), tk.data() + k, top_k[i].data());
+          // NEW: Use filtered or unfiltered search based on query_filter
+          if (filter_enabled_ && query_filter.has_value()) {
+            // Determine start nodes for ALL labels in query filter
+            // (multi-start)
+            std::vector<id_type> start_nodes_for_query;
+            for (uint32_t label : *query_filter) {
+              if (start_nodes_.find(label) != start_nodes_.end()) {
+                start_nodes_for_query.push_back(start_nodes_.at(label));
+              }
+            }
+
+            if (start_nodes_for_query.empty()) {
+              throw std::runtime_error(
+                  "No start nodes found for query filter labels");
+            }
+
+            auto&& [tk_scores, tk, V] = filtered_greedy_search_multi_start(
+                graph_,
+                feature_vectors_,
+                filter_labels_,
+                start_nodes_for_query,
+                query_vec,
+                *query_filter,
+                k,
+                L,
+                distance_function_,
+                true);
+            std::copy(
+                tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
+            std::copy(tk.data(), tk.data() + k, top_k[i].data());
+          } else {
+            // Unfiltered search
+            auto&& [tk_scores, tk, V] = greedy_search(
+                graph_,
+                feature_vectors_,
+                medoid_,
+                query_vec,
+                k,
+                L,
+                distance_function_,
+                true);
+            std::copy(
+                tk_scores.data(), tk_scores.data() + k, top_k_scores[i].data());
+            std::copy(tk.data(), tk.data() + k, top_k[i].data());
+          }
         });
 
     return std::make_tuple(std::move(top_k_scores), std::move(top_k));
@@ -625,6 +1015,7 @@ class vamana_index {
    * @param query_vec The vector to query
    * @param k How many nearest neighbors to return
    * @param l_search How deep to search
+   * @param query_filter Optional filter labels for filtered search
    * @return Top k scores and top k ids
    */
   template <query_vector Q>
@@ -632,19 +1023,53 @@ class vamana_index {
       const Q& query_vec,
       size_t k,
       std::optional<uint32_t> l_search = std::nullopt,
+      std::optional<std::unordered_set<filter_label_type>> query_filter =
+          std::nullopt,
       Distance distance = Distance{}) {
     uint32_t L = l_search ? *l_search : l_build_;
-    auto&& [top_k_scores, top_k, V] = greedy_search(
-        graph_,
-        feature_vectors_,
-        medoid_,
-        query_vec,
-        k,
-        L,
-        distance_function_,
-        true);
 
-    return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+    // NEW: Use filtered or unfiltered search based on query_filter
+    if (filter_enabled_ && query_filter.has_value()) {
+      // Determine start nodes for ALL labels in query filter (multi-start)
+      std::vector<id_type> start_nodes_for_query;
+      for (uint32_t label : *query_filter) {
+        if (start_nodes_.find(label) != start_nodes_.end()) {
+          start_nodes_for_query.push_back(start_nodes_.at(label));
+        }
+      }
+
+      if (start_nodes_for_query.empty()) {
+        throw std::runtime_error(
+            "No start nodes found for query filter labels");
+      }
+
+      auto&& [top_k_scores, top_k, V] = filtered_greedy_search_multi_start(
+          graph_,
+          feature_vectors_,
+          filter_labels_,
+          start_nodes_for_query,
+          query_vec,
+          *query_filter,
+          k,
+          L,
+          distance_function_,
+          true);
+
+      return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+    } else {
+      // Unfiltered search
+      auto&& [top_k_scores, top_k, V] = greedy_search(
+          graph_,
+          feature_vectors_,
+          medoid_,
+          query_vec,
+          k,
+          L,
+          distance_function_,
+          true);
+
+      return std::make_tuple(std::move(top_k_scores), std::move(top_k));
+    }
   }
 
   constexpr uint64_t dimensions() const {
@@ -713,6 +1138,19 @@ class vamana_index {
     write_group.set_alpha_max(alpha_max_);
     write_group.set_medoid(medoid_);
     write_group.set_distance_metric(distance_metric_);
+
+    // NEW: Write filter metadata if filtering is enabled
+    write_group.set_filter_enabled(filter_enabled_);
+    if (filter_enabled_) {
+      // Convert start_nodes_ from unordered_map<uint32_t, id_type> to
+      // unordered_map<uint32_t, uint64_t>
+      std::unordered_map<uint32_t, uint64_t> start_nodes_u64;
+      for (const auto& [label, node_id] : start_nodes_) {
+        start_nodes_u64[label] = static_cast<uint64_t>(node_id);
+      }
+      write_group.set_label_enumeration(label_to_enum_);
+      write_group.set_start_nodes(start_nodes_u64);
+    }
 
     // When we create an index with Python, we will call write_index() twice,
     // once with empty data and once with the actual data. Here we add custom
@@ -802,6 +1240,44 @@ class vamana_index {
         0,
         false,
         temporal_policy_);
+
+    // NEW: Write filter_labels arrays if filtering is enabled
+    if (filter_enabled_) {
+      // Flatten filter_labels_ into CSR-like format
+      // Count total number of labels
+      size_t total_labels = 0;
+      for (const auto& label_set : filter_labels_) {
+        total_labels += label_set.size();
+      }
+
+      auto filter_labels_offsets = Vector<uint64_t>(num_vectors_ + 1);
+      auto filter_labels_data = Vector<uint32_t>(total_labels);
+
+      size_t label_offset = 0;
+      for (size_t i = 0; i < num_vectors_; ++i) {
+        filter_labels_offsets[i] = label_offset;
+        for (uint32_t label : filter_labels_[i]) {
+          filter_labels_data[label_offset] = label;
+          ++label_offset;
+        }
+      }
+      filter_labels_offsets.back() = label_offset;
+
+      write_vector(
+          ctx,
+          filter_labels_offsets,
+          write_group.filter_labels_offsets_uri(),
+          0,
+          false,
+          temporal_policy_);
+      write_vector(
+          ctx,
+          filter_labels_data,
+          write_group.filter_labels_data_uri(),
+          0,
+          false,
+          temporal_policy_);
+    }
 
     return true;
   }

@@ -65,6 +65,8 @@
          {"adjacency_scores_array_name", "adjacency_scores"},
          {"adjacency_ids_array_name", "adjacency_ids"},
          {"adjacency_row_index_array_name", "adjacency_row_index"},
+         {"filter_labels_offsets_array_name", "filter_labels_offsets"},
+         {"filter_labels_data_array_name", "filter_labels_data"},
 
          // @todo for ivf_vamana we would also want medoids
          // {"medoids_array_name", "medoids"},
@@ -119,6 +121,12 @@ class vamana_index_group : public base_index_group<index_type> {
         cached_ctx_, adjacency_ids_uri(), 0, timestamp);
     tiledb::Array::delete_fragments(
         cached_ctx_, adjacency_row_index_uri(), 0, timestamp);
+    if (has_filter_metadata()) {
+      tiledb::Array::delete_fragments(
+          cached_ctx_, filter_labels_offsets_uri(), 0, timestamp);
+      tiledb::Array::delete_fragments(
+          cached_ctx_, filter_labels_data_uri(), 0, timestamp);
+    }
   }
 
   /*
@@ -178,6 +186,53 @@ class vamana_index_group : public base_index_group<index_type> {
     metadata_.distance_metric_ = metric;
   }
 
+  /*
+   * Filter support for Filtered-Vamana
+   */
+  bool get_filter_enabled() const {
+    return metadata_.filter_enabled_;
+  }
+  void set_filter_enabled(bool enabled) {
+    metadata_.filter_enabled_ = enabled;
+  }
+
+  // Get label enumeration as unordered_map from JSON string
+  std::unordered_map<std::string, uint32_t> get_label_enumeration() const {
+    if (metadata_.label_enumeration_str_.empty()) {
+      return {};
+    }
+    auto json = nlohmann::json::parse(metadata_.label_enumeration_str_);
+    return json.template get<std::unordered_map<std::string, uint32_t>>();
+  }
+
+  // Set label enumeration from unordered_map, converting to JSON string
+  void set_label_enumeration(
+      const std::unordered_map<std::string, uint32_t>& label_enum) {
+    nlohmann::json json = label_enum;
+    metadata_.label_enumeration_str_ = json.dump();
+  }
+
+  // Get start nodes as unordered_map from JSON string
+  std::unordered_map<uint32_t, uint64_t> get_start_nodes() const {
+    if (metadata_.start_nodes_str_.empty()) {
+      return {};
+    }
+    auto json = nlohmann::json::parse(metadata_.start_nodes_str_);
+    return json.template get<std::unordered_map<uint32_t, uint64_t>>();
+  }
+
+  // Set start nodes from unordered_map, converting to JSON string
+  void set_start_nodes(
+      const std::unordered_map<uint32_t, uint64_t>& start_nodes) {
+    nlohmann::json json = start_nodes;
+    metadata_.start_nodes_str_ = json.dump();
+  }
+
+  // Check if filter metadata is present (for backward compatibility)
+  bool has_filter_metadata() const {
+    return metadata_.filter_enabled_;
+  }
+
   [[nodiscard]] auto adjacency_scores_uri() const {
     return this->array_key_to_uri("adjacency_scores_array_name");
   }
@@ -195,6 +250,18 @@ class vamana_index_group : public base_index_group<index_type> {
   }
   [[nodiscard]] auto adjacency_row_index_array_name() const {
     return this->array_key_to_array_name("adjacency_row_index_array_name");
+  }
+  [[nodiscard]] auto filter_labels_offsets_uri() const {
+    return this->array_key_to_uri("filter_labels_offsets_array_name");
+  }
+  [[nodiscard]] auto filter_labels_offsets_array_name() const {
+    return this->array_key_to_array_name("filter_labels_offsets_array_name");
+  }
+  [[nodiscard]] auto filter_labels_data_uri() const {
+    return this->array_key_to_uri("filter_labels_data_array_name");
+  }
+  [[nodiscard]] auto filter_labels_data_array_name() const {
+    return this->array_key_to_array_name("filter_labels_data_array_name");
   }
 
   void create_default_impl() {
@@ -305,6 +372,29 @@ class vamana_index_group : public base_index_group<index_type> {
         write_group,
         adjacency_row_index_uri(),
         adjacency_row_index_array_name());
+
+    // Create filter_labels arrays (CSR-like format)
+    // filter_labels_offsets: offset array (num_vectors + 1 elements)
+    // filter_labels_data: flat array of all label IDs
+    create_empty_for_vector<uint64_t>(
+        cached_ctx_,
+        filter_labels_offsets_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group,
+        filter_labels_offsets_uri(),
+        filter_labels_offsets_array_name());
+
+    create_empty_for_vector<uint32_t>(
+        cached_ctx_,
+        filter_labels_data_uri(),
+        default_domain,
+        tile_size,
+        default_compression);
+    tiledb_helpers::add_to_group(
+        write_group, filter_labels_data_uri(), filter_labels_data_array_name());
 
     // Store the metadata if all of the arrays were created successfully
     metadata_.store_metadata(write_group);
