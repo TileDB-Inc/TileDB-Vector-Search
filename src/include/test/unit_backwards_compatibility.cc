@@ -89,9 +89,10 @@ TEST_CASE("test_query_old_indices", "[backwards_compatibility]") {
         continue;
       }
 
-      // Skip pre-0.16.0 versions on Windows due to blosc1/blosc2 incompatibility.
-      // TileDB 2.30.0+ uses blosc2, but older test data was compressed with blosc1.
-      // blosc2 has a Windows-specific bug when decompressing blosc1 data.
+      // Skip pre-0.16.0 versions on Windows due to blosc1/blosc2
+      // incompatibility. TileDB 2.30.0+ uses blosc2, but older test data was
+      // compressed with blosc1. blosc2 has a Windows-specific bug when
+      // decompressing blosc1 data.
 #ifdef _WIN32
       if (index_uri.find("0.16.0") == std::string::npos) {
         continue;
