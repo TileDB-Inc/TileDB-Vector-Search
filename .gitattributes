@@ -1,3 +1,4 @@
 .git_archival.txt  export-subst
 *.qmd linguist-language=RMarkdown
 backwards-compatibility-data/data/**/* binary
+external/test-data/**/* binary
