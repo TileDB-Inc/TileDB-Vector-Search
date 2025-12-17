@@ -90,6 +90,19 @@ class vamana_index_metadata
 
   DistanceMetric distance_metric_{DistanceMetric::SUM_OF_SQUARES};
 
+  /*
+   * Filter support for Filtered-Vamana
+   */
+  bool filter_enabled_{false};
+
+  // Label enumeration: string label → uint32_t ID
+  // Stored as JSON string for serialization
+  std::string label_enumeration_str_;
+
+  // Start nodes: label ID → node_id
+  // Stored as JSON string for serialization
+  std::string start_nodes_str_;
+
  protected:
   std::vector<metadata_string_check_type> metadata_string_checks_impl{
       // name, member_variable, required
@@ -97,6 +110,8 @@ class vamana_index_metadata
       {"adjacency_scores_type", adjacency_scores_type_str_, false},
       {"adjacency_row_index_type", adjacency_row_index_type_str_, false},
       {"num_edges_history", num_edges_history_str_, true},
+      {"label_enumeration", label_enumeration_str_, false},
+      {"start_nodes", start_nodes_str_, false},
   };
 
   std::vector<metadata_arithmetic_check_type> metadata_arithmetic_checks_impl{
@@ -114,6 +129,7 @@ class vamana_index_metadata
       {"alpha_max", &alpha_max_, TILEDB_FLOAT32, false},
       {"medoid", &medoid_, TILEDB_UINT64, false},
       {"distance_metric", &distance_metric_, TILEDB_UINT32, false},
+      {"filter_enabled", &filter_enabled_, TILEDB_UINT8, false},
   };
 
   void clear_history_impl(uint64_t timestamp) {

@@ -40,6 +40,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "detail/linalg/vector.h"
 #include "scoring.h"
 #include "utils/fixed_min_heap.h"
 
@@ -420,11 +421,18 @@ auto greedy_search_O1(
 
   // Optionally convert from the vector indexes to the db IDs. Used during
   // querying to map to external IDs.
+  // Use if constexpr to only compile this if db has an ids() method
   if (convert_to_db_ids) {
-    for (size_t i = 0; i < k_nn; ++i) {
-      if (top_k[i] != std::numeric_limits<id_type>::max()) {
-        top_k[i] = db.ids()[top_k[i]];
+    if constexpr (requires { db.ids(); }) {
+      for (size_t i = 0; i < k_nn; ++i) {
+        if (top_k[i] != std::numeric_limits<id_type>::max()) {
+          top_k[i] = db.ids()[top_k[i]];
+        }
       }
+    } else {
+      throw std::runtime_error(
+          "[greedy_search_O1] convert_to_db_ids=true but db type "
+          "does not have ids() method");
     }
   }
 
@@ -583,6 +591,333 @@ auto robust_prune(
         }
       }
     }
+    if (noisy_robust_prune) {
+      debug_min_heap(V, "after prune V: ", 1);
+    }
+
+    std::swap(V, new_V);
+    new_V.clear();
+  }
+}
+
+/**
+ * @brief FilteredGreedySearch - Filter-aware best-first search with multiple
+ * start nodes (Algorithm 1 from Filtered-DiskANN paper)
+ * @tparam Distance The distance function used to compare vectors
+ * @param graph Graph to be searched
+ * @param db Database of vectors
+ * @param filter_labels Filter label sets for each vector
+ * @param start_nodes Vector of start node IDs (one per query label)
+ * @param query Query vector
+ * @param query_filter Set of label IDs for the query
+ * @param k_nn Number of neighbors to return
+ * @param L Search list size, L >= k_nn
+ * @param distance Distance function
+ * @param convert_to_db_ids Whether to convert internal IDs to external IDs
+ * @return Tuple of top_k_scores, top_k, visited vertices
+ *
+ * Key differences from greedy_search:
+ * 1. Accepts multiple start nodes (one per label in query filter)
+ * 2. Only traverses neighbors that match at least one query label (F_p ∩ F_q ≠
+ * ∅)
+ */
+template <class Distance = sum_of_squares_distance>
+auto filtered_greedy_search_multi_start(
+    auto&& graph,
+    auto&& db,
+    const std::vector<std::unordered_set<uint32_t>>& filter_labels,
+    const std::vector<typename std::decay_t<decltype(graph)>::id_type>&
+        start_nodes,
+    auto&& query,
+    const std::unordered_set<uint32_t>& query_filter,
+    size_t k_nn,
+    uint32_t L,
+    Distance&& distance = Distance{},
+    bool convert_to_db_ids = false) {
+  scoped_timer _{"greedy_search@filtered_greedy_search_multi_start"};
+
+  using id_type = typename std::decay_t<decltype(graph)>::id_type;
+  using score_type = typename std::decay_t<decltype(graph)>::score_type;
+
+  static_assert(std::integral<id_type>);
+
+  if (L < k_nn) {
+    throw std::runtime_error(
+        "[filtered_greedy_search_multi_start] L (" + std::to_string(L) +
+        ") < k_nn (" + std::to_string(k_nn) + ")");
+  }
+
+  // Helper to check if a node matches the query filter
+  auto matches_filter = [&](id_type node_id) {
+    if (query_filter.empty()) {
+      return true;  // No filter = matches everything
+    }
+    // Check if node has at least one label from query_filter (F_p ∩ F_q ≠ ∅)
+    for (const auto& label : query_filter) {
+      if (filter_labels[node_id].count(label) > 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  std::unordered_set<id_type> visited_vertices;
+  auto visited = [&visited_vertices](auto&& v) {
+    return visited_vertices.contains(v);
+  };
+
+  auto result = k_min_heap<score_type, id_type>{L};  // 𝓛: |𝓛| <= L
+  auto q1 = k_min_heap<score_type, id_type>{L};      // 𝓛 \ 𝓥
+  auto q2 = k_min_heap<score_type, id_type>{L};      // 𝓛 \ 𝓥
+
+  // Initialize with ALL start nodes (per paper Algorithm 1)
+  for (id_type source : start_nodes) {
+    // Verify each start node matches filter
+    if (!matches_filter(source)) {
+      throw std::runtime_error(
+          "[filtered_greedy_search_multi_start] Start node " +
+          std::to_string(source) + " doesn't match query filter");
+    }
+
+    auto score = distance(db[source], query);
+    result.insert(score, source);
+    q1.insert(score, source);
+  }
+
+  size_t counter{0};
+
+  // Main search loop - while 𝓛 \ 𝓥 ≠ ∅
+  while (!q1.empty()) {
+    if (noisy) {
+      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+      debug_min_heap(q1, "q1: ", 1);
+    }
+
+    // p* <- argmin_{p ∈ 𝓛 \ 𝓥} distance(p, q)
+    // Convert q1 to min_heap to extract minimum
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);
+    });
+
+    std::pop_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) > std::get<0>(b);
+    });
+
+    auto [s_star, p_star] = q1.back();
+    q1.pop_back();
+
+    if (noisy) {
+      std::cout << "p*: " << p_star
+                << " --  distance = " << distance(db[p_star], query)
+                << std::endl;
+    }
+
+    // Convert back to max heap
+    std::make_heap(begin(q1), end(q1), [](auto&& a, auto&& b) {
+      return std::get<0>(a) < std::get<0>(b);
+    });
+
+    if (visited(p_star)) {
+      continue;
+    }
+
+    // V <- V \cup {p*}
+    visited_vertices.insert(p_star);
+
+    if (noisy) {
+      debug_vector(visited_vertices, "visited_vertices: ");
+      debug_min_heap(graph.out_edges(p_star), "Nout(p*): ", 1);
+    }
+
+    // q2 <- L \ V
+    for (auto&& [s, p] : result) {
+      if (!visited(p)) {
+        q2.insert(s, p);
+      }
+    }
+
+    // L <- L \cup Nout(p*)  ; L \ V <- L \ V \cup Nout(p*)
+    // NEW: Only add neighbors that match query filter
+    for (auto&& [_, p] : graph.out_edges(p_star)) {
+      // Filter check: Only consider neighbors matching query filter
+      if (!visited(p) && matches_filter(p)) {
+        auto score = distance(db[p], query);
+
+        if (result.template insert<unique_id>(score, p)) {
+          q2.template insert<unique_id>(score, p);
+        }
+      }
+    }
+
+    if (noisy) {
+      debug_min_heap(result, "result, aka Ell: ", 1);
+      debug_min_heap(result, "result, aka Ell: ", 0);
+    }
+
+    q1.swap(q2);
+    q2.clear();
+  }
+
+  auto top_k = std::vector<id_type>(k_nn);
+  auto top_k_scores = std::vector<score_type>(k_nn);
+
+  get_top_k_with_scores_from_heap(result, top_k, top_k_scores);
+
+  // Optionally convert from vector indexes to db IDs
+  // Use if constexpr to only compile this if db has an ids() method
+  if (convert_to_db_ids) {
+    if constexpr (requires { db.ids(); }) {
+      for (size_t i = 0; i < k_nn; ++i) {
+        if (top_k[i] != std::numeric_limits<id_type>::max()) {
+          top_k[i] = db.ids()[top_k[i]];
+        }
+      }
+    } else {
+      throw std::runtime_error(
+          "[filtered_greedy_search_multi_start] convert_to_db_ids=true but db "
+          "type "
+          "does not have ids() method");
+    }
+  }
+
+  return std::make_tuple(
+      std::move(top_k_scores), std::move(top_k), std::move(visited_vertices));
+}
+
+/**
+ * @brief FilteredRobustPrune - Filter-aware graph pruning (Algorithm 3 from
+ * Filtered-DiskANN paper)
+ * @tparam I index type
+ * @tparam Distance distance functor
+ * @param graph Graph
+ * @param db Database of vectors
+ * @param filter_labels Filter label sets for each vector
+ * @param p point \in P
+ * @param V_in candidate set
+ * @param alpha distance threshold >= 1
+ * @param R Degree bound
+ *
+ * This is a modified version of RobustPrune that considers filter labels when
+ * pruning edges. Key difference: Only prunes edge (p, pp) via p* if p* "covers"
+ * all common labels between p and pp. i.e., F_p ∩ F_pp ⊆ F_p*
+ *
+ * This ensures that paths to rare labels are preserved, enabling efficient
+ * filtered search.
+ */
+template <class I = size_t, class Distance = sum_of_squares_distance>
+auto filtered_robust_prune(
+    auto&& graph,
+    auto&& db,
+    const std::vector<std::unordered_set<uint32_t>>& filter_labels,
+    I p,
+    auto&& V_in,
+    float alpha,
+    size_t R,
+    Distance&& distance = Distance{}) {
+  using id_type = typename std::decay_t<decltype(graph)>::id_type;
+  using score_type = typename std::decay_t<decltype(graph)>::score_type;
+
+  std::unordered_map<id_type, score_type> V_map;
+
+  for (auto&& v : V_in) {
+    if (v != p) {
+      auto score = distance(db[v], db[p]);
+      V_map.try_emplace(v, score);
+    }
+  }
+
+  // V <- (V \cup Nout(p)) \ p
+  for (auto&& [ss, pp] : graph.out_edges(p)) {
+    if (pp != p) {
+      V_map.try_emplace(pp, ss);
+    }
+  }
+
+  std::vector<std::tuple<score_type, id_type>> V;
+  V.reserve(V_map.size() + R);
+  std::vector<std::tuple<score_type, id_type>> new_V;
+  new_V.reserve(V_map.size() + R);
+
+  for (auto&& v : V_map) {
+    V.emplace_back(v.second, v.first);
+  }
+
+  if (noisy_robust_prune) {
+    debug_min_heap(V, "V: ", 1);
+  }
+
+  // Nout(p) <- ∅
+  graph.out_edges(p).clear();
+
+  size_t counter{0};
+  // while V ≠ ∅
+  while (!V.empty()) {
+    if (noisy_robust_prune) {
+      std::cout << "\n:::: " << counter++ << " ::::" << std::endl;
+    }
+
+    // p* <- argmin_{pp \in V} distance(p, pp)
+    auto&& [s_star, p_star] =
+        *(std::min_element(begin(V), end(V), [](auto&& a, auto&& b) {
+          return std::get<0>(a) < std::get<0>(b);
+        }));
+
+    if (p_star == p) {
+      throw std::runtime_error("[filtered_robust_prune] p_star == p");
+    }
+
+    if (noisy_robust_prune) {
+      std::cout << "::::" << p_star << std::endl;
+      debug_min_heap(V, "V: ", 1);
+    }
+
+    // Nout(p) <- Nout(p) \cup p*
+    graph.add_edge(p, p_star, s_star);
+
+    if (noisy_robust_prune) {
+      debug_min_heap(graph.out_edges(p), "Nout(p): ", 1);
+    }
+
+    if (graph.out_edges(p).size() == R) {
+      break;
+    }
+
+    // For p' in V - Filter-aware pruning
+    for (auto&& [ss, pp] : V) {
+      // Standard DiskANN distance check
+      if (alpha * distance(db[p_star], db[pp]) <= ss) {
+        // NEW: Check if p_star covers all common labels between p and pp
+        // Only prune if F_p ∩ F_pp ⊆ F_p*
+        bool p_star_covers = true;
+
+        // For each label in p, check if it's common with pp and covered by
+        // p_star
+        for (const auto& label : filter_labels[p]) {
+          // Is this label common to both p and pp?
+          if (filter_labels[pp].count(label) > 0) {
+            // Yes - does p_star have it?
+            if (filter_labels[p_star].count(label) == 0) {
+              // No! p_star doesn't cover this common label
+              // Must keep pp to maintain connectivity for this label
+              p_star_covers = false;
+              break;
+            }
+          }
+        }
+
+        if (!p_star_covers) {
+          // Keep pp - needed for label connectivity
+          new_V.emplace_back(ss, pp);
+        }
+        // else: prune pp (don't add to new_V)
+      } else {
+        // Distance condition not met, keep pp
+        if (pp != p) {
+          new_V.emplace_back(ss, pp);
+        }
+      }
+    }
+
     if (noisy_robust_prune) {
       debug_min_heap(V, "after prune V: ", 1);
     }
