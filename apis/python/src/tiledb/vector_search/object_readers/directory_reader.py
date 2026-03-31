@@ -471,7 +471,7 @@ class DirectoryTextReader(DirectoryReader):
         pages = np.zeros(max_size, dtype=np.int32)
         external_ids = np.zeros(max_size, dtype=np.uint64)
         write_id = 0
-        text_splitters_module = importlib.import_module("langchain.text_splitter")
+        text_splitters_module = importlib.import_module("langchain_text_splitters")
         text_splitter_class_ = getattr(text_splitters_module, self.text_splitter)
         text_splitter = text_splitter_class_(**self.text_splitter_kwargs)
         for uri in partition.paths:

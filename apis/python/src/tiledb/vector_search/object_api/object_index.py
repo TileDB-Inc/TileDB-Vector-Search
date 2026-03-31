@@ -1000,6 +1000,10 @@ def create(
         group.meta["embedding_source_code"] = get_source_code(embedding)
         group.meta["embedding_class_name"] = embedding.__class__.__name__
         group.meta["embedding_kwargs"] = json.dumps(embedding.init_kwargs())
+        if embedding.__class__.__name__ == "SentenceTransformersEmbedding":
+            st_model = getattr(embedding, "model_name_or_path", None)
+            if st_model:
+                group.meta["sentence_transformer_model"] = st_model
         object_metadata_array_uri = object_reader.metadata_array_uri()
         materialize_object_metadata = False
         if (

@@ -642,3 +642,29 @@ def test_object_index_flat(tmp_path):
         dim_id=2042,
         vector_dim_offset=1000,
     )
+
+
+def test_object_index_stores_sentence_transformer_model_metadata(tmp_path):
+    from tiledb.vector_search.embeddings.sentence_transformers_embedding import (
+        SentenceTransformersEmbedding,
+    )
+
+    reader = TestReader(
+        object_id_start=0,
+        object_id_end=10,
+        vector_dim_offset=0,
+    )
+    model_id = "hf-org/example-st-model"
+    embedding = SentenceTransformersEmbedding(
+        model_name_or_path=model_id,
+        dimensions=EMBED_DIM,
+    )
+    index_uri = os.path.join(tmp_path, "object_index_st_meta")
+    object_index.create(
+        uri=index_uri,
+        index_type="FLAT",
+        object_reader=reader,
+        embedding=embedding,
+    )
+    with tiledb.Group(index_uri, "r") as g:
+        assert g.meta["sentence_transformer_model"] == model_id

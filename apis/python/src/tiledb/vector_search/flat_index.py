@@ -276,6 +276,7 @@ def create(
                 "array_name": ids_array_name,
                 "group": grp,
                 "schema": ids_schema,
+                "config": config,
             },
         )
         thread.start()
@@ -313,6 +314,7 @@ def create(
                 "array_name": parts_array_name,
                 "group": grp,
                 "schema": parts_schema,
+                "config": config,
             },
         )
         thread.start()
@@ -338,6 +340,7 @@ def create(
                 "array_name": updates_array_name,
                 "group": grp,
                 "schema": updates_schema,
+                "config": config,
             },
         )
         thread.start()

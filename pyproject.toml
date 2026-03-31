@@ -25,12 +25,34 @@ dependencies = [
     "typing-extensions", # for tiledb-cloud indirect, x-ref https://github.com/TileDB-Inc/TileDB-Cloud-Py/pull/428
     "scikit-learn",
     "numpy>=1.25.0",
+    "click>=8.0",
+    "langgraph",
+    "langchain-anthropic",
+    "langchain-core",
 ]
 
+[project.scripts]
+tiledb = "tiledb.vector_search.cli.main:cli"
+
 [project.optional-dependencies]
-test = ["nbmake", "pytest<8.0.0", "pytest-xdist"]
+cli = [
+    "sentence-transformers",
+    "langchain-text-splitters",
+    "langchain-community",
+    "beautifulsoup4",
+    "pymupdf",
+    "python-docx",
+]
+test = [
+    "nbmake",
+    "pytest<8.0.0",
+    "pytest-xdist",
+]
 formatting = ["pre-commit"]
 benchmarks = ["boto3", "paramiko", "matplotlib"]
+eval = [
+    "anthropic",
+]
 
 [project.urls]
 homepage = "https://tiledb.com"

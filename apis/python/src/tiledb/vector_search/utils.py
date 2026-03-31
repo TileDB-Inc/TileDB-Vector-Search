@@ -16,8 +16,11 @@ def is_type_erased_index(index_type: str) -> bool:
     return index_type == "VAMANA" or index_type == "IVF_PQ"
 
 
-def create_array_and_add_to_group(array_uri, array_name, schema, group):
-    tiledb.Array.create(array_uri, schema)
+def create_array_and_add_to_group(array_uri, array_name, schema, group, config=None):
+
+    config = tiledb.Config(config) if isinstance(config, dict) else config
+    ctx = tiledb.Ctx(config) if config else None
+    tiledb.Array.create(array_uri, schema, ctx=ctx)
     add_to_group(group, array_uri, name=array_name)
 
 

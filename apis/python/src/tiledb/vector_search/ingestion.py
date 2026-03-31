@@ -1311,14 +1311,7 @@ def ingest(
             else np.empty((0, dimensions), dtype=vector_type)
         )
 
-        # NOTE: We add kind='sort' as a workaround to this bug: https://github.com/numpy/numpy/issues/26922
-        updates_filter = np.in1d(
-            external_ids,
-            updated_ids,
-            assume_unique=True,
-            invert=True,
-            kind="sort",
-        )
+        updates_filter = ~np.isin(external_ids, updated_ids)
         sample_vectors = sample_vectors[updates_filter]
 
         # Then add any new vectors.
@@ -1639,14 +1632,7 @@ def ingest(
                     verbose=verbose,
                     trace_id=trace_id,
                 )
-                # NOTE: We add kind='sort' as a workaround to this bug: https://github.com/numpy/numpy/issues/26922
-                updates_filter = np.in1d(
-                    external_ids,
-                    updated_ids,
-                    assume_unique=True,
-                    invert=True,
-                    kind="sort",
-                )
+                updates_filter = ~np.isin(external_ids, updated_ids)
                 in_vectors = in_vectors[updates_filter]
                 external_ids = external_ids[updates_filter]
                 vector_len = len(in_vectors)
@@ -1766,14 +1752,7 @@ def ingest(
                 )
 
                 # Then check if the external id is in the updated ids.
-                # NOTE: We add kind='sort' as a workaround to this bug: https://github.com/numpy/numpy/issues/26922
-                updates_filter = np.in1d(
-                    external_ids,
-                    updated_ids,
-                    assume_unique=True,
-                    invert=True,
-                    kind="sort",
-                )
+                updates_filter = ~np.isin(external_ids, updated_ids)
                 # We only keep the vectors and external ids that are not in the updated ids.
                 in_vectors = in_vectors[updates_filter]
                 external_ids = external_ids[updates_filter]
